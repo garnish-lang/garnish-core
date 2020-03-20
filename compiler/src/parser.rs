@@ -1,0 +1,592 @@
+use expr_lang_common::Result;
+
+use crate::{Token, TokenType};
+
+#[derive(Debug, Clone, PartialOrd, PartialEq)]
+pub enum Operation {
+    Group,
+    Addition,
+    Subtraction,
+    NoOp,
+    Literal,
+    Multiplication,
+    Division,
+    IntegerDivision,
+    Modulo,
+    Exponential,
+    LogicalAnd,
+    LogicalOr,
+    LogicalXor,
+    Not,
+    TypeCast,
+    Equality,
+    Inequality,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
+    TypeEqual,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+    BitwiseLeftShift,
+    BitwiseRightShift,
+    Access,
+    MakeRange,
+    MakeStartExclusiveRange,
+    MakeEndExclusiveRange,
+    MakeExclusiveRange,
+    MakePair,
+    MakeLink,
+    MultiIterate,
+    InvokeIfTrue,
+    InvokeIfFalse,
+    ResultCheckInvoke,
+    Apply,
+    PartiallyApply,
+    PipeApply,
+    Iterate,
+    IterateToSingleValue,
+    ReverseIterate,
+    ReversIterateToSingleValue,
+    IterationOutput,
+    IterationSkip,
+    IterationContinue,
+    IterationComplete,
+    OutputResult,
+    CheckForResult,
+}
+
+#[derive(Debug, Clone, PartialOrd, PartialEq)]
+pub struct Node {
+    operation: Operation,
+    token: Token,
+    left: Option<usize>,
+    right: Option<usize>,
+}
+
+pub struct ParseResult {
+    nodes: Vec<Node>,
+    groups: Vec<usize>,
+    sub_expressions: Vec<usize>,
+}
+
+pub struct Parser {}
+
+impl Parser {
+    pub fn new() -> Self {
+        Parser {}
+    }
+
+    pub fn make_groups(&self, tokens: &[Token]) -> Result<ParseResult> {
+        let mut nodes: Vec<Node> = vec![];
+        let mut groups = vec![];
+        let mut sub_expressions = vec![0]; // assuming first sub expression is always start of input
+
+        let mut groups_stack = vec![];
+        let mut next_left = None;
+
+        let mut last_token_type = TokenType::HorizontalSpace;
+
+        let trim_start = tokens.iter().position(non_white_space).unwrap_or(0);
+        let trim_end = tokens.iter().rposition(non_white_space).unwrap_or(tokens.len());
+
+        let trimmed_tokens = &tokens[trim_start..=trim_end];
+
+        for (i, token) in trimmed_tokens.iter().enumerate() {
+            let left = match next_left {
+                Some(l) => {
+                    // only use next left once
+                    next_left = None;
+                    Some(l)
+                },
+                None => if i as i32 - 1 >= 0 { Some(i - 1) } else { None }
+            };
+
+            let right = if i + 1 < trimmed_tokens.len() { Some(i + 1) } else { None };
+
+            let _l = left.unwrap_or_default();
+
+            // match token type for special cases
+            match token.token_type {
+                TokenType::StartGroup | TokenType::StartExpression => {
+                    groups.push(i);
+                    groups_stack.push(i);
+                }
+                TokenType::EndGroup | TokenType::EndExpression => {
+                    match groups_stack.pop() {
+                        Some(group_start) => {
+                            // set next left to group start to force next node to point there
+                            next_left = Some(group_start);
+
+                            // go back to group start node and update its right
+                            // to point to one after this node
+                            match nodes.get_mut(group_start) {
+                                Some(n) => {
+                                    if (n.token.token_type == TokenType::StartGroup && token.token_type != TokenType::EndGroup)
+                                        || (n.token.token_type == TokenType::StartExpression && token.token_type != TokenType::EndExpression) {
+                                        // group tokens don't match raise error
+                                        let expected = if n.token.token_type == TokenType::StartGroup { "group" } else { "expression" };
+                                        let found = if n.token.token_type == TokenType::StartGroup { "expression" } else { "group" };
+
+                                        return Err(format!("Expected end of {}, found end of {}.", expected, found).into())
+                                    }
+                                    n.right = right;
+                                }
+                                None => unreachable!("Group start not in nodes vec.")
+                            }
+                        }
+                        None => return Err(format!("End of group found at {} but no start preceded it.", i).into())
+                    }
+                }
+                // not all token types have unique behavior
+                _ => ()
+            }
+
+            let mut op = initial_operation_from_token_type(token.token_type);
+
+            if token.token_type == TokenType::NewLine && last_token_type == TokenType::NewLine {
+                // starting new sub expression
+                // update this token to be a no op
+                // update previous token to be an output operation
+                // and push next token index to subexpressions if exists
+
+                op = Operation::NoOp;
+
+                match nodes.get_mut(i - 1) {
+                    Some(n) => {
+                        n.operation = Operation::OutputResult;
+                    }
+                    None => unreachable!()
+                }
+
+                match right {
+                    Some(r) => {
+                        sub_expressions.push(r);
+                    }
+                    None => () // were at end of input
+                }
+            }
+
+            last_token_type = token.token_type;
+
+            nodes.push(Node {
+                operation: initial_operation_from_token_type(token.token_type),
+                token: token.clone(),
+                left,
+                right
+            });
+        }
+
+        let limit = nodes.len();
+        for i in 0..limit {
+            let current = &nodes[i];
+
+            // if new line wasn't reassigned to OutputResult
+            if current.operation == Operation::CheckForResult {
+
+            }
+        }
+
+        // groups stack should be empty
+        // if not we have an unclosed group some where
+        if !groups_stack.is_empty() {
+            return Err(format!("Unclosed group starting at {}.", groups_stack.pop().unwrap()).into());
+        }
+
+        Ok(ParseResult {
+            groups,
+            nodes,
+            sub_expressions
+        })
+    }
+}
+
+fn non_white_space(t: &Token) -> bool {
+    t.token_type != TokenType::HorizontalSpace && t.token_type != TokenType::NewLine
+}
+
+fn initial_operation_from_token_type(token_type: TokenType) -> Operation {
+    match token_type {
+        TokenType::Number => Operation::Literal,
+        TokenType::Identifier => Operation::Literal,
+        TokenType::HorizontalSpace => Operation::NoOp,
+        TokenType::PlusSign => Operation::Addition,
+        TokenType::MinusSign => Operation::Subtraction,
+        TokenType::MultiplicationSign => Operation::Multiplication,
+        TokenType::DivisionSign => Operation::Division,
+        TokenType::IntegerDivisionOperator => Operation::IntegerDivision,
+        TokenType::ModuloOperator => Operation::Modulo,
+        TokenType::ExponentialSign => Operation::Exponential,
+        TokenType::LogicalAndOperator => Operation::LogicalAnd,
+        TokenType::LogicalOrOperator => Operation::LogicalOr,
+        TokenType::LogicalXorOperator => Operation::LogicalXor,
+        TokenType::NotOperator => Operation::Not,
+        TokenType::TypeCastOperator => Operation::TypeCast,
+        TokenType::EqualityOperator => Operation::Equality,
+        TokenType::InequalityOperator => Operation::Inequality,
+        TokenType::LessThanOperator => Operation::LessThan,
+        TokenType::LessThanOrEqualOperator => Operation::LessThanOrEqual,
+        TokenType::GreaterThanOperator => Operation::GreaterThan,
+        TokenType::GreaterThanOrEqualOperator => Operation::GreaterThanOrEqual,
+        TokenType::TypeComparisonOperator => Operation::TypeEqual,
+        TokenType::BitwiseAndOperator => Operation::BitwiseAnd,
+        TokenType::BitwiseOrOperator => Operation::BitwiseOr,
+        TokenType::BitwiseXorOperator => Operation::BitwiseXor,
+        TokenType::BitwiseLeftShiftOperator => Operation::BitwiseLeftShift,
+        TokenType::BitwiseRightShiftOperator => Operation::BitwiseRightShift,
+        TokenType::DotOperator => Operation::Access,
+        TokenType::RangeOperator => Operation::MakeRange,
+        TokenType::StartExclusiveRangeOperator => Operation::MakeStartExclusiveRange,
+        TokenType::EndExclusiveRangeOperator => Operation::MakeEndExclusiveRange,
+        TokenType::ExclusiveRangeOperator => Operation::MakeExclusiveRange,
+        TokenType::PairOperator => Operation::MakePair,
+        TokenType::LinkOperator => Operation::MakeLink,
+        TokenType::MultiIterationOperator => Operation::MultiIterate,
+        TokenType::ConditionalTrueOperator => Operation::InvokeIfTrue,
+        TokenType::ConditionalFalseOperator => Operation::InvokeIfFalse,
+        TokenType::ConditionalResultOperator => Operation::ResultCheckInvoke,
+        TokenType::SymbolOperator => Operation::Literal,
+        TokenType::StartExpression => Operation::Literal,
+        TokenType::EndExpression => Operation::NoOp,
+        TokenType::StartGroup => Operation::Literal,
+        TokenType::EndGroup => Operation::NoOp,
+        TokenType::Result => Operation::Literal,
+        TokenType::Input => Operation::Literal,
+        TokenType::Comma => Operation::NoOp,
+        TokenType::UnitLiteral => Operation::Literal,
+        TokenType::ApplyOperator => Operation::Apply,
+        TokenType::PartiallyApplyOperator => Operation::PartiallyApply,
+        TokenType::PipeOperator => Operation::PipeApply,
+        TokenType::InfixOperator => Operation::Apply,
+        TokenType::IterationOperator => Operation::Iterate,
+        TokenType::SingleValueIterationOperator => Operation::IterateToSingleValue,
+        TokenType::ReverseIterationOperator => Operation::ReverseIterate,
+        TokenType::SingleValueReverseIterationOperator => Operation::ReversIterateToSingleValue,
+        TokenType::IterationOutput => Operation::IterationOutput,
+        TokenType::IterationSkip => Operation::IterationSkip,
+        TokenType::IterationContinue => Operation::IterationContinue,
+        TokenType::IterationComplete => Operation::IterationComplete,
+        TokenType::Character => Operation::Literal,
+        TokenType::CharacterList => Operation::Literal,
+        TokenType::NewLine => Operation::CheckForResult,
+    }
+}
+
+#[cfg(test)]
+mod general_tests {
+    use crate::{Operation, Parser, Token, TokenType, Lexer};
+
+    #[test]
+    fn create_parser() {
+        Parser::new();
+    }
+
+    #[test]
+    fn assigns_initial_operations() {
+        let pairs = [
+            (TokenType::PlusSign, Operation::Addition),
+            (TokenType::MinusSign, Operation::Subtraction),
+            (TokenType::MultiplicationSign, Operation::Multiplication),
+            (TokenType::DivisionSign, Operation::Division),
+            (TokenType::IntegerDivisionOperator, Operation::IntegerDivision),
+            (TokenType::ModuloOperator, Operation::Modulo),
+            (TokenType::ExponentialSign, Operation::Exponential),
+            (TokenType::LogicalAndOperator, Operation::LogicalAnd),
+            (TokenType::LogicalOrOperator, Operation::LogicalOr),
+            (TokenType::LogicalXorOperator, Operation::LogicalXor),
+            (TokenType::NotOperator, Operation::Not),
+            (TokenType::TypeCastOperator, Operation::TypeCast),
+            (TokenType::EqualityOperator, Operation::Equality),
+            (TokenType::InequalityOperator, Operation::Inequality),
+            (TokenType::LessThanOperator, Operation::LessThan),
+            (TokenType::LessThanOrEqualOperator, Operation::LessThanOrEqual),
+            (TokenType::GreaterThanOperator, Operation::GreaterThan),
+            (TokenType::GreaterThanOrEqualOperator, Operation::GreaterThanOrEqual),
+            (TokenType::TypeComparisonOperator, Operation::TypeEqual),
+            (TokenType::BitwiseAndOperator, Operation::BitwiseAnd),
+            (TokenType::BitwiseOrOperator, Operation::BitwiseOr),
+            (TokenType::BitwiseXorOperator, Operation::BitwiseXor),
+            (TokenType::BitwiseLeftShiftOperator, Operation::BitwiseLeftShift),
+            (TokenType::BitwiseRightShiftOperator, Operation::BitwiseRightShift),
+            (TokenType::DotOperator, Operation::Access),
+            (TokenType::RangeOperator, Operation::MakeRange),
+            (TokenType::StartExclusiveRangeOperator, Operation::MakeStartExclusiveRange),
+            (TokenType::EndExclusiveRangeOperator, Operation::MakeEndExclusiveRange),
+            (TokenType::ExclusiveRangeOperator, Operation::MakeExclusiveRange),
+            (TokenType::PairOperator, Operation::MakePair),
+            (TokenType::LinkOperator, Operation::MakeLink),
+            (TokenType::MultiIterationOperator, Operation::MultiIterate),
+            (TokenType::ConditionalTrueOperator, Operation::InvokeIfTrue),
+            (TokenType::ConditionalFalseOperator, Operation::InvokeIfFalse),
+            (TokenType::ConditionalResultOperator, Operation::ResultCheckInvoke),
+            (TokenType::SymbolOperator, Operation::Literal),
+//            (TokenType::StartExpression, Operation::Literal), requires additional tokens to be valid
+//            (TokenType::EndExpression, Operation::NoOp), requires additional tokens to be valid
+//            (TokenType::StartGroup, Operation::Literal), requires additional tokens to be valid
+//            (TokenType::EndGroup, Operation::NoOp), requires additional tokens to be valid
+            (TokenType::Result, Operation::Literal),
+            (TokenType::Input, Operation::Literal),
+            (TokenType::Comma, Operation::NoOp),
+            (TokenType::UnitLiteral, Operation::Literal),
+            (TokenType::ApplyOperator, Operation::Apply),
+            (TokenType::PartiallyApplyOperator, Operation::PartiallyApply),
+            (TokenType::PipeOperator, Operation::PipeApply),
+            (TokenType::InfixOperator, Operation::Apply),
+            (TokenType::IterationOperator, Operation::Iterate),
+            (TokenType::SingleValueIterationOperator, Operation::IterateToSingleValue),
+            (TokenType::ReverseIterationOperator, Operation::ReverseIterate),
+            (TokenType::SingleValueReverseIterationOperator, Operation::ReversIterateToSingleValue),
+            (TokenType::IterationOutput, Operation::IterationOutput),
+            (TokenType::IterationSkip, Operation::IterationSkip),
+            (TokenType::IterationContinue, Operation::IterationContinue),
+            (TokenType::IterationComplete, Operation::IterationComplete),
+            (TokenType::Character, Operation::Literal),
+            (TokenType::CharacterList, Operation::Literal),
+            (TokenType::Number, Operation::Literal),
+            (TokenType::Identifier, Operation::Literal),
+//            (TokenType::HorizontalSpace, Operation::NoOp), trimmed when by itself
+//            (TokenType::NewLine, Operation::NoOp), trimmed when by itself
+        ];
+
+        for pair in pairs.iter() {
+            let input = vec![Token {
+                value: String::from(""),
+                token_type: pair.0
+            }];
+
+            let parser = Parser::new();
+            let result = parser.make_groups(&input).unwrap().nodes;
+
+            assert_eq!(result.get(0).unwrap().operation, pair.1);
+        }
+    }
+
+    #[test]
+    fn parsing_creates_initial_links() {
+        let input = Lexer::new().lex("5 + my_value").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_1 = result.nodes.get(0).unwrap();
+        assert_eq!(node_1.left, None);
+        assert_eq!(node_1.right, Some(1));
+
+        let node_2 = result.nodes.get(1).unwrap();
+        assert_eq!(node_2.left, Some(0));
+        assert_eq!(node_2.right, Some(2));
+
+        let node_3 = result.nodes.get(2).unwrap();
+        assert_eq!(node_3.left, Some(1));
+        assert_eq!(node_3.right, Some(3));
+
+        let node_4 = result.nodes.get(3).unwrap();
+        assert_eq!(node_4.left, Some(2));
+        assert_eq!(node_4.right, Some(4));
+
+        let node_5 = result.nodes.get(4).unwrap();
+        assert_eq!(node_5.left, Some(3));
+        assert_eq!(node_5.right, None);
+    }
+}
+
+#[cfg(test)]
+mod group_tests {
+    use crate::{Parser, Lexer};
+
+    #[test]
+    fn parenthesis_cause_group_to_be_created_with_proper_links() {
+        let input = Lexer::new().lex("5 + (5 - 10) + my_value").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        assert_eq!(*result.groups.get(0).unwrap(), 4);
+
+        // only check the links that should be non-sequential
+
+        // start group right should now reference first space after end group
+        let node_5 = result.nodes.get(4).unwrap();
+        assert_eq!(node_5.left, Some(3));
+        assert_eq!(node_5.right, Some(11));
+
+        // first space after end group should now reference start group
+        let node_11 = result.nodes.get(11).unwrap();
+        assert_eq!(node_11.left, Some(4));
+        assert_eq!(node_11.right, Some(12));
+    }
+
+    #[test]
+    fn braces_cause_group_to_be_created_with_proper_links() {
+        let input = Lexer::new().lex("5 + {5 - 10} + my_value").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        assert_eq!(*result.groups.get(0).unwrap(), 4);
+
+        // only check the links that should be non-sequential
+
+        // start group right should now reference first space after end group
+        let node_5 = result.nodes.get(4).unwrap();
+        assert_eq!(node_5.left, Some(3));
+        assert_eq!(node_5.right, Some(11));
+
+        // first space after end group should now reference start group
+        let node_11 = result.nodes.get(11).unwrap();
+        assert_eq!(node_11.left, Some(4));
+        assert_eq!(node_11.right, Some(12));
+    }
+
+    #[test]
+    fn brace_and_parenthesis_result_in_error() {
+        let input = Lexer::new().lex("5 + {5 - 10) + my_value").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input);
+
+        assert_eq!(result.err().unwrap().get_message(), "Expected end of expression, found end of group.");
+    }
+
+    #[test]
+    fn parenthesis_braces_result_in_error() {
+        let input = Lexer::new().lex("5 + (5 - 10} + my_value").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input);
+
+        assert_eq!(result.err().unwrap().get_message(), "Expected end of group, found end of expression.");
+    }
+
+    #[test]
+    fn only_group_has_none_references_on_start_group_node() {
+        let input = Lexer::new().lex("(5 - 10)").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        // start group right should now reference first space after end group
+        let node = result.nodes.get(0).unwrap();
+        assert_eq!(node.left, None);
+        assert_eq!(node.right, None);
+    }
+
+    #[test]
+    fn unclosed_group_results_in_error() {
+        let input = Lexer::new().lex("(5 - 10").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input);
+
+        assert_eq!(result.err().unwrap().get_message(), "Unclosed group starting at 0.");
+    }
+
+    #[test]
+    fn unstarted_group_results_in_error() {
+        let input = Lexer::new().lex("5 - 10)").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input);
+
+        assert_eq!(result.err().unwrap().get_message(), "End of group found at 5 but no start preceded it.");
+    }
+
+    #[test]
+    fn nested_group_creates_links() {
+        let input = Lexer::new().lex("(5 + (5 - 10) - 9) + 4").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_1 = result.nodes.get(0).unwrap();
+        assert_eq!(node_1.left, None);
+        assert_eq!(node_1.right, Some(17));
+
+        let node_6 = result.nodes.get(5).unwrap();
+        assert_eq!(node_6.left, Some(4));
+        assert_eq!(node_6.right, Some(12));
+
+        let node_13 = result.nodes.get(12).unwrap();
+        assert_eq!(node_13.left, Some(5));
+        assert_eq!(node_13.right, Some(13));
+
+        let node_18 = result.nodes.get(17).unwrap();
+        assert_eq!(node_18.left, Some(0));
+        assert_eq!(node_18.right, Some(18));
+    }
+}
+
+#[cfg(test)]
+mod subexpression_tests {
+    use crate::{Lexer, Parser, Operation};
+
+    #[test]
+    fn first_subexpression_starts_at_zero() {
+        let input = Lexer::new().lex("5 + 4").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
+    }
+
+    #[test]
+    fn first_subexpression_starts_after_horizontal_space() {
+        let input = Lexer::new().lex(" 5 + 4").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
+    }
+
+    #[test]
+    fn newlines_are_ignored_at_start_and_end_of_input() {
+        let input = Lexer::new().lex(" \n\n 5 + 4 \n\n ").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        assert_eq!(result.sub_expressions.len(), 1);
+    }
+
+    #[test]
+    fn double_new_line_between_tokens_converts_to_sub_expression() {
+        let input = Lexer::new().lex("5 + 4\n\n10 + 6").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_6 = result.nodes.get(5).unwrap();
+        assert_eq!(node_6.operation, Operation::OutputResult);
+        assert_eq!(node_6.left, Some(4));
+        assert_eq!(node_6.right, Some(6));
+
+        assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
+        assert_eq!(*result.sub_expressions.get(1).unwrap(), 7);
+    }
+
+    #[test]
+    fn single_new_line_between_tokens_converts_to_expression_if_after_new_line_is_non_terminable() {
+        let input = Lexer::new().lex("5 + 4\n+ 6").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_5 = result.nodes.get(4).unwrap();
+        assert_eq!(node_5.left, Some(3));
+        assert_eq!(node_5.right, Some(6));
+
+        let node_6 = result.nodes.get(5).unwrap();
+        assert_eq!(node_6.operation, Operation::NoOp);
+        assert_eq!(node_6.left, None);
+        assert_eq!(node_6.right, None);
+
+        let node_7 = result.nodes.get(6).unwrap();
+        assert_eq!(node_7.left, Some(4));
+        assert_eq!(node_7.right, Some(7));
+
+        assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
+    }
+}

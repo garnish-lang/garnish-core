@@ -1,0 +1,9 @@
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[workspace]
+members = [
+    "expr_lang_runtime",
+    "expr_lang_common",
+    "expr_lang_instruction_set_builder",
+    "compiler"
+]

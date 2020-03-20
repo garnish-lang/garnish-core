@@ -1,0 +1,6 @@
+[book]
+authors = ["Chad Collins"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Expression Lang"
