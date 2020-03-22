@@ -2,7 +2,7 @@ use expr_lang_common::Result;
 
 use crate::{Token, TokenType};
 
-#[derive(Debug, Clone, PartialOrd, PartialEq)]
+#[derive(Debug, Copy, Clone, PartialOrd, PartialEq)]
 pub enum Operation {
     Group,
     Addition,
@@ -87,6 +87,7 @@ impl Parser {
         let mut next_left = None;
 
         let mut last_token_type = TokenType::HorizontalSpace;
+        let mut last_operation = Operation::NoOp;
 
         let trim_start = tokens.iter().position(non_white_space).unwrap_or(0);
         let trim_end = tokens.iter().rposition(non_white_space).unwrap_or(tokens.len());
@@ -145,33 +146,63 @@ impl Parser {
 
             let mut op = initial_operation_from_token_type(token.token_type);
 
-            if token.token_type == TokenType::NewLine && last_token_type == TokenType::NewLine {
-                // starting new sub expression
-                // update this token to be a no op
-                // update previous token to be an output operation
-                // and push next token index to subexpressions if exists
+            if token.token_type == TokenType::NewLine {
+                if last_token_type == TokenType::NewLine {
+                    // explicit starting new sub expression
+                    // update this token to be a no op
+                    // update previous token to be an output operation
+                    // and push next token index to subexpressions if exists
 
-                op = Operation::NoOp;
+                    op = Operation::NoOp;
 
-                match nodes.get_mut(i - 1) {
-                    Some(n) => {
-                        n.operation = Operation::OutputResult;
+                    match nodes.get_mut(i - 1) {
+                        Some(n) => {
+                            n.operation = Operation::OutputResult;
+                        }
+                        None => unreachable!()
                     }
-                    None => unreachable!()
-                }
 
-                match right {
-                    Some(r) => {
-                        sub_expressions.push(r);
+                    match right {
+                        Some(r) => {
+                            sub_expressions.push(r);
+                        }
+                        None => () // were at end of input
                     }
-                    None => () // were at end of input
+                } else {
+                    // check for implicit new sub expression
+                    // by looking at terminability of previous token
+                    // and the startability of current expression
+                    // an expression is terminable if it ends in a value type
+                    // and an expression can only start with a value type
+
+                    if last_operation == Operation::Literal && op == Operation::Literal {
+                        // end of expression
+                        // this new line will output result
+                       
+                        op = Operation::OutputResult;
+                    } else {
+                        // current expression continues to next node
+                        // skip over this newline by linking last node
+                        // and set this node to be a noop
+
+                        next_left = Some(i - 1);
+                        op = Operation::NoOp;
+
+                        match nodes.get_mut(i - 1) {
+                            Some(n) => {
+                                n.right = right;
+                            }
+                            None => () // end of input
+                        }
+                    }
                 }
             }
 
             last_token_type = token.token_type;
+            last_operation = op;
 
             nodes.push(Node {
-                operation: initial_operation_from_token_type(token.token_type),
+                operation: last_operation,
                 token: token.clone(),
                 left,
                 right
@@ -556,7 +587,7 @@ mod subexpression_tests {
         let input = Lexer::new().lex("5 + 4\n\n10 + 6").unwrap();
 
         let parser = Parser::new();
-        let result = parser.make_groups(&input).unwrap();
+         let result = parser.make_groups(&input).unwrap();
 
         let node_6 = result.nodes.get(5).unwrap();
         assert_eq!(node_6.operation, Operation::OutputResult);
@@ -580,8 +611,6 @@ mod subexpression_tests {
 
         let node_6 = result.nodes.get(5).unwrap();
         assert_eq!(node_6.operation, Operation::NoOp);
-        assert_eq!(node_6.left, None);
-        assert_eq!(node_6.right, None);
 
         let node_7 = result.nodes.get(6).unwrap();
         assert_eq!(node_7.left, Some(4));
@@ -590,3 +619,4 @@ mod subexpression_tests {
         assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
     }
 }
+
