@@ -132,12 +132,37 @@ impl Parser {
 
                                         return Err(format!("Expected end of {}, found end of {}.", expected, found).into())
                                     }
-                                    n.right = right;
+
+                                    match trimmed_tokens.get(i + 1) {
+                                        Some(rt) => {
+                                            if rt.token_type == TokenType::HorizontalSpace {
+                                                // skip the horizontal space
+                                                n.right = Some(i + 2);
+                                            } else {
+                                                n.right = right;
+                                            }
+                                        }
+                                        None => {
+                                            n.right = None;
+                                        }
+                                    }
                                 }
                                 None => unreachable!("Group start not in nodes vec.")
                             }
                         }
                         None => return Err(format!("End of group found at {} but no start preceded it.", i).into())
+                    }
+                }
+                TokenType::HorizontalSpace => {
+                    // set next left to be this nodes left
+                    next_left = left;
+
+                    // set previous nodes' right to this nodes right
+                    match nodes.get_mut(i - 1) {
+                        Some(n) => {
+                            n.right = right;
+                        }
+                        None => () // end of input
                     }
                 }
                 // not all token types have unique behavior
@@ -402,23 +427,15 @@ mod general_tests {
 
         let node_1 = result.nodes.get(0).unwrap();
         assert_eq!(node_1.left, None);
-        assert_eq!(node_1.right, Some(1));
+        assert_eq!(node_1.right, Some(2));
 
-        let node_2 = result.nodes.get(1).unwrap();
+        let node_2 = result.nodes.get(2).unwrap();
         assert_eq!(node_2.left, Some(0));
-        assert_eq!(node_2.right, Some(2));
+        assert_eq!(node_2.right, Some(4));
 
-        let node_3 = result.nodes.get(2).unwrap();
-        assert_eq!(node_3.left, Some(1));
-        assert_eq!(node_3.right, Some(3));
-
-        let node_4 = result.nodes.get(3).unwrap();
-        assert_eq!(node_4.left, Some(2));
-        assert_eq!(node_4.right, Some(4));
-
-        let node_5 = result.nodes.get(4).unwrap();
-        assert_eq!(node_5.left, Some(3));
-        assert_eq!(node_5.right, None);
+        let node_3 = result.nodes.get(4).unwrap();
+        assert_eq!(node_3.left, Some(2));
+        assert_eq!(node_3.right, None);
     }
 }
 
@@ -439,13 +456,13 @@ mod group_tests {
 
         // start group right should now reference first space after end group
         let node_5 = result.nodes.get(4).unwrap();
-        assert_eq!(node_5.left, Some(3));
-        assert_eq!(node_5.right, Some(11));
+        assert_eq!(node_5.left, Some(2));
+        assert_eq!(node_5.right, Some(12));
 
         // first space after end group should now reference start group
-        let node_11 = result.nodes.get(11).unwrap();
+        let node_11 = result.nodes.get(12).unwrap();
         assert_eq!(node_11.left, Some(4));
-        assert_eq!(node_11.right, Some(12));
+        assert_eq!(node_11.right, Some(14));
     }
 
     #[test]
@@ -459,15 +476,15 @@ mod group_tests {
 
         // only check the links that should be non-sequential
 
-        // start group right should now reference first space after end group
+        // start group right should now reference addition sign after end group
         let node_5 = result.nodes.get(4).unwrap();
-        assert_eq!(node_5.left, Some(3));
-        assert_eq!(node_5.right, Some(11));
+        assert_eq!(node_5.left, Some(2));
+        assert_eq!(node_5.right, Some(12));
 
-        // first space after end group should now reference start group
-        let node_11 = result.nodes.get(11).unwrap();
+        // addition sign after end group should now reference start group
+        let node_11 = result.nodes.get(12).unwrap();
         assert_eq!(node_11.left, Some(4));
-        assert_eq!(node_11.right, Some(12));
+        assert_eq!(node_11.right, Some(14));
     }
 
     #[test]
@@ -532,19 +549,19 @@ mod group_tests {
 
         let node_1 = result.nodes.get(0).unwrap();
         assert_eq!(node_1.left, None);
-        assert_eq!(node_1.right, Some(17));
+        assert_eq!(node_1.right, Some(18));
 
         let node_6 = result.nodes.get(5).unwrap();
-        assert_eq!(node_6.left, Some(4));
-        assert_eq!(node_6.right, Some(12));
+        assert_eq!(node_6.left, Some(3));
+        assert_eq!(node_6.right, Some(13));
 
-        let node_13 = result.nodes.get(12).unwrap();
+        let node_13 = result.nodes.get(13).unwrap();
         assert_eq!(node_13.left, Some(5));
-        assert_eq!(node_13.right, Some(13));
+        assert_eq!(node_13.right, Some(15));
 
-        let node_18 = result.nodes.get(17).unwrap();
+        let node_18 = result.nodes.get(18).unwrap();
         assert_eq!(node_18.left, Some(0));
-        assert_eq!(node_18.right, Some(18));
+        assert_eq!(node_18.right, Some(20));
     }
 }
 
@@ -606,7 +623,7 @@ mod subexpression_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_5 = result.nodes.get(4).unwrap();
-        assert_eq!(node_5.left, Some(3));
+        assert_eq!(node_5.left, Some(2));
         assert_eq!(node_5.right, Some(6));
 
         let node_6 = result.nodes.get(5).unwrap();
@@ -614,7 +631,7 @@ mod subexpression_tests {
 
         let node_7 = result.nodes.get(6).unwrap();
         assert_eq!(node_7.left, Some(4));
-        assert_eq!(node_7.right, Some(7));
+        assert_eq!(node_7.right, Some(8));
 
         assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
     }
@@ -627,7 +644,7 @@ mod subexpression_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(2).unwrap();
-        assert_eq!(node_3.left, Some(1));
+        assert_eq!(node_3.left, Some(0));
         assert_eq!(node_3.right, Some(4));
 
         let node_4 = result.nodes.get(3).unwrap();
@@ -635,7 +652,7 @@ mod subexpression_tests {
 
         let node_5 = result.nodes.get(4).unwrap();
         assert_eq!(node_5.left, Some(2));
-        assert_eq!(node_5.right, Some(5));
+        assert_eq!(node_5.right, Some(6));
 
         assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
     }
