@@ -618,5 +618,26 @@ mod subexpression_tests {
 
         assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
     }
+
+    #[test]
+    fn single_new_line_between_tokens_converts_to_expression_if_before_new_line_is_non_terminable() {
+        let input = Lexer::new().lex("5 +\n4 + 6").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(2).unwrap();
+        assert_eq!(node_3.left, Some(1));
+        assert_eq!(node_3.right, Some(4));
+
+        let node_4 = result.nodes.get(3).unwrap();
+        assert_eq!(node_4.operation, Operation::NoOp);
+
+        let node_5 = result.nodes.get(4).unwrap();
+        assert_eq!(node_5.left, Some(2));
+        assert_eq!(node_5.right, Some(5));
+
+        assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
+    }
 }
 
