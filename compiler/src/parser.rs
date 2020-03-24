@@ -156,11 +156,14 @@ impl Parser {
                 TokenType::HorizontalSpace => {
                     // set next left to be this nodes left
                     next_left = left;
-
-                    // set previous nodes' right to this nodes right
-                    match nodes.get_mut(i - 1) {
-                        Some(n) => {
-                            n.right = right;
+                    match left {
+                        Some(l) => {
+                            match nodes.get_mut(l) {
+                                Some(n) => {
+                                    n.right = right;
+                                }
+                                None => unreachable!()
+                            }
                         }
                         None => () // end of input
                     }
@@ -210,12 +213,16 @@ impl Parser {
                         // skip over this newline by linking last node
                         // and set this node to be a noop
 
-                        next_left = Some(i - 1);
+                        next_left = left;
                         op = Operation::NoOp;
-
-                        match nodes.get_mut(i - 1) {
-                            Some(n) => {
-                                n.right = right;
+                        match left {
+                            Some(l) => {
+                                match nodes.get_mut(l) {
+                                    Some(n) => {
+                                        n.right = right;
+                                    }
+                                    None => unreachable!()
+                                }
                             }
                             None => () // end of input
                         }
@@ -653,6 +660,78 @@ mod subexpression_tests {
         let node_5 = result.nodes.get(4).unwrap();
         assert_eq!(node_5.left, Some(2));
         assert_eq!(node_5.right, Some(6));
+
+        assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
+    }
+
+    #[test]
+    fn group_before_and_newline_before_unstartable_expression_is_a_single_expression() {
+        let input = Lexer::new().lex("(5 + 4)\n + 6").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(0).unwrap();
+        assert_eq!(node_3.left, None);
+        assert_eq!(node_3.right, Some(9));
+
+        let node_4 = result.nodes.get(9).unwrap();
+        assert_eq!(node_4.left, Some(0));
+        assert_eq!(node_4.right, Some(11));
+
+        assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
+    }
+
+    #[test]
+    fn group_after_newline_and_unterminated_expression_is_a_single_expression() {
+        let input = Lexer::new().lex("6 + \n(5 + 4)").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(2).unwrap();
+        assert_eq!(node_3.left, Some(0));
+        assert_eq!(node_3.right, Some(5));
+
+        let node_4 = result.nodes.get(5).unwrap();
+        assert_eq!(node_4.left, Some(2));
+        assert_eq!(node_4.right, None);
+
+        assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
+    }
+
+    #[test]
+    fn expression_before_and_newline_before_unstartable_expression_is_a_single_expression() {
+        let input = Lexer::new().lex("{5 + 4}\n + 6").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(0).unwrap();
+        assert_eq!(node_3.left, None);
+        assert_eq!(node_3.right, Some(9));
+
+        let node_4 = result.nodes.get(9).unwrap();
+        assert_eq!(node_4.left, Some(0));
+        assert_eq!(node_4.right, Some(11));
+
+        assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
+    }
+
+    #[test]
+    fn expression_after_newline_and_unterminated_expression_is_a_single_expression() {
+        let input = Lexer::new().lex("6 + \n{5 + 4}").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(2).unwrap();
+        assert_eq!(node_3.left, Some(0));
+        assert_eq!(node_3.right, Some(5));
+
+        let node_4 = result.nodes.get(5).unwrap();
+        assert_eq!(node_4.left, Some(2));
+        assert_eq!(node_4.right, None);
 
         assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
     }
