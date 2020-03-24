@@ -88,6 +88,7 @@ impl Parser {
 
         let mut last_token_type = TokenType::HorizontalSpace;
         let mut last_operation = Operation::NoOp;
+        let mut check_for_result: Option<usize> = None;
 
         let trim_start = tokens.iter().position(non_white_space).unwrap_or(0);
         let trim_end = tokens.iter().rposition(non_white_space).unwrap_or(tokens.len());
@@ -174,6 +175,47 @@ impl Parser {
 
             let mut op = initial_operation_from_token_type(token.token_type);
 
+            // check for result
+            match check_for_result {
+                Some(r) => {
+                    if op == Operation::Literal {
+                        // this is a separate expression
+                        // set check for result node to be have output result
+                        match nodes.get_mut(r) {
+                            Some(n) => {
+                                n.operation = Operation::OutputResult;
+                            }
+                            None => unreachable!()
+                        }                      
+
+                        sub_expressions.push(i);
+                    } else {
+                        // update left's right to point to this node
+                        match left {
+                            Some(l) => {
+                                match nodes.get_mut(l) {
+                                    Some(n) => {
+                                        n.right = Some(i);
+                                    }
+                                    None => unreachable!()
+                                }
+                            }
+                            None => () // end of input
+                        }
+
+                        // The new line before this now serves no purpose
+                        match nodes.get_mut(r) {
+                            Some(n) => {
+                                n.operation = Operation::NoOp;
+                            }
+                            None => unreachable!()
+                        }
+                    }
+                    check_for_result = None;
+                }
+                None => () // nothing to do
+            }
+
             if token.token_type == TokenType::NewLine {
                 if last_token_type == TokenType::NewLine {
                     // explicit starting new sub expression
@@ -203,11 +245,12 @@ impl Parser {
                     // an expression is terminable if it ends in a value type
                     // and an expression can only start with a value type
 
-                    if last_operation == Operation::Literal && op == Operation::Literal {
-                        // end of expression
-                        // this new line will output result
-                       
-                        op = Operation::OutputResult;
+                    if last_operation == Operation::Literal {
+                        // store node to be checked during next iteration
+                        check_for_result = Some(i);
+                        // set next left to be reassigned 
+                        // if next token is not a literal
+                        next_left = left;
                     } else {
                         // current expression continues to next node
                         // skip over this newline by linking last node
@@ -611,7 +654,7 @@ mod subexpression_tests {
         let input = Lexer::new().lex("5 + 4\n\n10 + 6").unwrap();
 
         let parser = Parser::new();
-         let result = parser.make_groups(&input).unwrap();
+        let result = parser.make_groups(&input).unwrap();
 
         let node_6 = result.nodes.get(5).unwrap();
         assert_eq!(node_6.operation, Operation::OutputResult);
@@ -734,6 +777,22 @@ mod subexpression_tests {
         assert_eq!(node_4.right, None);
 
         assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
+    }
+
+    #[test]
+    fn two_terminated_expressions_separated_by_newline_are_separate_expressions() {
+        let input = Lexer::new().lex("6 + 9\n5 + 4").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(5).unwrap();
+        assert_eq!(node_3.operation, Operation::OutputResult);
+        assert_eq!(node_3.left, Some(4));
+        assert_eq!(node_3.right, Some(6));
+        
+        assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
+        assert_eq!(*result.sub_expressions.get(1).unwrap(), 6);
     }
 }
 
