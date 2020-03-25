@@ -7,6 +7,7 @@ pub enum Operation {
     Group,
     Addition,
     Subtraction,
+    Negation,
     NoOp,
     Literal,
     Multiplication,
@@ -195,6 +196,17 @@ impl Parser {
                             }
                         }
                         None => return Err(format!("End of group found at {} but no start preceded it.", i).into())
+                    }
+                }
+                TokenType::MinusSign => {
+                    match left {
+                        Some(l) => match nodes.get(l) {
+                            Some(n) => if n.operation != Operation::Literal {
+                                op = Operation::Negation;
+                            }
+                            None => unreachable!()
+                        }
+                        None => op = Operation::Negation
                     }
                 }
                 TokenType::HorizontalSpace => {
@@ -391,7 +403,7 @@ mod general_tests {
     fn assigns_initial_operations() {
         let pairs = [
             (TokenType::PlusSign, Operation::Addition),
-            (TokenType::MinusSign, Operation::Subtraction),
+            (TokenType::MinusSign, Operation::Negation),
             (TokenType::MultiplicationSign, Operation::Multiplication),
             (TokenType::DivisionSign, Operation::Division),
             (TokenType::IntegerDivisionOperator, Operation::IntegerDivision),
@@ -795,3 +807,40 @@ mod subexpression_tests {
     }
 }
 
+#[cfg(test)]
+mod reassignment_tests {
+    use crate::{Lexer, Parser, Operation};
+
+    #[test]
+    fn minus_sign_gets_reassigned_to_negation() {
+        let input = Lexer::new().lex("5 + -4").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(4).unwrap();
+        assert_eq!(node_3.operation, Operation::Negation);
+    }
+
+    #[test]
+    fn minus_sign_remains_subtraction_if_value_is_before() {
+        let input = Lexer::new().lex("5 - 4").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(2).unwrap();
+        assert_eq!(node_3.operation, Operation::Subtraction);
+    }
+
+    #[test]
+    fn minus_sign_is_negation_when_only_value() {
+        let input = Lexer::new().lex("-4").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(0).unwrap();
+        assert_eq!(node_3.operation, Operation::Negation);
+    }
+}
