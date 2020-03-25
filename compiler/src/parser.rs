@@ -109,6 +109,49 @@ impl Parser {
 
             let _l = left.unwrap_or_default();
 
+            let mut op = initial_operation_from_token_type(token.token_type);
+
+            // check for result
+            match check_for_result {
+                Some(r) => {
+                    if op == Operation::Literal {
+                        // this is a separate expression
+                        // set check for result node to be have output result
+                        match nodes.get_mut(r) {
+                            Some(n) => {
+                                n.operation = Operation::OutputResult;
+                            }
+                            None => unreachable!()
+                        }                      
+
+                        sub_expressions.push(i);
+                    } else {
+                        // update left's right to point to this node
+                        match left {
+                            Some(l) => {
+                                match nodes.get_mut(l) {
+                                    Some(n) => {
+                                        n.right = Some(i);
+                                    }
+                                    None => unreachable!()
+                                }
+                            }
+                            None => () // end of input
+                        }
+
+                        // The new line before this now serves no purpose
+                        match nodes.get_mut(r) {
+                            Some(n) => {
+                                n.operation = Operation::NoOp;
+                            }
+                            None => unreachable!()
+                        }
+                    }
+                    check_for_result = None;
+                }
+                None => () // nothing to do
+            }
+
             // match token type for special cases
             match token.token_type {
                 TokenType::StartGroup | TokenType::StartExpression => {
@@ -169,108 +212,64 @@ impl Parser {
                         None => () // end of input
                     }
                 }
-                // not all token types have unique behavior
-                _ => ()
-            }
+                TokenType::NewLine => {
+                    if last_token_type == TokenType::NewLine {
+                        // explicit starting new sub expression
+                        // update this token to be a no op
+                        // update previous token to be an output operation
+                        // and push next token index to subexpressions if exists
 
-            let mut op = initial_operation_from_token_type(token.token_type);
+                        op = Operation::NoOp;
 
-            // check for result
-            match check_for_result {
-                Some(r) => {
-                    if op == Operation::Literal {
-                        // this is a separate expression
-                        // set check for result node to be have output result
-                        match nodes.get_mut(r) {
+                        match nodes.get_mut(i - 1) {
                             Some(n) => {
                                 n.operation = Operation::OutputResult;
                             }
                             None => unreachable!()
-                        }                      
+                        }
 
-                        sub_expressions.push(i);
+                        match right {
+                            Some(r) => {
+                                sub_expressions.push(r);
+                            }
+                            None => () // were at end of input
+                        }
                     } else {
-                        // update left's right to point to this node
-                        match left {
-                            Some(l) => {
-                                match nodes.get_mut(l) {
-                                    Some(n) => {
-                                        n.right = Some(i);
+                        // check for implicit new sub expression
+                        // by looking at terminability of previous token
+                        // and the startability of current expression
+                        // an expression is terminable if it ends in a value type
+                        // and an expression can only start with a value type
+
+                        if last_operation == Operation::Literal {
+                            // store node to be checked during next iteration
+                            check_for_result = Some(i);
+                            // set next left to be reassigned 
+                            // if next token is not a literal
+                            next_left = left;
+                        } else {
+                            // current expression continues to next node
+                            // skip over this newline by linking last node
+                            // and set this node to be a noop
+
+                            next_left = left;
+                            op = Operation::NoOp;
+                            match left {
+                                Some(l) => {
+                                    match nodes.get_mut(l) {
+                                        Some(n) => {
+                                            n.right = right;
+                                        }
+                                        None => unreachable!()
                                     }
-                                    None => unreachable!()
                                 }
+                                None => () // end of input
                             }
-                            None => () // end of input
-                        }
-
-                        // The new line before this now serves no purpose
-                        match nodes.get_mut(r) {
-                            Some(n) => {
-                                n.operation = Operation::NoOp;
-                            }
-                            None => unreachable!()
-                        }
-                    }
-                    check_for_result = None;
-                }
-                None => () // nothing to do
-            }
-
-            if token.token_type == TokenType::NewLine {
-                if last_token_type == TokenType::NewLine {
-                    // explicit starting new sub expression
-                    // update this token to be a no op
-                    // update previous token to be an output operation
-                    // and push next token index to subexpressions if exists
-
-                    op = Operation::NoOp;
-
-                    match nodes.get_mut(i - 1) {
-                        Some(n) => {
-                            n.operation = Operation::OutputResult;
-                        }
-                        None => unreachable!()
-                    }
-
-                    match right {
-                        Some(r) => {
-                            sub_expressions.push(r);
-                        }
-                        None => () // were at end of input
-                    }
-                } else {
-                    // check for implicit new sub expression
-                    // by looking at terminability of previous token
-                    // and the startability of current expression
-                    // an expression is terminable if it ends in a value type
-                    // and an expression can only start with a value type
-
-                    if last_operation == Operation::Literal {
-                        // store node to be checked during next iteration
-                        check_for_result = Some(i);
-                        // set next left to be reassigned 
-                        // if next token is not a literal
-                        next_left = left;
-                    } else {
-                        // current expression continues to next node
-                        // skip over this newline by linking last node
-                        // and set this node to be a noop
-
-                        next_left = left;
-                        op = Operation::NoOp;
-                        match left {
-                            Some(l) => {
-                                match nodes.get_mut(l) {
-                                    Some(n) => {
-                                        n.right = right;
-                                    }
-                                    None => unreachable!()
-                                }
-                            }
-                            None => () // end of input
                         }
                     }
                 }
+                // not all token types have unique behavior
+                _ => ()
             }
 
             last_token_type = token.token_type;
