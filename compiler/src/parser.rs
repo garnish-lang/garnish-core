@@ -47,6 +47,7 @@ pub enum Operation {
     Apply,
     PartiallyApply,
     PipeApply,
+    PrefixApply,
     Iterate,
     IterateToSingleValue,
     ReverseIterate,
@@ -91,6 +92,7 @@ impl Parser {
         let mut last_token_type = TokenType::HorizontalSpace;
         let mut last_operation = Operation::NoOp;
         let mut check_for_result: Option<usize> = None;
+        let mut check_for_prefix: Option<usize> = None;
 
         let trim_start = tokens.iter().position(non_white_space).unwrap_or(0);
         let trim_end = tokens.iter().rposition(non_white_space).unwrap_or(tokens.len());
@@ -220,6 +222,18 @@ impl Parser {
                         }
                         None => op = Operation::AbsoluteValue
                     }
+                }
+                TokenType::Identifier => {
+                    match check_for_prefix {
+                        Some(p) => match nodes.get_mut(p) {
+                            Some(n) => n.operation = Operation::PrefixApply,
+                            None => unreachable!()
+                        }
+                        None => () // nothing to do
+                    }
+                }
+                TokenType::InfixOperator => {
+                    check_for_prefix = Some(i);
                 }
                 TokenType::HorizontalSpace => {
                     // set next left to be this nodes left
@@ -387,7 +401,7 @@ fn initial_operation_from_token_type(token_type: TokenType) -> Operation {
         TokenType::ApplyOperator => Operation::Apply,
         TokenType::PartiallyApplyOperator => Operation::PartiallyApply,
         TokenType::PipeOperator => Operation::PipeApply,
-        TokenType::InfixOperator => Operation::Apply,
+        TokenType::InfixOperator => Operation::NoOp,
         TokenType::IterationOperator => Operation::Iterate,
         TokenType::SingleValueIterationOperator => Operation::IterateToSingleValue,
         TokenType::ReverseIterationOperator => Operation::ReverseIterate,
@@ -461,7 +475,7 @@ mod general_tests {
             (TokenType::ApplyOperator, Operation::Apply),
             (TokenType::PartiallyApplyOperator, Operation::PartiallyApply),
             (TokenType::PipeOperator, Operation::PipeApply),
-            (TokenType::InfixOperator, Operation::Apply),
+            (TokenType::InfixOperator, Operation::NoOp),
             (TokenType::IterationOperator, Operation::Iterate),
             (TokenType::SingleValueIterationOperator, Operation::IterateToSingleValue),
             (TokenType::ReverseIterationOperator, Operation::ReverseIterate),
@@ -887,5 +901,16 @@ mod reassignment_tests {
 
         let node_3 = result.nodes.get(0).unwrap();
         assert_eq!(node_3.operation, Operation::AbsoluteValue);
+    }
+
+    #[test]
+    fn fix_operator_reassinged_to_prefix_when_before_an_identifier() {
+        let input = Lexer::new().lex("`expr 5").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(0).unwrap();
+        assert_eq!(node_3.operation, Operation::PrefixApply);
     }
 }
