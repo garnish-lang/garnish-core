@@ -296,6 +296,13 @@ impl Parser {
                     if check_for_suffix.is_some() {
                         check_for_suffix = None;
                     }
+
+                    // if still looking for prefix
+                    // will raise error because this means
+                    // the *fix operator is surrounded by spaces
+                    if check_for_prefix.is_some() {
+                        return Err(format!("Orphan *fix operator at {}.", i).into());
+                    }
                 }
                 TokenType::NewLine => {
                     if last_token_type == TokenType::NewLine {
@@ -1023,5 +1030,15 @@ mod reassignment_tests {
 
         let node_3 = result.nodes.get(4).unwrap();
         assert_eq!(node_3.operation, Operation::PrefixApply);
+    }
+
+    #[test]
+    fn fix_operator_followed_by_space_is_error() {
+        let input = Lexer::new().lex("` expr 5").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input);
+
+        assert_eq!(result.err().unwrap().get_message(), "Orphan *fix operator at 1.");
     }
 }
