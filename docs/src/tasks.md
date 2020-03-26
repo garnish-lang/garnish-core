@@ -348,13 +348,13 @@ Identifying groupings from parenthesis, braces and newlines.
 Separate groups from braces.
 
 Reassign operations. 
-	- ✅Minus sign to subtraction or negation
+	- ✅ Minus sign to subtraction or negation
 	- dot to access or decimal
 	- dot chains etc.
 	- commas to list separators or conditional separators
 	- spaces to list separators
-	- \*fix reasignment
-	- Plus sign to addition or absolute value
+	- ✅ \*fix reasignment
+	- ✅ Plus sign to addition or absolute value
 
 Identify sub expressions from terminability, double newlines and conditionals
 
