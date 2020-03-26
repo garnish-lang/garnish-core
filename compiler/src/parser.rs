@@ -262,6 +262,7 @@ impl Parser {
                             // else this could still be a prefix apply
                             if check_for_suffix.is_some() {
                                 op = Operation::SuffixApply;
+                                check_for_suffix = None;
                             } else {
                                 check_for_prefix = Some(i);
                             }
@@ -290,6 +291,10 @@ impl Parser {
                 
                     if check_for_infix.is_some() {
                         check_for_infix = None;
+                    }
+
+                    if check_for_suffix.is_some() {
+                        check_for_suffix = None;
                     }
                 }
                 TokenType::NewLine => {
@@ -993,5 +998,30 @@ mod reassignment_tests {
 
         let node_3 = result.nodes.get(10).unwrap();
         assert_eq!(node_3.operation, Operation::SuffixApply);
+    }
+
+    #[test]
+    fn suffix_followed_by_prefix_parse_correctly() {
+        let input = Lexer::new().lex("4 expr` + `expr 5").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(3).unwrap();
+        assert_eq!(node_3.operation, Operation::SuffixApply);
+
+        let node_3 = result.nodes.get(7).unwrap();
+        assert_eq!(node_3.operation, Operation::PrefixApply);
+    }
+
+    #[test]
+    fn prefix_after_plain_identifier_pares_correctly() {
+        let input = Lexer::new().lex("value + `expr 5").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(4).unwrap();
+        assert_eq!(node_3.operation, Operation::PrefixApply);
     }
 }
