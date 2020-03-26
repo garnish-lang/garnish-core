@@ -49,6 +49,7 @@ pub enum Operation {
     PipeApply,
     PrefixApply,
     SuffixApply,
+    InfixApply,
     Iterate,
     IterateToSingleValue,
     ReverseIterate,
@@ -95,6 +96,7 @@ impl Parser {
         let mut check_for_result: Option<usize> = None;
         let mut check_for_prefix: Option<usize> = None;
         let mut check_for_suffix: Option<usize> = None;
+        let mut check_for_infix: Option<usize> = None;
 
         let trim_start = tokens.iter().position(non_white_space).unwrap_or(0);
         let trim_end = tokens.iter().rposition(non_white_space).unwrap_or(tokens.len());
@@ -228,19 +230,42 @@ impl Parser {
                 TokenType::Identifier => {
                     match check_for_prefix {
                         Some(p) => match nodes.get_mut(p) {
-                            Some(n) => n.operation = Operation::PrefixApply,
+                            Some(n) => {
+                                n.operation = Operation::PrefixApply;
+
+                                // also set check for infix
+                                check_for_infix = Some(p);
+
+                                check_for_prefix = None;
+                            }
                             None => unreachable!()
                         }
-                        None => () // nothing to do
+                        // if not checking for prefix, is could still be a suffix apply
+                        None => check_for_suffix = Some(i)
                     }
-
-                    check_for_suffix = Some(i);
                 }
                 TokenType::InfixOperator => {
-                    check_for_prefix = Some(i);
+                    match check_for_infix {
+                        Some(f) => {
+                            // update this node and previous node to be infix apply
+                            op = Operation::InfixApply;
+                            match nodes.get_mut(f) {
+                                Some(n) => n.operation = Operation::InfixApply,
+                                None => unreachable!()
+                            }
 
-                    if check_for_suffix.is_some() {
-                        op = Operation::SuffixApply;
+                            check_for_infix = None;
+                        }
+                        None => {
+                            // not checking for infix
+                            // first see if looking for suffix
+                            // else this could still be a prefix apply
+                            if check_for_suffix.is_some() {
+                                op = Operation::SuffixApply;
+                            } else {
+                                check_for_prefix = Some(i);
+                            }
+                        }
                     }
                 }
                 TokenType::HorizontalSpace => {
@@ -256,6 +281,15 @@ impl Parser {
                             }
                         }
                         None => () // end of input
+                    }
+
+                    // *fix termination
+                    // *fix operators must be right next to their identifiers
+                    // so if we are checking for any off them
+                    // we stop checking now
+                
+                    if check_for_infix.is_some() {
+                        check_for_infix = None;
                     }
                 }
                 TokenType::NewLine => {
@@ -912,7 +946,7 @@ mod reassignment_tests {
     }
 
     #[test]
-    fn fix_operator_reassinged_to_prefix_when_before_an_identifier() {
+    fn fix_operator_reassigned_to_prefix_when_before_an_identifier() {
         let input = Lexer::new().lex("`expr 5").unwrap();
 
         let parser = Parser::new();
@@ -923,13 +957,41 @@ mod reassignment_tests {
     }
 
     #[test]
-    fn fix_operator_reassinged_to_suffix_when_after_an_identifier() {
+    fn fix_operator_reassigned_to_suffix_when_after_an_identifier() {
         let input = Lexer::new().lex("5 expr`").unwrap();
 
         let parser = Parser::new();
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(3).unwrap();
+        assert_eq!(node_3.operation, Operation::SuffixApply);
+    }
+
+    #[test]
+    fn fix_operator_reassigned_to_infix_when_surrounding_an_identifier() {
+        let input = Lexer::new().lex("5 `expr` 4").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(2).unwrap();
+        assert_eq!(node_3.operation, Operation::InfixApply);
+
+        let node_3 = result.nodes.get(4).unwrap();
+        assert_eq!(node_3.operation, Operation::InfixApply);
+    }
+
+    #[test]
+    fn prefix_followed_by_suffix_parse_correctly() {
+        let input = Lexer::new().lex("`expr 4 + 5 expr`").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(0).unwrap();
+        assert_eq!(node_3.operation, Operation::PrefixApply);
+
+        let node_3 = result.nodes.get(10).unwrap();
         assert_eq!(node_3.operation, Operation::SuffixApply);
     }
 }
