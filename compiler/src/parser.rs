@@ -48,6 +48,7 @@ pub enum Operation {
     PartiallyApply,
     PipeApply,
     PrefixApply,
+    SuffixApply,
     Iterate,
     IterateToSingleValue,
     ReverseIterate,
@@ -93,6 +94,7 @@ impl Parser {
         let mut last_operation = Operation::NoOp;
         let mut check_for_result: Option<usize> = None;
         let mut check_for_prefix: Option<usize> = None;
+        let mut check_for_suffix: Option<usize> = None;
 
         let trim_start = tokens.iter().position(non_white_space).unwrap_or(0);
         let trim_end = tokens.iter().rposition(non_white_space).unwrap_or(tokens.len());
@@ -231,9 +233,15 @@ impl Parser {
                         }
                         None => () // nothing to do
                     }
+
+                    check_for_suffix = Some(i);
                 }
                 TokenType::InfixOperator => {
                     check_for_prefix = Some(i);
+
+                    if check_for_suffix.is_some() {
+                        op = Operation::SuffixApply;
+                    }
                 }
                 TokenType::HorizontalSpace => {
                     // set next left to be this nodes left
@@ -912,5 +920,16 @@ mod reassignment_tests {
 
         let node_3 = result.nodes.get(0).unwrap();
         assert_eq!(node_3.operation, Operation::PrefixApply);
+    }
+
+    #[test]
+    fn fix_operator_reassinged_to_suffix_when_after_an_identifier() {
+        let input = Lexer::new().lex("5 expr`").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(3).unwrap();
+        assert_eq!(node_3.operation, Operation::SuffixApply);
     }
 }
