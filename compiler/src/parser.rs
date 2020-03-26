@@ -301,7 +301,8 @@ impl Parser {
                     // will raise error because this means
                     // the *fix operator is surrounded by spaces
                     if check_for_prefix.is_some() {
-                        return Err(format!("Orphan *fix operator at {}.", i).into());
+                        // actual *fix operator is previous token, so subtract 1 for location
+                        return Err(format!("Orphan *fix operator at {}.", i - 1).into());
                     }
                 }
                 TokenType::NewLine => {
@@ -1039,6 +1040,6 @@ mod reassignment_tests {
         let parser = Parser::new();
         let result = parser.make_groups(&input);
 
-        assert_eq!(result.err().unwrap().get_message(), "Orphan *fix operator at 1.");
+        assert_eq!(result.err().unwrap().get_message(), "Orphan *fix operator at 0.");
     }
 }
