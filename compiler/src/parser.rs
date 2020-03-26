@@ -8,6 +8,7 @@ pub enum Operation {
     Addition,
     Subtraction,
     Negation,
+    AbsoluteValue,
     NoOp,
     Literal,
     Multiplication,
@@ -209,6 +210,17 @@ impl Parser {
                         None => op = Operation::Negation
                     }
                 }
+                TokenType::PlusSign => {
+                    match left {
+                        Some(l) => match nodes.get(l) {
+                            Some(n) => if n.operation != Operation::Literal {
+                                op = Operation::AbsoluteValue;
+                            }
+                            None => unreachable!()
+                        }
+                        None => op = Operation::AbsoluteValue
+                    }
+                }
                 TokenType::HorizontalSpace => {
                     // set next left to be this nodes left
                     next_left = left;
@@ -402,7 +414,7 @@ mod general_tests {
     #[test]
     fn assigns_initial_operations() {
         let pairs = [
-            (TokenType::PlusSign, Operation::Addition),
+            (TokenType::PlusSign, Operation::AbsoluteValue),
             (TokenType::MinusSign, Operation::Negation),
             (TokenType::MultiplicationSign, Operation::Multiplication),
             (TokenType::DivisionSign, Operation::Division),
@@ -842,5 +854,38 @@ mod reassignment_tests {
 
         let node_3 = result.nodes.get(0).unwrap();
         assert_eq!(node_3.operation, Operation::Negation);
+    }
+    
+    #[test]
+    fn plus_sign_gets_reassigned_to_absolute_value() {
+        let input = Lexer::new().lex("5 - +4").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(4).unwrap();
+        assert_eq!(node_3.operation, Operation::AbsoluteValue);
+    }
+
+    #[test]
+    fn plus_sign_remains_addition_if_value_is_before() {
+        let input = Lexer::new().lex("5 + 4").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(2).unwrap();
+        assert_eq!(node_3.operation, Operation::Addition);
+    }
+
+    #[test]
+    fn plus_sign_is_absolute_value_when_only_value() {
+        let input = Lexer::new().lex("+4").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node_3 = result.nodes.get(0).unwrap();
+        assert_eq!(node_3.operation, Operation::AbsoluteValue);
     }
 }
