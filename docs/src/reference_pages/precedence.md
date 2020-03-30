@@ -23,8 +23,8 @@
 | 20         | =                                                                  | Create Pair      | right-left    |
 | 21         | ,                                                                  | Create List      | left-right    |
 | 22         | ~~                                                                 | Partially Apply  | left-right    |
-| 23         | expr`                                                              | Suffix Apply     | right-left    |
-| 24         | `expr                                                              | Prefix Apply     | left-right    |
+| 23         | `expr                                                              | Prefix Apply     | left-right    |
+| 24         | expr`                                                              | Suffix Apply     | right-left    |
 | 25         | \`expr\`                                                           | Infix Apply      | left-right    |
 | 26         | => !> =?>                                                          | Conditional      | left-right    |
 | 27         | ~ ~>                                                               | Functional       | left-right    |
