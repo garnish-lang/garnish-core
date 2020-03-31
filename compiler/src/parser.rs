@@ -329,7 +329,7 @@ impl Parser {
                     match left {
                         Some(l) => {
                             let is_literal = match nodes.get(l) {
-                                Some(nl) => nl.operation == Operation::Literal,
+                                Some(nl) => nl.operation == Operation::Literal && nl.token.token_type != TokenType::StartGroup && nl.token.token_type != TokenType::StartExpression,
                                 None => false
                             };
 
@@ -1122,6 +1122,22 @@ mod reassignment_tests {
         assert_eq!(node.left, Some(2));
         assert_eq!(node.right, Some(4));
         assert_eq!(node.operation, Operation::ListSeparator);
+    }
+
+    #[test]
+    fn space_after_open_group_and_before_close_group_are_not_list_separators() {
+        for item in ["( 5 10 15 )", "{ 5 10 15 }"].iter() {
+            let input = Lexer::new().lex(item).unwrap();
+
+            let parser = Parser::new();
+            let result = parser.make_groups(&input).unwrap();
+
+            let node = result.nodes.get(1).unwrap();
+            assert_eq!(node.operation, Operation::NoOp);
+
+            let node = result.nodes.get(8).unwrap();
+            assert_eq!(node.operation, Operation::NoOp);
+        }
     }
 
     #[test]
