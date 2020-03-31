@@ -95,6 +95,7 @@ impl Parser {
         let mut last_token_type = TokenType::HorizontalSpace;
         let mut last_operation = Operation::NoOp;
         let mut check_for_result: Option<usize> = None;
+        let mut check_for_list_separator: Option<usize> = None;
         let mut check_for_prefix: Option<usize> = None;
         let mut check_for_suffix: Option<usize> = None;
         let mut check_for_infix: Option<usize> = None;
@@ -105,7 +106,7 @@ impl Parser {
         let trimmed_tokens = &tokens[trim_start..=trim_end];
 
         for (i, token) in trimmed_tokens.iter().enumerate() {
-            let left = match next_left {
+            let mut left = match next_left {
                 Some(l) => {
                     // only use next left once
                     next_left = None;
@@ -159,6 +160,37 @@ impl Parser {
                     check_for_result = None;
                 }
                 None => () // nothing to do
+            }
+
+            match check_for_list_separator {
+                // previous node was a space with value on the left
+                // if this node is a value the space is a list separator
+                Some(r) => {
+                    if op == Operation::Literal {
+                        // update space to be list separator
+                        match nodes.get_mut(r) {
+                            Some(n) => n.operation = Operation::ListSeparator,
+                            None => unreachable!()
+                        }
+                    } else {
+                        // update space's left's right to point to this node
+                        let space_left = match nodes.get(r) {
+                            Some(n) => {
+                                left = n.left;
+                                match n.left {
+                                    Some(nl) => match nodes.get_mut(nl) {
+                                        Some(n) => n.right = Some(i),
+                                        None => unreachable!()
+                                    }
+                                    None => () // no left
+                                }
+                            }
+                            None => unreachable!()
+                        };
+                    }
+                    check_for_list_separator = None;
+                }
+                None => ()
             }
 
             // match token type for special cases
@@ -275,11 +307,20 @@ impl Parser {
                     next_left = left;
                     match left {
                         Some(l) => {
-                            match nodes.get_mut(l) {
-                                Some(n) => {
-                                    n.right = right;
+                            let is_literal = match nodes.get(l) {
+                                Some(nl) => nl.operation == Operation::Literal,
+                                None => false
+                            };
+
+                            if is_literal {
+                                check_for_list_separator = Some(i);
+                            } else {
+                                match nodes.get_mut(l) {
+                                    Some(n) => {
+                                        n.right = right;
+                                    }
+                                    None => unreachable!()
                                 }
-                                None => unreachable!()
                             }
                         }
                         None => () // end of input
@@ -1042,5 +1083,23 @@ mod reassignment_tests {
         let result = parser.make_groups(&input);
 
         assert_eq!(result.err().unwrap().get_message(), "Orphan *fix operator at 0.");
+    }
+
+    #[test]
+    fn space_between_literals_on_same_line_is_list_separator() {
+        let input = Lexer::new().lex("5 10 15").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(1).unwrap();
+        assert_eq!(node.left, Some(0));
+        assert_eq!(node.right, Some(2));
+        assert_eq!(node.operation, Operation::ListSeparator);
+
+        let node = result.nodes.get(3).unwrap();
+        assert_eq!(node.left, Some(2));
+        assert_eq!(node.right, Some(4));
+        assert_eq!(node.operation, Operation::ListSeparator);
     }
 }
