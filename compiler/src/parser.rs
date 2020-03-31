@@ -241,11 +241,11 @@ impl Parser {
                     }
                 }
                 TokenType::ConditionalTrueOperator => {
-                    last_conditional_group = Some(groups.len());
+                    last_conditional_group = Some(groups_stack.len());
                 }
                 TokenType::Comma => {
                     match last_conditional_group {
-                        Some(g) if groups.len() == g => {
+                        Some(g) if groups_stack.len() == g => {
                             op = Operation::ConditionalContinuation;
                         }
                         _ => () // nothing to do
@@ -1124,6 +1124,26 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node = result.nodes.get(9).unwrap();
+        assert_eq!(node.operation, Operation::ConditionalContinuation);
+    }
+
+    #[test]
+    fn commas_in_different_group_than_conditional_are_unchanged() {
+        let input = Lexer::new().lex("value == 5 => (25, 50, 75, 100), value == 10 => 1000").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(10).unwrap();
+        assert_eq!(node.operation, Operation::ListSeparator);
+
+        let node = result.nodes.get(13).unwrap();
+        assert_eq!(node.operation, Operation::ListSeparator);
+
+        let node = result.nodes.get(16).unwrap();
+        assert_eq!(node.operation, Operation::ListSeparator);
+
+        let node = result.nodes.get(20).unwrap();
         assert_eq!(node.operation, Operation::ConditionalContinuation);
     }
 }
