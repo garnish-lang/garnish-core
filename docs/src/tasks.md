@@ -352,7 +352,7 @@ Reassign operations.
 	- dot to access or decimal
 	- dot chains etc.
 	- commas to list separators or conditional separators
-	- spaces to list separators
+	- ✅ spaces to list separators
 	- ✅ \*fix reasignment
 	- ✅ Plus sign to addition or absolute value
 
