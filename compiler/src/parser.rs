@@ -91,6 +91,7 @@ impl Parser {
         let mut sub_expressions = vec![0]; // assuming first sub expression is always start of input
 
         let mut groups_stack = vec![];
+        let mut conditional_groups_stack = vec![None]; // keep extra in vec so condtitionals in group 0 can be used
         let mut next_left = None;
 
         let mut last_token_type = TokenType::HorizontalSpace;
@@ -100,7 +101,6 @@ impl Parser {
         let mut check_for_prefix: Option<usize> = None;
         let mut check_for_suffix: Option<usize> = None;
         let mut check_for_infix: Option<usize> = None;
-        let mut last_conditional_group: Option<usize> = None;
 
         let trim_start = tokens.iter().position(non_white_space).unwrap_or(0);
         let trim_end = tokens.iter().rposition(non_white_space).unwrap_or(tokens.len());
@@ -200,6 +200,8 @@ impl Parser {
                 TokenType::StartGroup | TokenType::StartExpression => {
                     groups.push(i);
                     groups_stack.push(i);
+                    // keep conditional groups in sync
+                    conditional_groups_stack.push(None);
                 }
                 TokenType::EndGroup | TokenType::EndExpression => {
                     match groups_stack.pop() {
@@ -236,27 +238,26 @@ impl Parser {
                                 }
                                 None => unreachable!("Group start not in nodes vec.")
                             }
-
-                            match last_conditional_group {
-                                Some(g) if g == groups_stack.len() + 1 => {
-                                    last_conditional_group = None;
-                                }
-                                _ => () // do nothing
-                            }
+                            
+                            // remove conditional group that might've in this group
+                            conditional_groups_stack.pop();
                         }
                         None => return Err(format!("End of group found at {} but no start preceded it.", i).into())
                     }
                 }
                 TokenType::ConditionalTrueOperator => {
-                    last_conditional_group = Some(groups_stack.len());
+                    conditional_groups_stack[groups_stack.len()] = Some(groups_stack.len());
                 }
                 TokenType::Comma => {
-                    match last_conditional_group {
-                        Some(g) if groups_stack.len() == g => {
-                            op = Operation::ConditionalContinuation;
+                    match conditional_groups_stack.get(groups_stack.len()) {
+                        Some(item) => match item {
+                            Some(g) => op = Operation::ConditionalContinuation,
+                            None => () // nothing to do
                         }
-                        _ => () // nothing to do
+                        None => unreachable!() // conditional groups should be in sync with groups
                     }
+
+                    conditional_groups_stack[groups_stack.len()] = None;
                 }
                 TokenType::MinusSign => {
                     match left {
@@ -1168,5 +1169,41 @@ mod reassignment_tests {
 
         let node = result.nodes.get(18).unwrap();
         assert_eq!(node.operation, Operation::ListSeparator);
+    }
+
+    #[test]
+    fn conditional_with_nested_conditional_chain_has_its_continuation_set() {
+        let input = Lexer::new().lex("value == 5 => (x == 1 => :true, x == 2 => :false), value == 10 => 100").unwrap();
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(19).unwrap();
+        assert_eq!(node.operation, Operation::ConditionalContinuation);
+
+        let node = result.nodes.get(32).unwrap();
+        assert_eq!(node.operation, Operation::ConditionalContinuation);
+    }
+
+    #[test]
+    fn conditional_check_terminates_after_first_comma() {
+        let input = Lexer::new().lex("value == 5 => 100, 10, 20, 30").unwrap();
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(9).unwrap();
+        assert_eq!(node.operation, Operation::ConditionalContinuation);
+
+        let node = result.nodes.get(12).unwrap();
+        assert_eq!(node.operation, Operation::ListSeparator);
+    }
+
+    #[test]
+    fn conditional_continues_through_new_lines() {
+        let input = Lexer::new().lex("value == 5 => 5 + \n4 - 3, value == 10 => 1000").unwrap();
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(18).unwrap();
+        assert_eq!(node.operation, Operation::ConditionalContinuation);
     }
 }
