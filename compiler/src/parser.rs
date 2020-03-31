@@ -236,6 +236,13 @@ impl Parser {
                                 }
                                 None => unreachable!("Group start not in nodes vec.")
                             }
+
+                            match last_conditional_group {
+                                Some(g) if g == groups_stack.len() + 1 => {
+                                    last_conditional_group = None;
+                                }
+                                _ => () // do nothing
+                            }
                         }
                         None => return Err(format!("End of group found at {} but no start preceded it.", i).into())
                     }
@@ -1145,5 +1152,21 @@ mod reassignment_tests {
 
         let node = result.nodes.get(20).unwrap();
         assert_eq!(node.operation, Operation::ConditionalContinuation);
+    }
+
+    #[test]
+    fn conditional_ends_with_group() {
+        let input = Lexer::new().lex("(value == 5 => 100), (10, 20, 30)").unwrap();
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(11).unwrap();
+        assert_eq!(node.operation, Operation::ListSeparator);
+
+        let node = result.nodes.get(15).unwrap();
+        assert_eq!(node.operation, Operation::ListSeparator);
+
+        let node = result.nodes.get(18).unwrap();
+        assert_eq!(node.operation, Operation::ListSeparator);
     }
 }
