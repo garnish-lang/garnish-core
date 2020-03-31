@@ -45,6 +45,7 @@ pub enum Operation {
     InvokeIfTrue,
     InvokeIfFalse,
     ResultCheckInvoke,
+    ConditionalContinuation,
     Apply,
     PartiallyApply,
     PipeApply,
@@ -99,6 +100,7 @@ impl Parser {
         let mut check_for_prefix: Option<usize> = None;
         let mut check_for_suffix: Option<usize> = None;
         let mut check_for_infix: Option<usize> = None;
+        let mut last_conditional_group: Option<usize> = None;
 
         let trim_start = tokens.iter().position(non_white_space).unwrap_or(0);
         let trim_end = tokens.iter().rposition(non_white_space).unwrap_or(tokens.len());
@@ -236,6 +238,17 @@ impl Parser {
                             }
                         }
                         None => return Err(format!("End of group found at {} but no start preceded it.", i).into())
+                    }
+                }
+                TokenType::ConditionalTrueOperator => {
+                    last_conditional_group = Some(groups.len());
+                }
+                TokenType::Comma => {
+                    match last_conditional_group {
+                        Some(g) if groups.len() == g => {
+                            op = Operation::ConditionalContinuation;
+                        }
+                        _ => () // nothing to do
                     }
                 }
                 TokenType::MinusSign => {
@@ -1101,5 +1114,16 @@ mod reassignment_tests {
         assert_eq!(node.left, Some(2));
         assert_eq!(node.right, Some(4));
         assert_eq!(node.operation, Operation::ListSeparator);
+    }
+
+    #[test]
+    fn first_comma_in_same_group_after_conditional_is_conditional_continuation() {
+        let input = Lexer::new().lex("value == 5 => 100, value == 10 => 1000").unwrap();
+
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(9).unwrap();
+        assert_eq!(node.operation, Operation::ConditionalContinuation);
     }
 }
