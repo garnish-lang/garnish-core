@@ -103,6 +103,7 @@ impl Parser {
         let mut check_for_suffix: Option<usize> = None;
         let mut check_for_infix: Option<usize> = None;
         let mut check_for_decimal: Option<usize> = None;
+        let mut in_access = false;
 
         let trim_start = tokens.iter().position(non_white_space).unwrap_or(0);
         let trim_end = tokens.iter().rposition(non_white_space).unwrap_or(tokens.len());
@@ -296,8 +297,11 @@ impl Parser {
                     match left {
                         Some(l) => match nodes.get(l) {
                             Some(n) => {
-                                if n.token.token_type == TokenType::Number {
+                                if n.token.token_type == TokenType::Number && !in_access {
                                     check_for_decimal = Some(i);
+                                } else {
+                                    // flag as access chain
+                                    in_access = true;
                                 }
                             }
                             None => unreachable!()
@@ -1255,5 +1259,21 @@ mod reassignment_tests {
 
         let node = result.nodes.get(1).unwrap();
         assert_eq!(node.operation, Operation::Decimal);
+    }
+
+    #[test]
+    fn contiguous_dots_after_non_number_remain_access_operation() {
+        let input = Lexer::new().lex("value.1.10.5").unwrap();
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(1).unwrap();
+        assert_eq!(node.operation, Operation::Access);
+
+        let node = result.nodes.get(3).unwrap();
+        assert_eq!(node.operation, Operation::Access);
+
+        let node = result.nodes.get(5).unwrap();
+        assert_eq!(node.operation, Operation::Access);
     }
 }
