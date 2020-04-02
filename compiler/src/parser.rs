@@ -11,6 +11,7 @@ pub enum Operation {
     AbsoluteValue,
     NoOp,
     Literal,
+    Decimal,
     Multiplication,
     Division,
     IntegerDivision,
@@ -101,6 +102,7 @@ impl Parser {
         let mut check_for_prefix: Option<usize> = None;
         let mut check_for_suffix: Option<usize> = None;
         let mut check_for_infix: Option<usize> = None;
+        let mut check_for_decimal: Option<usize> = None;
 
         let trim_start = tokens.iter().position(non_white_space).unwrap_or(0);
         let trim_end = tokens.iter().rposition(non_white_space).unwrap_or(tokens.len());
@@ -279,6 +281,28 @@ impl Parser {
                             None => unreachable!()
                         }
                         None => op = Operation::AbsoluteValue
+                    }
+                }
+                TokenType::Number => {
+                    match check_for_decimal {
+                        Some(d) => match nodes.get_mut(d) {
+                            Some(n) => n.operation = Operation::Decimal,
+                            None => unreachable!()
+                        }
+                        None => () // nothing to do
+                    }
+                }
+                TokenType::DotOperator => {
+                    match left {
+                        Some(l) => match nodes.get(l) {
+                            Some(n) => {
+                                if n.token.token_type == TokenType::Number {
+                                    check_for_decimal = Some(i);
+                                }
+                            }
+                            None => unreachable!()
+                        }
+                        None => () // begining of input
                     }
                 }
                 TokenType::Identifier => {
@@ -1221,5 +1245,15 @@ mod reassignment_tests {
 
         let node = result.nodes.get(18).unwrap();
         assert_eq!(node.operation, Operation::ConditionalContinuation);
+    }
+
+    #[test]
+    fn dot_reassigned_to_decimal_when_between_numbers() {
+        let input = Lexer::new().lex("3.14").unwrap();
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(1).unwrap();
+        assert_eq!(node.operation, Operation::Decimal);
     }
 }
