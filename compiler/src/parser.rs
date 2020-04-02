@@ -198,6 +198,14 @@ impl Parser {
                 None => ()
             }
 
+            // check to cancel access chain
+            if in_access {
+                if (last_token_type == TokenType::Number || last_token_type == TokenType::Identifier)
+                    && token.token_type != TokenType::DotOperator {
+                    in_access = false;
+                }
+            }
+
             // match token type for special cases
             match token.token_type {
                 TokenType::StartGroup | TokenType::StartExpression => {
@@ -1275,5 +1283,24 @@ mod reassignment_tests {
 
         let node = result.nodes.get(5).unwrap();
         assert_eq!(node.operation, Operation::Access);
+    }
+
+    #[test]
+    fn dot_chain_ends_after_no_more_dots() {
+        let input = Lexer::new().lex("value.1.10.5 10.5 20").unwrap();
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(1).unwrap();
+        assert_eq!(node.operation, Operation::Access);
+
+        let node = result.nodes.get(3).unwrap();
+        assert_eq!(node.operation, Operation::Access);
+
+        let node = result.nodes.get(5).unwrap();
+        assert_eq!(node.operation, Operation::Access);
+
+        let node = result.nodes.get(9).unwrap();
+        assert_eq!(node.operation, Operation::Decimal);
     }
 }
