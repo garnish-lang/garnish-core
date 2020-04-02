@@ -203,6 +203,9 @@ impl Parser {
                 if (last_token_type == TokenType::Number || last_token_type == TokenType::Identifier)
                     && token.token_type != TokenType::DotOperator {
                     in_access = false;
+                } else if last_token_type == TokenType::DotOperator &&
+                    token.token_type != TokenType::Number && token.token_type != TokenType::Identifier {
+                    return Err(format!("Trailing access operator at {}.", i - 1).into());
                 }
             }
 
@@ -1302,5 +1305,14 @@ mod reassignment_tests {
 
         let node = result.nodes.get(9).unwrap();
         assert_eq!(node.operation, Operation::Decimal);
+    }
+
+    #[test]
+    fn dot_chain_raises_error_if_ended_with_dot() {
+        let input = Lexer::new().lex("value.1.10.5. + 5").unwrap();
+        let parser = Parser::new();
+        let result = parser.make_groups(&input);
+
+        assert_eq!(result.err().unwrap().get_message(), "Trailing access operator at 7.");
     }
 }
