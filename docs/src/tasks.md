@@ -349,13 +349,13 @@ Separate groups from braces.
 
 Reassign operations. 
 	- ✅ Minus sign to subtraction or negation
-	- dot to access or decimal
-	- dot chains etc.
+	- ✅ dot to access or decimal
+	- ✅ dot chains etc.
 	- ✅ commas to list separators or conditional separators
 	- ✅ spaces to list separators
 	- ✅ \*fix reasignment
 	- ✅ Plus sign to addition or absolute value
-    -  Newlines don't cause output when inside group
+    - ✅ Newlines don't cause output when inside group
 
 Identify sub expressions from terminability, double newlines and conditionals
 
