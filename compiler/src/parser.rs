@@ -277,7 +277,9 @@ impl Parser {
                         None => return Err(format!("End of group found at {} but no start preceded it.", i).into())
                     }
                 }
-                TokenType::ConditionalTrueOperator => {
+                TokenType::ConditionalTrueOperator |
+                TokenType::ConditionalFalseOperator |
+                TokenType::ConditionalResultOperator => {
                     conditional_groups_stack[groups_stack.len()] = Some(groups_stack.len());
                 }
                 TokenType::Comma => {
@@ -1222,13 +1224,15 @@ mod reassignment_tests {
 
     #[test]
     fn first_comma_in_same_group_after_conditional_is_conditional_continuation() {
-        let input = Lexer::new().lex("value == 5 => 100, value == 10 => 1000").unwrap();
+        for text in ["=>", "!>", "=?>"].iter() {
+            let input = Lexer::new().lex(&format!("value == 5 {} 100, value == 10 {} 1000", text, text)).unwrap();
 
-        let parser = Parser::new();
-        let result = parser.make_groups(&input).unwrap();
+            let parser = Parser::new();
+            let result = parser.make_groups(&input).unwrap();
 
-        let node = result.nodes.get(9).unwrap();
-        assert_eq!(node.operation, Operation::ConditionalContinuation);
+            let node = result.nodes.get(9).unwrap();
+            assert_eq!(node.operation, Operation::ConditionalContinuation);
+        }
     }
 
     #[test]
