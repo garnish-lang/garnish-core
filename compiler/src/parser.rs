@@ -91,7 +91,7 @@ impl Parser {
         let mut groups = vec![];
         let mut sub_expressions = vec![0]; // assuming first sub expression is always start of input
 
-        let mut groups_stack = vec![];
+        let mut groups_stack: Vec<usize> = vec![];
         let mut conditional_groups_stack = vec![None]; // keep extra in vec so condtitionals in group 0 can be used
         let mut next_left = None;
 
@@ -125,6 +125,15 @@ impl Parser {
             let _l = left.unwrap_or_default();
 
             let mut op = initial_operation_from_token_type(token.token_type);
+
+            let mut token_type = token.token_type;
+            let in_group = match groups_stack.iter().peekable().peek() {
+                Some(g) => match nodes.get(**g) {
+                    Some(n) => n.token.token_type == TokenType::StartGroup,
+                    None => unreachable!()
+                }
+                None => false
+            };
 
             // check for result
             match check_for_result {
@@ -171,12 +180,14 @@ impl Parser {
                 // previous node was a space with value on the left
                 // if this node is a value the space is a list separator
                 Some(r) => {
-                    if op == Operation::Literal {
+                    if op == Operation::Literal || (in_group && token.token_type == TokenType::NewLine) {
                         // update space to be list separator
                         match nodes.get_mut(r) {
                             Some(n) => n.operation = Operation::ListSeparator,
                             None => unreachable!()
                         }
+
+                        left = Some(r);
                     } else {
                         // update space's left's right to point to this node
                         let space_left = match nodes.get(r) {
@@ -209,8 +220,15 @@ impl Parser {
                 }
             }
 
+            // Outputing a result isn't allowed in a group
+            // so all newlines get space logic applied to them
+            if in_group && token_type == TokenType::NewLine {
+                token_type = TokenType::HorizontalSpace;
+            }
+
+
             // match token type for special cases
-            match token.token_type {
+            match token_type {
                 TokenType::StartGroup | TokenType::StartExpression => {
                     groups.push(i);
                     groups_stack.push(i);
@@ -569,7 +587,7 @@ fn initial_operation_from_token_type(token_type: TokenType) -> Operation {
         TokenType::IterationComplete => Operation::IterationComplete,
         TokenType::Character => Operation::Literal,
         TokenType::CharacterList => Operation::Literal,
-        TokenType::NewLine => Operation::CheckForResult,
+        TokenType::NewLine => Operation::NoOp,
     }
 }
 
@@ -987,6 +1005,29 @@ mod subexpression_tests {
         
         assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
         assert_eq!(*result.sub_expressions.get(1).unwrap(), 6);
+    }
+
+    #[test]
+    fn single_newline_in_group_is_treated_like_space() {
+        let input = Lexer::new().lex("(5 + 4\n9 + 2)").unwrap();
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(6).unwrap();
+        assert_eq!(node.operation, Operation::ListSeparator);
+    }
+
+    #[test]
+    fn double_newline_in_group_is_treated_like_space() {
+        let input = Lexer::new().lex("(5 + 4\n\n9 + 2)").unwrap();
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(6).unwrap();
+        assert_eq!(node.operation, Operation::ListSeparator);
+
+        let node = result.nodes.get(7).unwrap();
+        assert_eq!(node.operation, Operation::NoOp);
     }
 }
 
