@@ -3,7 +3,7 @@ use expr_lang_common::Result;
 use crate::{Token, TokenType};
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq)]
-pub enum Operation {
+pub enum Classification {
     Group,
     Addition,
     Subtraction,
@@ -67,7 +67,7 @@ pub enum Operation {
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct Node {
-    operation: Operation,
+    classification: Classification,
     token: Token,
     left: Option<usize>,
     right: Option<usize>,
@@ -96,7 +96,7 @@ impl Parser {
         let mut next_left = None;
 
         let mut last_token_type = TokenType::HorizontalSpace;
-        let mut last_operation = Operation::NoOp;
+        let mut last_classification = Classification::NoOp;
         let mut check_for_result: Option<usize> = None;
         let mut check_for_list_separator: Option<usize> = None;
         let mut check_for_prefix: Option<usize> = None;
@@ -124,7 +124,7 @@ impl Parser {
 
             let _l = left.unwrap_or_default();
 
-            let mut op = initial_operation_from_token_type(token.token_type);
+            let mut classification = initial_classification_from_token_type(token.token_type);
 
             let mut token_type = token.token_type;
             let in_group = match groups_stack.iter().peekable().peek() {
@@ -138,12 +138,12 @@ impl Parser {
             // check for result
             match check_for_result {
                 Some(r) => {
-                    if op == Operation::Literal {
+                    if classification == Classification::Literal {
                         // this is a separate expression
                         // set check for result node to be have output result
                         match nodes.get_mut(r) {
                             Some(n) => {
-                                n.operation = Operation::OutputResult;
+                                n.classification = Classification::OutputResult;
                             }
                             None => unreachable!()
                         }                      
@@ -166,7 +166,7 @@ impl Parser {
                         // The new line before this now serves no purpose
                         match nodes.get_mut(r) {
                             Some(n) => {
-                                n.operation = Operation::NoOp;
+                                n.classification = Classification::NoOp;
                             }
                             None => unreachable!()
                         }
@@ -180,10 +180,10 @@ impl Parser {
                 // previous node was a space with value on the left
                 // if this node is a value the space is a list separator
                 Some(r) => {
-                    if op == Operation::Literal || (in_group && token.token_type == TokenType::NewLine) {
+                    if classification == Classification::Literal || (in_group && token.token_type == TokenType::NewLine) {
                         // update space to be list separator
                         match nodes.get_mut(r) {
-                            Some(n) => n.operation = Operation::ListSeparator,
+                            Some(n) => n.classification = Classification::ListSeparator,
                             None => unreachable!()
                         }
 
@@ -285,7 +285,7 @@ impl Parser {
                 TokenType::Comma => {
                     match conditional_groups_stack.get(groups_stack.len()) {
                         Some(item) => match item {
-                            Some(g) => op = Operation::ConditionalContinuation,
+                            Some(g) => classification = Classification::ConditionalContinuation,
                             None => () // nothing to do
                         }
                         None => unreachable!() // conditional groups should be in sync with groups
@@ -296,29 +296,29 @@ impl Parser {
                 TokenType::MinusSign => {
                     match left {
                         Some(l) => match nodes.get(l) {
-                            Some(n) => if n.operation != Operation::Literal {
-                                op = Operation::Negation;
+                            Some(n) => if n.classification != Classification::Literal {
+                                classification = Classification::Negation;
                             }
                             None => unreachable!()
                         }
-                        None => op = Operation::Negation
+                        None => classification = Classification::Negation
                     }
                 }
                 TokenType::PlusSign => {
                     match left {
                         Some(l) => match nodes.get(l) {
-                            Some(n) => if n.operation != Operation::Literal {
-                                op = Operation::AbsoluteValue;
+                            Some(n) => if n.classification != Classification::Literal {
+                                classification = Classification::AbsoluteValue;
                             }
                             None => unreachable!()
                         }
-                        None => op = Operation::AbsoluteValue
+                        None => classification = Classification::AbsoluteValue
                     }
                 }
                 TokenType::Number => {
                     match check_for_decimal {
                         Some(d) => match nodes.get_mut(d) {
-                            Some(n) => n.operation = Operation::Decimal,
+                            Some(n) => n.classification = Classification::Decimal,
                             None => unreachable!()
                         }
                         None => () // nothing to do
@@ -344,7 +344,7 @@ impl Parser {
                     match check_for_prefix {
                         Some(p) => match nodes.get_mut(p) {
                             Some(n) => {
-                                n.operation = Operation::PrefixApply;
+                                n.classification = Classification::PrefixApply;
 
                                 // also set check for infix
                                 check_for_infix = Some(p);
@@ -361,9 +361,9 @@ impl Parser {
                     match check_for_infix {
                         Some(f) => {
                             // update this node and previous node to be infix apply
-                            op = Operation::InfixApply;
+                            classification = Classification::InfixApply;
                             match nodes.get_mut(f) {
-                                Some(n) => n.operation = Operation::InfixApply,
+                                Some(n) => n.classification = Classification::InfixApply,
                                 None => unreachable!()
                             }
 
@@ -374,7 +374,7 @@ impl Parser {
                             // first see if looking for suffix
                             // else this could still be a prefix apply
                             if check_for_suffix.is_some() {
-                                op = Operation::SuffixApply;
+                                classification = Classification::SuffixApply;
                                 check_for_suffix = None;
                             } else {
                                 check_for_prefix = Some(i);
@@ -388,7 +388,7 @@ impl Parser {
                     match left {
                         Some(l) => {
                             let is_literal = match nodes.get(l) {
-                                Some(nl) => nl.operation == Operation::Literal && nl.token.token_type != TokenType::StartGroup && nl.token.token_type != TokenType::StartExpression,
+                                Some(nl) => nl.classification == Classification::Literal && nl.token.token_type != TokenType::StartGroup && nl.token.token_type != TokenType::StartExpression,
                                 None => false
                             };
 
@@ -431,14 +431,14 @@ impl Parser {
                     if last_token_type == TokenType::NewLine {
                         // explicit starting new sub expression
                         // update this token to be a no op
-                        // update previous token to be an output operation
+                        // update previous token to be an output classification
                         // and push next token index to subexpressions if exists
 
-                        op = Operation::NoOp;
+                        classification = Classification::NoOp;
 
                         match nodes.get_mut(i - 1) {
                             Some(n) => {
-                                n.operation = Operation::OutputResult;
+                                n.classification = Classification::OutputResult;
                             }
                             None => unreachable!()
                         }
@@ -456,7 +456,7 @@ impl Parser {
                         // an expression is terminable if it ends in a value type
                         // and an expression can only start with a value type
 
-                        if last_operation == Operation::Literal {
+                        if last_classification == Classification::Literal {
                             // store node to be checked during next iteration
                             check_for_result = Some(i);
                             // set next left to be reassigned 
@@ -468,7 +468,7 @@ impl Parser {
                             // and set this node to be a noop
 
                             next_left = left;
-                            op = Operation::NoOp;
+                            classification = Classification::NoOp;
                             match left {
                                 Some(l) => {
                                     match nodes.get_mut(l) {
@@ -488,24 +488,14 @@ impl Parser {
             }
 
             last_token_type = token.token_type;
-            last_operation = op;
+            last_classification = classification;
 
             nodes.push(Node {
-                operation: last_operation,
+               classification: last_classification,
                 token: token.clone(),
                 left,
                 right
             });
-        }
-
-        let limit = nodes.len();
-        for i in 0..limit {
-            let current = &nodes[i];
-
-            // if new line wasn't reassigned to OutputResult
-            if current.operation == Operation::CheckForResult {
-
-            }
         }
 
         // groups stack should be empty
@@ -526,76 +516,76 @@ fn non_white_space(t: &Token) -> bool {
     t.token_type != TokenType::HorizontalSpace && t.token_type != TokenType::NewLine
 }
 
-fn initial_operation_from_token_type(token_type: TokenType) -> Operation {
+fn initial_classification_from_token_type(token_type: TokenType) -> Classification {
     match token_type {
-        TokenType::Number => Operation::Literal,
-        TokenType::Identifier => Operation::Literal,
-        TokenType::HorizontalSpace => Operation::NoOp,
-        TokenType::PlusSign => Operation::Addition,
-        TokenType::MinusSign => Operation::Subtraction,
-        TokenType::MultiplicationSign => Operation::Multiplication,
-        TokenType::DivisionSign => Operation::Division,
-        TokenType::IntegerDivisionOperator => Operation::IntegerDivision,
-        TokenType::ModuloOperator => Operation::Modulo,
-        TokenType::ExponentialSign => Operation::Exponential,
-        TokenType::LogicalAndOperator => Operation::LogicalAnd,
-        TokenType::LogicalOrOperator => Operation::LogicalOr,
-        TokenType::LogicalXorOperator => Operation::LogicalXor,
-        TokenType::NotOperator => Operation::Not,
-        TokenType::TypeCastOperator => Operation::TypeCast,
-        TokenType::EqualityOperator => Operation::Equality,
-        TokenType::InequalityOperator => Operation::Inequality,
-        TokenType::LessThanOperator => Operation::LessThan,
-        TokenType::LessThanOrEqualOperator => Operation::LessThanOrEqual,
-        TokenType::GreaterThanOperator => Operation::GreaterThan,
-        TokenType::GreaterThanOrEqualOperator => Operation::GreaterThanOrEqual,
-        TokenType::TypeComparisonOperator => Operation::TypeEqual,
-        TokenType::BitwiseAndOperator => Operation::BitwiseAnd,
-        TokenType::BitwiseOrOperator => Operation::BitwiseOr,
-        TokenType::BitwiseXorOperator => Operation::BitwiseXor,
-        TokenType::BitwiseLeftShiftOperator => Operation::BitwiseLeftShift,
-        TokenType::BitwiseRightShiftOperator => Operation::BitwiseRightShift,
-        TokenType::DotOperator => Operation::Access,
-        TokenType::RangeOperator => Operation::MakeRange,
-        TokenType::StartExclusiveRangeOperator => Operation::MakeStartExclusiveRange,
-        TokenType::EndExclusiveRangeOperator => Operation::MakeEndExclusiveRange,
-        TokenType::ExclusiveRangeOperator => Operation::MakeExclusiveRange,
-        TokenType::PairOperator => Operation::MakePair,
-        TokenType::LinkOperator => Operation::MakeLink,
-        TokenType::MultiIterationOperator => Operation::MultiIterate,
-        TokenType::ConditionalTrueOperator => Operation::InvokeIfTrue,
-        TokenType::ConditionalFalseOperator => Operation::InvokeIfFalse,
-        TokenType::ConditionalResultOperator => Operation::ResultCheckInvoke,
-        TokenType::SymbolOperator => Operation::Literal,
-        TokenType::StartExpression => Operation::Literal,
-        TokenType::EndExpression => Operation::NoOp,
-        TokenType::StartGroup => Operation::Literal,
-        TokenType::EndGroup => Operation::NoOp,
-        TokenType::Result => Operation::Literal,
-        TokenType::Input => Operation::Literal,
-        TokenType::Comma => Operation::ListSeparator,
-        TokenType::UnitLiteral => Operation::Literal,
-        TokenType::ApplyOperator => Operation::Apply,
-        TokenType::PartiallyApplyOperator => Operation::PartiallyApply,
-        TokenType::PipeOperator => Operation::PipeApply,
-        TokenType::InfixOperator => Operation::NoOp,
-        TokenType::IterationOperator => Operation::Iterate,
-        TokenType::SingleValueIterationOperator => Operation::IterateToSingleValue,
-        TokenType::ReverseIterationOperator => Operation::ReverseIterate,
-        TokenType::SingleValueReverseIterationOperator => Operation::ReversIterateToSingleValue,
-        TokenType::IterationOutput => Operation::IterationOutput,
-        TokenType::IterationSkip => Operation::IterationSkip,
-        TokenType::IterationContinue => Operation::IterationContinue,
-        TokenType::IterationComplete => Operation::IterationComplete,
-        TokenType::Character => Operation::Literal,
-        TokenType::CharacterList => Operation::Literal,
-        TokenType::NewLine => Operation::NoOp,
+        TokenType::Number => Classification::Literal,
+        TokenType::Identifier => Classification::Literal,
+        TokenType::HorizontalSpace => Classification::NoOp,
+        TokenType::PlusSign => Classification::Addition,
+        TokenType::MinusSign => Classification::Subtraction,
+        TokenType::MultiplicationSign => Classification::Multiplication,
+        TokenType::DivisionSign => Classification::Division,
+        TokenType::IntegerDivisionOperator => Classification::IntegerDivision,
+        TokenType::ModuloOperator => Classification::Modulo,
+        TokenType::ExponentialSign => Classification::Exponential,
+        TokenType::LogicalAndOperator => Classification::LogicalAnd,
+        TokenType::LogicalOrOperator => Classification::LogicalOr,
+        TokenType::LogicalXorOperator => Classification::LogicalXor,
+        TokenType::NotOperator => Classification::Not,
+        TokenType::TypeCastOperator => Classification::TypeCast,
+        TokenType::EqualityOperator => Classification::Equality,
+        TokenType::InequalityOperator => Classification::Inequality,
+        TokenType::LessThanOperator => Classification::LessThan,
+        TokenType::LessThanOrEqualOperator => Classification::LessThanOrEqual,
+        TokenType::GreaterThanOperator => Classification::GreaterThan,
+        TokenType::GreaterThanOrEqualOperator => Classification::GreaterThanOrEqual,
+        TokenType::TypeComparisonOperator => Classification::TypeEqual,
+        TokenType::BitwiseAndOperator => Classification::BitwiseAnd,
+        TokenType::BitwiseOrOperator => Classification::BitwiseOr,
+        TokenType::BitwiseXorOperator => Classification::BitwiseXor,
+        TokenType::BitwiseLeftShiftOperator => Classification::BitwiseLeftShift,
+        TokenType::BitwiseRightShiftOperator => Classification::BitwiseRightShift,
+        TokenType::DotOperator => Classification::Access,
+        TokenType::RangeOperator => Classification::MakeRange,
+        TokenType::StartExclusiveRangeOperator => Classification::MakeStartExclusiveRange,
+        TokenType::EndExclusiveRangeOperator => Classification::MakeEndExclusiveRange,
+        TokenType::ExclusiveRangeOperator => Classification::MakeExclusiveRange,
+        TokenType::PairOperator => Classification::MakePair,
+        TokenType::LinkOperator => Classification::MakeLink,
+        TokenType::MultiIterationOperator => Classification::MultiIterate,
+        TokenType::ConditionalTrueOperator => Classification::InvokeIfTrue,
+        TokenType::ConditionalFalseOperator => Classification::InvokeIfFalse,
+        TokenType::ConditionalResultOperator => Classification::ResultCheckInvoke,
+        TokenType::SymbolOperator => Classification::Literal,
+        TokenType::StartExpression => Classification::Literal,
+        TokenType::EndExpression => Classification::NoOp,
+        TokenType::StartGroup => Classification::Literal,
+        TokenType::EndGroup => Classification::NoOp,
+        TokenType::Result => Classification::Literal,
+        TokenType::Input => Classification::Literal,
+        TokenType::Comma => Classification::ListSeparator,
+        TokenType::UnitLiteral => Classification::Literal,
+        TokenType::ApplyOperator => Classification::Apply,
+        TokenType::PartiallyApplyOperator => Classification::PartiallyApply,
+        TokenType::PipeOperator => Classification::PipeApply,
+        TokenType::InfixOperator => Classification::NoOp,
+        TokenType::IterationOperator => Classification::Iterate,
+        TokenType::SingleValueIterationOperator => Classification::IterateToSingleValue,
+        TokenType::ReverseIterationOperator => Classification::ReverseIterate,
+        TokenType::SingleValueReverseIterationOperator => Classification::ReversIterateToSingleValue,
+        TokenType::IterationOutput => Classification::IterationOutput,
+        TokenType::IterationSkip => Classification::IterationSkip,
+        TokenType::IterationContinue => Classification::IterationContinue,
+        TokenType::IterationComplete => Classification::IterationComplete,
+        TokenType::Character => Classification::Literal,
+        TokenType::CharacterList => Classification::Literal,
+        TokenType::NewLine => Classification::NoOp,
     }
 }
 
 #[cfg(test)]
 mod general_tests {
-    use crate::{Operation, Parser, Token, TokenType, Lexer};
+    use crate::{Classification, Parser, Token, TokenType, Lexer};
 
     #[test]
     fn create_parser() {
@@ -603,70 +593,70 @@ mod general_tests {
     }
 
     #[test]
-    fn assigns_initial_operations() {
+    fn assigns_initial_classifications() {
         let pairs = [
-            (TokenType::PlusSign, Operation::AbsoluteValue),
-            (TokenType::MinusSign, Operation::Negation),
-            (TokenType::MultiplicationSign, Operation::Multiplication),
-            (TokenType::DivisionSign, Operation::Division),
-            (TokenType::IntegerDivisionOperator, Operation::IntegerDivision),
-            (TokenType::ModuloOperator, Operation::Modulo),
-            (TokenType::ExponentialSign, Operation::Exponential),
-            (TokenType::LogicalAndOperator, Operation::LogicalAnd),
-            (TokenType::LogicalOrOperator, Operation::LogicalOr),
-            (TokenType::LogicalXorOperator, Operation::LogicalXor),
-            (TokenType::NotOperator, Operation::Not),
-            (TokenType::TypeCastOperator, Operation::TypeCast),
-            (TokenType::EqualityOperator, Operation::Equality),
-            (TokenType::InequalityOperator, Operation::Inequality),
-            (TokenType::LessThanOperator, Operation::LessThan),
-            (TokenType::LessThanOrEqualOperator, Operation::LessThanOrEqual),
-            (TokenType::GreaterThanOperator, Operation::GreaterThan),
-            (TokenType::GreaterThanOrEqualOperator, Operation::GreaterThanOrEqual),
-            (TokenType::TypeComparisonOperator, Operation::TypeEqual),
-            (TokenType::BitwiseAndOperator, Operation::BitwiseAnd),
-            (TokenType::BitwiseOrOperator, Operation::BitwiseOr),
-            (TokenType::BitwiseXorOperator, Operation::BitwiseXor),
-            (TokenType::BitwiseLeftShiftOperator, Operation::BitwiseLeftShift),
-            (TokenType::BitwiseRightShiftOperator, Operation::BitwiseRightShift),
-            (TokenType::DotOperator, Operation::Access),
-            (TokenType::RangeOperator, Operation::MakeRange),
-            (TokenType::StartExclusiveRangeOperator, Operation::MakeStartExclusiveRange),
-            (TokenType::EndExclusiveRangeOperator, Operation::MakeEndExclusiveRange),
-            (TokenType::ExclusiveRangeOperator, Operation::MakeExclusiveRange),
-            (TokenType::PairOperator, Operation::MakePair),
-            (TokenType::LinkOperator, Operation::MakeLink),
-            (TokenType::MultiIterationOperator, Operation::MultiIterate),
-            (TokenType::ConditionalTrueOperator, Operation::InvokeIfTrue),
-            (TokenType::ConditionalFalseOperator, Operation::InvokeIfFalse),
-            (TokenType::ConditionalResultOperator, Operation::ResultCheckInvoke),
-            (TokenType::SymbolOperator, Operation::Literal),
-//            (TokenType::StartExpression, Operation::Literal), requires additional tokens to be valid
-//            (TokenType::EndExpression, Operation::NoOp), requires additional tokens to be valid
-//            (TokenType::StartGroup, Operation::Literal), requires additional tokens to be valid
-//            (TokenType::EndGroup, Operation::NoOp), requires additional tokens to be valid
-            (TokenType::Result, Operation::Literal),
-            (TokenType::Input, Operation::Literal),
-            (TokenType::Comma, Operation::ListSeparator),
-            (TokenType::UnitLiteral, Operation::Literal),
-            (TokenType::ApplyOperator, Operation::Apply),
-            (TokenType::PartiallyApplyOperator, Operation::PartiallyApply),
-            (TokenType::PipeOperator, Operation::PipeApply),
-            (TokenType::InfixOperator, Operation::NoOp),
-            (TokenType::IterationOperator, Operation::Iterate),
-            (TokenType::SingleValueIterationOperator, Operation::IterateToSingleValue),
-            (TokenType::ReverseIterationOperator, Operation::ReverseIterate),
-            (TokenType::SingleValueReverseIterationOperator, Operation::ReversIterateToSingleValue),
-            (TokenType::IterationOutput, Operation::IterationOutput),
-            (TokenType::IterationSkip, Operation::IterationSkip),
-            (TokenType::IterationContinue, Operation::IterationContinue),
-            (TokenType::IterationComplete, Operation::IterationComplete),
-            (TokenType::Character, Operation::Literal),
-            (TokenType::CharacterList, Operation::Literal),
-            (TokenType::Number, Operation::Literal),
-            (TokenType::Identifier, Operation::Literal),
-//            (TokenType::HorizontalSpace, Operation::NoOp), trimmed when by itself
-//            (TokenType::NewLine, Operation::NoOp), trimmed when by itself
+            (TokenType::PlusSign, Classification::AbsoluteValue),
+            (TokenType::MinusSign, Classification::Negation),
+            (TokenType::MultiplicationSign, Classification::Multiplication),
+            (TokenType::DivisionSign, Classification::Division),
+            (TokenType::IntegerDivisionOperator, Classification::IntegerDivision),
+            (TokenType::ModuloOperator, Classification::Modulo),
+            (TokenType::ExponentialSign, Classification::Exponential),
+            (TokenType::LogicalAndOperator, Classification::LogicalAnd),
+            (TokenType::LogicalOrOperator, Classification::LogicalOr),
+            (TokenType::LogicalXorOperator, Classification::LogicalXor),
+            (TokenType::NotOperator, Classification::Not),
+            (TokenType::TypeCastOperator, Classification::TypeCast),
+            (TokenType::EqualityOperator, Classification::Equality),
+            (TokenType::InequalityOperator, Classification::Inequality),
+            (TokenType::LessThanOperator, Classification::LessThan),
+            (TokenType::LessThanOrEqualOperator, Classification::LessThanOrEqual),
+            (TokenType::GreaterThanOperator, Classification::GreaterThan),
+            (TokenType::GreaterThanOrEqualOperator, Classification::GreaterThanOrEqual),
+            (TokenType::TypeComparisonOperator, Classification::TypeEqual),
+            (TokenType::BitwiseAndOperator, Classification::BitwiseAnd),
+            (TokenType::BitwiseOrOperator, Classification::BitwiseOr),
+            (TokenType::BitwiseXorOperator, Classification::BitwiseXor),
+            (TokenType::BitwiseLeftShiftOperator, Classification::BitwiseLeftShift),
+            (TokenType::BitwiseRightShiftOperator, Classification::BitwiseRightShift),
+            (TokenType::DotOperator, Classification::Access),
+            (TokenType::RangeOperator, Classification::MakeRange),
+            (TokenType::StartExclusiveRangeOperator, Classification::MakeStartExclusiveRange),
+            (TokenType::EndExclusiveRangeOperator, Classification::MakeEndExclusiveRange),
+            (TokenType::ExclusiveRangeOperator, Classification::MakeExclusiveRange),
+            (TokenType::PairOperator, Classification::MakePair),
+            (TokenType::LinkOperator, Classification::MakeLink),
+            (TokenType::MultiIterationOperator, Classification::MultiIterate),
+            (TokenType::ConditionalTrueOperator, Classification::InvokeIfTrue),
+            (TokenType::ConditionalFalseOperator, Classification::InvokeIfFalse),
+            (TokenType::ConditionalResultOperator, Classification::ResultCheckInvoke),
+            (TokenType::SymbolOperator, Classification::Literal),
+//            (TokenType::StartExpression, Classification::Literal), requires additional tokens to be valid
+//            (TokenType::EndExpression, Classification::NoOp), requires additional tokens to be valid
+//            (TokenType::StartGroup, Classification::Literal), requires additional tokens to be valid
+//            (TokenType::EndGroup, Classification::NoOp), requires additional tokens to be valid
+            (TokenType::Result, Classification::Literal),
+            (TokenType::Input, Classification::Literal),
+            (TokenType::Comma, Classification::ListSeparator),
+            (TokenType::UnitLiteral, Classification::Literal),
+            (TokenType::ApplyOperator, Classification::Apply),
+            (TokenType::PartiallyApplyOperator, Classification::PartiallyApply),
+            (TokenType::PipeOperator, Classification::PipeApply),
+            (TokenType::InfixOperator, Classification::NoOp),
+            (TokenType::IterationOperator, Classification::Iterate),
+            (TokenType::SingleValueIterationOperator, Classification::IterateToSingleValue),
+            (TokenType::ReverseIterationOperator, Classification::ReverseIterate),
+            (TokenType::SingleValueReverseIterationOperator, Classification::ReversIterateToSingleValue),
+            (TokenType::IterationOutput, Classification::IterationOutput),
+            (TokenType::IterationSkip, Classification::IterationSkip),
+            (TokenType::IterationContinue, Classification::IterationContinue),
+            (TokenType::IterationComplete, Classification::IterationComplete),
+            (TokenType::Character, Classification::Literal),
+            (TokenType::CharacterList, Classification::Literal),
+            (TokenType::Number, Classification::Literal),
+            (TokenType::Identifier, Classification::Literal),
+//            (TokenType::HorizontalSpace, Classification::NoOp), trimmed when by itself
+//            (TokenType::NewLine, Classification::NoOp), trimmed when by itself
         ];
 
         for pair in pairs.iter() {
@@ -678,7 +668,7 @@ mod general_tests {
             let parser = Parser::new();
             let result = parser.make_groups(&input).unwrap().nodes;
 
-            assert_eq!(result.get(0).unwrap().operation, pair.1);
+            assert_eq!(result.get(0).unwrap().classification, pair.1);
         }
     }
 
@@ -831,7 +821,7 @@ mod group_tests {
 
 #[cfg(test)]
 mod subexpression_tests {
-    use crate::{Lexer, Parser, Operation};
+    use crate::{Lexer, Parser, Classification};
 
     #[test]
     fn first_subexpression_starts_at_zero() {
@@ -871,7 +861,7 @@ mod subexpression_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_6 = result.nodes.get(5).unwrap();
-        assert_eq!(node_6.operation, Operation::OutputResult);
+        assert_eq!(node_6.classification, Classification::OutputResult);
         assert_eq!(node_6.left, Some(4));
         assert_eq!(node_6.right, Some(6));
 
@@ -891,7 +881,7 @@ mod subexpression_tests {
         assert_eq!(node_5.right, Some(6));
 
         let node_6 = result.nodes.get(5).unwrap();
-        assert_eq!(node_6.operation, Operation::NoOp);
+        assert_eq!(node_6.classification, Classification::NoOp);
 
         let node_7 = result.nodes.get(6).unwrap();
         assert_eq!(node_7.left, Some(4));
@@ -912,7 +902,7 @@ mod subexpression_tests {
         assert_eq!(node_3.right, Some(4));
 
         let node_4 = result.nodes.get(3).unwrap();
-        assert_eq!(node_4.operation, Operation::NoOp);
+        assert_eq!(node_4.classification, Classification::NoOp);
 
         let node_5 = result.nodes.get(4).unwrap();
         assert_eq!(node_5.left, Some(2));
@@ -1001,7 +991,7 @@ mod subexpression_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(5).unwrap();
-        assert_eq!(node_3.operation, Operation::OutputResult);
+        assert_eq!(node_3.classification, Classification::OutputResult);
         assert_eq!(node_3.left, Some(4));
         assert_eq!(node_3.right, Some(6));
         
@@ -1016,7 +1006,7 @@ mod subexpression_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node = result.nodes.get(6).unwrap();
-        assert_eq!(node.operation, Operation::ListSeparator);
+        assert_eq!(node.classification, Classification::ListSeparator);
     }
 
     #[test]
@@ -1026,16 +1016,16 @@ mod subexpression_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node = result.nodes.get(6).unwrap();
-        assert_eq!(node.operation, Operation::ListSeparator);
+        assert_eq!(node.classification, Classification::ListSeparator);
 
         let node = result.nodes.get(7).unwrap();
-        assert_eq!(node.operation, Operation::NoOp);
+        assert_eq!(node.classification, Classification::NoOp);
     }
 }
 
 #[cfg(test)]
 mod reassignment_tests {
-    use crate::{Lexer, Parser, Operation};
+    use crate::{Lexer, Parser, Classification};
 
     #[test]
     fn minus_sign_gets_reassigned_to_negation() {
@@ -1045,7 +1035,7 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(4).unwrap();
-        assert_eq!(node_3.operation, Operation::Negation);
+        assert_eq!(node_3.classification, Classification::Negation);
     }
 
     #[test]
@@ -1056,7 +1046,7 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(2).unwrap();
-        assert_eq!(node_3.operation, Operation::Subtraction);
+        assert_eq!(node_3.classification, Classification::Subtraction);
     }
 
     #[test]
@@ -1067,7 +1057,7 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(0).unwrap();
-        assert_eq!(node_3.operation, Operation::Negation);
+        assert_eq!(node_3.classification, Classification::Negation);
     }
     
     #[test]
@@ -1078,7 +1068,7 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(4).unwrap();
-        assert_eq!(node_3.operation, Operation::AbsoluteValue);
+        assert_eq!(node_3.classification, Classification::AbsoluteValue);
     }
 
     #[test]
@@ -1089,7 +1079,7 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(2).unwrap();
-        assert_eq!(node_3.operation, Operation::Addition);
+        assert_eq!(node_3.classification, Classification::Addition);
     }
 
     #[test]
@@ -1100,7 +1090,7 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(0).unwrap();
-        assert_eq!(node_3.operation, Operation::AbsoluteValue);
+        assert_eq!(node_3.classification, Classification::AbsoluteValue);
     }
 
     #[test]
@@ -1111,7 +1101,7 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(0).unwrap();
-        assert_eq!(node_3.operation, Operation::PrefixApply);
+        assert_eq!(node_3.classification, Classification::PrefixApply);
     }
 
     #[test]
@@ -1122,7 +1112,7 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(3).unwrap();
-        assert_eq!(node_3.operation, Operation::SuffixApply);
+        assert_eq!(node_3.classification, Classification::SuffixApply);
     }
 
     #[test]
@@ -1133,10 +1123,10 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(2).unwrap();
-        assert_eq!(node_3.operation, Operation::InfixApply);
+        assert_eq!(node_3.classification, Classification::InfixApply);
 
         let node_3 = result.nodes.get(4).unwrap();
-        assert_eq!(node_3.operation, Operation::InfixApply);
+        assert_eq!(node_3.classification, Classification::InfixApply);
     }
 
     #[test]
@@ -1147,10 +1137,10 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(0).unwrap();
-        assert_eq!(node_3.operation, Operation::PrefixApply);
+        assert_eq!(node_3.classification, Classification::PrefixApply);
 
         let node_3 = result.nodes.get(10).unwrap();
-        assert_eq!(node_3.operation, Operation::SuffixApply);
+        assert_eq!(node_3.classification, Classification::SuffixApply);
     }
 
     #[test]
@@ -1161,10 +1151,10 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(3).unwrap();
-        assert_eq!(node_3.operation, Operation::SuffixApply);
+        assert_eq!(node_3.classification, Classification::SuffixApply);
 
         let node_3 = result.nodes.get(7).unwrap();
-        assert_eq!(node_3.operation, Operation::PrefixApply);
+        assert_eq!(node_3.classification, Classification::PrefixApply);
     }
 
     #[test]
@@ -1175,7 +1165,7 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node_3 = result.nodes.get(4).unwrap();
-        assert_eq!(node_3.operation, Operation::PrefixApply);
+        assert_eq!(node_3.classification, Classification::PrefixApply);
     }
 
     #[test]
@@ -1198,12 +1188,12 @@ mod reassignment_tests {
         let node = result.nodes.get(1).unwrap();
         assert_eq!(node.left, Some(0));
         assert_eq!(node.right, Some(2));
-        assert_eq!(node.operation, Operation::ListSeparator);
+        assert_eq!(node.classification, Classification::ListSeparator);
 
         let node = result.nodes.get(3).unwrap();
         assert_eq!(node.left, Some(2));
         assert_eq!(node.right, Some(4));
-        assert_eq!(node.operation, Operation::ListSeparator);
+        assert_eq!(node.classification, Classification::ListSeparator);
     }
 
     #[test]
@@ -1215,10 +1205,10 @@ mod reassignment_tests {
             let result = parser.make_groups(&input).unwrap();
 
             let node = result.nodes.get(1).unwrap();
-            assert_eq!(node.operation, Operation::NoOp);
+            assert_eq!(node.classification, Classification::NoOp);
 
             let node = result.nodes.get(8).unwrap();
-            assert_eq!(node.operation, Operation::NoOp);
+            assert_eq!(node.classification, Classification::NoOp);
         }
     }
 
@@ -1231,7 +1221,7 @@ mod reassignment_tests {
             let result = parser.make_groups(&input).unwrap();
 
             let node = result.nodes.get(9).unwrap();
-            assert_eq!(node.operation, Operation::ConditionalContinuation);
+            assert_eq!(node.classification, Classification::ConditionalContinuation);
         }
     }
 
@@ -1243,16 +1233,16 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node = result.nodes.get(10).unwrap();
-        assert_eq!(node.operation, Operation::ListSeparator);
+        assert_eq!(node.classification, Classification::ListSeparator);
 
         let node = result.nodes.get(13).unwrap();
-        assert_eq!(node.operation, Operation::ListSeparator);
+        assert_eq!(node.classification, Classification::ListSeparator);
 
         let node = result.nodes.get(16).unwrap();
-        assert_eq!(node.operation, Operation::ListSeparator);
+        assert_eq!(node.classification, Classification::ListSeparator);
 
         let node = result.nodes.get(20).unwrap();
-        assert_eq!(node.operation, Operation::ConditionalContinuation);
+        assert_eq!(node.classification, Classification::ConditionalContinuation);
     }
 
     #[test]
@@ -1262,13 +1252,13 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node = result.nodes.get(11).unwrap();
-        assert_eq!(node.operation, Operation::ListSeparator);
+        assert_eq!(node.classification, Classification::ListSeparator);
 
         let node = result.nodes.get(15).unwrap();
-        assert_eq!(node.operation, Operation::ListSeparator);
+        assert_eq!(node.classification, Classification::ListSeparator);
 
         let node = result.nodes.get(18).unwrap();
-        assert_eq!(node.operation, Operation::ListSeparator);
+        assert_eq!(node.classification, Classification::ListSeparator);
     }
 
     #[test]
@@ -1278,10 +1268,10 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node = result.nodes.get(19).unwrap();
-        assert_eq!(node.operation, Operation::ConditionalContinuation);
+        assert_eq!(node.classification, Classification::ConditionalContinuation);
 
         let node = result.nodes.get(32).unwrap();
-        assert_eq!(node.operation, Operation::ConditionalContinuation);
+        assert_eq!(node.classification, Classification::ConditionalContinuation);
     }
 
     #[test]
@@ -1291,10 +1281,10 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node = result.nodes.get(9).unwrap();
-        assert_eq!(node.operation, Operation::ConditionalContinuation);
+        assert_eq!(node.classification, Classification::ConditionalContinuation);
 
         let node = result.nodes.get(12).unwrap();
-        assert_eq!(node.operation, Operation::ListSeparator);
+        assert_eq!(node.classification, Classification::ListSeparator);
     }
 
     #[test]
@@ -1304,7 +1294,7 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node = result.nodes.get(18).unwrap();
-        assert_eq!(node.operation, Operation::ConditionalContinuation);
+        assert_eq!(node.classification, Classification::ConditionalContinuation);
     }
 
     #[test]
@@ -1314,23 +1304,23 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node = result.nodes.get(1).unwrap();
-        assert_eq!(node.operation, Operation::Decimal);
+        assert_eq!(node.classification, Classification::Decimal);
     }
 
     #[test]
-    fn contiguous_dots_after_non_number_remain_access_operation() {
+    fn contiguous_dots_after_non_number_remain_access_classification() {
         let input = Lexer::new().lex("value.1.10.5").unwrap();
         let parser = Parser::new();
         let result = parser.make_groups(&input).unwrap();
 
         let node = result.nodes.get(1).unwrap();
-        assert_eq!(node.operation, Operation::Access);
+        assert_eq!(node.classification, Classification::Access);
 
         let node = result.nodes.get(3).unwrap();
-        assert_eq!(node.operation, Operation::Access);
+        assert_eq!(node.classification, Classification::Access);
 
         let node = result.nodes.get(5).unwrap();
-        assert_eq!(node.operation, Operation::Access);
+        assert_eq!(node.classification, Classification::Access);
     }
 
     #[test]
@@ -1340,16 +1330,16 @@ mod reassignment_tests {
         let result = parser.make_groups(&input).unwrap();
 
         let node = result.nodes.get(1).unwrap();
-        assert_eq!(node.operation, Operation::Access);
+        assert_eq!(node.classification, Classification::Access);
 
         let node = result.nodes.get(3).unwrap();
-        assert_eq!(node.operation, Operation::Access);
+        assert_eq!(node.classification, Classification::Access);
 
         let node = result.nodes.get(5).unwrap();
-        assert_eq!(node.operation, Operation::Access);
+        assert_eq!(node.classification, Classification::Access);
 
         let node = result.nodes.get(9).unwrap();
-        assert_eq!(node.operation, Operation::Decimal);
+        assert_eq!(node.classification, Classification::Decimal);
     }
 
     #[test]
