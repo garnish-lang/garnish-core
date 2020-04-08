@@ -5,12 +5,12 @@
 | 2          | () {}                                                              | Groupings        | left-right    |
 | 3          | .                                                                  | Access           | left-right    |
 | 4          | + - !                                                              | Unary            | left-right    |
-| 5          | .. >.. ..< >..<                                                    | Create Range     | left-right    |
-| 6          | #>                                                                 | Type Cast        | left-right    |
-| 7          | **                                                                 | Arithmetic 1     | left-right    |
-| 8          | * / // %                                                           | Arithmetic 2     | left-right    |
-| 9          | + -                                                                | Arithmetic 3     | left-right    |
-| 10         | << >>                                                              | Shift            | left-right    |
+| 5          | #>                                                                 | Type Cast        | left-right    |
+| 6          | **                                                                 | Arithmetic 1     | left-right    |
+| 7          | * / // %                                                           | Arithmetic 2     | left-right    |
+| 8          | + -                                                                | Arithmetic 3     | left-right    |
+| 9          | << >>                                                              | Shift            | left-right    |
+| 10         | .. >.. ..< >..<                                                    | Create Range     | left-right    |
 | 11         | < <= > >=                                                          | Relational       | left-right    |
 | 12         | == != #=                                                           | Equality         | left-right    |
 | 13         | &                                                                  | Bit And          | left-right    |
