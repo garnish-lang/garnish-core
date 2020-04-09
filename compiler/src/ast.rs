@@ -69,36 +69,43 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                     Some(i) => {
                         parse_result.nodes[i].parent = Some(*loc);
 
+                        match parse_result.nodes[i].left {
+                            Some(l) => {
+                                if parse_result.nodes[l].parent != Some(i) {
+                                    parse_result.nodes[l].right = Some(*loc);
+                                }
+                            }
+                            None => ()
+                        }
+
                         if parse_result.nodes[i].classification == Classification::Literal {
                             parse_result.nodes[i].left = None;
                             parse_result.nodes[i].right = None;
                         }
                     }
                     None => () // nothing to do
-                }
+                };
             }
 
-            let new_right = match right {
+            match right {
                 Some(i) => {
-                    let r = parse_result.nodes[i].right;
                     parse_result.nodes[i].parent = Some(*loc);
+
+                    match parse_result.nodes[i].right {
+                        Some(r) => {
+                            if parse_result.nodes[r].parent != Some(i) {
+                                parse_result.nodes[r].left = Some(*loc);
+                            }
+                        }
+                        None => (),
+                    }
 
                     if parse_result.nodes[i].classification == Classification::Literal {
                         parse_result.nodes[i].left = None;
                         parse_result.nodes[i].right = None;
                     }
-
-                    r
                 }
-                None => None // nothing to do
-            };
-            
-            // update this right node's left to point to this node
-            match new_right {
-                Some(r) => {
-                    parse_result.nodes[r].left = Some(*loc);
-                }
-                None => () // nothing to update
+                None => () // nothing to do
             }
         }
     }
@@ -503,6 +510,31 @@ mod unary_precedence_tests {
 
         let node = ast.nodes.get(1).unwrap();
         assert_eq!(node.parent, Some(0));
+        assert_eq!(node.left, None);
+        assert_eq!(node.right, None);
+    }
+    
+    #[test]
+    fn unary_with_access() {
+        let ast = ast_from("!my_object.my_value");
+
+        let node = ast.nodes.get(0).unwrap();
+        assert_eq!(node.parent, None);
+        assert_eq!(node.left, None);
+        assert_eq!(node.right, Some(2));
+
+        let node = ast.nodes.get(1).unwrap();
+        assert_eq!(node.parent, Some(2));
+        assert_eq!(node.left, None);
+        assert_eq!(node.right, None);
+
+        let node = ast.nodes.get(2).unwrap();
+        assert_eq!(node.parent, Some(0));
+        assert_eq!(node.left, Some(1));
+        assert_eq!(node.right, Some(3));
+
+        let node = ast.nodes.get(3).unwrap();
+        assert_eq!(node.parent, Some(2));
         assert_eq!(node.left, None);
         assert_eq!(node.right, None);
     }
