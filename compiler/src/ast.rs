@@ -39,6 +39,7 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         (OpType::UnaryLeft, vec![]), // 3 - Unary
         (OpType::Binary, vec![]), // 4 - TypeCast
         (OpType::Binary, vec![]), // 5 - Exponential
+        (OpType::Binary, vec![]), // 6 - Multiply, Division, Modulo
     ];
 
     for (i, node) in parse_result.nodes.iter().enumerate() {
@@ -57,6 +58,10 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             | Classification::Not => 3,
             Classification::TypeCast => 4,
             Classification::Exponential => 5,
+            Classification::Multiplication
+            | Classification::Division
+            | Classification::IntegerDivision
+            | Classification::Modulo => 6,
             _ => unimplemented!("{:?}", node.classification)
         };
 
@@ -581,3 +586,67 @@ mod exponential_precedence_test {
         assert_eq!(ast.root, 6);
     }
 }
+
+#[cfg(test)]
+mod multiply_divide_modulo_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from};
+    
+    #[test]
+    fn multiplication() {
+        let ast = ast_from("10 * 2");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, None, Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, None);
+
+        assert_eq!(ast.root, 2);
+    }
+    
+    #[test]
+    fn division() {
+        let ast = ast_from("10 / 2");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, None, Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, None);
+
+        assert_eq!(ast.root, 2);
+    }
+    
+    #[test]
+    fn integer_division() {
+        let ast = ast_from("10 // 2");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, None, Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, None);
+
+        assert_eq!(ast.root, 2);
+    }
+    
+    #[test]
+    fn modulo() {
+        let ast = ast_from("10 % 2");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, None, Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, None);
+
+        assert_eq!(ast.root, 2);
+    }
+    
+    #[test]
+    fn multiplication_with_exponential() {
+        let ast = ast_from("10 ** 9 * 2");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(6), Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, None);
+        ast.nodes.assert_node(6, None, Some(2), Some(8));
+        ast.nodes.assert_node(8, Some(6), None, None);
+
+        assert_eq!(ast.root, 6);
+    }
+}
+
