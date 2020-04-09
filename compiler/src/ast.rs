@@ -36,6 +36,7 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         (OpType::Binary, vec![]),
         (OpType::Binary, vec![]),
         (OpType::UnaryLeft, vec![]),
+        (OpType::Binary, vec![]),
     ];
 
     for (i, node) in parse_result.nodes.iter().enumerate() {
@@ -44,13 +45,15 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             | Classification::IterationOutput 
             | Classification::IterationSkip 
             | Classification::IterationContinue
-            | Classification::IterationComplete => continue,
+            | Classification::IterationComplete 
+            | Classification::NoOp => continue,
             Classification::Decimal => 0,
             Classification::Access => 1,
             Classification::Negation
             | Classification::AbsoluteValue 
             | Classification::Not => 2,
-            _ => unimplemented!()
+            Classification::TypeCast => 3,
+            _ => unimplemented!("{:?}", node.classification)
         };
 
         op_locations[p].1.push(i);
@@ -481,5 +484,33 @@ mod unary_precedence_tests {
         ast.nodes.assert_node(3, Some(2), None, None);
 
         assert_eq!(ast.root, 0);
+    }
+}
+
+mod type_cast_precedence_tests {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from};
+    
+    #[test]
+    fn type_cast() {
+        let ast = ast_from("\"10\" #> 0");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, None, Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, None);
+
+        assert_eq!(ast.root, 2);
+    }
+    
+    #[test]
+    fn type_cast_with_unary() {
+        let ast = ast_from("-10 #> \"\"");
+
+        ast.nodes.assert_node(0, Some(3), None, Some(1));
+        ast.nodes.assert_node(1, Some(0), None, None );
+        ast.nodes.assert_node(3, None, Some(0), Some(5));
+        ast.nodes.assert_node(5, Some(3), None, None);
+
+        assert_eq!(ast.root, 3);
     }
 }
