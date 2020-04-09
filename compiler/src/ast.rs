@@ -462,6 +462,7 @@ mod dot_access_precedence_tests {
     }
 }
 
+#[cfg(test)]
 mod unary_precedence_tests {
     use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
     use super::tests::{AssertNode, ast_from};
@@ -520,6 +521,7 @@ mod unary_precedence_tests {
     }
 }
 
+#[cfg(test)]
 mod type_cast_precedence_tests {
     use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
     use super::tests::{AssertNode, ast_from};
