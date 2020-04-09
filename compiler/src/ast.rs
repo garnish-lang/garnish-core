@@ -40,6 +40,19 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         (OpType::Binary, vec![]), // 4 - TypeCast
         (OpType::Binary, vec![]), // 5 - Exponential
         (OpType::Binary, vec![]), // 6 - Multiply, Division, Modulo
+        (OpType::Binary, vec![]), // 7 - Addition, Subtraction
+        (OpType::Binary, vec![]), // 8 - Bit Shift
+        (OpType::Binary, vec![]), // 9 - Range
+        (OpType::Binary, vec![]), // 10 - Relational
+        (OpType::Binary, vec![]), // 11 - Equality
+        (OpType::Binary, vec![]), // 12 - Bitwise And
+        (OpType::Binary, vec![]), // 13 - Bitwise Xor
+        (OpType::Binary, vec![]), // 14 - Bitwise Or
+        (OpType::Binary, vec![]), // 15 - Logical And
+        (OpType::Binary, vec![]), // 16 - Logical Xor
+        (OpType::Binary, vec![]), // 17 - Logical Or
+        (OpType::Binary, vec![]), // 18 - Link
+        (OpType::Binary, vec![]), // 19 - Pair
     ];
 
     for (i, node) in parse_result.nodes.iter().enumerate() {
@@ -62,6 +75,29 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             | Classification::Division
             | Classification::IntegerDivision
             | Classification::Modulo => 6,
+            Classification::Addition
+            | Classification::Subtraction => 7,
+            Classification::BitwiseLeftShift
+            | Classification::BitwiseRightShift => 8,
+            Classification::MakeRange
+            | Classification::MakeStartExclusiveRange
+            | Classification::MakeEndExclusiveRange
+            | Classification::MakeExclusiveRange => 9,
+            Classification::LessThan
+            | Classification::LessThanOrEqual
+            | Classification::GreaterThan
+            | Classification::GreaterThanOrEqual => 10,
+            Classification::Equality
+            | Classification::Inequality
+            | Classification::TypeEqual => 11,
+            Classification::BitwiseAnd => 12,
+            Classification::BitwiseXor => 13,
+            Classification::BitwiseOr => 14,
+            Classification::LogicalAnd => 15,
+            Classification::LogicalXor => 16,
+            Classification::LogicalOr => 17,
+            Classification::MakeLink => 18,
+            Classification::MakePair => 19,
             _ => unimplemented!("{:?}", node.classification)
         };
 
@@ -164,6 +200,28 @@ mod tests {
             assert_eq!(node.left, left);
             assert_eq!(node.right, right);
         }
+    }
+
+    pub fn assert_binary_op(input: &str) {
+        let ast = ast_from(input);
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, None, Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, None);
+
+        assert_eq!(ast.root, 2);
+    }
+
+    pub fn assert_multi_op_least_first(input: &str) {
+        let ast = ast_from(input);
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(6), Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, None);
+        ast.nodes.assert_node(6, None, Some(2), Some(8));
+        ast.nodes.assert_node(8, Some(6), None, None);
+
+        assert_eq!(ast.root, 6);
     }
 
     #[test]
@@ -531,17 +589,11 @@ mod unary_precedence_tests {
 #[cfg(test)]
 mod type_cast_precedence_tests {
     use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
-    use super::tests::{AssertNode, ast_from};
+    use super::tests::{AssertNode, ast_from, assert_binary_op};
     
     #[test]
     fn type_cast() {
-        let ast = ast_from("\"10\" #> 0");
-
-        ast.nodes.assert_node(0, Some(2), None, None);
-        ast.nodes.assert_node(2, None, Some(0), Some(4));
-        ast.nodes.assert_node(4, Some(2), None, None);
-
-        assert_eq!(ast.root, 2);
+        assert_binary_op("\"10\" #> 0");
     }
     
     #[test]
@@ -560,93 +612,305 @@ mod type_cast_precedence_tests {
 #[cfg(test)]
 mod exponential_precedence_test {
     use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
-    use super::tests::{AssertNode, ast_from};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
     
     #[test]
     fn type_cast() {
-        let ast = ast_from("10 ** 2");
-
-        ast.nodes.assert_node(0, Some(2), None, None);
-        ast.nodes.assert_node(2, None, Some(0), Some(4));
-        ast.nodes.assert_node(4, Some(2), None, None);
-
-        assert_eq!(ast.root, 2);
+        assert_binary_op("10 ** 2");
     }
     
     #[test]
     fn type_cast_with_unary() {
-        let ast = ast_from("\"10\" #> 0 ** 2");
-
-        ast.nodes.assert_node(0, Some(2), None, None);
-        ast.nodes.assert_node(2, Some(6), Some(0), Some(4));
-        ast.nodes.assert_node(4, Some(2), None, None);
-        ast.nodes.assert_node(6, None, Some(2), Some(8));
-        ast.nodes.assert_node(8, Some(6), None, None);
-
-        assert_eq!(ast.root, 6);
+        assert_multi_op_least_first("\"10\" #> 0 ** 2");
     }
 }
 
 #[cfg(test)]
 mod multiply_divide_modulo_precedence_test {
     use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
-    use super::tests::{AssertNode, ast_from};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
     
     #[test]
     fn multiplication() {
-        let ast = ast_from("10 * 2");
-
-        ast.nodes.assert_node(0, Some(2), None, None);
-        ast.nodes.assert_node(2, None, Some(0), Some(4));
-        ast.nodes.assert_node(4, Some(2), None, None);
-
-        assert_eq!(ast.root, 2);
+        assert_binary_op("10 * 2");
     }
     
     #[test]
     fn division() {
-        let ast = ast_from("10 / 2");
-
-        ast.nodes.assert_node(0, Some(2), None, None);
-        ast.nodes.assert_node(2, None, Some(0), Some(4));
-        ast.nodes.assert_node(4, Some(2), None, None);
-
-        assert_eq!(ast.root, 2);
+        assert_binary_op("10 / 2");
     }
     
     #[test]
     fn integer_division() {
-        let ast = ast_from("10 // 2");
-
-        ast.nodes.assert_node(0, Some(2), None, None);
-        ast.nodes.assert_node(2, None, Some(0), Some(4));
-        ast.nodes.assert_node(4, Some(2), None, None);
-
-        assert_eq!(ast.root, 2);
+        assert_binary_op("10 // 2");
     }
     
     #[test]
     fn modulo() {
-        let ast = ast_from("10 % 2");
-
-        ast.nodes.assert_node(0, Some(2), None, None);
-        ast.nodes.assert_node(2, None, Some(0), Some(4));
-        ast.nodes.assert_node(4, Some(2), None, None);
-
-        assert_eq!(ast.root, 2);
+        assert_binary_op("10 % 2");
     }
     
     #[test]
     fn multiplication_with_exponential() {
-        let ast = ast_from("10 ** 9 * 2");
+        assert_multi_op_least_first("10 ** 9 * 2");
+    }
+}
 
-        ast.nodes.assert_node(0, Some(2), None, None);
-        ast.nodes.assert_node(2, Some(6), Some(0), Some(4));
-        ast.nodes.assert_node(4, Some(2), None, None);
-        ast.nodes.assert_node(6, None, Some(2), Some(8));
-        ast.nodes.assert_node(8, Some(6), None, None);
+#[cfg(test)]
+mod addition_subtraction_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn addition() {
+        assert_binary_op("10 + 2");
+    }
+    
+    #[test]
+    fn subtraction() {
+        assert_binary_op("10 - 2");
+    }
 
-        assert_eq!(ast.root, 6);
+    #[test]
+    fn addition_with_multiplication() {
+        assert_multi_op_least_first("10 * 9 + 2");
+    }
+}
+
+#[cfg(test)]
+mod bit_shift_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn shift_right() {
+        assert_binary_op("10 >> 2");
+    }
+    
+    #[test]
+    fn shift_left() {
+        assert_binary_op("10 << 2");
+    }
+
+    #[test]
+    fn shift_left_with_addition() {
+        assert_multi_op_least_first("10 + 9 << 2");
+    }
+}
+
+#[cfg(test)]
+mod range_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn inclusive_range() {
+        assert_binary_op("10 .. 2");
+    }
+    
+    #[test]
+    fn start_exclusive_range() {
+        assert_binary_op("10 >.. 2");
+    }
+
+    #[test]
+    fn end_exclusive_range() {
+        assert_binary_op("10 ..< 2");
+    }
+
+    #[test]
+    fn exclusive_range() {
+        assert_binary_op("10 >..< 2");
+    }
+
+    #[test]
+    fn exclusive_range_with_shift_left() {
+        assert_multi_op_least_first("10 << 9 >..< 2");
+    }
+}
+
+#[cfg(test)]
+mod relational_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn less_than() {
+        assert_binary_op("10 < 2");
+    }
+    
+    #[test]
+    fn less_than_or_equal() {
+        assert_binary_op("10 <= 2");
+    }
+
+    #[test]
+    fn greater_than() {
+        assert_binary_op("10 > 2");
+    }
+
+    #[test]
+    fn greater_than_or_equal() {
+        assert_binary_op("10 >= 2");
+    }
+
+    #[test]
+    fn greater_than_with_range() {
+        assert_multi_op_least_first("10 .. 9 > 2");
+    }
+}
+
+#[cfg(test)]
+mod equality_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn equality() {
+        assert_binary_op("10 == 2");
+    }
+    
+    #[test]
+    fn inequality() {
+        assert_binary_op("10 != 2");
+    }
+
+    #[test]
+    fn type_equality() {
+        assert_binary_op("10 #= 2");
+    }
+
+    #[test]
+    fn equality_with_less_than() {
+        assert_multi_op_least_first("10 < 9 == 2");
+    }
+}
+
+#[cfg(test)]
+mod bit_and_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn bit_and() {
+        assert_binary_op("10 & 2");
+    }
+
+    #[test]
+    fn bit_and_with_equality() {
+        assert_multi_op_least_first("10 == 9 & 2");
+    }
+}
+
+#[cfg(test)]
+mod bit_xor_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn bit_xor() {
+        assert_binary_op("10 ^ 2");
+    }
+
+    #[test]
+    fn bit_xor_with_bit_and() {
+        assert_multi_op_least_first("10 & 9 ^ 2");
+    }
+}
+
+#[cfg(test)]
+mod bit_or_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn bit_or() {
+        assert_binary_op("10 | 2");
+    }
+
+    #[test]
+    fn bit_or_with_bit_xor() {
+        assert_multi_op_least_first("10 ^ 9 | 2");
+    }
+}
+
+#[cfg(test)]
+mod logical_and_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn logical_and() {
+        assert_binary_op("10 && 2");
+    }
+
+    #[test]
+    fn logical_and_with_bit_or() {
+        assert_multi_op_least_first("10 | 9 && 2");
+    }
+}
+
+#[cfg(test)]
+mod logical_xor_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn logical_xor() {
+        assert_binary_op("10 ^^ 2");
+    }
+
+    #[test]
+    fn logical_xor_with_logical_and() {
+        assert_multi_op_least_first("10 && 9 ^^ 2");
+    }
+}
+
+#[cfg(test)]
+mod logical_or_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn logical_or() {
+        assert_binary_op("10 || 2");
+    }
+
+    #[test]
+    fn logical_or_with_logial_xor() {
+        assert_multi_op_least_first("10 ^^ 9 || 2");
+    }
+}
+
+#[cfg(test)]
+mod link_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn link() {
+        assert_binary_op("10 -> 2");
+    }
+
+    #[test]
+    fn link_with_logical_or() {
+        assert_multi_op_least_first("10 || 9 -> 2");
+    }
+}
+
+#[cfg(test)]
+mod pair_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn pair() {
+        assert_binary_op("10 = 2");
+    }
+
+    #[test]
+    fn pair_with_link() {
+        assert_multi_op_least_first("10 -> 9 = 2");
     }
 }
 
