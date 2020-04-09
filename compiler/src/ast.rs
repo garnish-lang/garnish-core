@@ -33,11 +33,12 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
     }
 
     let mut op_locations: Vec<(OpType, Vec<usize>)> = vec![
-        (OpType::UnaryLeft, vec![]),
-        (OpType::Binary, vec![]),
-        (OpType::Binary, vec![]),
-        (OpType::UnaryLeft, vec![]),
-        (OpType::Binary, vec![]),
+        (OpType::UnaryLeft, vec![]), // 0 - Symbol
+        (OpType::Binary, vec![]), // 1 - Decimal
+        (OpType::Binary, vec![]), // 2 - Access
+        (OpType::UnaryLeft, vec![]), // 3 - Unary
+        (OpType::Binary, vec![]), // 4 - TypeCast
+        (OpType::Binary, vec![]), // 5 - Exponential
     ];
 
     for (i, node) in parse_result.nodes.iter().enumerate() {
@@ -55,6 +56,7 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             | Classification::AbsoluteValue 
             | Classification::Not => 3,
             Classification::TypeCast => 4,
+            Classification::Exponential => 5,
             _ => unimplemented!("{:?}", node.classification)
         };
 
@@ -547,5 +549,35 @@ mod type_cast_precedence_tests {
         ast.nodes.assert_node(5, Some(3), None, None);
 
         assert_eq!(ast.root, 3);
+    }
+}
+
+#[cfg(test)]
+mod exponential_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from};
+    
+    #[test]
+    fn type_cast() {
+        let ast = ast_from("10 ** 2");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, None, Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, None);
+
+        assert_eq!(ast.root, 2);
+    }
+    
+    #[test]
+    fn type_cast_with_unary() {
+        let ast = ast_from("\"10\" #> 0 ** 2");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(6), Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, None);
+        ast.nodes.assert_node(6, None, Some(2), Some(8));
+        ast.nodes.assert_node(8, Some(6), None, None);
+
+        assert_eq!(ast.root, 6);
     }
 }
