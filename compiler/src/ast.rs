@@ -7,6 +7,13 @@ pub struct AST {
     pub(crate) sub_roots: Vec<usize>
 }
 
+#[derive(PartialEq, Copy, Clone)]
+enum OpType {
+    Binary,
+    UnaryLeft,
+    UnaryRight,
+}
+
 pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
     if parse_result.nodes.is_empty() {
         return Ok(AST {
@@ -25,9 +32,10 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         });
     }
 
-    let mut op_locations: Vec<Vec<usize>> = vec![
-        vec![],
-        vec![]
+    let mut op_locations: Vec<(OpType, Vec<usize>)> = vec![
+        (OpType::Binary, vec![]),
+        (OpType::Binary, vec![]),
+        (OpType::UnaryLeft, vec![]),
     ];
 
     for (i, node) in parse_result.nodes.iter().enumerate() {
@@ -39,30 +47,35 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             | Classification::IterationComplete => continue,
             Classification::Decimal => 0,
             Classification::Access => 1,
+            Classification::Negation
+            | Classification::AbsoluteValue 
+            | Classification::Not => 2,
             _ => unimplemented!()
         };
 
-        op_locations[p].push(i);
+        op_locations[p].1.push(i);
     }
 
     for precedence in op_locations.iter() {
-        for loc in precedence.iter() {
+        for loc in precedence.1.iter() {
             // get op's left and right
             // update parent to be loc
             // if value set left and right to None
 
             let (left, right) = parse_result.nodes.get(*loc).map(|n| (n.left, n.right)).unwrap();
 
-            match left {
-                Some(i) => {
-                    parse_result.nodes[i].parent = Some(*loc);
+            if precedence.0 != OpType::UnaryLeft {
+                match left {
+                    Some(i) => {
+                        parse_result.nodes[i].parent = Some(*loc);
 
-                    if parse_result.nodes[i].classification == Classification::Literal {
-                        parse_result.nodes[i].left = None;
-                        parse_result.nodes[i].right = None;
+                        if parse_result.nodes[i].classification == Classification::Literal {
+                            parse_result.nodes[i].left = None;
+                            parse_result.nodes[i].right = None;
+                        }
                     }
+                    None => () // nothing to do
                 }
-                None => () // nothing to do
             }
 
             let new_right = match right {
@@ -442,5 +455,55 @@ mod dot_access_precedence_tests {
         assert_eq!(node.right, None);
 
         assert_eq!(ast.root, 3);
+    }
+}
+
+mod unary_precedence_tests {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::ast_from;
+
+    #[test]
+    fn absolute_value() {
+        let ast = ast_from("+10");
+
+        let node = ast.nodes.get(0).unwrap();
+        assert_eq!(node.parent, None);
+        assert_eq!(node.left, None);
+        assert_eq!(node.right, Some(1));
+
+        let node = ast.nodes.get(1).unwrap();
+        assert_eq!(node.parent, Some(0));
+        assert_eq!(node.left, None);
+        assert_eq!(node.right, None);
+    }
+
+    #[test]
+    fn negation() {
+        let ast = ast_from("-10");
+
+        let node = ast.nodes.get(0).unwrap();
+        assert_eq!(node.parent, None);
+        assert_eq!(node.left, None);
+        assert_eq!(node.right, Some(1));
+
+        let node = ast.nodes.get(1).unwrap();
+        assert_eq!(node.parent, Some(0));
+        assert_eq!(node.left, None);
+        assert_eq!(node.right, None);
+    }
+    
+    #[test]
+    fn not() {
+        let ast = ast_from("!10");
+
+        let node = ast.nodes.get(0).unwrap();
+        assert_eq!(node.parent, None);
+        assert_eq!(node.left, None);
+        assert_eq!(node.right, Some(1));
+
+        let node = ast.nodes.get(1).unwrap();
+        assert_eq!(node.parent, Some(0));
+        assert_eq!(node.left, None);
+        assert_eq!(node.right, None);
     }
 }
