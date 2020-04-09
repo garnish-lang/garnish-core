@@ -33,6 +33,7 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
     }
 
     let mut op_locations: Vec<(OpType, Vec<usize>)> = vec![
+        (OpType::UnaryLeft, vec![]),
         (OpType::Binary, vec![]),
         (OpType::Binary, vec![]),
         (OpType::UnaryLeft, vec![]),
@@ -47,12 +48,13 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             | Classification::IterationContinue
             | Classification::IterationComplete 
             | Classification::NoOp => continue,
-            Classification::Decimal => 0,
-            Classification::Access => 1,
+            Classification::Symbol => 0,
+            Classification::Decimal => 1,
+            Classification::Access => 2,
             Classification::Negation
             | Classification::AbsoluteValue 
-            | Classification::Not => 2,
-            Classification::TypeCast => 3,
+            | Classification::Not => 3,
+            Classification::TypeCast => 4,
             _ => unimplemented!("{:?}", node.classification)
         };
 
@@ -88,6 +90,10 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                     }
                     None => () // nothing to do
                 };
+            } else {
+                // unary left means operand is on right side
+                // set left side to None
+                parse_result.nodes[*loc].left = None;
             }
 
             match right {
@@ -259,7 +265,7 @@ mod value_precedence_tests {
         let ast = ast_from(":");
 
         assert_eq!(ast.nodes, vec![Node {
-            classification: Classification::Literal,
+            classification: Classification::Symbol,
             token: Token {
                 value: String::from(":"),
                 token_type: TokenType::SymbolOperator,
@@ -400,6 +406,22 @@ mod value_precedence_tests {
 }
 
 #[cfg(test)]
+mod symbol_precedence_tests {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from};
+
+    #[test]
+    fn symbol() {
+        let ast = ast_from(":my_symbol");
+
+        ast.nodes.assert_node(0, None, None, Some(1));
+        ast.nodes.assert_node(1, Some(0), None, None);
+
+        assert_eq!(ast.root, 0);
+    }
+}
+
+#[cfg(test)]
 mod dot_access_precedence_tests {
     use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
     use super::tests::{AssertNode, ast_from};
@@ -482,6 +504,17 @@ mod unary_precedence_tests {
         ast.nodes.assert_node(1, Some(2), None, None);
         ast.nodes.assert_node(2, Some(0), Some(1), Some(3));
         ast.nodes.assert_node(3, Some(2), None, None);
+
+        assert_eq!(ast.root, 0);
+    }
+    
+    #[test]
+    fn unary_with_symbol() {
+        let ast = ast_from("!:true");
+
+        ast.nodes.assert_node(0, None, None, Some(1));
+        ast.nodes.assert_node(1, Some(0), None, Some(2));
+        ast.nodes.assert_node(2, Some(1), None, None);
 
         assert_eq!(ast.root, 0);
     }

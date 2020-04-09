@@ -11,6 +11,7 @@ pub enum Classification {
     AbsoluteValue,
     NoOp,
     Literal,
+    Symbol,
     Decimal,
     Multiplication,
     Division,
@@ -565,7 +566,7 @@ fn initial_classification_from_token_type(token_type: TokenType) -> Classificati
         TokenType::ConditionalTrueOperator => Classification::InvokeIfTrue,
         TokenType::ConditionalFalseOperator => Classification::InvokeIfFalse,
         TokenType::ConditionalResultOperator => Classification::ResultCheckInvoke,
-        TokenType::SymbolOperator => Classification::Literal,
+        TokenType::SymbolOperator => Classification::Symbol,
         TokenType::StartExpression => Classification::Literal,
         TokenType::EndExpression => Classification::NoOp,
         TokenType::StartGroup => Classification::Literal,
@@ -647,7 +648,7 @@ mod general_tests {
             (TokenType::ConditionalTrueOperator, Classification::InvokeIfTrue),
             (TokenType::ConditionalFalseOperator, Classification::InvokeIfFalse),
             (TokenType::ConditionalResultOperator, Classification::ResultCheckInvoke),
-            (TokenType::SymbolOperator, Classification::Literal),
+            (TokenType::SymbolOperator, Classification::Symbol),
 //            (TokenType::StartExpression, Classification::Literal), requires additional tokens to be valid
 //            (TokenType::EndExpression, Classification::NoOp), requires additional tokens to be valid
 //            (TokenType::StartGroup, Classification::Literal), requires additional tokens to be valid
