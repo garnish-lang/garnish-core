@@ -53,6 +53,8 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         (OpType::Binary, vec![]), // 17 - Logical Or
         (OpType::Binary, vec![]), // 18 - Link
         (OpType::Binary, vec![]), // 19 - Pair
+        (OpType::Binary, vec![]), // 20 - List
+        (OpType::Binary, vec![]), // 21 - Partially Apply
     ];
 
     for (i, node) in parse_result.nodes.iter().enumerate() {
@@ -98,6 +100,8 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             Classification::LogicalOr => 17,
             Classification::MakeLink => 18,
             Classification::MakePair => 19,
+            Classification::ListSeparator => 20,
+            Classification::PartiallyApply => 21,
             _ => unimplemented!("{:?}", node.classification)
         };
 
@@ -911,6 +915,49 @@ mod pair_precedence_test {
     #[test]
     fn pair_with_link() {
         assert_multi_op_least_first("10 -> 9 = 2");
+    }
+}
+
+#[cfg(test)]
+mod list_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn list_comma() {
+        assert_binary_op("10 , 2");
+    }
+    
+    #[test]
+    fn list_space() {
+        let ast = ast_from("10 2");
+
+        ast.nodes.assert_node(0, Some(1), None, None);
+        ast.nodes.assert_node(1, None, Some(0), Some(2));
+        ast.nodes.assert_node(2, Some(1), None, None);
+
+        assert_eq!(ast.root, 1);
+    }
+
+    #[test]
+    fn list_with_pair() {
+        assert_multi_op_least_first("10 = 9 , 2");
+    }
+}
+
+#[cfg(test)]
+mod partially_apply_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn partially_apply() {
+        assert_binary_op("10 ~~ 2");
+    }
+
+    #[test]
+    fn partially_apply_with_list() {
+        assert_multi_op_least_first("10 , 9 ~~ 2");
     }
 }
 
