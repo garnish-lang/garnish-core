@@ -137,6 +137,19 @@ mod tests {
         return make_ast(parse_result).unwrap();
     }
 
+    pub trait AssertNode {
+        fn assert_node(&self, index: usize, parent: Option<usize>, left: Option<usize>, right: Option<usize>);
+    }
+
+    impl AssertNode for Vec<Node> {
+        fn assert_node(&self, index: usize, parent: Option<usize>, left: Option<usize>, right: Option<usize>) {
+            let node = self.get(index).unwrap();
+            assert_eq!(node.parent, parent);
+            assert_eq!(node.left, left);
+            assert_eq!(node.right, right);
+        }
+    }
+
     #[test]
     fn create_empty() {
         let ast = ast_from("");
@@ -386,26 +399,15 @@ mod value_precedence_tests {
 #[cfg(test)]
 mod dot_access_precedence_tests {
     use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
-    use super::tests::ast_from;
+    use super::tests::{AssertNode, ast_from};
 
     #[test]
     fn decimal_is_above_numbers() {
         let ast = ast_from("3.14");
 
-        let node = ast.nodes.get(0).unwrap();
-        assert_eq!(node.parent, Some(1));
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, None);
-
-        let node = ast.nodes.get(2).unwrap();
-        assert_eq!(node.parent, Some(1));
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, None);
-
-        let node = ast.nodes.get(1).unwrap();
-        assert_eq!(node.parent, None);
-        assert_eq!(node.left, Some(0));
-        assert_eq!(node.right, Some(2));
+        ast.nodes.assert_node(0, Some(1), None, None);
+        ast.nodes.assert_node(1, None, Some(0), Some(2));
+        ast.nodes.assert_node(2, Some(1), None, None);
 
         assert_eq!(ast.root, 1);
     }
@@ -414,20 +416,9 @@ mod dot_access_precedence_tests {
     fn access_is_above_identifiers() {
         let ast = ast_from("my_object.my_value");
 
-        let node = ast.nodes.get(0).unwrap();
-        assert_eq!(node.parent, Some(1));
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, None);
-
-        let node = ast.nodes.get(2).unwrap();
-        assert_eq!(node.parent, Some(1));
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, None);
-
-        let node = ast.nodes.get(1).unwrap();
-        assert_eq!(node.parent, None);
-        assert_eq!(node.left, Some(0));
-        assert_eq!(node.right, Some(2));
+        ast.nodes.assert_node(0, Some(1), None, None);
+        ast.nodes.assert_node(1, None, Some(0), Some(2));
+        ast.nodes.assert_node(2, Some(1), None, None);
 
         assert_eq!(ast.root, 1);
     }
@@ -436,30 +427,11 @@ mod dot_access_precedence_tests {
     fn access_is_above_decimal() {
         let ast = ast_from("3.14.my_value");
 
-        let node = ast.nodes.get(0).unwrap();
-        assert_eq!(node.parent, Some(1));
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, None);
-
-        let node = ast.nodes.get(1).unwrap();
-        assert_eq!(node.parent, Some(3));
-        assert_eq!(node.left, Some(0));
-        assert_eq!(node.right, Some(2));
-
-        let node = ast.nodes.get(2).unwrap();
-        assert_eq!(node.parent, Some(1));
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, None);
-
-        let node = ast.nodes.get(3).unwrap();
-        assert_eq!(node.parent, None);
-        assert_eq!(node.left, Some(1));
-        assert_eq!(node.right, Some(4));
-
-        let node = ast.nodes.get(4).unwrap();
-        assert_eq!(node.parent, Some(3));
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, None);
+        ast.nodes.assert_node(0, Some(1), None, None);
+        ast.nodes.assert_node(1, Some(3), Some(0), Some(2));
+        ast.nodes.assert_node(2, Some(1), None, None);
+        ast.nodes.assert_node(3, None, Some(1), Some(4));
+        ast.nodes.assert_node(4, Some(3), None, None);
 
         assert_eq!(ast.root, 3);
     }
@@ -467,75 +439,47 @@ mod dot_access_precedence_tests {
 
 mod unary_precedence_tests {
     use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
-    use super::tests::ast_from;
+    use super::tests::{AssertNode, ast_from};
 
     #[test]
     fn absolute_value() {
         let ast = ast_from("+10");
 
-        let node = ast.nodes.get(0).unwrap();
-        assert_eq!(node.parent, None);
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, Some(1));
-
-        let node = ast.nodes.get(1).unwrap();
-        assert_eq!(node.parent, Some(0));
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, None);
+        ast.nodes.assert_node(0, None, None, Some(1));
+        ast.nodes.assert_node(1, Some(0), None, None);
+        
+        assert_eq!(ast.root, 0);
     }
 
     #[test]
     fn negation() {
         let ast = ast_from("-10");
 
-        let node = ast.nodes.get(0).unwrap();
-        assert_eq!(node.parent, None);
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, Some(1));
+        ast.nodes.assert_node(0, None, None, Some(1));
+        ast.nodes.assert_node(1, Some(0), None, None);
 
-        let node = ast.nodes.get(1).unwrap();
-        assert_eq!(node.parent, Some(0));
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, None);
+        assert_eq!(ast.root, 0);
     }
     
     #[test]
     fn not() {
         let ast = ast_from("!10");
 
-        let node = ast.nodes.get(0).unwrap();
-        assert_eq!(node.parent, None);
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, Some(1));
+        ast.nodes.assert_node(0, None, None, Some(1));
+        ast.nodes.assert_node(1, Some(0), None, None);
 
-        let node = ast.nodes.get(1).unwrap();
-        assert_eq!(node.parent, Some(0));
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, None);
+        assert_eq!(ast.root, 0);
     }
     
     #[test]
     fn unary_with_access() {
         let ast = ast_from("!my_object.my_value");
 
-        let node = ast.nodes.get(0).unwrap();
-        assert_eq!(node.parent, None);
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, Some(2));
+        ast.nodes.assert_node(0, None, None, Some(2));
+        ast.nodes.assert_node(1, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(0), Some(1), Some(3));
+        ast.nodes.assert_node(3, Some(2), None, None);
 
-        let node = ast.nodes.get(1).unwrap();
-        assert_eq!(node.parent, Some(2));
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, None);
-
-        let node = ast.nodes.get(2).unwrap();
-        assert_eq!(node.parent, Some(0));
-        assert_eq!(node.left, Some(1));
-        assert_eq!(node.right, Some(3));
-
-        let node = ast.nodes.get(3).unwrap();
-        assert_eq!(node.parent, Some(2));
-        assert_eq!(node.left, None);
-        assert_eq!(node.right, None);
+        assert_eq!(ast.root, 0);
     }
 }
