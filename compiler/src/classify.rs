@@ -349,58 +349,6 @@ impl Parser {
                         None => () // begining of input
                     }
                 }
-                TokenType::Identifier => {
-                    match check_for_prefix {
-                        Some(p) => {
-                            classification = Classification::PrefixApply;
-
-                            // also set check for infix
-                            check_for_infix = Some(i);
-
-                            check_for_prefix = None;
-
-                            // update left to point to point to this identifier as its operator
-                            match left {
-                                Some(l) => match nodes.get_mut(l) {
-                                    Some(n) => n.right = Some(i),
-                                    None => unreachable!()
-                                }
-                                None => ()
-                            }
-                        }
-                        // if not checking for prefix, is could still be a suffix apply
-                        None => check_for_suffix = Some(i)
-                    }
-                }
-                TokenType::InfixOperator => {
-                    // *fix symbol never linked, carry left
-                    next_left = left;
-
-                    match check_for_infix {
-                        Some(f) => {
-                            // update this node and previous node to be infix apply
-                            classification = Classification::InfixApply;
-                            match nodes.get_mut(f) {
-                                Some(n) => n.classification = Classification::InfixApply,
-                                None => unreachable!()
-                            }
-
-                            check_for_infix = None;
-                        }
-                        None => {
-                            // not checking for infix
-                            // first see if looking for suffix
-                            // else this could still be a prefix apply
-                            match check_for_suffix {
-                                Some(s) => match nodes.get_mut(s) {
-                                    Some(n) => n.classification = Classification::SuffixApply,
-                                    None => unreachable!(),
-                                }
-                                None => check_for_prefix = Some(i)
-                            }
-                        }
-                    }
-                }
                 TokenType::HorizontalSpace => {
                     // set next left to be this nodes left
                     next_left = left;
@@ -423,27 +371,6 @@ impl Parser {
                             }
                         }
                         None => () // end of input
-                    }
-
-                    // *fix termination
-                    // *fix operators must be right next to their identifiers
-                    // so if we are checking for any off them
-                    // we stop checking now
-                
-                    if check_for_infix.is_some() {
-                        check_for_infix = None;
-                    }
-
-                    if check_for_suffix.is_some() {
-                        check_for_suffix = None;
-                    }
-
-                    // if still looking for prefix
-                    // will raise error because this means
-                    // the *fix operator is surrounded by spaces
-                    if check_for_prefix.is_some() {
-                        // actual *fix operator is previous token, so subtract 1 for location
-                        return Err(format!("Orphan *fix operator at {}.", i - 1).into());
                     }
                 }
                 TokenType::NewLine => {
