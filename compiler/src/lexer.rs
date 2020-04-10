@@ -52,6 +52,8 @@ pub enum TokenType {
     PartiallyApplyOperator,
     PipeOperator,
     InfixOperator,
+    PrefixOperator,
+    SuffixOperator,
     IterationOperator,
     SingleValueIterationOperator,
     ReverseIterationOperator,
@@ -94,6 +96,7 @@ enum LexerState {
     ParsingIdentifier,
     ParsingHorizontalSpace,
     ParsingVerticalSpace,
+    ParsingFixOperator,
 }
 
 struct LexerNode {
@@ -195,7 +198,6 @@ impl Lexer {
             ("~", TokenType::ApplyOperator),
             ("~~", TokenType::PartiallyApplyOperator),
             ("~>", TokenType::PipeOperator),
-            ("`", TokenType::InfixOperator),
             (":", TokenType::SymbolOperator),
             ("{", TokenType::StartExpression),
             ("}", TokenType::EndExpression),
@@ -238,6 +240,7 @@ impl Lexer {
         let mut counter = 0;
         let mut current_value = String::new();
         let mut current_char: Option<char> = None;
+        let mut check_fix = false;
 
         let mut chars = s.chars().peekable();
 
@@ -355,16 +358,28 @@ impl Lexer {
                     if c.is_alphanumeric() || c == '_' {
                         current_value.push(c);
                     } else {
+                        let token_type = match check_fix {
+                            true if c == '`' => TokenType::InfixOperator,
+                            false if c == '`' => TokenType::SuffixOperator,
+                            true => TokenType::PrefixOperator,
+                            false => TokenType::Identifier,
+                        };
+
                         tokens.push(Token {
                             value: current_value,
-                            token_type: TokenType::Identifier,
+                            token_type: token_type,
                         });
 
+                        check_fix = false;
                         counter = 0;
                         current_value = String::new();
                         state = LexerState::NotParsing;
                         current_char = Some(c);
                     }
+                }
+                LexerState::ParsingFixOperator => {
+                    state = LexerState::ParsingIdentifier;
+                    check_fix = true;
                 }
                 LexerState::ParsingHorizontalSpace => {
                     if c != ' ' && c != '\t' {
@@ -436,9 +451,14 @@ impl Lexer {
                 });
             }
             LexerState::ParsingIdentifier => {
+                let token_type = match check_fix {
+                    true => TokenType::PrefixOperator,
+                    false => TokenType::Identifier,
+                };
+
                 tokens.push(Token {
                     value: current_value,
-                    token_type: TokenType::Identifier,
+                    token_type: token_type,
                 });
             }
             // reaching here while parsing a character or character list means the closing quote wasn't present
@@ -458,6 +478,7 @@ impl Lexer {
             }
             LexerState::ParsingVerticalSpace => (),
             LexerState::NotParsing => (),
+            LexerState::ParsingFixOperator => (),
         }
 
         Ok(tokens)
@@ -471,6 +492,7 @@ impl Lexer {
             x if x.is_alphabetic() || x == '_' => LexerState::ParsingIdentifier,
             ' ' | '\t' => LexerState::ParsingHorizontalSpace,
             '\n' => LexerState::ParsingVerticalSpace,
+            '`' => LexerState::ParsingFixOperator,
             _ => LexerState::ParsingSymbol,
         }
     }
@@ -985,12 +1007,36 @@ mod tests {
     }
 
     #[test]
-    fn lex_infix_operator() {
-        let token = Lexer::new().lex("`").unwrap().get(0).unwrap().clone();
+    fn lex_prefix_operator() {
+        let token = Lexer::new().lex("`expr").unwrap().get(0).unwrap().clone();
         assert_eq!(
             token,
             Token {
-                value: String::from("`"),
+                value: String::from("expr"),
+                token_type: TokenType::PrefixOperator,
+            }
+        );
+    }
+
+    #[test]
+    fn lex_suffix_operator() {
+        let token = Lexer::new().lex("expr`").unwrap().get(0).unwrap().clone();
+        assert_eq!(
+            token,
+            Token {
+                value: String::from("expr"),
+                token_type: TokenType::SuffixOperator,
+            }
+        );
+    }
+
+    #[test]
+    fn lex_infix_operator() {
+        let token = Lexer::new().lex("`expr`").unwrap().get(0).unwrap().clone();
+        assert_eq!(
+            token,
+            Token {
+                value: String::from("expr"),
                 token_type: TokenType::InfixOperator,
             }
         );
