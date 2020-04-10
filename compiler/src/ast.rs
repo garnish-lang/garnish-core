@@ -59,6 +59,7 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         (OpType::Binary, vec![]), // 22 - Prefix Apply
         (OpType::Binary, vec![]), // 23 - Suffix Apply
         (OpType::Binary, vec![]), // 24 - Infix Apply
+        (OpType::Binary, vec![]), // 25 - Conditional
     ];
 
     for (i, node) in parse_result.nodes.iter().enumerate() {
@@ -109,6 +110,9 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             Classification::PrefixApply => 22,
             Classification::SuffixApply => 23,
             Classification::InfixApply => 24,
+            Classification::InvokeIfTrue
+            | Classification::InvokeIfFalse
+            | Classification::ResultCheckInvoke => 25,
             _ => unimplemented!("{:?}", node.classification)
         };
 
@@ -1019,6 +1023,32 @@ mod infix_precedence_test {
     #[test]
     fn infix_apply_with_suffix_apply() {
         assert_multi_op_least_first("10 expr` 9 `expr` 2");
+    }
+}
+
+#[cfg(test)]
+mod conditional_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn invoke_if_true() {
+        assert_binary_op("10 => 2");
+    }
+    
+    #[test]
+    fn invoke_if_false() {
+        assert_binary_op("10 !> 2");
+    }
+    
+    #[test]
+    fn result_check_invoke() {
+        assert_binary_op("10 =?> 2");
+    }
+
+    #[test]
+    fn invoke_if_true_with_infix() {
+        assert_multi_op_least_first("10 `expr` 9 => 2");
     }
 }
 
