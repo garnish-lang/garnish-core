@@ -374,7 +374,9 @@ impl Lexer {
                         counter = 0;
                         current_value = String::new();
                         state = LexerState::NotParsing;
-                        current_char = Some(c);
+                        // backtick was used to determine which operator to set
+                        // no longer need it, set to None to continue to next char
+                        current_char = if c == '`' { None } else { Some(c) };
                     }
                 }
                 LexerState::ParsingFixOperator => {
@@ -1031,6 +1033,37 @@ mod tests {
     }
 
     #[test]
+    fn lex_suffix_operator_with_token_after() {
+        let lexing = Lexer::new().lex("expr` value").unwrap();
+        let token = lexing.get(0).unwrap().clone();
+        assert_eq!(
+            token,
+            Token {
+                value: String::from("expr"),
+                token_type: TokenType::SuffixOperator,
+            }
+        );
+
+        let token = lexing.get(1).unwrap().clone();
+        assert_eq!(
+            token,
+            Token {
+                value: String::from(" "),
+                token_type: TokenType::HorizontalSpace,
+            }
+        );
+
+        let token = lexing.get(2).unwrap().clone();
+        assert_eq!(
+            token,
+            Token {
+                value: String::from("value"),
+                token_type: TokenType::Identifier,
+            }
+        );
+    }
+
+    #[test]
     fn lex_infix_operator() {
         let token = Lexer::new().lex("`expr`").unwrap().get(0).unwrap().clone();
         assert_eq!(
@@ -1038,6 +1071,37 @@ mod tests {
             Token {
                 value: String::from("expr"),
                 token_type: TokenType::InfixOperator,
+            }
+        );
+    }
+
+    #[test]
+    fn lex_infix_operator_with_token_after() {
+        let lexing = Lexer::new().lex("`expr` value").unwrap();
+        let token = lexing.get(0).unwrap().clone();
+        assert_eq!(
+            token,
+            Token {
+                value: String::from("expr"),
+                token_type: TokenType::InfixOperator,
+            }
+        );
+
+        let token = lexing.get(1).unwrap().clone();
+        assert_eq!(
+            token,
+            Token {
+                value: String::from(" "),
+                token_type: TokenType::HorizontalSpace,
+            }
+        );
+
+        let token = lexing.get(2).unwrap().clone();
+        assert_eq!(
+            token,
+            Token {
+                value: String::from("value"),
+                token_type: TokenType::Identifier,
             }
         );
     }

@@ -1,13 +1,14 @@
 use crate::{ParseResult, Node, Token, TokenType, Classification};
 use expr_lang_common::Result;
 
+#[derive(Debug)]
 pub struct AST {
     pub(crate) nodes: Vec<Node>,
     pub(crate) root: usize,
     pub(crate) sub_roots: Vec<usize>
 }
 
-#[derive(PartialEq, Copy, Clone)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 enum OpType {
     Binary,
     UnaryLeft,
@@ -55,6 +56,9 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         (OpType::Binary, vec![]), // 19 - Pair
         (OpType::Binary, vec![]), // 20 - List
         (OpType::Binary, vec![]), // 21 - Partially Apply
+        (OpType::Binary, vec![]), // 22 - Prefix Apply
+        (OpType::Binary, vec![]), // 23 - Suffix Apply
+        (OpType::Binary, vec![]), // 24 - Infix Apply
     ];
 
     for (i, node) in parse_result.nodes.iter().enumerate() {
@@ -102,6 +106,9 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             Classification::MakePair => 19,
             Classification::ListSeparator => 20,
             Classification::PartiallyApply => 21,
+            Classification::PrefixApply => 22,
+            Classification::SuffixApply => 23,
+            Classification::InfixApply => 24,
             _ => unimplemented!("{:?}", node.classification)
         };
 
@@ -169,9 +176,15 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
     let mut root_index = *parse_result.sub_expressions.get(0).unwrap(); // should always have 1
     let mut node = &parse_result.nodes[root_index];
 
+    let mut count = 0;
     while node.parent.is_some() {
         root_index = node.parent.unwrap();
         node = &parse_result.nodes[root_index];
+
+        count += 1;
+        if count > parse_result.nodes.len() {
+            break;
+        }
     }
 
     return Ok(AST {
@@ -200,9 +213,9 @@ mod tests {
     impl AssertNode for Vec<Node> {
         fn assert_node(&self, index: usize, parent: Option<usize>, left: Option<usize>, right: Option<usize>) {
             let node = self.get(index).unwrap();
-            assert_eq!(node.parent, parent);
-            assert_eq!(node.left, left);
-            assert_eq!(node.right, right);
+            assert_eq!(node.parent, parent, "Expected parent node of {:?} to be {:?}, was {:?}", index, parent, node.parent);
+            assert_eq!(node.left, left, "Expected left node of {:?} to be {:?}, was {:?}", index, left, node.left);
+            assert_eq!(node.right, right, "Expected right node of {:?} to be {:?}, was {:?}", index, right, node.right);
         }
     }
 
@@ -958,6 +971,54 @@ mod partially_apply_precedence_test {
     #[test]
     fn partially_apply_with_list() {
         assert_multi_op_least_first("10 , 9 ~~ 2");
+    }
+}
+
+#[cfg(test)]
+mod prefix_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn prefix_apply() {
+        assert_binary_op("10 `expr 2");
+    }
+
+    #[test]
+    fn prefix_apply_with_partially_apply() {
+        assert_multi_op_least_first("10 ~~ 9 `expr 2");
+    }
+}
+
+#[cfg(test)]
+mod suffix_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn suffix_apply() {
+        assert_binary_op("10 expr` 2");
+    }
+
+    #[test]
+    fn suffix_apply_with_prefix_apply() {
+        assert_multi_op_least_first("10 `expr 9 expr` 2");
+    }
+}
+
+#[cfg(test)]
+mod infix_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn infix_apply() {
+        assert_binary_op("10 `expr` 2");
+    }
+
+    #[test]
+    fn infix_apply_with_suffix_apply() {
+        assert_multi_op_least_first("10 expr` 9 `expr` 2");
     }
 }
 

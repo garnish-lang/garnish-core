@@ -75,6 +75,7 @@ pub struct Node {
     pub(crate) parent: Option<usize>,
 }
 
+#[derive(Debug)]
 pub struct ParseResult {
     pub(crate) nodes: Vec<Node>,
     pub(crate) groups: Vec<usize>,
@@ -108,9 +109,6 @@ impl Parser {
         let mut last_classification = Classification::NoOp;
         let mut check_for_result: Option<usize> = None;
         let mut check_for_list_separator: Option<usize> = None;
-        let mut check_for_prefix: Option<usize> = None;
-        let mut check_for_suffix: Option<usize> = None;
-        let mut check_for_infix: Option<usize> = None;
         let mut check_for_decimal: Option<usize> = None;
         let mut in_access = false;
 
