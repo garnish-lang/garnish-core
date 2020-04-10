@@ -60,6 +60,8 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         (OpType::Binary, vec![]), // 23 - Suffix Apply
         (OpType::Binary, vec![]), // 24 - Infix Apply
         (OpType::Binary, vec![]), // 25 - Conditional
+        (OpType::UnaryLeft, vec![]), // 26 - DefaultInvoke
+        (OpType::Binary, vec![]), // 27 - Conditional Continuation
     ];
 
     for (i, node) in parse_result.nodes.iter().enumerate() {
@@ -113,6 +115,8 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             Classification::InvokeIfTrue
             | Classification::InvokeIfFalse
             | Classification::ResultCheckInvoke => 25,
+            Classification::DefaultInvoke => 26,
+            Classification::ConditionalContinuation => 27,
             _ => unimplemented!("{:?}", node.classification)
         };
 
@@ -130,6 +134,24 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             if precedence.0 != OpType::UnaryLeft {
                 match left {
                     Some(i) => {
+                        match parse_result.nodes[i].parent {
+                            Some(p) => {
+                                // go up to nodes root and update its right to be this node
+                                let mut p_root = p;
+                                while true {
+                                    match parse_result.nodes[p_root].parent {
+                                        Some(p) => p_root = p,
+                                        None => {
+                                            parse_result.nodes[p].right = Some(*loc);    
+                                            parse_result.nodes[*loc].parent = Some(p);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            None => (),
+                        }
+
                         parse_result.nodes[i].parent = Some(*loc);
 
                         match parse_result.nodes[i].left {
@@ -1049,6 +1071,19 @@ mod conditional_precedence_test {
     #[test]
     fn invoke_if_true_with_infix() {
         assert_multi_op_least_first("10 `expr` 9 => 2");
+    }
+
+    #[test]
+    fn conditional_chain() {
+        let ast = ast_from("10 => 5, 20 => 15, !> 25");
+
+        ast.nodes.assert_node(2, Some(5), Some(0), Some(4));
+        ast.nodes.assert_node(5, None, Some(2), Some(12));
+        ast.nodes.assert_node(9, Some(12), Some(7), Some(11));
+        ast.nodes.assert_node(12, Some(5), Some(9), Some(14));
+        ast.nodes.assert_node(14, Some(12), None, Some(16));
+
+        assert_eq!(ast.root, 5);
     }
 }
 

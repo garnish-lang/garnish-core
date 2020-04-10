@@ -46,6 +46,7 @@ pub enum Classification {
     MultiIterate,
     InvokeIfTrue,
     InvokeIfFalse,
+    DefaultInvoke,
     ResultCheckInvoke,
     ConditionalContinuation,
     Apply,
@@ -285,9 +286,21 @@ impl Parser {
                     }
                 }
                 TokenType::ConditionalTrueOperator |
-                TokenType::ConditionalFalseOperator |
                 TokenType::ConditionalResultOperator => {
                     conditional_groups_stack[groups_stack.len()] = Some(groups_stack.len());
+                }
+                TokenType::ConditionalFalseOperator => {
+                    match left {
+                        Some(l) => match nodes.get(l) {
+                            Some(n) => if n.classification == Classification::ConditionalContinuation {
+                                classification = Classification::DefaultInvoke;
+                            } else {
+                                conditional_groups_stack[groups_stack.len()] = Some(groups_stack.len());
+                            }
+                            None => unreachable!()
+                        }
+                        None => ()
+                    }
                 }
                 TokenType::Comma => {
                     match conditional_groups_stack.get(groups_stack.len()) {
@@ -1157,6 +1170,16 @@ mod reassignment_tests {
 
         let node = result.nodes.get(12).unwrap();
         assert_eq!(node.classification, Classification::ListSeparator);
+    }
+
+    #[test]
+    fn invoke_if_false_reassigned_to_default_if_at_end_of_chain_and_no_left_side() {
+        let input = Lexer::new().lex("value == 5 => 100, !> 50").unwrap();
+        let parser = Parser::new();
+        let result = parser.make_groups(&input).unwrap();
+
+        let node = result.nodes.get(11).unwrap();
+        assert_eq!(node.classification, Classification::DefaultInvoke);
     }
 
     #[test]
