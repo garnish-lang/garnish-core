@@ -351,22 +351,31 @@ impl Parser {
                 }
                 TokenType::Identifier => {
                     match check_for_prefix {
-                        Some(p) => match nodes.get_mut(p) {
-                            Some(n) => {
-                                n.classification = Classification::PrefixApply;
+                        Some(p) => {
+                            classification = Classification::PrefixApply;
 
-                                // also set check for infix
-                                check_for_infix = Some(p);
+                            // also set check for infix
+                            check_for_infix = Some(i);
 
-                                check_for_prefix = None;
+                            check_for_prefix = None;
+
+                            // update left to point to point to this identifier as its operator
+                            match left {
+                                Some(l) => match nodes.get_mut(l) {
+                                    Some(n) => n.right = Some(i),
+                                    None => unreachable!()
+                                }
+                                None => ()
                             }
-                            None => unreachable!()
                         }
                         // if not checking for prefix, is could still be a suffix apply
                         None => check_for_suffix = Some(i)
                     }
                 }
                 TokenType::InfixOperator => {
+                    // *fix symbol never linked, carry left
+                    next_left = left;
+
                     match check_for_infix {
                         Some(f) => {
                             // update this node and previous node to be infix apply
@@ -382,11 +391,12 @@ impl Parser {
                             // not checking for infix
                             // first see if looking for suffix
                             // else this could still be a prefix apply
-                            if check_for_suffix.is_some() {
-                                classification = Classification::SuffixApply;
-                                check_for_suffix = None;
-                            } else {
-                                check_for_prefix = Some(i);
+                            match check_for_suffix {
+                                Some(s) => match nodes.get_mut(s) {
+                                    Some(n) => n.classification = Classification::SuffixApply,
+                                    None => unreachable!(),
+                                }
+                                None => check_for_prefix = Some(i)
                             }
                         }
                     }
@@ -578,7 +588,9 @@ fn initial_classification_from_token_type(token_type: TokenType) -> Classificati
         TokenType::ApplyOperator => Classification::Apply,
         TokenType::PartiallyApplyOperator => Classification::PartiallyApply,
         TokenType::PipeOperator => Classification::PipeApply,
-        TokenType::InfixOperator => Classification::NoOp,
+        TokenType::InfixOperator => Classification::InfixApply,
+        TokenType::PrefixOperator => Classification::PrefixApply,
+        TokenType::SuffixOperator => Classification::SuffixApply,
         TokenType::IterationOperator => Classification::Iterate,
         TokenType::SingleValueIterationOperator => Classification::IterateToSingleValue,
         TokenType::ReverseIterationOperator => Classification::ReverseIterate,
@@ -660,7 +672,9 @@ mod general_tests {
             (TokenType::ApplyOperator, Classification::Apply),
             (TokenType::PartiallyApplyOperator, Classification::PartiallyApply),
             (TokenType::PipeOperator, Classification::PipeApply),
-            (TokenType::InfixOperator, Classification::NoOp),
+            (TokenType::InfixOperator, Classification::InfixApply),
+            (TokenType::PrefixOperator, Classification::PrefixApply),
+            (TokenType::SuffixOperator, Classification::SuffixApply),
             (TokenType::IterationOperator, Classification::Iterate),
             (TokenType::SingleValueIterationOperator, Classification::IterateToSingleValue),
             (TokenType::ReverseIterationOperator, Classification::ReverseIterate),
@@ -1109,91 +1123,6 @@ mod reassignment_tests {
 
         let node_3 = result.nodes.get(0).unwrap();
         assert_eq!(node_3.classification, Classification::AbsoluteValue);
-    }
-
-    #[test]
-    fn fix_operator_reassigned_to_prefix_when_before_an_identifier() {
-        let input = Lexer::new().lex("`expr 5").unwrap();
-
-        let parser = Parser::new();
-        let result = parser.make_groups(&input).unwrap();
-
-        let node_3 = result.nodes.get(0).unwrap();
-        assert_eq!(node_3.classification, Classification::PrefixApply);
-    }
-
-    #[test]
-    fn fix_operator_reassigned_to_suffix_when_after_an_identifier() {
-        let input = Lexer::new().lex("5 expr`").unwrap();
-
-        let parser = Parser::new();
-        let result = parser.make_groups(&input).unwrap();
-
-        let node_3 = result.nodes.get(3).unwrap();
-        assert_eq!(node_3.classification, Classification::SuffixApply);
-    }
-
-    #[test]
-    fn fix_operator_reassigned_to_infix_when_surrounding_an_identifier() {
-        let input = Lexer::new().lex("5 `expr` 4").unwrap();
-
-        let parser = Parser::new();
-        let result = parser.make_groups(&input).unwrap();
-
-        let node_3 = result.nodes.get(2).unwrap();
-        assert_eq!(node_3.classification, Classification::InfixApply);
-
-        let node_3 = result.nodes.get(4).unwrap();
-        assert_eq!(node_3.classification, Classification::InfixApply);
-    }
-
-    #[test]
-    fn prefix_followed_by_suffix_parse_correctly() {
-        let input = Lexer::new().lex("`expr 4 + 5 expr`").unwrap();
-
-        let parser = Parser::new();
-        let result = parser.make_groups(&input).unwrap();
-
-        let node_3 = result.nodes.get(0).unwrap();
-        assert_eq!(node_3.classification, Classification::PrefixApply);
-
-        let node_3 = result.nodes.get(10).unwrap();
-        assert_eq!(node_3.classification, Classification::SuffixApply);
-    }
-
-    #[test]
-    fn suffix_followed_by_prefix_parse_correctly() {
-        let input = Lexer::new().lex("4 expr` + `expr 5").unwrap();
-
-        let parser = Parser::new();
-        let result = parser.make_groups(&input).unwrap();
-
-        let node_3 = result.nodes.get(3).unwrap();
-        assert_eq!(node_3.classification, Classification::SuffixApply);
-
-        let node_3 = result.nodes.get(7).unwrap();
-        assert_eq!(node_3.classification, Classification::PrefixApply);
-    }
-
-    #[test]
-    fn prefix_after_plain_identifier_pares_correctly() {
-        let input = Lexer::new().lex("value + `expr 5").unwrap();
-
-        let parser = Parser::new();
-        let result = parser.make_groups(&input).unwrap();
-
-        let node_3 = result.nodes.get(4).unwrap();
-        assert_eq!(node_3.classification, Classification::PrefixApply);
-    }
-
-    #[test]
-    fn fix_operator_followed_by_space_is_error() {
-        let input = Lexer::new().lex("` expr 5").unwrap();
-
-        let parser = Parser::new();
-        let result = parser.make_groups(&input);
-
-        assert_eq!(result.err().unwrap().get_message(), "Orphan *fix operator at 0.");
     }
 
     #[test]
