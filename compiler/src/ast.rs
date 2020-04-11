@@ -62,6 +62,8 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         (OpType::Binary, vec![]), // 25 - Conditional
         (OpType::UnaryLeft, vec![]), // 26 - DefaultInvoke
         (OpType::Binary, vec![]), // 27 - Conditional Continuation
+        (OpType::Binary, vec![]), // 28 - Functional
+        (OpType::Binary, vec![]), // 29 - Iteration
     ];
 
     for (i, node) in parse_result.nodes.iter().enumerate() {
@@ -117,6 +119,13 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             | Classification::ResultCheckInvoke => 25,
             Classification::DefaultInvoke => 26,
             Classification::ConditionalContinuation => 27,
+            Classification::Apply
+            | Classification::PipeApply => 28,
+            Classification::Iterate
+            | Classification::IterateToSingleValue 
+            | Classification::ReverseIterate
+            | Classification::ReverseIterateToSingleValue 
+            | Classification::MultiIterate => 29,
             _ => unimplemented!("{:?}", node.classification)
         };
 
@@ -1071,6 +1080,71 @@ mod conditional_precedence_test {
     #[test]
     fn invoke_if_true_with_infix() {
         assert_multi_op_least_first("10 `expr` 9 => 2");
+    }
+
+    #[test]
+    fn conditional_chain() {
+        let ast = ast_from("10 => 5, 20 => 15, !> 25");
+
+        ast.nodes.assert_node(2, Some(5), Some(0), Some(4));
+        ast.nodes.assert_node(5, None, Some(2), Some(12));
+        ast.nodes.assert_node(9, Some(12), Some(7), Some(11));
+        ast.nodes.assert_node(12, Some(5), Some(9), Some(14));
+        ast.nodes.assert_node(14, Some(12), None, Some(16));
+
+        assert_eq!(ast.root, 5);
+    }
+}
+
+#[cfg(test)]
+mod funtional_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn apply() {
+        assert_binary_op("10 ~ 2");
+    }
+    
+    #[test]
+    fn pipe_apply() {
+        assert_binary_op("10 ~> 2");
+    }
+
+    #[test]
+    fn pipe_apply_with_invoke_if_true() {
+        assert_multi_op_least_first("10 => 9 ~> 2");
+    }
+}
+
+#[cfg(test)]
+mod iteration_precedence_test {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+    
+    #[test]
+    fn iteration() {
+        assert_binary_op("10 >>> 2");
+    }
+    
+    #[test]
+    fn iteration_to_single_value() {
+        assert_binary_op("10 >>| 2");
+    }
+    
+    #[test]
+    fn reverse_iteration() {
+        assert_binary_op("10 |>> 2");
+    }
+    
+    #[test]
+    fn reverse_iteration_to_single_value() {
+        assert_binary_op("10 |>| 2");
+    }
+
+    #[test]
+    fn iteration_with_apply() {
+        assert_multi_op_least_first("10 ~ 9 >>> 2");
     }
 
     #[test]
