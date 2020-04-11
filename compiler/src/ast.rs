@@ -131,6 +131,10 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         op_locations[p].1.push(i);
     }
 
+    // pair precedence has right to left associativity
+    // so we're going to reverse that list before creating AST
+    op_locations[20].1 = op_locations[20].1.iter().rev().map(|u| *u).collect();
+
     for precedence in op_locations.iter() {
         for loc in precedence.1.iter() {
             // get op's left and right
@@ -1027,6 +1031,19 @@ mod pair_precedence_test {
     #[test]
     fn pair_with_link() {
         assert_multi_op_least_first("10 -> 9 = 2");
+    }
+
+    #[test]
+    fn multiple_pairs() {
+        let ast = ast_from("10 = 5 = 1");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, None, Some(0), Some(6));
+        ast.nodes.assert_node(4, Some(6), None, None);
+        ast.nodes.assert_node(6, Some(2), Some(4), Some(8));
+        ast.nodes.assert_node(8, Some(6), None, None);
+
+        assert_eq!(ast.root, 2);
     }
 }
 
