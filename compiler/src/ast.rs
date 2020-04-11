@@ -38,32 +38,31 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         (OpType::Binary, vec![]), // 1 - Decimal
         (OpType::Binary, vec![]), // 2 - Access
         (OpType::UnaryLeft, vec![]), // 3 - Unary
-        (OpType::Binary, vec![]), // 4 - TypeCast
-        (OpType::Binary, vec![]), // 5 - Exponential
-        (OpType::Binary, vec![]), // 6 - Multiply, Division, Modulo
-        (OpType::Binary, vec![]), // 7 - Addition, Subtraction
-        (OpType::Binary, vec![]), // 8 - Bit Shift
-        (OpType::Binary, vec![]), // 9 - Range
-        (OpType::Binary, vec![]), // 10 - Relational
-        (OpType::Binary, vec![]), // 11 - Equality
-        (OpType::Binary, vec![]), // 12 - Bitwise And
-        (OpType::Binary, vec![]), // 13 - Bitwise Xor
-        (OpType::Binary, vec![]), // 14 - Bitwise Or
-        (OpType::Binary, vec![]), // 15 - Logical And
-        (OpType::Binary, vec![]), // 16 - Logical Xor
-        (OpType::Binary, vec![]), // 17 - Logical Or
-        (OpType::Binary, vec![]), // 18 - Link
-        (OpType::Binary, vec![]), // 19 - Pair
-        (OpType::Binary, vec![]), // 20 - List
-        (OpType::Binary, vec![]), // 21 - Partially Apply
-        (OpType::Binary, vec![]), // 22 - Prefix Apply
-        (OpType::Binary, vec![]), // 23 - Suffix Apply
-        (OpType::Binary, vec![]), // 24 - Infix Apply
-        (OpType::Binary, vec![]), // 25 - Conditional
-        (OpType::UnaryLeft, vec![]), // 26 - DefaultInvoke
-        (OpType::Binary, vec![]), // 27 - Conditional Continuation
-        (OpType::Binary, vec![]), // 28 - Functional
-        (OpType::Binary, vec![]), // 29 - Iteration
+        (OpType::UnaryRight, vec![]), // 4 - Suffix Apply
+        (OpType::Binary, vec![]), // 5 - TypeCast
+        (OpType::Binary, vec![]), // 6 - Exponential
+        (OpType::Binary, vec![]), // 7 - Multiply, Division, Modulo
+        (OpType::Binary, vec![]), // 8 - Addition, Subtraction
+        (OpType::Binary, vec![]), // 9 - Bit Shift
+        (OpType::Binary, vec![]), // 10 - Range
+        (OpType::Binary, vec![]), // 11 - Relational
+        (OpType::Binary, vec![]), // 12 - Equality
+        (OpType::Binary, vec![]), // 13 - Bitwise And
+        (OpType::Binary, vec![]), // 14 - Bitwise Xor
+        (OpType::Binary, vec![]), // 15 - Bitwise Or
+        (OpType::Binary, vec![]), // 16 - Logical And
+        (OpType::Binary, vec![]), // 17 - Logical Xor
+        (OpType::Binary, vec![]), // 18 - Logical Or
+        (OpType::Binary, vec![]), // 19 - Link
+        (OpType::Binary, vec![]), // 20 - Pair
+        (OpType::Binary, vec![]), // 21 - List
+        (OpType::Binary, vec![]), // 22 - Partially Apply
+        (OpType::Binary, vec![]), // 23 - Infix Apply
+        (OpType::Binary, vec![]), // 24 - Conditional
+        (OpType::UnaryLeft, vec![]), // 25 - DefaultInvoke
+        (OpType::Binary, vec![]), // 26 - Conditional Continuation
+        (OpType::Binary, vec![]), // 27 - Functional
+        (OpType::Binary, vec![]), // 28 - Iteration
     ];
 
     for (i, node) in parse_result.nodes.iter().enumerate() {
@@ -79,53 +78,53 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             Classification::Access => 2,
             Classification::Negation
             | Classification::AbsoluteValue 
-            | Classification::Not => 3,
-            Classification::TypeCast => 4,
-            Classification::Exponential => 5,
+            | Classification::Not 
+            | Classification::PrefixApply => 3,
+            Classification::SuffixApply => 4,
+            Classification::TypeCast => 5,
+            Classification::Exponential => 6,
             Classification::Multiplication
             | Classification::Division
             | Classification::IntegerDivision
-            | Classification::Modulo => 6,
+            | Classification::Modulo => 7,
             Classification::Addition
-            | Classification::Subtraction => 7,
+            | Classification::Subtraction => 8,
             Classification::BitwiseLeftShift
-            | Classification::BitwiseRightShift => 8,
+            | Classification::BitwiseRightShift => 9,
             Classification::MakeRange
             | Classification::MakeStartExclusiveRange
             | Classification::MakeEndExclusiveRange
-            | Classification::MakeExclusiveRange => 9,
+            | Classification::MakeExclusiveRange => 10,
             Classification::LessThan
             | Classification::LessThanOrEqual
             | Classification::GreaterThan
-            | Classification::GreaterThanOrEqual => 10,
+            | Classification::GreaterThanOrEqual => 11,
             Classification::Equality
             | Classification::Inequality
-            | Classification::TypeEqual => 11,
-            Classification::BitwiseAnd => 12,
-            Classification::BitwiseXor => 13,
-            Classification::BitwiseOr => 14,
-            Classification::LogicalAnd => 15,
-            Classification::LogicalXor => 16,
-            Classification::LogicalOr => 17,
-            Classification::MakeLink => 18,
-            Classification::MakePair => 19,
-            Classification::ListSeparator => 20,
-            Classification::PartiallyApply => 21,
-            Classification::PrefixApply => 22,
-            Classification::SuffixApply => 23,
-            Classification::InfixApply => 24,
+            | Classification::TypeEqual => 12,
+            Classification::BitwiseAnd => 13,
+            Classification::BitwiseXor => 14,
+            Classification::BitwiseOr => 15,
+            Classification::LogicalAnd => 16,
+            Classification::LogicalXor => 17,
+            Classification::LogicalOr => 18,
+            Classification::MakeLink => 19,
+            Classification::MakePair => 20,
+            Classification::ListSeparator => 21,
+            Classification::PartiallyApply => 22,
+            Classification::InfixApply => 23,
             Classification::InvokeIfTrue
             | Classification::InvokeIfFalse
-            | Classification::ResultCheckInvoke => 25,
-            Classification::DefaultInvoke => 26,
-            Classification::ConditionalContinuation => 27,
+            | Classification::ResultCheckInvoke => 24,
+            Classification::DefaultInvoke => 25,
+            Classification::ConditionalContinuation => 26,
             Classification::Apply
-            | Classification::PipeApply => 28,
+            | Classification::PipeApply => 27,
             Classification::Iterate
             | Classification::IterateToSingleValue 
             | Classification::ReverseIterate
             | Classification::ReverseIterateToSingleValue 
-            | Classification::MultiIterate => 29,
+            | Classification::MultiIterate => 28,
             _ => unimplemented!("{:?}", node.classification)
         };
 
@@ -185,25 +184,31 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                 parse_result.nodes[*loc].left = None;
             }
 
-            match right {
-                Some(i) => {
-                    parse_result.nodes[i].parent = Some(*loc);
+            if precedence.0 != OpType::UnaryRight {
+                match right {
+                    Some(i) => {
+                        parse_result.nodes[i].parent = Some(*loc);
 
-                    match parse_result.nodes[i].right {
-                        Some(r) => {
-                            if parse_result.nodes[r].parent != Some(i) {
-                                parse_result.nodes[r].left = Some(*loc);
+                        match parse_result.nodes[i].right {
+                            Some(r) => {
+                                if parse_result.nodes[r].parent != Some(i) {
+                                    parse_result.nodes[r].left = Some(*loc);
+                                }
                             }
+                            None => (),
                         }
-                        None => (),
-                    }
 
-                    if parse_result.nodes[i].classification == Classification::Literal {
-                        parse_result.nodes[i].left = None;
-                        parse_result.nodes[i].right = None;
+                        if parse_result.nodes[i].classification == Classification::Literal {
+                            parse_result.nodes[i].left = None;
+                            parse_result.nodes[i].right = None;
+                        }
                     }
+                    None => () // nothing to do
                 }
-                None => () // nothing to do
+            } else {
+                // unary riht means operand is on left
+                // set right side to None
+                parse_result.nodes[*loc].right = None;
             }
         }
     }
@@ -613,6 +618,27 @@ mod unary_precedence_tests {
 
         assert_eq!(ast.root, 0);
     }
+
+    #[test]
+    fn prefix_apply() {
+        let ast = ast_from("`expr 10");
+
+        ast.nodes.assert_node(0, None, None, Some(2));
+        ast.nodes.assert_node(2, Some(0), None, None);
+
+        assert_eq!(ast.root, 0);
+    }
+
+    #[test]
+    fn multiple_prefix_apply() {
+        let ast = ast_from("`expr2 `expr 10");
+
+        ast.nodes.assert_node(0, None, None, Some(2));
+        ast.nodes.assert_node(2, Some(0), None, Some(4));
+        ast.nodes.assert_node(4, Some(2), None, None);
+
+        assert_eq!(ast.root, 0);
+    }
     
     #[test]
     fn unary_with_access() {
@@ -639,6 +665,44 @@ mod unary_precedence_tests {
 }
 
 #[cfg(test)]
+mod suffix_apply_precedence_tests {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op};
+
+    #[test]
+    fn multiple_suffix_apply() {
+        let ast = ast_from("10 expr` expr2`");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(4), Some(0), None);
+        ast.nodes.assert_node(4, None, Some(2), None);
+
+        assert_eq!(ast.root, 4);
+    }
+
+    #[test]
+    fn suffix_apply() {
+        let ast = ast_from("10 expr`");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, None, Some(0), None);
+
+        assert_eq!(ast.root, 2);
+    }
+
+    #[test]
+    fn suffix_apply_with_prefix_apply() {
+        let ast = ast_from("`expr 10 expr`");
+
+        ast.nodes.assert_node(0, Some(4), None, Some(2));
+        ast.nodes.assert_node(2, Some(0), None, None);
+        ast.nodes.assert_node(4, None, Some(0), None);
+
+        assert_eq!(ast.root, 4);
+    }
+}
+
+#[cfg(test)]
 mod type_cast_precedence_tests {
     use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
     use super::tests::{AssertNode, ast_from, assert_binary_op};
@@ -649,15 +713,15 @@ mod type_cast_precedence_tests {
     }
     
     #[test]
-    fn type_cast_with_unary() {
-        let ast = ast_from("-10 #> \"\"");
+    fn type_cast_with_suffix_apply() {
+        let ast = ast_from("10 expr` #> \"\"");
 
-        ast.nodes.assert_node(0, Some(3), None, Some(1));
-        ast.nodes.assert_node(1, Some(0), None, None );
-        ast.nodes.assert_node(3, None, Some(0), Some(5));
-        ast.nodes.assert_node(5, Some(3), None, None);
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(4), Some(0), None );
+        ast.nodes.assert_node(4, None, Some(2), Some(6));
+        ast.nodes.assert_node(6, Some(4), None, None);
 
-        assert_eq!(ast.root, 3);
+        assert_eq!(ast.root, 4);
     }
 }
 
@@ -1010,38 +1074,6 @@ mod partially_apply_precedence_test {
 }
 
 #[cfg(test)]
-mod prefix_precedence_test {
-    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
-    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
-    
-    #[test]
-    fn prefix_apply() {
-        assert_binary_op("10 `expr 2");
-    }
-
-    #[test]
-    fn prefix_apply_with_partially_apply() {
-        assert_multi_op_least_first("10 ~~ 9 `expr 2");
-    }
-}
-
-#[cfg(test)]
-mod suffix_precedence_test {
-    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
-    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
-    
-    #[test]
-    fn suffix_apply() {
-        assert_binary_op("10 expr` 2");
-    }
-
-    #[test]
-    fn suffix_apply_with_prefix_apply() {
-        assert_multi_op_least_first("10 `expr 9 expr` 2");
-    }
-}
-
-#[cfg(test)]
 mod infix_precedence_test {
     use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
     use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
@@ -1052,8 +1084,8 @@ mod infix_precedence_test {
     }
 
     #[test]
-    fn infix_apply_with_suffix_apply() {
-        assert_multi_op_least_first("10 expr` 9 `expr` 2");
+    fn infix_apply_partially_apply() {
+        assert_multi_op_least_first("10 ~~ 9 `expr` 2");
     }
 }
 
