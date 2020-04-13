@@ -1210,3 +1210,34 @@ mod iteration_precedence_test {
     }
 }
 
+#[cfg(test)]
+mod multi_precedence_tests {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+
+    #[test]
+    fn pyrimid_greatest_precedence_on_outsides() {
+        //                  0                        1          2
+        //                  0        12        4 6 8 0 2  4 6 8 0 2        34
+        let ast = ast_from("my_object.my_value * 4 + 8 .. 8 + 4 * my_object.my_value");
+
+        ast.nodes.assert_node(0, Some(1), None, None);
+        ast.nodes.assert_node(1, Some(4), Some(0), Some(2));
+        ast.nodes.assert_node(2, Some(1), None, None);
+        ast.nodes.assert_node(4, Some(8), Some(1), Some(6));
+        ast.nodes.assert_node(6, Some(4), None, None);
+        ast.nodes.assert_node(8, Some(12), Some(4), Some(10));
+        ast.nodes.assert_node(10, Some(8), None, None);
+        ast.nodes.assert_node(12, None, Some(8), Some(16));
+        ast.nodes.assert_node(14, Some(16), None, None);
+        ast.nodes.assert_node(16, Some(12), Some(14), Some(20));
+        ast.nodes.assert_node(18, Some(20), None, None);
+        ast.nodes.assert_node(20, Some(16), Some(18), Some(23));
+        ast.nodes.assert_node(22, Some(23), None, None);
+        ast.nodes.assert_node(23, Some(20), Some(22), Some(24));
+        ast.nodes.assert_node(24, Some(23), None, None);
+
+        assert_eq!(ast.root, 12);
+    }
+}
+
