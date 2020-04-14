@@ -65,14 +65,22 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         (OpType::Binary, vec![]), // 28 - Iteration
     ];
 
+    // maintain separate list for groupings
+    let mut groups: Vec<usize> = vec![];
+
     for (i, node) in parse_result.nodes.iter().enumerate() {
         let p = match node.classification {
-            Classification::Literal 
-            | Classification::IterationOutput 
+            Classification::IterationOutput 
             | Classification::IterationSkip 
             | Classification::IterationContinue
             | Classification::IterationComplete 
             | Classification::NoOp => continue,
+            Classification::Literal => {
+                if node.token.token_type == TokenType::StartGroup {
+                    groups.push(i);
+                }
+                continue;
+            }
             Classification::Symbol => 0,
             Classification::Decimal => 1,
             Classification::Access => 2,
@@ -245,7 +253,22 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             }
             println!("------");
         }
+    }
 
+    // group sub trees will have been resolved
+    // final touch is to assign the parent to the sub tree root
+    // which will be already assigned to the group start node's right
+    for i in groups {
+        match parse_result.nodes[i].right {
+            Some(r) => parse_result.nodes[r].parent = Some(i),
+            None => unimplemented!("no right assign to group node {}", i),
+        }
+                
+        // for testing only
+        for (i, n) in parse_result.nodes.iter().enumerate() {
+            println!("{}, {:?}", i, n);
+        }
+        println!("------");
     }
 
     let mut root_index = *parse_result.sub_expressions.get(0).unwrap(); // should always have 1
@@ -1284,3 +1307,24 @@ mod multi_precedence_tests {
     }
 }
 
+#[cfg(test)]
+mod group_tests {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+
+    #[test]
+    fn group_resolves_first() {
+        let ast = ast_from("5 * (4 + 9) * 5");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(12), Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, Some(7));
+        ast.nodes.assert_node(5, Some(7), None, None);
+        ast.nodes.assert_node(7, Some(4), Some(5), Some(9));
+        ast.nodes.assert_node(9, Some(7), None, None);
+        ast.nodes.assert_node(12, None, Some(2), Some(14));
+        ast.nodes.assert_node(14, Some(12), None, None);
+
+        assert_eq!(ast.root, 12);
+    }
+}
