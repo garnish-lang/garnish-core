@@ -135,6 +135,12 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
     // so we're going to reverse that list before creating AST
     op_locations[20].1 = op_locations[20].1.iter().rev().map(|u| *u).collect();
 
+    // for testing only
+    for (i, n) in parse_result.nodes.iter().enumerate() {
+        println!("{}, {:?}", i, n);
+    }
+    println!("------");
+
     for precedence in op_locations.iter() {
         for loc in precedence.1.iter() {
             // get op's left and right
@@ -233,10 +239,10 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                 parse_result.nodes[*loc].right = None;
             }
                 
+            // for testing only
             for (i, n) in parse_result.nodes.iter().enumerate() {
                 println!("{}, {:?}", i, n);
             }
-
             println!("------");
         }
 
