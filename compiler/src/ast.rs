@@ -76,7 +76,8 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             | Classification::IterationComplete 
             | Classification::NoOp => continue,
             Classification::Literal => {
-                if node.token.token_type == TokenType::StartGroup {
+                if node.token.token_type == TokenType::StartGroup 
+                    || node.token.token_type == TokenType::StartExpression {
                     groups.push(i);
                 }
                 continue;
@@ -1314,17 +1315,19 @@ mod group_tests {
 
     #[test]
     fn group_resolves_first() {
-        let ast = ast_from("5 * (4 + 9) * 5");
+        for input in ["5 * {4 + 9} * 5", "5 * (4 + 9) * 5"].iter() {
+            let ast = ast_from(input);
 
-        ast.nodes.assert_node(0, Some(2), None, None);
-        ast.nodes.assert_node(2, Some(12), Some(0), Some(4));
-        ast.nodes.assert_node(4, Some(2), None, Some(7));
-        ast.nodes.assert_node(5, Some(7), None, None);
-        ast.nodes.assert_node(7, Some(4), Some(5), Some(9));
-        ast.nodes.assert_node(9, Some(7), None, None);
-        ast.nodes.assert_node(12, None, Some(2), Some(14));
-        ast.nodes.assert_node(14, Some(12), None, None);
+            ast.nodes.assert_node(0, Some(2), None, None);
+            ast.nodes.assert_node(2, Some(12), Some(0), Some(4));
+            ast.nodes.assert_node(4, Some(2), None, Some(7));
+            ast.nodes.assert_node(5, Some(7), None, None);
+            ast.nodes.assert_node(7, Some(4), Some(5), Some(9));
+            ast.nodes.assert_node(9, Some(7), None, None);
+            ast.nodes.assert_node(12, None, Some(2), Some(14));
+            ast.nodes.assert_node(14, Some(12), None, None);
 
-        assert_eq!(ast.root, 12);
+            assert_eq!(ast.root, 12);
+        }
     }
 }
