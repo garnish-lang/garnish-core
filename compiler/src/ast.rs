@@ -258,10 +258,26 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
 
     // group sub trees will have been resolved
     // final touch is to assign the parent to the sub tree root
-    // which will be already assigned to the group start node's right
+    // a node will already be assigned to the start group's right
+    // crawl up until we find the root
     for i in groups {
         match parse_result.nodes[i].right {
-            Some(r) => parse_result.nodes[r].parent = Some(i),
+            Some(r) => match parse_result.nodes[r].parent {
+                Some(p) => {
+                    let mut p_root = p;
+                    while true {
+                        match parse_result.nodes[p_root].parent {
+                            Some(p) => p_root = p,
+                            None => {
+                                parse_result.nodes[p_root].parent = Some(i);
+                                parse_result.nodes[i].right = Some(p_root);
+                                break;
+                            }
+                        }
+                    }
+                }
+                None => parse_result.nodes[r].parent = Some(i),
+            }
             None => unimplemented!("no right assign to group node {}", i),
         }
                 
@@ -1329,5 +1345,26 @@ mod group_tests {
 
             assert_eq!(ast.root, 12);
         }
+    }
+
+    #[test]
+    fn nested_group() {
+        let ast = ast_from("5 ** (4 * (3 + 3) * 4) ** 5");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(22), Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, Some(17));
+        ast.nodes.assert_node(5, Some(7), None, None);
+        ast.nodes.assert_node(7, Some(17), Some(5), Some(9));
+        ast.nodes.assert_node(9, Some(7), None, Some(12));
+        ast.nodes.assert_node(10, Some(12), None, None);
+        ast.nodes.assert_node(12, Some(9), Some(10), Some(14));
+        ast.nodes.assert_node(14, Some(12), None, None);
+        ast.nodes.assert_node(17, Some(4), Some(7), Some(19));
+        ast.nodes.assert_node(19, Some(17), None, None);
+        ast.nodes.assert_node(22, None, Some(2), Some(24));
+        ast.nodes.assert_node(24, Some(22), None, None);
+
+        assert_eq!(ast.root, 22);
     }
 }
