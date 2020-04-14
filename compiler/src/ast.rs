@@ -154,17 +154,17 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                                     match parse_result.nodes[p_root].parent {
                                         Some(p) => p_root = p,
                                         None => {
-                                            parse_result.nodes[p].right = Some(*loc);    
-                                            parse_result.nodes[*loc].parent = Some(p);
+                                            parse_result.nodes[p].parent = Some(*loc);    
+                                            parse_result.nodes[*loc].left = Some(p);
                                             break;
                                         }
                                     }
                                 }
                             }
-                            None => (),
+                            None => {
+                                parse_result.nodes[i].parent = Some(*loc);
+                            }
                         }
-
-                        parse_result.nodes[i].parent = Some(*loc);
 
                         match parse_result.nodes[i].left {
                             Some(l) => {
@@ -191,7 +191,25 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             if precedence.0 != OpType::UnaryRight {
                 match right {
                     Some(i) => {
-                        parse_result.nodes[i].parent = Some(*loc);
+                        match parse_result.nodes[i].parent {
+                            Some(p) => {
+                                // go up to nodes root and update its left to be this node
+                                let mut p_root = p;
+                                while true {
+                                    match parse_result.nodes[p_root].parent {
+                                        Some(p) => p_root = p,
+                                        None => {
+                                            parse_result.nodes[*loc].right = Some(p);    
+                                            parse_result.nodes[p].parent = Some(*loc);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            None => {
+                                parse_result.nodes[i].parent = Some(*loc);
+                            }
+                        }
 
                         match parse_result.nodes[i].right {
                             Some(r) => {
@@ -210,11 +228,18 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                     None => () // nothing to do
                 }
             } else {
-                // unary riht means operand is on left
+                // unary right means operand is on left
                 // set right side to None
                 parse_result.nodes[*loc].right = None;
             }
+                
+            for (i, n) in parse_result.nodes.iter().enumerate() {
+                println!("{}, {:?}", i, n);
+            }
+
+            println!("------");
         }
+
     }
 
     let mut root_index = *parse_result.sub_expressions.get(0).unwrap(); // should always have 1
@@ -1136,12 +1161,12 @@ mod conditional_precedence_test {
         let ast = ast_from("10 => 5, 20 => 15, !> 25");
 
         ast.nodes.assert_node(2, Some(5), Some(0), Some(4));
-        ast.nodes.assert_node(5, None, Some(2), Some(12));
-        ast.nodes.assert_node(9, Some(12), Some(7), Some(11));
-        ast.nodes.assert_node(12, Some(5), Some(9), Some(14));
+        ast.nodes.assert_node(5, Some(12), Some(2), Some(9));
+        ast.nodes.assert_node(9, Some(5), Some(7), Some(11));
+        ast.nodes.assert_node(12, None, Some(5), Some(14));
         ast.nodes.assert_node(14, Some(12), None, Some(16));
 
-        assert_eq!(ast.root, 5);
+        assert_eq!(ast.root, 12);
     }
 }
 
@@ -1195,19 +1220,6 @@ mod iteration_precedence_test {
     fn iteration_with_apply() {
         assert_multi_op_least_first("10 ~ 9 >>> 2");
     }
-
-    #[test]
-    fn conditional_chain() {
-        let ast = ast_from("10 => 5, 20 => 15, !> 25");
-
-        ast.nodes.assert_node(2, Some(5), Some(0), Some(4));
-        ast.nodes.assert_node(5, None, Some(2), Some(12));
-        ast.nodes.assert_node(9, Some(12), Some(7), Some(11));
-        ast.nodes.assert_node(12, Some(5), Some(9), Some(14));
-        ast.nodes.assert_node(14, Some(12), None, Some(16));
-
-        assert_eq!(ast.root, 5);
-    }
 }
 
 #[cfg(test)]
@@ -1238,6 +1250,31 @@ mod multi_precedence_tests {
         ast.nodes.assert_node(24, Some(23), None, None);
 
         assert_eq!(ast.root, 12);
+    }
+
+    #[test]
+    fn pyrimid_greatest_precedence_on_insides() {
+        //                  0           1                        2   
+        //                  0 2  4  6 8 0 2        34        6 8 0 2  4  6 
+        let ast = ast_from("5 && 10 + 6 * my_object.my_value * 6 + 10 && 5");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(24), Some(0), Some(20));
+        ast.nodes.assert_node(4, Some(6), None, None);
+        ast.nodes.assert_node(6, Some(20), Some(4), Some(16));
+        ast.nodes.assert_node(8, Some(10), None, None);
+        ast.nodes.assert_node(10, Some(16), Some(8), Some(13));
+        ast.nodes.assert_node(12, Some(13), None, None);
+        ast.nodes.assert_node(13, Some(10), Some(12), Some(14));
+        ast.nodes.assert_node(14, Some(13), None, None);
+        ast.nodes.assert_node(16, Some(6), Some(10), Some(18));
+        ast.nodes.assert_node(18, Some(16), None, None);
+        ast.nodes.assert_node(20, Some(2), Some(6), Some(22));
+        ast.nodes.assert_node(22, Some(20), None, None);
+        ast.nodes.assert_node(24, None, Some(2), Some(26));
+        ast.nodes.assert_node(26, Some(24), None, None);
+
+        assert_eq!(ast.root, 24);
     }
 }
 

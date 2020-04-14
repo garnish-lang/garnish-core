@@ -1,4 +1,5 @@
 use expr_lang_common::Result;
+use std::fmt;
 
 use crate::{Token, TokenType};
 
@@ -67,13 +68,19 @@ pub enum Classification {
     CheckForResult,
 }
 
-#[derive(Debug, Clone, PartialOrd, PartialEq)]
+#[derive(Clone, PartialOrd, PartialEq)]
 pub struct Node {
     pub(crate) classification: Classification,
     pub(crate) token: Token,
     pub(crate) left: Option<usize>,
     pub(crate) right: Option<usize>,
     pub(crate) parent: Option<usize>,
+}
+
+impl fmt::Debug for Node {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}, {:?}, {:?}, {:?}, {:?}, {:?}", self.classification, self.token.token_type, self.token.value, self.parent, self.left, self.right)
+    }
 }
 
 #[derive(Debug)]
