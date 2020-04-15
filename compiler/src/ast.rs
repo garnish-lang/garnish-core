@@ -68,17 +68,25 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
     // maintain separate list for groupings
     let mut groups: Vec<usize> = vec![];
 
+    // maintain separate list of literals for checking for orphans
+    let mut literals: Vec<usize> = vec![];
+
     for (i, node) in parse_result.nodes.iter().enumerate() {
         let p = match node.classification {
             Classification::IterationOutput 
             | Classification::IterationSkip 
             | Classification::IterationContinue
-            | Classification::IterationComplete 
-            | Classification::NoOp => continue,
+            | Classification::IterationComplete => {
+                literals.push(i);
+                continue;
+            }
+            Classification::NoOp => continue,
             Classification::Literal => {
                 if node.token.token_type == TokenType::StartGroup 
                     || node.token.token_type == TokenType::StartExpression {
                     groups.push(i);
+                } else {
+                    literals.push(i);
                 }
                 continue;
             }
@@ -253,6 +261,26 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                 println!("{}, {:?}", i, n);
             }
             println!("------");
+        }
+    }
+
+    // check for orphaned literals
+    for i in literals {
+        match parse_result.nodes[i].parent {
+            Some(_) => (), // has parent, nothing to do
+            None => {
+                // orphan literals happen when they are the only value in a group
+                // check left to see if it is a start group
+                // assign as parent if so
+                match parse_result.nodes[i].left {
+                    Some(l) => if parse_result.nodes[l].token.token_type == TokenType::StartGroup {
+                        // parent will be assigned in group loop below
+                        // assign groups right for that to happen
+                        parse_result.nodes[l].right = Some(i);
+                    } else { unreachable!("Orphan literal not in group found at {}", i) }
+                    None => () // no left means this literal was the start of input, which is fine also
+                }
+            }
         }
     }
 
@@ -1367,4 +1395,24 @@ mod group_tests {
 
         assert_eq!(ast.root, 22);
     }
+
+    #[test]
+    fn compact_nesting() {
+        let ast = ast_from("(3+((4)+(4))+3)");
+
+        ast.nodes.assert_node(0, None, None, Some(12));
+        ast.nodes.assert_node(1, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(12), Some(1), Some(3));
+        ast.nodes.assert_node(3, Some(2), None, Some(7));
+        ast.nodes.assert_node(4, Some(7), None, Some(5));
+        ast.nodes.assert_node(5, Some(4), None, None);
+        ast.nodes.assert_node(7, Some(3), Some(4), Some(8));
+        ast.nodes.assert_node(8, Some(7), None, Some(9));
+        ast.nodes.assert_node(9, Some(8), None, None);
+        ast.nodes.assert_node(12, Some(0), Some(2), Some(13));
+        ast.nodes.assert_node(13, None, None, None);
+
+        assert_eq!(ast.root, 0);
+    }
 }
+
