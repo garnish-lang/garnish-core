@@ -1315,6 +1315,21 @@ mod output_result_tests {
 
         assert_eq!(ast.root, 1);
     }
+
+    #[test]
+    fn output_result_with_iteration() {
+        let ast = ast_from("my_list >>> expr\n\nmy_list >> expr");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(5), Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, None);
+        ast.nodes.assert_node(5, None, Some(2), Some(9));
+        ast.nodes.assert_node(7, Some(9), None, None);
+        ast.nodes.assert_node(9, Some(5), Some(7), Some(11));
+        ast.nodes.assert_node(11, Some(9), None, None);
+
+        assert_eq!(ast.root, 5);
+    }
 }
 
 #[cfg(test)]
