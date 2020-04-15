@@ -6,6 +6,7 @@ use expr_lang_common::{
     ExpressionValueConsumer, Instruction, InstructionSet, Result,
 };
 
+#[derive(Eq, PartialEq, Debug)]
 pub struct InstructionSetBuilder {
     instructions: Vec<u8>,
     expression_map: HashMap<String, usize>,

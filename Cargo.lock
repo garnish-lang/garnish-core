@@ -10,6 +10,7 @@ name = "compiler"
 version = "0.1.0"
 dependencies = [
  "expr_lang_common 0.1.0",
+ "expr_lang_instruction_set_builder 0.1.0",
 ]
 
 [[package]]

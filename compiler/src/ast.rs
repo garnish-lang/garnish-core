@@ -18,16 +18,7 @@ enum OpType {
 pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
     if parse_result.nodes.is_empty() {
         return Ok(AST {
-            nodes: vec![Node {
-                classification: Classification::Literal,
-                token: Token {
-                    value: String::from(""),
-                    token_type: TokenType::UnitLiteral
-                },
-                left: None,
-                right: None,
-                parent: None
-            }],
+            nodes: vec![],
             root: 0,
             sub_roots: vec![]
         });
@@ -392,16 +383,7 @@ mod tests {
     fn create_empty() {
         let ast = ast_from("");
 
-        assert_eq!(ast.nodes, vec![Node {
-            classification: Classification::Literal,
-            token: Token {
-                value: String::from(""),
-                token_type: TokenType::UnitLiteral,
-            },
-            left: None,
-            right: None,
-            parent: None
-        }]);
+        assert_eq!(ast.nodes, vec![]);
         assert_eq!(ast.root, 0);
         assert_eq!(ast.sub_roots, vec![]);
     }
