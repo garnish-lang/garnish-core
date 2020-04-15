@@ -403,9 +403,12 @@ impl Parser {
                         match nodes.get_mut(i - 1) {
                             Some(n) => {
                                 n.classification = Classification::OutputResult;
+                                n.right = right;
                             }
                             None => unreachable!()
                         }
+
+                        next_left = Some(i - 1);
 
                         match right {
                             Some(r) => {
@@ -840,7 +843,10 @@ mod subexpression_tests {
         let node_6 = result.nodes.get(5).unwrap();
         assert_eq!(node_6.classification, Classification::OutputResult);
         assert_eq!(node_6.left, Some(4));
-        assert_eq!(node_6.right, Some(6));
+        assert_eq!(node_6.right, Some(7));
+
+        let node = result.nodes.get(7).unwrap();
+        assert_eq!(node.left, Some(5));
 
         assert_eq!(*result.sub_expressions.get(0).unwrap(), 0);
         assert_eq!(*result.sub_expressions.get(1).unwrap(), 7);

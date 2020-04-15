@@ -63,6 +63,7 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         (OpType::Binary, vec![]), // 26 - Conditional Continuation
         (OpType::Binary, vec![]), // 27 - Functional
         (OpType::Binary, vec![]), // 28 - Iteration
+        (OpType::Binary, vec![]), // 29 - Output Result
     ];
 
     // maintain separate list for groupings
@@ -142,6 +143,7 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             | Classification::ReverseIterate
             | Classification::ReverseIterateToSingleValue 
             | Classification::MultiIterate => 28,
+            Classification::OutputResult => 29,
             _ => unimplemented!("{:?}", node.classification)
         };
 
@@ -277,6 +279,8 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                         // parent will be assigned in group loop below
                         // assign groups right for that to happen
                         parse_result.nodes[l].right = Some(i);
+                        parse_result.nodes[i].right = None;
+                        parse_result.nodes[i].left = None;
                     } else { unreachable!("Orphan literal not in group found at {}", i) }
                     None => () // no left means this literal was the start of input, which is fine also
                 }
@@ -1297,6 +1301,23 @@ mod iteration_precedence_test {
 }
 
 #[cfg(test)]
+mod output_result_tests {
+    use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
+    use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
+
+    #[test]
+    fn output_result() {
+        let ast = ast_from("5\n\n6");
+
+        ast.nodes.assert_node(0, Some(1), None, None);
+        ast.nodes.assert_node(1, None, Some(0), Some(3));
+        ast.nodes.assert_node(3, Some(1), None, None);
+
+        assert_eq!(ast.root, 1);
+    }
+}
+
+#[cfg(test)]
 mod multi_precedence_tests {
     use crate::{Lexer, TokenType, Token, Node, Parser, Classification};
     use super::tests::{AssertNode, ast_from, assert_binary_op, assert_multi_op_least_first};
@@ -1410,7 +1431,7 @@ mod group_tests {
         ast.nodes.assert_node(8, Some(7), None, Some(9));
         ast.nodes.assert_node(9, Some(8), None, None);
         ast.nodes.assert_node(12, Some(0), Some(2), Some(13));
-        ast.nodes.assert_node(13, None, None, None);
+        ast.nodes.assert_node(13, Some(12), None, None);
 
         assert_eq!(ast.root, 0);
     }
