@@ -1,5 +1,5 @@
 use expr_lang_common::Result;
-use crate::{AST, Classification, TokenType};
+use crate::{AST, Classification, TokenType, Node};
 use expr_lang_instruction_set_builder::InstructionSetBuilder;
 use expr_lang_common::ExpressionValue;
 
@@ -13,9 +13,12 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
         return Ok(instructions);
     }
 
-    let extract = |o, s, p| -> Result<usize> { 
+    let extract = |o, s, p| -> Result<&Node> { 
         match o {
-            Some(i) => Ok(i),
+            Some(i) => match ast.nodes.get(i) {
+                Some(n) => Ok(n),
+                None => Err(format!("Node on {} side of parent {} with index {} not in AST", s, p, i).into())
+            }
             None => Err(format!("Expected {} side node for parent {}", s, p).into())
         }
     };
@@ -48,19 +51,13 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
         }
         Classification::Symbol => {
             // unary op literal
-            let identifier = &ast.nodes[extract_right(first.right, ast.root)?].token.value;
-            instructions.put(ExpressionValue::symbol(identifier))?;
+            instructions.put(ExpressionValue::symbol(&extract_right(first.right, ast.root)?.token.value))?;
         }
         Classification::Decimal => {
             // special literal value composed of two literal nodes
-            let (left, right) = (
-                extract_left(first.left, ast.root)?,
-                extract_right(first.right, ast.root)?
-            );
-
             let float_str = format!("{}.{}", 
-                ast.nodes[left].token.value, 
-                ast.nodes[right].token.value
+                extract_left(first.left, ast.root)?.token.value, 
+                extract_right(first.right, ast.root)?.token.value
             );
             let f: f32 = match float_str.parse() {
                 Ok(f) => f,
