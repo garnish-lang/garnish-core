@@ -13,6 +13,16 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
         return Ok(instructions);
     }
 
+    let extract = |o, s, p| -> Result<usize> { 
+        match o {
+            Some(i) => Ok(i),
+            None => Err(format!("Expected {} side node for parent {}", s, p).into())
+        }
+    };
+
+    let extract_left = |o, p| extract(o, "left", p);
+    let extract_right = |o, p| extract(o, "right", p);
+
     let first = &ast.nodes[ast.root];
     match first.classification {
         // put literal values in based on their type
@@ -38,23 +48,15 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
         }
         Classification::Symbol => {
             // unary op literal
-            let identifier = &ast.nodes[match first.right {
-                Some(r) => r,
-                None => return Err(format!("Symbol value missing right side at {}", ast.root).into())
-            }].token.value;
+            let identifier = &ast.nodes[extract_right(first.right, ast.root)?].token.value;
             instructions.put(ExpressionValue::symbol(identifier))?;
         }
         Classification::Decimal => {
             // special literal value composed of two literal nodes
             let (left, right) = (
-            match first.left {
-                Some(l) => l,
-                None => return Err(format!("Float value missing left side at {}", ast.root).into()),
-            },
-            match first.right {
-                Some(r) => r,
-                None => return Err(format!("Float value missing right side at {}", ast.root).into())
-            });
+                extract_left(first.left, ast.root)?,
+                extract_right(first.right, ast.root)?
+            );
 
             let float_str = format!("{}.{}", 
                 ast.nodes[left].token.value, 
@@ -221,7 +223,7 @@ mod tests {
         });
 
         let result = build_byte_code(ast);
-        assert_eq!(result.err().unwrap().get_message(), "Float value missing left side at 0");
+        assert_eq!(result.err().unwrap().get_message(), "Expected left side node for parent 0");
     }
 
     #[test]
@@ -250,7 +252,7 @@ mod tests {
         });
 
         let result = build_byte_code(ast);
-        assert_eq!(result.err().unwrap().get_message(), "Float value missing right side at 1");
+        assert_eq!(result.err().unwrap().get_message(), "Expected right side node for parent 1");
     }
 
     #[test]
@@ -305,7 +307,7 @@ mod tests {
         });
 
         let result = build_byte_code(ast);
-        assert_eq!(result.err().unwrap().get_message(), "Symbol value missing right side at 0");
+        assert_eq!(result.err().unwrap().get_message(), "Expected right side node for parent 0");
     }
 
     #[test]
