@@ -22,7 +22,21 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
                 let i: i32 = first.token.value.parse().unwrap();
                 instructions.put(ExpressionValue::integer(i))?;
             }
+            TokenType::Character => {
+                instructions.put(ExpressionValue::character(first.token.value.clone()))?;
+            }
+            TokenType::CharacterList => {
+                instructions.put(ExpressionValue::character_list(first.token.value.clone()))?;
+            }
+            TokenType::Identifier => {
+                instructions.resolve(&first.token.value);
+            }
             _ => unimplemented!()
+        }
+        Classification::Symbol => {
+            // unary op literal
+            let identifier = &ast.nodes[first.right.unwrap()].token.value;
+            instructions.put(ExpressionValue::symbol(identifier))?;
         }
         Classification::Decimal => {
             // special literal value composed of two literal nodes
@@ -99,6 +113,54 @@ mod tests {
         let mut expected = InstructionSetBuilder::new();
         expected.start_expression("main");
         expected.put(ExpressionValue::float(3.14)).unwrap();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn character() {
+        let instructions = byte_code_from("'a'");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::character("a".into())).unwrap();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn character_list() {
+        let instructions = byte_code_from("\"Hello, World!\"");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::character_list("Hello, World!".into())).unwrap();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn symbol() {
+        let instructions = byte_code_from(":my_symbol");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::symbol("my_symbol")).unwrap();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn identifier() {
+        let instructions = byte_code_from("my_value");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.resolve(&"my_value".into());
         expected.end_expression();
 
         assert_eq!(instructions, expected);
