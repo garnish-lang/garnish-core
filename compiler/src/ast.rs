@@ -8,6 +8,16 @@ pub struct AST {
     pub(crate) sub_roots: Vec<usize>
 }
 
+impl AST {
+    pub fn new() -> Self {
+        AST {
+            nodes: vec![],
+            root: 0,
+            sub_roots: vec![],
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Copy, Clone)]
 enum OpType {
     Binary,

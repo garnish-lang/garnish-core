@@ -19,7 +19,10 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
         Classification::Literal => match first.token.token_type {
             TokenType::UnitLiteral => instructions.put(ExpressionValue::unit())?,
             TokenType::Number => {
-                let i: i32 = first.token.value.parse().unwrap();
+                let i: i32 = match first.token.value.parse() {
+                    Ok(f) => f,
+                    Err(_) => return Err(format!("Invalid integer value ({}) at node {}", first.token.value, ast.root).into())
+                };
                 instructions.put(ExpressionValue::integer(i))?;
             }
             TokenType::Character => {
@@ -35,16 +38,32 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
         }
         Classification::Symbol => {
             // unary op literal
-            let identifier = &ast.nodes[first.right.unwrap()].token.value;
+            let identifier = &ast.nodes[match first.right {
+                Some(r) => r,
+                None => return Err(format!("Symbol value missing right side at {}", ast.root).into())
+            }].token.value;
             instructions.put(ExpressionValue::symbol(identifier))?;
         }
         Classification::Decimal => {
             // special literal value composed of two literal nodes
+            let (left, right) = (
+            match first.left {
+                Some(l) => l,
+                None => return Err(format!("Float value missing left side at {}", ast.root).into()),
+            },
+            match first.right {
+                Some(r) => r,
+                None => return Err(format!("Float value missing right side at {}", ast.root).into())
+            });
+
             let float_str = format!("{}.{}", 
-                ast.nodes[first.left.unwrap()].token.value, 
-                ast.nodes[first.right.unwrap()].token.value
+                ast.nodes[left].token.value, 
+                ast.nodes[right].token.value
             );
-            let f: f32 = float_str.parse().unwrap();
+            let f: f32 = match float_str.parse() {
+                Ok(f) => f,
+                Err(_) => return Err(format!("Invalid float value ({}) at node {}", float_str, ast.root).into())
+            };
             instructions.put(ExpressionValue::float(f))?;
         }
         _ => ()
@@ -107,6 +126,25 @@ mod tests {
     }
 
     #[test]
+    fn invalid_integer() {
+        let mut ast = AST::new();
+        ast.root = 0;
+        ast.nodes.push(Node {
+            classification: Classification::Literal,
+            token: Token {
+                value: "abc".into(),
+                token_type: TokenType::Number,
+            },
+            left: None,
+            right: None,
+            parent: None,
+        });
+
+        let result = build_byte_code(ast);
+        assert_eq!(result.err().unwrap().get_message(), "Invalid integer value (abc) at node 0");
+    }
+
+    #[test]
     fn float() {
         let instructions = byte_code_from("3.14");
 
@@ -116,6 +154,103 @@ mod tests {
         expected.end_expression();
 
         assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn invalid_float() {
+        let mut ast = AST::new();
+        ast.root = 1;
+        ast.nodes.push(Node {
+            classification: Classification::Literal,
+            token: Token {
+                value: "abc".into(),
+                token_type: TokenType::Number,
+            },
+            left: None,
+            right: None,
+            parent: Some(1),
+        });
+        ast.nodes.push(Node {
+            classification: Classification::Decimal,
+            token: Token {
+                value: ".".into(),
+                token_type: TokenType::DotOperator,
+            },
+            left: Some(0),
+            right: Some(2),
+            parent: None,
+        });
+        ast.nodes.push(Node {
+            classification: Classification::Literal,
+            token: Token {
+                value: "abc".into(),
+                token_type: TokenType::Number,
+            },
+            left: None,
+            right: None,
+            parent: Some(1),
+        });
+
+        let result = build_byte_code(ast);
+        assert_eq!(result.err().unwrap().get_message(), "Invalid float value (abc.abc) at node 1");
+    }
+
+    #[test]
+    fn float_missing_left() {
+        let mut ast = AST::new();
+        ast.root = 0;
+        ast.nodes.push(Node {
+            classification: Classification::Decimal,
+            token: Token {
+                value: ".".into(),
+                token_type: TokenType::DotOperator,
+            },
+            left: None,
+            right: Some(1),
+            parent: None,
+        });
+        ast.nodes.push(Node {
+            classification: Classification::Literal,
+            token: Token {
+                value: "10".into(),
+                token_type: TokenType::Number,
+            },
+            left: None,
+            right: None,
+            parent: Some(0),
+        });
+
+        let result = build_byte_code(ast);
+        assert_eq!(result.err().unwrap().get_message(), "Float value missing left side at 0");
+    }
+
+    #[test]
+    fn float_missing_right() {
+        let mut ast = AST::new();
+        ast.root = 1;
+        ast.nodes.push(Node {
+            classification: Classification::Literal,
+            token: Token {
+                value: "10".into(),
+                token_type: TokenType::Number,
+            },
+            left: None,
+            right: None,
+            parent: Some(1),
+        });
+        ast.nodes.push(Node {
+            classification: Classification::Decimal,
+            token: Token {
+                value: ".".into(),
+                token_type: TokenType::DotOperator,
+            },
+            left: Some(0),
+            right: None,
+            parent: None,
+        });
+
+        let result = build_byte_code(ast);
+        assert_eq!(result.err().unwrap().get_message(), "Float value missing right side at 1");
     }
 
     #[test]
@@ -152,6 +287,25 @@ mod tests {
         expected.end_expression();
 
         assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn symbol_missing_right() {
+        let mut ast = AST::new();
+        ast.root = 0;
+        ast.nodes.push(Node {
+            classification: Classification::Symbol,
+            token: Token {
+                value: ":".into(),
+                token_type: TokenType::SymbolOperator,
+            },
+            left: None,
+            right: None,
+            parent: None,
+        });
+
+        let result = build_byte_code(ast);
+        assert_eq!(result.err().unwrap().get_message(), "Symbol value missing right side at 0");
     }
 
     #[test]
