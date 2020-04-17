@@ -20,7 +20,7 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
     return Ok(instructions);
 }
  
-fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilder) -> Result<()> {
+fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder) -> Result<()> {
     let node = &ast.nodes[index];
 
     let extract_index = |o, s, p| -> Result<usize> {
@@ -44,31 +44,44 @@ fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilde
     let right_index = || extract_index(node.right, "right", index);
     let left_index = || extract_index(node.left, "left", index);
 
+    let process_left_right = |i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
+        process_node(left_index()?, ast, i)?;
+        process_node(right_index()?, ast, i)?;
+        op(i);
+        Ok(())
+    };
+
+    let process_unary_right = |i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
+        process_node(right_index()?, ast, i)?;
+        op(i);
+        Ok(())
+    };
+
     match node.classification {
         // put literal values in based on their type
         Classification::Literal => match node.token.token_type {
-            TokenType::UnitLiteral => instructions.put(ExpressionValue::unit())?,
+            TokenType::UnitLiteral => i.put(ExpressionValue::unit())?,
             TokenType::Number => {
-                let i: i32 = match node.token.value.parse() {
+                let num: i32 = match node.token.value.parse() {
                     Ok(f) => f,
                     Err(_) => return Err(format!("Invalid integer value ({}) at node {}", node.token.value, ast.root).into())
                 };
-                instructions.put(ExpressionValue::integer(i))?;
+                i.put(ExpressionValue::integer(num))?;
             }
             TokenType::Character => {
-                instructions.put(ExpressionValue::character(node.token.value.clone()))?;
+                i.put(ExpressionValue::character(node.token.value.clone()))?;
             }
             TokenType::CharacterList => {
-                instructions.put(ExpressionValue::character_list(node.token.value.clone()))?;
+                i.put(ExpressionValue::character_list(node.token.value.clone()))?;
             }
             TokenType::Identifier => {
-                instructions.resolve(&node.token.value)?;
+                i.resolve(&node.token.value)?;
             }
             _ => unimplemented!()
         }
         Classification::Symbol => {
             // unary op literal
-            instructions.put(ExpressionValue::symbol(&extract_right()?.token.value))?;
+            i.put(ExpressionValue::symbol(&extract_right()?.token.value))?;
         }
         Classification::Decimal => {
             // special literal value composed of two literal nodes
@@ -80,39 +93,24 @@ fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilde
                 Ok(f) => f,
                 Err(_) => return Err(format!("Invalid float value ({}) at node {}", float_str, ast.root).into())
             };
-            instructions.put(ExpressionValue::float(f))?;
+            i.put(ExpressionValue::float(f))?;
         }
-        Classification::Access => {
-            process_node(left_index()?, ast, instructions)?;    
-            process_node(right_index()?, ast, instructions)?;    
-            instructions.perform_access();
-        }
-        Classification::Negation => {
-            process_node(right_index()?, ast, instructions)?;
-            instructions.perform_negation();
-        }
-        Classification::AbsoluteValue => {
-            process_node(right_index()?, ast, instructions)?;
-            instructions.perform_absolute_value();
-        }
-        Classification::LogicalNot => {
-            process_node(right_index()?, ast, instructions)?;
-            instructions.perform_logical_not();
-        }
-        Classification::BitwiseNot => {
-            process_node(right_index()?, ast, instructions)?;
-            instructions.perform_bitwise_not();
-        }
+        Classification::Negation => process_unary_right(i, InstructionSetBuilder::perform_negation)?,
+        Classification::AbsoluteValue => process_unary_right(i, InstructionSetBuilder::perform_absolute_value)?,
+        Classification::LogicalNot => process_unary_right(i, InstructionSetBuilder::perform_logical_not)?,
+        Classification::BitwiseNot => process_unary_right(i, InstructionSetBuilder::perform_bitwise_not)?,
         Classification::PrefixApply => {
-            process_node(right_index()?, ast, instructions)?;
-            instructions.push_input();
-            instructions.execute_expression(&node.token.value);
+            process_node(right_index()?, ast, i)?;
+            i.push_input();
+            i.execute_expression(&node.token.value);
         }
         Classification::SuffixApply => {
-            process_node(left_index()?, ast, instructions)?;
-            instructions.push_input();
-            instructions.execute_expression(&node.token.value);
+            process_node(left_index()?, ast, i)?;
+            i.push_input();
+            i.execute_expression(&node.token.value);
         }
+        Classification::Access => process_left_right(i, InstructionSetBuilder::perform_access)?,
+        Classification::TypeCast => process_left_right(i, InstructionSetBuilder::perform_type_cast)?,
         _ => ()
     };
 
@@ -479,6 +477,27 @@ mod unary_tests {
         expected.put(ExpressionValue::integer(10)).unwrap();
         expected.push_input();
         expected.execute_expression("expr");
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+}
+
+#[cfg(test)]
+mod binary_tests {
+    use expr_lang_instruction_set_builder::InstructionSetBuilder;
+    use expr_lang_common::{ExpressionValue};
+    use super::tests::byte_code_from;
+
+    #[test]
+    fn type_cast() {
+        let instructions = byte_code_from("10 #> \"\"");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.put(ExpressionValue::character_list("".into())).unwrap();
+        expected.perform_type_cast();
         expected.end_expression();
 
         assert_eq!(instructions, expected);
