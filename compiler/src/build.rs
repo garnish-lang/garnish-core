@@ -490,32 +490,27 @@ mod binary_tests {
     use expr_lang_common::{ExpressionValue};
     use super::tests::byte_code_from;
 
-    #[test]
-    fn type_cast() {
-        let instructions = byte_code_from("10 #> \"\"");
+    fn assert_binary_op(op_str: &str, op: fn(&mut InstructionSetBuilder) -> ()) {
+        let instructions = byte_code_from(&format!("10 {} 5", op_str));
 
         let mut expected = InstructionSetBuilder::new();
         expected.start_expression("main");
         expected.put(ExpressionValue::integer(10)).unwrap();
-        expected.put(ExpressionValue::character_list("".into())).unwrap();
-        expected.perform_type_cast();
+        expected.put(ExpressionValue::integer(5)).unwrap();
+        op(&mut expected);
         expected.end_expression();
 
         assert_eq!(instructions, expected);
     }
 
     #[test]
+    fn type_cast() {
+        assert_binary_op("#>", InstructionSetBuilder::perform_type_cast);
+    }
+
+    #[test]
     fn exponential() {
-        let instructions = byte_code_from("10 ** \"\"");
-
-        let mut expected = InstructionSetBuilder::new();
-        expected.start_expression("main");
-        expected.put(ExpressionValue::integer(10)).unwrap();
-        expected.put(ExpressionValue::character_list("".into())).unwrap();
-        expected.perform_exponential();
-        expected.end_expression();
-
-        assert_eq!(instructions, expected);
+        assert_binary_op("**", InstructionSetBuilder::perform_exponential);
     }
 }
 
