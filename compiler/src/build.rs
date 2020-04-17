@@ -62,7 +62,7 @@ fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilde
                 instructions.put(ExpressionValue::character_list(node.token.value.clone()))?;
             }
             TokenType::Identifier => {
-                instructions.resolve(&node.token.value);
+                instructions.resolve(&node.token.value)?;
             }
             _ => unimplemented!()
         }
@@ -123,7 +123,7 @@ fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilde
 mod tests {
     use crate::{build_byte_code, make_ast, AST, Lexer, TokenType, Token, Node, Parser, Classification};
     use expr_lang_instruction_set_builder::InstructionSetBuilder;
-    use expr_lang_common::{DataType, ExpressionValue};
+    use expr_lang_common::{ExpressionValue};
 
     pub fn byte_code_from(s: &str) -> InstructionSetBuilder {
         let input = Lexer::new().lex(s).unwrap();
@@ -359,7 +359,7 @@ mod tests {
 
         let mut expected = InstructionSetBuilder::new();
         expected.start_expression("main");
-        expected.resolve(&"my_value".into());
+        expected.resolve(&"my_value".into()).unwrap();
         expected.end_expression();
 
         assert_eq!(instructions, expected);
@@ -371,8 +371,8 @@ mod tests {
 
         let mut expected = InstructionSetBuilder::new();
         expected.start_expression("main");
-        expected.resolve(&"my_object".into());
-        expected.resolve(&"my_value".into());
+        expected.resolve(&"my_object".into()).unwrap();
+        expected.resolve(&"my_value".into()).unwrap();
         expected.perform_access();
         expected.end_expression();
 
@@ -385,12 +385,12 @@ mod tests {
 
         let mut expected = InstructionSetBuilder::new();
         expected.start_expression("main");
-        expected.resolve(&"my_object".into());
-        expected.resolve(&"my_sub_object".into());
+        expected.resolve(&"my_object".into()).unwrap();
+        expected.resolve(&"my_sub_object".into()).unwrap();
         expected.perform_access();
-        expected.resolve(&"my_property".into());
+        expected.resolve(&"my_property".into()).unwrap();
         expected.perform_access();
-        expected.resolve(&"my_value".into());
+        expected.resolve(&"my_value".into()).unwrap();
         expected.perform_access();
         expected.end_expression();
 
@@ -400,9 +400,8 @@ mod tests {
 
 #[cfg(test)]
 mod unary_tests {
-    use crate::{build_byte_code, make_ast, AST, Lexer, TokenType, Token, Node, Parser, Classification};
     use expr_lang_instruction_set_builder::InstructionSetBuilder;
-    use expr_lang_common::{DataType, ExpressionValue};
+    use expr_lang_common::{ExpressionValue};
     use super::tests::byte_code_from;
 
     #[test]
