@@ -111,6 +111,7 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder) -> Resul
         }
         Classification::Access => process_left_right(i, InstructionSetBuilder::perform_access)?,
         Classification::TypeCast => process_left_right(i, InstructionSetBuilder::perform_type_cast)?,
+        Classification::Exponential => process_left_right(i, InstructionSetBuilder::perform_exponential)?,
         _ => ()
     };
 
@@ -498,6 +499,20 @@ mod binary_tests {
         expected.put(ExpressionValue::integer(10)).unwrap();
         expected.put(ExpressionValue::character_list("".into())).unwrap();
         expected.perform_type_cast();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn exponential() {
+        let instructions = byte_code_from("10 ** \"\"");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.put(ExpressionValue::character_list("".into())).unwrap();
+        expected.perform_exponential();
         expected.end_expression();
 
         assert_eq!(instructions, expected);
