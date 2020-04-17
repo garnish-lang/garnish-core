@@ -19,7 +19,7 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
 
     return Ok(instructions);
 }
-
+ 
 fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilder) -> Result<()> {
     let extract_index = |o, s, p| -> Result<usize> {
         match o {
@@ -38,7 +38,7 @@ fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilde
 
     let extract_left = |o, p| extract(o, "left", p);
     let extract_right = |o, p| extract(o, "right", p);
-    
+
     let node = &ast.nodes[index];
     match node.classification {
         // put literal values in based on their type
@@ -79,8 +79,8 @@ fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilde
             instructions.put(ExpressionValue::float(f))?;
         }
         Classification::Access => {
-            process_node(extract_index(node.left, "left", index)?, ast, instructions)?;
-            process_node(extract_index(node.right, "right", index)?, ast, instructions)?;
+            process_node(extract_index(node.left, "left", index)?, ast, instructions)?;    
+            process_node(extract_index(node.right, "right", index)?, ast, instructions)?;    
             instructions.perform_access();
         }
         _ => ()
