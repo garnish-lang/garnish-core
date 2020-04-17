@@ -21,6 +21,8 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
 }
  
 fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilder) -> Result<()> {
+    let node = &ast.nodes[index];
+
     let extract_index = |o, s, p| -> Result<usize> {
         match o {
             Some(i) => Ok(i),
@@ -36,10 +38,12 @@ fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilde
         }
     };
 
-    let extract_left = |o, p| extract(o, "left", p);
-    let extract_right = |o, p| extract(o, "right", p);
+    let extract_left = || extract(node.left, "left", index);
+    let extract_right = || extract(node.right, "right", index);
 
-    let node = &ast.nodes[index];
+    let right_index = || extract_index(node.right, "right", index);
+    let left_index = || extract_index(node.left, "left", index);
+
     match node.classification {
         // put literal values in based on their type
         Classification::Literal => match node.token.token_type {
@@ -64,13 +68,13 @@ fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilde
         }
         Classification::Symbol => {
             // unary op literal
-            instructions.put(ExpressionValue::symbol(&extract_right(node.right, ast.root)?.token.value))?;
+            instructions.put(ExpressionValue::symbol(&extract_right()?.token.value))?;
         }
         Classification::Decimal => {
             // special literal value composed of two literal nodes
             let float_str = format!("{}.{}", 
-                extract_left(node.left, ast.root)?.token.value, 
-                extract_right(node.right, ast.root)?.token.value
+                extract_left()?.token.value, 
+                extract_right()?.token.value
             );
             let f: f32 = match float_str.parse() {
                 Ok(f) => f,
@@ -79,13 +83,31 @@ fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilde
             instructions.put(ExpressionValue::float(f))?;
         }
         Classification::Access => {
-            process_node(extract_index(node.left, "left", index)?, ast, instructions)?;    
-            process_node(extract_index(node.right, "right", index)?, ast, instructions)?;    
+            process_node(left_index()?, ast, instructions)?;    
+            process_node(right_index()?, ast, instructions)?;    
             instructions.perform_access();
         }
         Classification::Negation => {
-            process_node(extract_index(node.right, "right", index)?, ast, instructions)?;
+            process_node(right_index()?, ast, instructions)?;
             instructions.perform_negation();
+        }
+        Classification::AbsoluteValue => {
+            process_node(right_index()?, ast, instructions)?;
+            instructions.perform_absolute_value();
+        }
+        Classification::Not => {
+            process_node(right_index()?, ast, instructions)?;
+            instructions.perform_logical_not();
+        }
+        Classification::PrefixApply => {
+            process_node(right_index()?, ast, instructions)?;
+            instructions.push_input();
+            instructions.execute_expression(&node.token.value);
+        }
+        Classification::SuffixApply => {
+            process_node(left_index()?, ast, instructions)?;
+            instructions.push_input();
+            instructions.execute_expression(&node.token.value);
         }
         _ => ()
     };
@@ -387,6 +409,60 @@ mod unary_tests {
         expected.start_expression("main");
         expected.put(ExpressionValue::integer(10)).unwrap();
         expected.perform_negation();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn absolute_value() {
+        let instructions = byte_code_from("+10");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.perform_absolute_value();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn logcial_not() {
+        let instructions = byte_code_from("!10");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.perform_logical_not();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn prefix_invoke() {
+        let instructions = byte_code_from("`expr 10");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.push_input();
+        expected.execute_expression("expr");
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn suffix_invoke() {
+        let instructions = byte_code_from("10 expr`");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.push_input();
+        expected.execute_expression("expr");
         expected.end_expression();
 
         assert_eq!(instructions, expected);
