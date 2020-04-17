@@ -14,7 +14,7 @@ pub enum TokenType {
     LogicalAndOperator,
     LogicalOrOperator,
     LogicalXorOperator,
-    NotOperator,
+    LogicalNotOperator,
     TypeCastOperator,
     EqualityOperator,
     InequalityOperator,
@@ -26,6 +26,7 @@ pub enum TokenType {
     BitwiseAndOperator,
     BitwiseOrOperator,
     BitwiseXorOperator,
+    BitwiseNotOperator,
     BitwiseLeftShiftOperator,
     BitwiseRightShiftOperator,
     DotOperator,
@@ -171,7 +172,7 @@ impl Lexer {
             ("&&", TokenType::LogicalAndOperator),
             ("||", TokenType::LogicalOrOperator),
             ("^^", TokenType::LogicalXorOperator),
-            ("!", TokenType::NotOperator),
+            ("!!", TokenType::LogicalNotOperator),
             ("#>", TokenType::TypeCastOperator),
             ("==", TokenType::EqualityOperator),
             ("!=", TokenType::InequalityOperator),
@@ -183,6 +184,7 @@ impl Lexer {
             ("&", TokenType::BitwiseAndOperator),
             ("|", TokenType::BitwiseOrOperator),
             ("^", TokenType::BitwiseXorOperator),
+            ("!", TokenType::BitwiseNotOperator),
             ("<<", TokenType::BitwiseLeftShiftOperator),
             (">>", TokenType::BitwiseRightShiftOperator),
             (".", TokenType::DotOperator),
@@ -697,13 +699,13 @@ mod tests {
     }
 
     #[test]
-    fn lex_not_operator() {
-        let token = Lexer::new().lex("!").unwrap().get(0).unwrap().clone();
+    fn lex_logical_not_not_operator() {
+        let token = Lexer::new().lex("!!").unwrap().get(0).unwrap().clone();
         assert_eq!(
             token,
             Token {
-                value: String::from("!"),
-                token_type: TokenType::NotOperator,
+                value: String::from("!!"),
+                token_type: TokenType::LogicalNotOperator,
             }
         );
     }
@@ -824,6 +826,18 @@ mod tests {
             Token {
                 value: String::from("^"),
                 token_type: TokenType::BitwiseXorOperator,
+            }
+        );
+    }
+
+    #[test]
+    fn lex_bitwise_not_operator() {
+        let token = Lexer::new().lex("!").unwrap().get(0).unwrap().clone();
+        assert_eq!(
+            token,
+            Token {
+                value: String::from("!"),
+                token_type: TokenType::BitwiseNotOperator,
             }
         );
     }

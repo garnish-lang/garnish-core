@@ -100,14 +100,14 @@ Supported logical operations are:
 
 `^^` XOR
 
-`!` NOT
+`!!` NOT
 
 Logical operation expect either symbols `:true` or `:false` but will
 also evaluate if given a Unit value. Unit values are logical equivalent
 to `:false`. 
 
 Any other value provided is logically equivalent to `:true` (except for
-the `!` operator. See Bitwise).
+the `!!` operator. See Bitwise).
 ```
 :true && :false
 
@@ -115,9 +115,9 @@ the `!` operator. See Bitwise).
 
 :true ^^ :false
 
-!:true
+!!:true
 
-!()
+!!()
 
 :true && ()
 ```

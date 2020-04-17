@@ -95,9 +95,13 @@ fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilde
             process_node(right_index()?, ast, instructions)?;
             instructions.perform_absolute_value();
         }
-        Classification::Not => {
+        Classification::LogicalNot => {
             process_node(right_index()?, ast, instructions)?;
             instructions.perform_logical_not();
+        }
+        Classification::BitwiseNot => {
+            process_node(right_index()?, ast, instructions)?;
+            instructions.perform_bitwise_not();
         }
         Classification::PrefixApply => {
             process_node(right_index()?, ast, instructions)?;
@@ -429,12 +433,25 @@ mod unary_tests {
 
     #[test]
     fn logcial_not() {
-        let instructions = byte_code_from("!10");
+        let instructions = byte_code_from("!!10");
 
         let mut expected = InstructionSetBuilder::new();
         expected.start_expression("main");
         expected.put(ExpressionValue::integer(10)).unwrap();
         expected.perform_logical_not();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn bitwise_not() {
+        let instructions = byte_code_from("!10");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.perform_bitwise_not();
         expected.end_expression();
 
         assert_eq!(instructions, expected);

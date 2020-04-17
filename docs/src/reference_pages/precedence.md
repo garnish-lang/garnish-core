@@ -4,7 +4,7 @@
 | 1          | ? $ : () &#124;>output &#124;>continue &#124;>skip &#124;>complete | Value            | left-right    |
 | 2          | () {}                                                              | Groupings        | left-right    |
 | 3          | .                                                                  | Access           | left-right    |
-| 4          | + - ! `expr                                                        | Unary Prefix     | right-left    |
+| 4          | + - ! !! `expr                                                     | Unary Prefix     | right-left    |
 | 5          | expr`                                                              | Suffix Apply     | left-right    |
 | 6          | #>                                                                 | Type Cast        | left-right    |
 | 7          | **                                                                 | Arithmetic 1     | left-right    |

@@ -97,7 +97,8 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             Classification::Access => 2,
             Classification::Negation
             | Classification::AbsoluteValue 
-            | Classification::Not 
+            | Classification::LogicalNot 
+            | Classification::BitwiseNot
             | Classification::PrefixApply => 3,
             Classification::SuffixApply => 4,
             Classification::TypeCast => 5,
@@ -709,7 +710,17 @@ mod unary_precedence_tests {
     }
     
     #[test]
-    fn not() {
+    fn logical_not() {
+        let ast = ast_from("!!10");
+
+        ast.nodes.assert_node(0, None, None, Some(1));
+        ast.nodes.assert_node(1, Some(0), None, None);
+
+        assert_eq!(ast.root, 0);
+    }
+    
+    #[test]
+    fn bitwise_not() {
         let ast = ast_from("!10");
 
         ast.nodes.assert_node(0, None, None, Some(1));
