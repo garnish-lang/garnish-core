@@ -83,6 +83,10 @@ fn process_node(index: usize, ast: &AST, instructions: &mut InstructionSetBuilde
             process_node(extract_index(node.right, "right", index)?, ast, instructions)?;    
             instructions.perform_access();
         }
+        Classification::Negation => {
+            process_node(extract_index(node.right, "right", index)?, ast, instructions)?;
+            instructions.perform_negation();
+        }
         _ => ()
     };
 
@@ -362,6 +366,27 @@ mod tests {
         expected.perform_access();
         expected.resolve(&"my_value".into());
         expected.perform_access();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+}
+
+#[cfg(test)]
+mod unary_tests {
+    use crate::{build_byte_code, make_ast, AST, Lexer, TokenType, Token, Node, Parser, Classification};
+    use expr_lang_instruction_set_builder::InstructionSetBuilder;
+    use expr_lang_common::{DataType, ExpressionValue};
+    use super::tests::byte_code_from;
+
+    #[test]
+    fn negation() {
+        let instructions = byte_code_from("-10");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.perform_negation();
         expected.end_expression();
 
         assert_eq!(instructions, expected);
