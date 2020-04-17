@@ -366,3 +366,10 @@ Create AST
 
 ## 6.3
 Create instruction set from AST
+
+# Pre-Alpha
+
+- combine bitwise and logical not in instructions set
+- implement garbage collection
+- implement dynamic resizing
+
