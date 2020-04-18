@@ -9,6 +9,7 @@ use crate::utils::insert_if_not_present;
 pub(crate) enum CallType {
     Normal,
     Iteration,
+    ExpressionIteration,
     Conditional,
 }
 

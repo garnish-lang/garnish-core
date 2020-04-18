@@ -61,10 +61,9 @@ pub enum Instruction {
     IterationContinue,
     IterationSkip,
     IterationComplete,
-    Reiterate,
 }
 
-const LAST_INSTRUCTION_VALUE: u8 = Instruction::Reiterate as u8;
+const LAST_INSTRUCTION_VALUE: u8 = Instruction::IterationComplete as u8;
 
 impl TryInto<u8> for Instruction {
     type Error = Infallible;
@@ -117,13 +116,13 @@ mod tests {
     }
 
     #[test]
-    fn instruction_from_reiterate() {
+    fn instruction_from_iteration_complete() {
         let instruction = Instruction::try_from(LAST_INSTRUCTION_VALUE).unwrap();
-        assert_eq!(instruction, Instruction::Reiterate);
+        assert_eq!(instruction, Instruction::IterationComplete);
     }
 
     #[test]
-    fn instruction_from_value_larger_than_reiterate() {
+    fn instruction_from_value_larger_than_iteration_complete() {
         let instruction = Instruction::try_from(LAST_INSTRUCTION_VALUE + 1);
         assert!(instruction.is_err());
     }

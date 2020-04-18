@@ -142,7 +142,7 @@ impl ExpressionRuntime {
                     call_stack_index: self.call_stack.len(),
                 });
 
-                self.push_frame(expression_start);
+                self.push_iteration_frame(expression_start);
             }
             DataType::CharacterList => {
                 self.start_list();
@@ -166,7 +166,7 @@ impl ExpressionRuntime {
                     call_stack_index: self.call_stack.len(),
                 });
 
-                self.push_frame(expression_start);
+                self.push_iteration_frame(expression_start);
             }
             DataType::Expression => {
                 let input_expression_index = self.read_size_at(skip_type(left_ref))?;
@@ -187,7 +187,7 @@ impl ExpressionRuntime {
 
                 // push input expression frame
                 // mark as iterating to call back here
-                self.push_iteration_frame(input_expression_start);
+                self.push_expression_iteration_frame(input_expression_start);
 
                 // add unit input for input expression to use
                 self.push_unit_input()?;
@@ -253,7 +253,7 @@ impl ExpressionRuntime {
                     call_stack_index: self.call_stack.len(),
                 });
 
-                self.push_frame(expression_start);
+                self.push_iteration_frame(expression_start);
             }
             _ => {
                 self.insert_unit()?;
@@ -282,7 +282,7 @@ impl ExpressionRuntime {
 
                     self.push_iteration_input_list_with_last_result(current_ref)?;
 
-                    self.push_frame(data.expression_start);
+                    self.push_iteration_frame(data.expression_start);
 
                     false
                 }
@@ -430,7 +430,7 @@ impl ExpressionRuntime {
             }
         };
 
-        self.push_frame(expression_start);
+        self.push_iteration_frame(expression_start);
 
         self.start_list();
 
@@ -581,7 +581,7 @@ impl ExpressionRuntime {
 
             let input_ref = self.push_iteration_input_list_with_last_result(next_ref)?;
 
-            self.push_frame(data.expression_start);
+            self.push_iteration_frame(data.expression_start);
 
             // update last ref on current iteration data
             // given data is a clone
@@ -654,7 +654,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(5)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -697,7 +697,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(0)).unwrap();
         instructions.perform_type_cast();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -740,7 +740,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(5)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -785,7 +785,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(5)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -830,7 +830,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(0)).unwrap();
         instructions.perform_type_cast();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -875,7 +875,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(5)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -919,7 +919,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(5)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -963,7 +963,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(5)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1010,7 +1010,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(5)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1054,7 +1054,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(5)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1098,7 +1098,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(5)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1145,7 +1145,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(0)).unwrap();
         instructions.perform_type_cast();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1189,7 +1189,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(0)).unwrap();
         instructions.perform_type_cast();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1233,7 +1233,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(0)).unwrap();
         instructions.perform_type_cast();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1280,7 +1280,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(5)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1325,7 +1325,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(5)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1371,7 +1371,7 @@ mod tests {
         instructions.put(ExpressionValue::float(5.0)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1416,7 +1416,7 @@ mod tests {
         instructions.put(ExpressionValue::float(5.0)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1462,7 +1462,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(0)).unwrap();
         instructions.perform_type_cast();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1508,7 +1508,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(0)).unwrap();
         instructions.perform_type_cast();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1554,7 +1554,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(3)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("input_expr");
 
@@ -1629,7 +1629,7 @@ mod tests {
 
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1675,7 +1675,7 @@ mod tests {
 
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1723,7 +1723,7 @@ mod tests {
 
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1785,7 +1785,7 @@ mod tests {
 
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1832,7 +1832,7 @@ mod tests {
 
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1881,7 +1881,7 @@ mod tests {
 
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("input_expr");
 
@@ -1933,7 +1933,7 @@ mod tests {
 
         instructions.put(ExpressionValue::integer(10)).unwrap();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -1973,7 +1973,7 @@ mod tests {
 
         instructions.put(ExpressionValue::integer(10)).unwrap();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -2016,7 +2016,7 @@ mod tests {
 
         instructions.put(ExpressionValue::integer(10)).unwrap();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -2069,7 +2069,7 @@ mod tests {
 
         instructions.put(ExpressionValue::integer(5)).unwrap();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -2126,7 +2126,7 @@ mod tests {
 
         instructions.put(ExpressionValue::integer(5)).unwrap();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -2169,7 +2169,7 @@ mod tests {
         instructions.put(ExpressionValue::integer(5)).unwrap();
         instructions.perform_addition();
 
-        instructions.reiterate();
+        instructions.end_expression();
 
         instructions.start_expression("main");
 
@@ -2188,28 +2188,5 @@ mod tests {
         let result = expression_runtime.execute("main").unwrap();
 
         assert!(result.is_unit());
-    }
-
-    #[test]
-    fn reiterate_without_iterate_results_in_error() {
-        let mut instructions = InstructionSetBuilder::new();
-
-        instructions.start_expression("main");
-
-        instructions.put(ExpressionValue::integer(10)).unwrap();
-
-        instructions
-            .put(ExpressionValue::expression("iteration_expr"))
-            .unwrap();
-
-        instructions.reiterate();
-
-        instructions.end_expression();
-
-        let mut expression_runtime = ExpressionRuntime::new(&instructions);
-
-        let result = expression_runtime.execute("main");
-
-        assert!(result.is_err());
     }
 }

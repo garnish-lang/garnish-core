@@ -351,10 +351,6 @@ impl InstructionSetBuilder {
         self.add(Instruction::IterationComplete);
     }
 
-    pub fn reiterate(&mut self) {
-        self.add(Instruction::Reiterate);
-    }
-
     fn add(&mut self, instruction: Instruction) {
         self.instructions.push(instruction.try_into().unwrap());
     }

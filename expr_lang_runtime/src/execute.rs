@@ -153,7 +153,6 @@ impl ExpressionRuntime {
             Instruction::IterationSkip => self.perform_iteration_skip()?,
             Instruction::IterationComplete => self.perform_iteration_complete()?,
             Instruction::IterateToSingleResult => self.perform_iterate_to_single_result()?,
-            Instruction::Reiterate => self.perform_reiterate()?,
         }
 
         Ok(if self.call_stack.is_empty() {
@@ -172,32 +171,39 @@ impl ExpressionRuntime {
     }
 
     fn perform_end_expression(&mut self) -> Result {
-        match self.call_stack.pop() {
-            None => Err("Attempt to end expression with empty call stack")?,
-            Some(frame) => {
-                if frame.call_type != CallType::Conditional {
-                    self.pop_input();
-                }
+        if self.call_stack.is_empty() {
+            return Err("Attempt to end expression with empty call stack")?;
+        }
 
-                if self.call_stack.is_empty() {
-                    // primary expression has ended
-                    // push last ref onto result stack
-                    self.output_result()?;
-                } else {
-                    // perform type specific functionality before clearing results
-                    match frame.call_type {
-                        CallType::Normal | CallType::Conditional => (),
-                        CallType::Iteration => self.iteration_expression_end(frame.clone())?,
-                    }
+        let frame = self.call_stack[self.call_stack.len() - 1].clone();
 
-                    // just ended a sub expression
-                    // clear all results output by it
-                    while self.result_stack.len() > frame.result_start {
-                        self.result_stack.pop();
-                    }
-                }
+        if frame.call_type == CallType::Iteration {
+            self.perform_reiterate()?;
+            return Ok(());
+        }
+
+        self.call_stack.pop(); 
+
+        if frame.call_type != CallType::Conditional {
+            self.pop_input();
+        }
+
+        if self.call_stack.is_empty() {
+            // primary expression has ended
+            // push last ref onto result stack
+            self.output_result()?;
+        } else {
+            // perform type specific functionality before clearing results
+            if frame.call_type == CallType::ExpressionIteration {
+                self.iteration_expression_end(frame.clone())?;
             }
-        };
+
+            // just ended a sub expression
+            // clear all results output by it
+            while self.result_stack.len() > frame.result_start {
+                self.result_stack.pop();
+            }
+        }
 
         Ok(())
     }

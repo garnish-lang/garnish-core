@@ -363,6 +363,10 @@ impl ExpressionRuntime {
         self.add_call_frame(start, CallType::Conditional)
     }
 
+    pub(crate) fn push_expression_iteration_frame(&mut self, start: usize) {
+        self.add_call_frame(start, CallType::ExpressionIteration)
+    }
+
     pub(crate) fn push_iteration_frame(&mut self, start: usize) {
         self.add_call_frame(start, CallType::Iteration)
     }
