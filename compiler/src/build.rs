@@ -13,14 +13,14 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
         return Ok(instructions);
     }
 
-    process_node(ast.root, &ast, &mut instructions)?;
+    process_node(ast.root, &ast, &mut instructions, false)?;
 
     instructions.end_expression();
 
     return Ok(instructions);
 }
  
-fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder) -> Result<()> {
+fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_root: bool) -> Result<()> {
     let node = &ast.nodes[index];
 
     let extract_index = |o, s, p| -> Result<usize> {
@@ -45,14 +45,14 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder) -> Resul
     let left_index = || extract_index(node.left, "left", index);
 
     let process_left_right = |i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
-        process_node(left_index()?, ast, i)?;
-        process_node(right_index()?, ast, i)?;
+        process_node(left_index()?, ast, i, list_root)?;
+        process_node(right_index()?, ast, i, list_root)?;
         op(i);
         Ok(())
     };
 
     let process_unary_right = |i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
-        process_node(right_index()?, ast, i)?;
+        process_node(right_index()?, ast, i, list_root)?;
         op(i);
         Ok(())
     };
@@ -100,12 +100,12 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder) -> Resul
         Classification::LogicalNot => process_unary_right(i, InstructionSetBuilder::perform_logical_not)?,
         Classification::BitwiseNot => process_unary_right(i, InstructionSetBuilder::perform_bitwise_not)?,
         Classification::PrefixApply => {
-            process_node(right_index()?, ast, i)?;
+            process_node(right_index()?, ast, i, list_root)?;
             i.push_input();
             i.execute_expression(&node.token.value);
         }
         Classification::SuffixApply => {
-            process_node(left_index()?, ast, i)?;
+            process_node(left_index()?, ast, i, list_root)?;
             i.push_input();
             i.execute_expression(&node.token.value);
         }
@@ -139,14 +139,27 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder) -> Resul
         Classification::LogicalXor => process_left_right(i, InstructionSetBuilder::perform_logical_xor)?,
         Classification::MakeLink => process_left_right(i, InstructionSetBuilder::make_link)?,
         Classification::MakePair => process_left_right(i, InstructionSetBuilder::make_pair)?,
-        Classification::ListSeparator => unimplemented!(),
         Classification::PartiallyApply => process_left_right(i, InstructionSetBuilder::partially_apply)?,
         Classification::Apply => process_left_right(i, InstructionSetBuilder::apply)?,
         Classification::Iterate => process_left_right(i, InstructionSetBuilder::iterate)?,
         Classification::IterateToSingleValue => process_left_right(i, InstructionSetBuilder::iterate_to_single_value)?,
+        Classification::ListSeparator => {
+            match list_root {
+                false => {
+                    i.start_list();
+                    process_node(left_index()?, ast, i, true)?;
+                    process_node(right_index()?, ast, i, true)?;
+                    i.make_list();
+                }
+                true => {
+                    process_node(left_index()?, ast, i, true)?;
+                    process_node(right_index()?, ast, i, true)?;
+                }
+            }
+        }
         _ => ()
     };
-
+    
     Ok(())
 }
 
@@ -682,7 +695,20 @@ mod binary_tests {
 
     #[test]
     fn make_list() {
-        unimplemented!();
+        let instructions = byte_code_from("10, 20, 30, 40, 50");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.start_list();
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.put(ExpressionValue::integer(20)).unwrap();
+        expected.put(ExpressionValue::integer(30)).unwrap();
+        expected.put(ExpressionValue::integer(40)).unwrap();
+        expected.put(ExpressionValue::integer(50)).unwrap();
+        expected.make_list();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
     }
 
     #[test]
