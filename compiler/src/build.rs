@@ -116,6 +116,34 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder) -> Resul
         Classification::Division => process_left_right(i, InstructionSetBuilder::perform_division)?,
         Classification::IntegerDivision => process_left_right(i, InstructionSetBuilder::perform_integer_division)?,
         Classification::Modulo => process_left_right(i, InstructionSetBuilder::perform_remainder)?,
+        Classification::Addition => process_left_right(i, InstructionSetBuilder::perform_addition)?,
+        Classification::Subtraction => process_left_right(i, InstructionSetBuilder::perform_subtraction)?,
+        Classification::BitwiseLeftShift => process_left_right(i, InstructionSetBuilder::perform_bitwise_left_shift)?,
+        Classification::BitwiseRightShift => process_left_right(i, InstructionSetBuilder::perform_bitwise_right_shift)?,
+        Classification::MakeRange => process_left_right(i, InstructionSetBuilder::make_inclusive_range)?,
+        Classification::MakeStartExclusiveRange => process_left_right(i, InstructionSetBuilder::make_start_exclusive_range)?,
+        Classification::MakeEndExclusiveRange => process_left_right(i, InstructionSetBuilder::make_end_exclusive_range)?,
+        Classification::MakeExclusiveRange => process_left_right(i, InstructionSetBuilder::make_exclusive_range)?,
+        Classification::LessThan => process_left_right(i, InstructionSetBuilder::perform_less_than_comparison)?,
+        Classification::LessThanOrEqual => process_left_right(i, InstructionSetBuilder::perform_less_than_or_equal_comparison)?,
+        Classification::GreaterThan => process_left_right(i, InstructionSetBuilder::perform_greater_than_comparison)?,
+        Classification::GreaterThanOrEqual => process_left_right(i, InstructionSetBuilder::perform_greater_than_or_equal_comparison)?,
+        Classification::Equality => process_left_right(i, InstructionSetBuilder::perform_equality_comparison)?,
+        Classification::Inequality => process_left_right(i, InstructionSetBuilder::perform_inequality_comparison)?,
+        Classification::TypeEqual => process_left_right(i, InstructionSetBuilder::perform_type_comparison)?,
+        Classification::BitwiseAnd => process_left_right(i, InstructionSetBuilder::perform_bitwise_and)?,
+        Classification::BitwiseOr => process_left_right(i, InstructionSetBuilder::perform_bitwise_or)?,
+        Classification::BitwiseXor => process_left_right(i, InstructionSetBuilder::perform_bitwise_xor)?,
+        Classification::LogicalAnd => process_left_right(i, InstructionSetBuilder::perform_logical_and)?,
+        Classification::LogicalOr => process_left_right(i, InstructionSetBuilder::perform_logical_or)?,
+        Classification::LogicalXor => process_left_right(i, InstructionSetBuilder::perform_logical_xor)?,
+        Classification::MakeLink => process_left_right(i, InstructionSetBuilder::make_link)?,
+        Classification::MakePair => process_left_right(i, InstructionSetBuilder::make_pair)?,
+        Classification::ListSeparator => unimplemented!(),
+        Classification::PartiallyApply => process_left_right(i, InstructionSetBuilder::partially_apply)?,
+        Classification::Apply => process_left_right(i, InstructionSetBuilder::apply)?,
+        Classification::Iterate => process_left_right(i, InstructionSetBuilder::iterate)?,
+        Classification::IterateToSingleValue => process_left_right(i, InstructionSetBuilder::iterate_to_single_value)?,
         _ => ()
     };
 
@@ -535,6 +563,186 @@ mod binary_tests {
     #[test]
     fn modulo() {
         assert_binary_op("%", InstructionSetBuilder::perform_remainder);
+    }
+
+    #[test]
+    fn addition() {
+        assert_binary_op("+", InstructionSetBuilder::perform_addition);
+    }
+
+    #[test]
+    fn subtraction() {
+        assert_binary_op("-", InstructionSetBuilder::perform_subtraction);
+    }
+
+    #[test]
+    fn bitwise_left_shift() {
+        assert_binary_op("<<", InstructionSetBuilder::perform_bitwise_left_shift);
+    }
+
+    #[test]
+    fn bitwise_right_shift() {
+        assert_binary_op(">>", InstructionSetBuilder::perform_bitwise_right_shift);
+    }
+
+    #[test]
+    fn inclusive_range() {
+        assert_binary_op("..", InstructionSetBuilder::make_inclusive_range);
+    }
+
+    #[test]
+    fn start_exclusive_range() {
+        assert_binary_op(">..", InstructionSetBuilder::make_start_exclusive_range);
+    }
+
+    #[test]
+    fn end_exclusive_range() {
+        assert_binary_op("..<", InstructionSetBuilder::make_end_exclusive_range);
+    }
+
+    #[test]
+    fn exclusive_range() {
+        assert_binary_op(">..<", InstructionSetBuilder::make_exclusive_range);
+    }
+
+    #[test]
+    fn less_than() {
+        assert_binary_op("<", InstructionSetBuilder::perform_less_than_comparison);
+    }
+
+    #[test]
+    fn less_than_or_equal() {
+        assert_binary_op("<=", InstructionSetBuilder::perform_less_than_or_equal_comparison);
+    }
+
+    #[test]
+    fn greater_than() {
+        assert_binary_op(">", InstructionSetBuilder::perform_greater_than_comparison);
+    }
+
+    #[test]
+    fn greater_than_or_equal() {
+        assert_binary_op(">=", InstructionSetBuilder::perform_greater_than_or_equal_comparison);
+    }
+
+    #[test]
+    fn equality() {
+        assert_binary_op("==", InstructionSetBuilder::perform_equality_comparison);
+    }
+
+    #[test]
+    fn inequality_comparison() {
+        assert_binary_op("!=", InstructionSetBuilder::perform_inequality_comparison);
+    }
+
+    #[test]
+    fn type_comparison() {
+        assert_binary_op("#=", InstructionSetBuilder::perform_type_comparison);
+    }
+
+    #[test]
+    fn bitwise_and() {
+        assert_binary_op("&", InstructionSetBuilder::perform_bitwise_and);
+    }
+
+    #[test]
+    fn bitwise_or() {
+        assert_binary_op("|", InstructionSetBuilder::perform_bitwise_or);
+    }
+
+    #[test]
+    fn bitwise_xor() {
+        assert_binary_op("^", InstructionSetBuilder::perform_bitwise_xor);
+    }
+
+    #[test]
+    fn logical_and() {
+        assert_binary_op("&&", InstructionSetBuilder::perform_logical_and);
+    }
+
+    #[test]
+    fn logical_or() {
+        assert_binary_op("||", InstructionSetBuilder::perform_logical_or);
+    }
+
+    #[test]
+    fn logical_xor() {
+        assert_binary_op("^^", InstructionSetBuilder::perform_logical_xor);
+    }
+
+    #[test]
+    fn make_link() {
+        assert_binary_op("->", InstructionSetBuilder::make_link);
+    }
+
+    #[test]
+    fn make_pair() {
+        assert_binary_op("=", InstructionSetBuilder::make_pair);
+    }
+
+    #[test]
+    fn make_list() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn partially_apply() {
+        assert_binary_op("~~", InstructionSetBuilder::partially_apply);
+    }
+
+    #[test]
+    fn infix() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn invoke_if_true() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn invoke_if_false() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn result_check_invoke() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn apply() {
+        assert_binary_op("~", InstructionSetBuilder::apply);
+    }
+
+    #[test]
+    fn pipe_apply() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn iterate() {
+        assert_binary_op(">>>", InstructionSetBuilder::iterate);
+    }
+
+    #[test]
+    fn iterate_to_single_value() {
+        assert_binary_op(">>|", InstructionSetBuilder::iterate_to_single_value);
+    }
+
+    #[test]
+    fn reverse_iterate() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn reverse_iterate_to_single_value() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn multi_iterate() {
+        unimplemented!();
     }
 }
 
