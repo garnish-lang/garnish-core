@@ -162,6 +162,14 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_roo
                 }
             }
         }
+        Classification::InfixApply => {
+            i.start_list();
+            process_node(left_index()?, ast, i, true)?;
+            process_node(right_index()?, ast, i, true)?;
+            i.make_list();
+            i.push_input();
+            i.execute_expression(&node.token.value);
+        }
         _ => ()
     };
     
@@ -723,7 +731,19 @@ mod binary_tests {
 
     #[test]
     fn infix() {
-        unimplemented!();
+        let instructions = byte_code_from("10 `expr` 20");
+        let mut expected = InstructionSetBuilder::new();
+
+        expected.start_expression("main");
+        expected.start_list();
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.put(ExpressionValue::integer(20)).unwrap();
+        expected.make_list();
+        expected.push_input();
+        expected.execute_expression("expr");
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
     }
 
     #[test]
