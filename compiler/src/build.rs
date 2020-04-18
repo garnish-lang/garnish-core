@@ -141,6 +141,11 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_roo
         Classification::MakePair => process_left_right(i, InstructionSetBuilder::make_pair)?,
         Classification::PartiallyApply => process_left_right(i, InstructionSetBuilder::partially_apply)?,
         Classification::Apply => process_left_right(i, InstructionSetBuilder::apply)?,
+        Classification::PipeApply => {
+            process_node(right_index()?, ast, i, list_root)?;
+            process_node(left_index()?, ast, i, list_root)?;
+            i.apply();
+        }
         Classification::Iterate => process_left_right(i, InstructionSetBuilder::iterate)?,
         Classification::IterateToSingleValue => process_left_right(i, InstructionSetBuilder::iterate_to_single_value)?,
         Classification::ListSeparator => {
@@ -743,7 +748,16 @@ mod binary_tests {
 
     #[test]
     fn pipe_apply() {
-        unimplemented!();
+        let instructions = byte_code_from("10 ~> expr");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.resolve(&"expr".into()).unwrap();
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.apply();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
     }
 
     #[test]
