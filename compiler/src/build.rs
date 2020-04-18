@@ -112,6 +112,10 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder) -> Resul
         Classification::Access => process_left_right(i, InstructionSetBuilder::perform_access)?,
         Classification::TypeCast => process_left_right(i, InstructionSetBuilder::perform_type_cast)?,
         Classification::Exponential => process_left_right(i, InstructionSetBuilder::perform_exponential)?,
+        Classification::Multiplication => process_left_right(i, InstructionSetBuilder::perform_multiplication)?,
+        Classification::Division => process_left_right(i, InstructionSetBuilder::perform_division)?,
+        Classification::IntegerDivision => process_left_right(i, InstructionSetBuilder::perform_integer_division)?,
+        Classification::Modulo => process_left_right(i, InstructionSetBuilder::perform_remainder)?,
         _ => ()
     };
 
@@ -511,6 +515,26 @@ mod binary_tests {
     #[test]
     fn exponential() {
         assert_binary_op("**", InstructionSetBuilder::perform_exponential);
+    }
+
+    #[test]
+    fn multiplication() {
+        assert_binary_op("*", InstructionSetBuilder::perform_multiplication);
+    }
+
+    #[test]
+    fn division() {
+        assert_binary_op("/", InstructionSetBuilder::perform_division);
+    }
+
+    #[test]
+    fn integer_division() {
+        assert_binary_op("//", InstructionSetBuilder::perform_integer_division);
+    }
+
+    #[test]
+    fn modulo() {
+        assert_binary_op("%", InstructionSetBuilder::perform_remainder);
     }
 }
 
