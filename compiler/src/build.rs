@@ -255,6 +255,9 @@ fn process_node(name: &str,
             };
             i.result_conditional_execute(name, right);
         }
+        Classification::DefaultInvoke => {
+            process_node(name, right_index()?, ast, i, list_root, conditional, refs)?;
+        }
         Classification::ConditionalContinuation => {
             let id = refs.count;
             refs.count += 1;
@@ -1051,6 +1054,27 @@ mod conditional_chain_tests {
 
         expected.start_expression("main@sub_4");
         expected.put(ExpressionValue::integer(25)).unwrap();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn conditional_with_default() {
+        let instructions = byte_code_from("10 => 5, !> 15");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.conditional_execute(Some("main@sub_1".into()), Some("main@sub_0".into()));
+        expected.end_expression();
+
+        expected.start_expression("main@sub_1");
+        expected.put(ExpressionValue::integer(5)).unwrap();
+        expected.end_expression();
+
+        expected.start_expression("main@sub_0");
+        expected.put(ExpressionValue::integer(15)).unwrap();
         expected.end_expression();
 
         assert_eq!(instructions, expected);
