@@ -148,6 +148,9 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_roo
         }
         Classification::Iterate => process_left_right(i, InstructionSetBuilder::iterate)?,
         Classification::IterateToSingleValue => process_left_right(i, InstructionSetBuilder::iterate_to_single_value)?,
+        Classification::ReverseIterate => process_left_right(i, InstructionSetBuilder::reverse_iterate)?,
+        Classification::ReverseIterateToSingleValue => process_left_right(i, InstructionSetBuilder::reverse_iterate_to_single_value)?,
+        Classification::MultiIterate => process_left_right(i, InstructionSetBuilder::multi_iterate)?,
         Classification::ListSeparator => {
             match list_root {
                 false => {
@@ -792,17 +795,17 @@ mod binary_tests {
 
     #[test]
     fn reverse_iterate() {
-        unimplemented!();
+        assert_binary_op("|>>", InstructionSetBuilder::reverse_iterate);
     }
 
     #[test]
     fn reverse_iterate_to_single_value() {
-        unimplemented!();
+        assert_binary_op("|>|", InstructionSetBuilder::reverse_iterate_to_single_value);
     }
 
     #[test]
     fn multi_iterate() {
-        unimplemented!();
+        assert_binary_op("<>>", InstructionSetBuilder::multi_iterate);
     }
 }
 

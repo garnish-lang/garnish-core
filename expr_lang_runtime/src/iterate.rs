@@ -36,6 +36,18 @@ impl ExpressionRuntime {
         self.perform_iterate_to_result(false)
     }
 
+    pub(crate) fn perform_reverse_iterate(&mut self) -> Result {
+        Err("Unimplemented".into())
+    }
+
+    pub(crate) fn perform_reverse_iterate_to_single_result(&mut self) -> Result {
+        Err("Unimplemented".into())
+    }
+
+    pub(crate) fn perform_multi_iterate(&mut self) -> Result {
+        Err("Unimplemented".into())
+    }
+
     pub(crate) fn perform_iteration_output(&mut self) -> Result {
         let last = self.iteration_stack.len() - 1;
         match self.iteration_stack.get_mut(last) {

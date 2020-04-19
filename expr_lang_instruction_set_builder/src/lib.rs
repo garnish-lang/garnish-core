@@ -335,6 +335,18 @@ impl InstructionSetBuilder {
         self.add(Instruction::IterateToSingleResult);
     }
 
+    pub fn reverse_iterate(&mut self) {
+        self.add(Instruction::ReverseIterate);
+    }
+
+    pub fn reverse_iterate_to_single_value(&mut self) {
+        self.add(Instruction::ReverseIterateToSingleResult);
+    }
+
+    pub fn multi_iterate(&mut self) {
+        self.add(Instruction::MultiIterate);
+    }
+
     pub fn iteration_output(&mut self) {
         self.add(Instruction::IterationOutput);
     }

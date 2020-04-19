@@ -153,6 +153,9 @@ impl ExpressionRuntime {
             Instruction::IterationSkip => self.perform_iteration_skip()?,
             Instruction::IterationComplete => self.perform_iteration_complete()?,
             Instruction::IterateToSingleResult => self.perform_iterate_to_single_result()?,
+            Instruction::ReverseIterate => self.perform_reverse_iterate()?,
+            Instruction::ReverseIterateToSingleResult => self.perform_reverse_iterate_to_single_result()?,
+            Instruction::MultiIterate => self.perform_multi_iterate()?,
         }
 
         Ok(if self.call_stack.is_empty() {
