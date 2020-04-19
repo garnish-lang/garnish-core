@@ -3,9 +3,9 @@ use crate::{AST, Classification, TokenType, Node};
 use expr_lang_instruction_set_builder::InstructionSetBuilder;
 use expr_lang_common::ExpressionValue;
 
-pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
+pub fn build_byte_code(name: &str, ast: AST) -> Result<InstructionSetBuilder> {
     let mut instructions = InstructionSetBuilder::new();
-    instructions.start_expression("main");
+    instructions.start_expression(name);
 
     if ast.nodes.is_empty() {
         instructions.put(ExpressionValue::unit())?;
@@ -14,21 +14,21 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
     }
 
     let mut sub_references = vec![];
-    process_node(ast.root, &ast, &mut instructions, false, &mut sub_references)?;
+    process_node(name, ast.root, &ast, &mut instructions, false, &mut sub_references)?;
 
     instructions.end_expression();
 
     for sub in sub_references {
         instructions.start_expression(sub.0);
         let mut sub_references = vec![];
-        process_node(sub.1, &ast, &mut instructions, false, &mut sub_references)?;
+        process_node(name, sub.1, &ast, &mut instructions, false, &mut sub_references)?;
         instructions.end_expression();
     }
 
     return Ok(instructions);
 }
  
-fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_root: bool, refs: &mut Vec<(String, usize)>) -> Result<()> {
+fn process_node(name: &str, index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_root: bool, refs: &mut Vec<(String, usize)>) -> Result<()> {
     let node = &ast.nodes[index];
 
     let extract_index = |o, s, p| -> Result<usize> {
@@ -53,14 +53,14 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_roo
     let left_index = || extract_index(node.left, "left", index);
 
     let process_left_right = |refs: &mut Vec<(String, usize)>, i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
-        process_node(left_index()?, ast, i, list_root, refs)?;
-        process_node(right_index()?, ast, i, list_root, refs)?;
+        process_node(name, left_index()?, ast, i, list_root, refs)?;
+        process_node(name, right_index()?, ast, i, list_root, refs)?;
         op(i);
         Ok(())
     };
 
     let process_unary_right = |refs: &mut Vec<(String, usize)>, i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
-        process_node(right_index()?, ast, i, list_root, refs)?;
+        process_node(name, right_index()?, ast, i, list_root, refs)?;
         op(i);
         Ok(())
     };
@@ -108,12 +108,12 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_roo
         Classification::LogicalNot => process_unary_right(refs, i, InstructionSetBuilder::perform_logical_not)?,
         Classification::BitwiseNot => process_unary_right(refs, i, InstructionSetBuilder::perform_bitwise_not)?,
         Classification::PrefixApply => {
-            process_node(right_index()?, ast, i, list_root, refs)?;
+            process_node(name, right_index()?, ast, i, list_root, refs)?;
             i.push_input();
             i.execute_expression(&node.token.value);
         }
         Classification::SuffixApply => {
-            process_node(left_index()?, ast, i, list_root, refs)?;
+            process_node(name, left_index()?, ast, i, list_root, refs)?;
             i.push_input();
             i.execute_expression(&node.token.value);
         }
@@ -150,8 +150,8 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_roo
         Classification::PartiallyApply => process_left_right(refs, i, InstructionSetBuilder::partially_apply)?,
         Classification::Apply => process_left_right(refs, i, InstructionSetBuilder::apply)?,
         Classification::PipeApply => {
-            process_node(right_index()?, ast, i, list_root, refs)?;
-            process_node(left_index()?, ast, i, list_root, refs)?;
+            process_node(name, right_index()?, ast, i, list_root, refs)?;
+            process_node(name, left_index()?, ast, i, list_root, refs)?;
             i.apply();
         }
         Classification::Iterate => process_left_right(refs, i, InstructionSetBuilder::iterate)?,
@@ -163,39 +163,39 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_roo
             match list_root {
                 false => {
                     i.start_list();
-                    process_node(left_index()?, ast, i, true, refs)?;
-                    process_node(right_index()?, ast, i, true, refs)?;
+                    process_node(name, left_index()?, ast, i, true, refs)?;
+                    process_node(name, right_index()?, ast, i, true, refs)?;
                     i.make_list();
                 }
                 true => {
-                    process_node(left_index()?, ast, i, true, refs)?;
-                    process_node(right_index()?, ast, i, true, refs)?;
+                    process_node(name, left_index()?, ast, i, true, refs)?;
+                    process_node(name, right_index()?, ast, i, true, refs)?;
                 }
             }
         }
         Classification::InfixApply => {
             i.start_list();
-            process_node(left_index()?, ast, i, list_root, refs)?;
-            process_node(right_index()?, ast, i, list_root, refs)?;
+            process_node(name, left_index()?, ast, i, list_root, refs)?;
+            process_node(name, right_index()?, ast, i, list_root, refs)?;
             i.make_list();
             i.push_input();
             i.execute_expression(&node.token.value);
         }
         Classification::InvokeIfTrue => {
-            process_node(left_index()?, ast, i, list_root, refs);
-            let name = format!("main@sub_{}", refs.len());
+            process_node(name, left_index()?, ast, i, list_root, refs);
+            let name = format!("{}@sub_{}", name, refs.len());
             refs.push((name.clone(), right_index()?));
             i.conditional_execute(Some(name), None);
         }
         Classification::InvokeIfFalse => {
-            process_node(left_index()?, ast, i, list_root, refs);
-            let name = format!("main@sub_{}", refs.len());
+            process_node(name, left_index()?, ast, i, list_root, refs);
+            let name = format!("{}@sub_{}", name, refs.len());
             refs.push((name.clone(), right_index()?));
             i.conditional_execute(None, Some(name));
         }
         Classification::ResultCheckInvoke => {
-            process_node(left_index()?, ast, i, list_root, refs);
-            let name = format!("main@sub_{}", refs.len());
+            process_node(name, left_index()?, ast, i, list_root, refs);
+            let name = format!("{}@sub_{}", name, refs.len());
             refs.push((name.clone(), right_index()?));
             i.result_conditional_execute(name, None);
         }
@@ -217,7 +217,7 @@ mod tests {
         let parse_result = parser.make_groups(&input).unwrap();
         let ast_result = make_ast(parse_result).unwrap();
         
-        return build_byte_code(ast_result).unwrap();
+        return build_byte_code("main", ast_result).unwrap();
     }
 
     #[test]
@@ -271,7 +271,7 @@ mod tests {
             parent: None,
         });
 
-        let result = build_byte_code(ast);
+        let result = build_byte_code("main", ast);
         assert_eq!(result.err().unwrap().get_message(), "Invalid integer value (abc) at node 0");
     }
 
@@ -322,7 +322,7 @@ mod tests {
             parent: Some(1),
         });
 
-        let result = build_byte_code(ast);
+        let result = build_byte_code("main", ast);
         assert_eq!(result.err().unwrap().get_message(), "Invalid float value (abc.abc) at node 1");
     }
 
@@ -351,7 +351,7 @@ mod tests {
             parent: Some(0),
         });
 
-        let result = build_byte_code(ast);
+        let result = build_byte_code("main", ast);
         assert_eq!(result.err().unwrap().get_message(), "Expected left side node for parent 0");
     }
 
@@ -380,7 +380,7 @@ mod tests {
             parent: None,
         });
 
-        let result = build_byte_code(ast);
+        let result = build_byte_code("main", ast);
         assert_eq!(result.err().unwrap().get_message(), "Expected right side node for parent 1");
     }
 
@@ -435,7 +435,7 @@ mod tests {
             parent: None,
         });
 
-        let result = build_byte_code(ast);
+        let result = build_byte_code("main", ast);
         assert_eq!(result.err().unwrap().get_message(), "Expected right side node for parent 0");
     }
 
