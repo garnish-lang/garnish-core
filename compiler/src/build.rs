@@ -13,14 +13,22 @@ pub fn build_byte_code(ast: AST) -> Result<InstructionSetBuilder> {
         return Ok(instructions);
     }
 
-    process_node(ast.root, &ast, &mut instructions, false)?;
+    let mut sub_references = vec![];
+    process_node(ast.root, &ast, &mut instructions, false, &mut sub_references)?;
 
     instructions.end_expression();
+
+    for sub in sub_references {
+        instructions.start_expression(sub.0);
+        let mut sub_references = vec![];
+        process_node(sub.1, &ast, &mut instructions, false, &mut sub_references)?;
+        instructions.end_expression();
+    }
 
     return Ok(instructions);
 }
  
-fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_root: bool) -> Result<()> {
+fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_root: bool, refs: &mut Vec<(String, usize)>) -> Result<()> {
     let node = &ast.nodes[index];
 
     let extract_index = |o, s, p| -> Result<usize> {
@@ -44,15 +52,15 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_roo
     let right_index = || extract_index(node.right, "right", index);
     let left_index = || extract_index(node.left, "left", index);
 
-    let process_left_right = |i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
-        process_node(left_index()?, ast, i, list_root)?;
-        process_node(right_index()?, ast, i, list_root)?;
+    let process_left_right = |refs: &mut Vec<(String, usize)>, i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
+        process_node(left_index()?, ast, i, list_root, refs)?;
+        process_node(right_index()?, ast, i, list_root, refs)?;
         op(i);
         Ok(())
     };
 
-    let process_unary_right = |i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
-        process_node(right_index()?, ast, i, list_root)?;
+    let process_unary_right = |refs: &mut Vec<(String, usize)>, i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
+        process_node(right_index()?, ast, i, list_root, refs)?;
         op(i);
         Ok(())
     };
@@ -95,83 +103,101 @@ fn process_node(index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_roo
             };
             i.put(ExpressionValue::float(f))?;
         }
-        Classification::Negation => process_unary_right(i, InstructionSetBuilder::perform_negation)?,
-        Classification::AbsoluteValue => process_unary_right(i, InstructionSetBuilder::perform_absolute_value)?,
-        Classification::LogicalNot => process_unary_right(i, InstructionSetBuilder::perform_logical_not)?,
-        Classification::BitwiseNot => process_unary_right(i, InstructionSetBuilder::perform_bitwise_not)?,
+        Classification::Negation => process_unary_right(refs, i, InstructionSetBuilder::perform_negation)?,
+        Classification::AbsoluteValue => process_unary_right(refs, i, InstructionSetBuilder::perform_absolute_value)?,
+        Classification::LogicalNot => process_unary_right(refs, i, InstructionSetBuilder::perform_logical_not)?,
+        Classification::BitwiseNot => process_unary_right(refs, i, InstructionSetBuilder::perform_bitwise_not)?,
         Classification::PrefixApply => {
-            process_node(right_index()?, ast, i, list_root)?;
+            process_node(right_index()?, ast, i, list_root, refs)?;
             i.push_input();
             i.execute_expression(&node.token.value);
         }
         Classification::SuffixApply => {
-            process_node(left_index()?, ast, i, list_root)?;
+            process_node(left_index()?, ast, i, list_root, refs)?;
             i.push_input();
             i.execute_expression(&node.token.value);
         }
-        Classification::Access => process_left_right(i, InstructionSetBuilder::perform_access)?,
-        Classification::TypeCast => process_left_right(i, InstructionSetBuilder::perform_type_cast)?,
-        Classification::Exponential => process_left_right(i, InstructionSetBuilder::perform_exponential)?,
-        Classification::Multiplication => process_left_right(i, InstructionSetBuilder::perform_multiplication)?,
-        Classification::Division => process_left_right(i, InstructionSetBuilder::perform_division)?,
-        Classification::IntegerDivision => process_left_right(i, InstructionSetBuilder::perform_integer_division)?,
-        Classification::Modulo => process_left_right(i, InstructionSetBuilder::perform_remainder)?,
-        Classification::Addition => process_left_right(i, InstructionSetBuilder::perform_addition)?,
-        Classification::Subtraction => process_left_right(i, InstructionSetBuilder::perform_subtraction)?,
-        Classification::BitwiseLeftShift => process_left_right(i, InstructionSetBuilder::perform_bitwise_left_shift)?,
-        Classification::BitwiseRightShift => process_left_right(i, InstructionSetBuilder::perform_bitwise_right_shift)?,
-        Classification::MakeRange => process_left_right(i, InstructionSetBuilder::make_inclusive_range)?,
-        Classification::MakeStartExclusiveRange => process_left_right(i, InstructionSetBuilder::make_start_exclusive_range)?,
-        Classification::MakeEndExclusiveRange => process_left_right(i, InstructionSetBuilder::make_end_exclusive_range)?,
-        Classification::MakeExclusiveRange => process_left_right(i, InstructionSetBuilder::make_exclusive_range)?,
-        Classification::LessThan => process_left_right(i, InstructionSetBuilder::perform_less_than_comparison)?,
-        Classification::LessThanOrEqual => process_left_right(i, InstructionSetBuilder::perform_less_than_or_equal_comparison)?,
-        Classification::GreaterThan => process_left_right(i, InstructionSetBuilder::perform_greater_than_comparison)?,
-        Classification::GreaterThanOrEqual => process_left_right(i, InstructionSetBuilder::perform_greater_than_or_equal_comparison)?,
-        Classification::Equality => process_left_right(i, InstructionSetBuilder::perform_equality_comparison)?,
-        Classification::Inequality => process_left_right(i, InstructionSetBuilder::perform_inequality_comparison)?,
-        Classification::TypeEqual => process_left_right(i, InstructionSetBuilder::perform_type_comparison)?,
-        Classification::BitwiseAnd => process_left_right(i, InstructionSetBuilder::perform_bitwise_and)?,
-        Classification::BitwiseOr => process_left_right(i, InstructionSetBuilder::perform_bitwise_or)?,
-        Classification::BitwiseXor => process_left_right(i, InstructionSetBuilder::perform_bitwise_xor)?,
-        Classification::LogicalAnd => process_left_right(i, InstructionSetBuilder::perform_logical_and)?,
-        Classification::LogicalOr => process_left_right(i, InstructionSetBuilder::perform_logical_or)?,
-        Classification::LogicalXor => process_left_right(i, InstructionSetBuilder::perform_logical_xor)?,
-        Classification::MakeLink => process_left_right(i, InstructionSetBuilder::make_link)?,
-        Classification::MakePair => process_left_right(i, InstructionSetBuilder::make_pair)?,
-        Classification::PartiallyApply => process_left_right(i, InstructionSetBuilder::partially_apply)?,
-        Classification::Apply => process_left_right(i, InstructionSetBuilder::apply)?,
+        Classification::Access => process_left_right(refs, i, InstructionSetBuilder::perform_access)?,
+        Classification::TypeCast => process_left_right(refs, i, InstructionSetBuilder::perform_type_cast)?,
+        Classification::Exponential => process_left_right(refs, i, InstructionSetBuilder::perform_exponential)?,
+        Classification::Multiplication => process_left_right(refs, i, InstructionSetBuilder::perform_multiplication)?,
+        Classification::Division => process_left_right(refs, i, InstructionSetBuilder::perform_division)?,
+        Classification::IntegerDivision => process_left_right(refs, i, InstructionSetBuilder::perform_integer_division)?,
+        Classification::Modulo => process_left_right(refs, i, InstructionSetBuilder::perform_remainder)?,
+        Classification::Addition => process_left_right(refs, i, InstructionSetBuilder::perform_addition)?,
+        Classification::Subtraction => process_left_right(refs, i, InstructionSetBuilder::perform_subtraction)?,
+        Classification::BitwiseLeftShift => process_left_right(refs, i, InstructionSetBuilder::perform_bitwise_left_shift)?,
+        Classification::BitwiseRightShift => process_left_right(refs, i, InstructionSetBuilder::perform_bitwise_right_shift)?,
+        Classification::MakeRange => process_left_right(refs, i, InstructionSetBuilder::make_inclusive_range)?,
+        Classification::MakeStartExclusiveRange => process_left_right(refs, i, InstructionSetBuilder::make_start_exclusive_range)?,
+        Classification::MakeEndExclusiveRange => process_left_right(refs, i, InstructionSetBuilder::make_end_exclusive_range)?,
+        Classification::MakeExclusiveRange => process_left_right(refs, i, InstructionSetBuilder::make_exclusive_range)?,
+        Classification::LessThan => process_left_right(refs, i, InstructionSetBuilder::perform_less_than_comparison)?,
+        Classification::LessThanOrEqual => process_left_right(refs, i, InstructionSetBuilder::perform_less_than_or_equal_comparison)?,
+        Classification::GreaterThan => process_left_right(refs, i, InstructionSetBuilder::perform_greater_than_comparison)?,
+        Classification::GreaterThanOrEqual => process_left_right(refs, i, InstructionSetBuilder::perform_greater_than_or_equal_comparison)?,
+        Classification::Equality => process_left_right(refs, i, InstructionSetBuilder::perform_equality_comparison)?,
+        Classification::Inequality => process_left_right(refs, i, InstructionSetBuilder::perform_inequality_comparison)?,
+        Classification::TypeEqual => process_left_right(refs, i, InstructionSetBuilder::perform_type_comparison)?,
+        Classification::BitwiseAnd => process_left_right(refs, i, InstructionSetBuilder::perform_bitwise_and)?,
+        Classification::BitwiseOr => process_left_right(refs, i, InstructionSetBuilder::perform_bitwise_or)?,
+        Classification::BitwiseXor => process_left_right(refs, i, InstructionSetBuilder::perform_bitwise_xor)?,
+        Classification::LogicalAnd => process_left_right(refs, i, InstructionSetBuilder::perform_logical_and)?,
+        Classification::LogicalOr => process_left_right(refs, i, InstructionSetBuilder::perform_logical_or)?,
+        Classification::LogicalXor => process_left_right(refs, i, InstructionSetBuilder::perform_logical_xor)?,
+        Classification::MakeLink => process_left_right(refs, i, InstructionSetBuilder::make_link)?,
+        Classification::MakePair => process_left_right(refs, i, InstructionSetBuilder::make_pair)?,
+        Classification::PartiallyApply => process_left_right(refs, i, InstructionSetBuilder::partially_apply)?,
+        Classification::Apply => process_left_right(refs, i, InstructionSetBuilder::apply)?,
         Classification::PipeApply => {
-            process_node(right_index()?, ast, i, list_root)?;
-            process_node(left_index()?, ast, i, list_root)?;
+            process_node(right_index()?, ast, i, list_root, refs)?;
+            process_node(left_index()?, ast, i, list_root, refs)?;
             i.apply();
         }
-        Classification::Iterate => process_left_right(i, InstructionSetBuilder::iterate)?,
-        Classification::IterateToSingleValue => process_left_right(i, InstructionSetBuilder::iterate_to_single_value)?,
-        Classification::ReverseIterate => process_left_right(i, InstructionSetBuilder::reverse_iterate)?,
-        Classification::ReverseIterateToSingleValue => process_left_right(i, InstructionSetBuilder::reverse_iterate_to_single_value)?,
-        Classification::MultiIterate => process_left_right(i, InstructionSetBuilder::multi_iterate)?,
+        Classification::Iterate => process_left_right(refs, i, InstructionSetBuilder::iterate)?,
+        Classification::IterateToSingleValue => process_left_right(refs, i, InstructionSetBuilder::iterate_to_single_value)?,
+        Classification::ReverseIterate => process_left_right(refs, i, InstructionSetBuilder::reverse_iterate)?,
+        Classification::ReverseIterateToSingleValue => process_left_right(refs, i, InstructionSetBuilder::reverse_iterate_to_single_value)?,
+        Classification::MultiIterate => process_left_right(refs, i, InstructionSetBuilder::multi_iterate)?,
         Classification::ListSeparator => {
             match list_root {
                 false => {
                     i.start_list();
-                    process_node(left_index()?, ast, i, true)?;
-                    process_node(right_index()?, ast, i, true)?;
+                    process_node(left_index()?, ast, i, true, refs)?;
+                    process_node(right_index()?, ast, i, true, refs)?;
                     i.make_list();
                 }
                 true => {
-                    process_node(left_index()?, ast, i, true)?;
-                    process_node(right_index()?, ast, i, true)?;
+                    process_node(left_index()?, ast, i, true, refs)?;
+                    process_node(right_index()?, ast, i, true, refs)?;
                 }
             }
         }
         Classification::InfixApply => {
             i.start_list();
-            process_node(left_index()?, ast, i, true)?;
-            process_node(right_index()?, ast, i, true)?;
+            process_node(left_index()?, ast, i, list_root, refs)?;
+            process_node(right_index()?, ast, i, list_root, refs)?;
             i.make_list();
             i.push_input();
             i.execute_expression(&node.token.value);
+        }
+        Classification::InvokeIfTrue => {
+            process_node(left_index()?, ast, i, list_root, refs);
+            let name = format!("main@sub_{}", refs.len());
+            refs.push((name.clone(), right_index()?));
+            i.conditional_execute(Some(name), None);
+        }
+        Classification::InvokeIfFalse => {
+            process_node(left_index()?, ast, i, list_root, refs);
+            let name = format!("main@sub_{}", refs.len());
+            refs.push((name.clone(), right_index()?));
+            i.conditional_execute(None, Some(name));
+        }
+        Classification::ResultCheckInvoke => {
+            process_node(left_index()?, ast, i, list_root, refs);
+            let name = format!("main@sub_{}", refs.len());
+            refs.push((name.clone(), right_index()?));
+            i.result_conditional_execute(name, None);
         }
         _ => ()
     };
@@ -751,17 +777,53 @@ mod binary_tests {
 
     #[test]
     fn invoke_if_true() {
-        unimplemented!();
+        let instructions = byte_code_from("10 => 5");
+        let mut expected = InstructionSetBuilder::new();
+
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.conditional_execute(Some("main@sub_0".into()), None);
+        expected.end_expression();
+
+        expected.start_expression("main@sub_0");
+        expected.put(ExpressionValue::integer(5)).unwrap();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
     }
 
     #[test]
     fn invoke_if_false() {
-        unimplemented!();
+        let instructions = byte_code_from("10 !> 5");
+        let mut expected = InstructionSetBuilder::new();
+
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.conditional_execute(None, Some("main@sub_0".into()));
+        expected.end_expression();
+
+        expected.start_expression("main@sub_0");
+        expected.put(ExpressionValue::integer(5)).unwrap();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
     }
 
     #[test]
     fn result_check_invoke() {
-        unimplemented!();
+        let instructions = byte_code_from("10 =?> 5");
+        let mut expected = InstructionSetBuilder::new();
+
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.result_conditional_execute("main@sub_0".into(), None);
+        expected.end_expression();
+
+        expected.start_expression("main@sub_0");
+        expected.put(ExpressionValue::integer(5)).unwrap();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
     }
 
     #[test]
