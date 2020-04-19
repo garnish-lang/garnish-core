@@ -114,6 +114,7 @@ fn process_node(name: &str,
             TokenType::Identifier => {
                 i.resolve(&node.token.value)?;
             }
+            TokenType::StartGroup => process_node(name, right_index()?, ast, i, list_root, conditional, refs)?,
             _ => unimplemented!()
         }
         Classification::Symbol => {
@@ -1075,6 +1076,31 @@ mod conditional_chain_tests {
 
         expected.start_expression("main@sub_0");
         expected.put(ExpressionValue::integer(15)).unwrap();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+}
+
+#[cfg(test)]
+mod groups_and_sub_expressions {
+    use expr_lang_instruction_set_builder::InstructionSetBuilder;
+    use expr_lang_common::{ExpressionValue};
+    use super::tests::byte_code_from;
+
+    #[test]
+    fn single_group() {
+        let instructions = byte_code_from("5 * (4 + 3) * 9");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(5)).unwrap();
+        expected.put(ExpressionValue::integer(4)).unwrap();
+        expected.put(ExpressionValue::integer(3)).unwrap();
+        expected.perform_addition();
+        expected.perform_multiplication();
+        expected.put(ExpressionValue::integer(9)).unwrap();
+        expected.perform_multiplication();
         expected.end_expression();
 
         assert_eq!(instructions, expected);
