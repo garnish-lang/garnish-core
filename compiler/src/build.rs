@@ -3,31 +3,61 @@ use crate::{AST, Classification, TokenType, Node};
 use expr_lang_instruction_set_builder::InstructionSetBuilder;
 use expr_lang_common::ExpressionValue;
 
-pub fn build_byte_code(name: &str, ast: AST) -> Result<InstructionSetBuilder> {
+struct SubData {
+    name: String,
+    start: usize,
+    id: usize,
+    right: Option<String>
+}
+
+impl SubData {
+    fn new(name: String, start: usize, id: usize, right: Option<String>) -> Self {
+        SubData { name, start, id, right }
+    }
+}
+
+struct SubInfo {
+    count: usize,
+    subs: Vec<SubData>,
+    current: SubData
+}
+
+pub fn build_byte_code(root_name: &str, ast: AST) -> Result<InstructionSetBuilder> {
     let mut instructions = InstructionSetBuilder::new();
 
     if ast.nodes.is_empty() {
-        instructions.start_expression(name);
+        instructions.start_expression(root_name);
         instructions.put(ExpressionValue::unit())?;
         instructions.end_expression();
         return Ok(instructions);
     }
     
-    let mut references = vec![];
-    references.push((String::from(name), ast.root));
+    let mut info = SubInfo {
+        count: 0,
+        subs: vec![],
+        current: SubData::new("".into(), 0, 0, None),
+    };
+    info.subs.push(SubData::new(String::from(root_name), ast.root, 0, None));
 
-    while !references.is_empty() {
-        let (name, index) = references.pop().unwrap();
+    while !info.subs.is_empty() {
+        info.current = info.subs.pop().unwrap();
 
-        instructions.start_expression(name.clone());
-        process_node(&name, index, &ast, &mut instructions, false, None, &mut references)?;
+        instructions.start_expression(info.current.name.clone());
+        process_node(&root_name, info.current.start.clone(), &ast, &mut instructions, false, None, &mut info)?;
         instructions.end_expression();
     }
 
     return Ok(instructions);
 }
  
-fn process_node(name: &str, index: usize, ast: &AST, i: &mut InstructionSetBuilder, list_root: bool, conditional: Option<&String>, refs: &mut Vec<(String, usize)>) -> Result<()> {
+fn process_node(name: &str,
+        index: usize,
+        ast: &AST,
+        i: &mut InstructionSetBuilder,
+        list_root: bool,
+        conditional: Option<&String>,
+        refs: &mut SubInfo
+    ) -> Result<()> {
     let node = &ast.nodes[index];
 
     let extract_index = |o, s, p| -> Result<usize> {
@@ -51,14 +81,14 @@ fn process_node(name: &str, index: usize, ast: &AST, i: &mut InstructionSetBuild
     let right_index = || extract_index(node.right, "right", index);
     let left_index = || extract_index(node.left, "left", index);
 
-    let process_left_right = |refs: &mut Vec<(String, usize)>, i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
+    let process_left_right = |refs: &mut SubInfo, i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
         process_node(name, left_index()?, ast, i, list_root, conditional, refs)?;
         process_node(name, right_index()?, ast, i, list_root, conditional, refs)?;
         op(i);
         Ok(())
     };
 
-    let process_unary_right = |refs: &mut Vec<(String, usize)>, i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
+    let process_unary_right = |refs: &mut SubInfo, i: &mut InstructionSetBuilder, op: fn(&mut InstructionSetBuilder) -> ()| -> Result<()> {
         process_node(name, right_index()?, ast, i, list_root, conditional, refs)?;
         op(i);
         Ok(())
@@ -182,29 +212,57 @@ fn process_node(name: &str, index: usize, ast: &AST, i: &mut InstructionSetBuild
         }
         Classification::InvokeIfTrue => {
             process_node(name, left_index()?, ast, i, list_root, conditional, refs)?;
-            let name = format!("{}@sub_{}", name, refs.len());
-            refs.push((name.clone(), right_index()?));
+            let id = refs.count;
+            refs.count += 1;
+            let name = format!("{}@sub_{}", name, id);
+            refs.subs.push(SubData::new(name.clone(), right_index()?, id, None));
             let right = match conditional {
                 Some(c) => Some(c.clone()),
-                None => None
+                None => match &refs.current.right {
+                    Some(c) => Some(c.clone()),
+                    None => None,
+                }
             };
             i.conditional_execute(Some(name), right);
         }
         Classification::InvokeIfFalse => {
             process_node(name, left_index()?, ast, i, list_root, conditional, refs)?;
-            let name = format!("{}@sub_{}", name, refs.len());
-            refs.push((name.clone(), right_index()?));
-            i.conditional_execute(None, Some(name));
+            let id = refs.count;
+            refs.count += 1;
+            let name = format!("{}@sub_{}", name, id);
+            refs.subs.push(SubData::new(name.clone(), right_index()?, id, None));
+            let right = match conditional {
+                Some(c) => Some(c.clone()),
+                None => match &refs.current.right {
+                    Some(c) => Some(c.clone()),
+                    None => None,
+                }
+            };
+            i.conditional_execute(right, Some(name));
         }
         Classification::ResultCheckInvoke => {
             process_node(name, left_index()?, ast, i, list_root, conditional, refs)?;
-            let name = format!("{}@sub_{}", name, refs.len());
-            refs.push((name.clone(), right_index()?));
-            i.result_conditional_execute(name, None);
+            let id = refs.count;
+            refs.count += 1;
+            let name = format!("{}@sub_{}", name, id);
+            refs.subs.push(SubData::new(name.clone(), right_index()?, id, None));
+            let right = match conditional {
+                Some(c) => Some(c.clone()),
+                None => match &refs.current.right {
+                    Some(c) => Some(c.clone()),
+                    None => None,
+                }
+            };
+            i.result_conditional_execute(name, right);
         }
         Classification::ConditionalContinuation => {
-            let right_name = format!("{}@sub_{}", name, refs.len());
-            refs.push((right_name.clone(), right_index()?));
+            let id = refs.count;
+            refs.count += 1;
+            let right_name = format!("{}@sub_{}", name, id);
+            refs.subs.push(SubData::new(right_name.clone(), right_index()?, id, match conditional {
+                Some(c) => Some(c.clone()),
+                None => None
+            }));
             process_node(name, left_index()?, ast, i, list_root, Some(&right_name), refs)?;
         }
         _ => ()
@@ -901,11 +959,98 @@ mod conditional_chain_tests {
 
         expected.start_expression("main@sub_0");
         expected.put(ExpressionValue::integer(20)).unwrap();
-        expected.conditional_execute(Some("main@sub_0@sub_0".into()), None);
+        expected.conditional_execute(Some("main@sub_2".into()), None);
         expected.end_expression();
 
-        expected.start_expression("main@sub_0@sub_0");
+        expected.start_expression("main@sub_2");
         expected.put(ExpressionValue::integer(15)).unwrap();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn two_false_chain() {
+        let instructions = byte_code_from("10 !> 5, 20 !> 15");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.conditional_execute(Some("main@sub_0".into()), Some("main@sub_1".into()));
+        expected.end_expression();
+
+        expected.start_expression("main@sub_1");
+        expected.put(ExpressionValue::integer(5)).unwrap();
+        expected.end_expression();
+
+        expected.start_expression("main@sub_0");
+        expected.put(ExpressionValue::integer(20)).unwrap();
+        expected.conditional_execute(None, Some("main@sub_2".into()));
+        expected.end_expression();
+
+        expected.start_expression("main@sub_2");
+        expected.put(ExpressionValue::integer(15)).unwrap();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn two_result_check_chain() {
+        let instructions = byte_code_from("10 =?> 5, 20 =?> 15");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.result_conditional_execute("main@sub_1".into(), Some("main@sub_0".into()));
+        expected.end_expression();
+
+        expected.start_expression("main@sub_1");
+        expected.put(ExpressionValue::integer(5)).unwrap();
+        expected.end_expression();
+
+        expected.start_expression("main@sub_0");
+        expected.put(ExpressionValue::integer(20)).unwrap();
+        expected.result_conditional_execute("main@sub_2".into(), None);
+        expected.end_expression();
+
+        expected.start_expression("main@sub_2");
+        expected.put(ExpressionValue::integer(15)).unwrap();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn three_true_chain() {
+        let instructions = byte_code_from("10 => 5, 20 => 15, 30 => 25");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.conditional_execute(Some("main@sub_2".into()), Some("main@sub_1".into()));
+        expected.end_expression();
+
+        expected.start_expression("main@sub_2");
+        expected.put(ExpressionValue::integer(5)).unwrap();
+        expected.end_expression();
+
+        expected.start_expression("main@sub_1");
+        expected.put(ExpressionValue::integer(20)).unwrap();
+        expected.conditional_execute(Some("main@sub_3".into()), Some("main@sub_0".into()));
+        expected.end_expression();
+
+        expected.start_expression("main@sub_3");
+        expected.put(ExpressionValue::integer(15)).unwrap();
+        expected.end_expression();
+
+        expected.start_expression("main@sub_0");
+        expected.put(ExpressionValue::integer(30)).unwrap();
+        expected.conditional_execute(Some("main@sub_4".into()), None);
+        expected.end_expression();
+
+        expected.start_expression("main@sub_4");
+        expected.put(ExpressionValue::integer(25)).unwrap();
         expected.end_expression();
 
         assert_eq!(instructions, expected);
