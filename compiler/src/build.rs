@@ -114,7 +114,7 @@ fn process_node(name: &str,
             TokenType::Identifier => {
                 i.resolve(&node.token.value)?;
             }
-            TokenType::StartGroup => process_node(name, right_index()?, ast, i, list_root, conditional, refs)?,
+            TokenType::StartGroup => process_node(name, right_index()?, ast, i, false, conditional, refs)?,
             _ => unimplemented!()
         }
         Classification::Symbol => {
@@ -1123,6 +1123,27 @@ mod groups_and_sub_expressions {
         expected.perform_multiplication();
         expected.put(ExpressionValue::integer(9)).unwrap();
         expected.perform_multiplication();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn nested_list() {
+        let instructions = byte_code_from("10, 20, (30, 40, 50), 60");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.start_list();
+        expected.put(ExpressionValue::integer(10)).unwrap();
+        expected.put(ExpressionValue::integer(20)).unwrap();
+        expected.start_list();
+        expected.put(ExpressionValue::integer(30)).unwrap();
+        expected.put(ExpressionValue::integer(40)).unwrap();
+        expected.put(ExpressionValue::integer(50)).unwrap();
+        expected.make_list();
+        expected.put(ExpressionValue::integer(60)).unwrap();
+        expected.make_list();
         expected.end_expression();
 
         assert_eq!(instructions, expected);
