@@ -1105,5 +1105,27 @@ mod groups_and_sub_expressions {
 
         assert_eq!(instructions, expected);
     }
+
+    #[test]
+    fn nested_group() {
+        let instructions = byte_code_from("5 * (4 + (3 - 2) + 3) * 9");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(5)).unwrap();
+        expected.put(ExpressionValue::integer(4)).unwrap();
+        expected.put(ExpressionValue::integer(3)).unwrap();
+        expected.put(ExpressionValue::integer(2)).unwrap();
+        expected.perform_subtraction();
+        expected.perform_addition();
+        expected.put(ExpressionValue::integer(3)).unwrap();
+        expected.perform_addition();
+        expected.perform_multiplication();
+        expected.put(ExpressionValue::integer(9)).unwrap();
+        expected.perform_multiplication();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
 }
 
