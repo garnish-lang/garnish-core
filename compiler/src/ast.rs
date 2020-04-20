@@ -72,8 +72,31 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
 
     // maintain separate list of literals for checking for orphans
     let mut literals: Vec<usize> = vec![];
+    let mut next_parent: Option<usize> = None;
 
-    for (i, node) in parse_result.nodes.iter().enumerate() {
+    for (i, n) in parse_result.nodes.iter().enumerate() {
+        println!("{}, {:?}", i, n);
+    }
+    println!("------");
+
+    for i in 0..parse_result.nodes.len() {
+        match next_parent {
+            Some(p) if parse_result.nodes[i].classification != Classification::NoOp => {
+                parse_result.nodes[i].parent = next_parent;
+                parse_result.nodes[i].left = None;
+                parse_result.nodes[p].right = Some(i);
+                next_parent = None;
+            }
+            _ => ()
+        }
+
+        let node = &mut parse_result.nodes[i];
+
+        if node.token.token_type == TokenType::StartGroup 
+            || node.token.token_type == TokenType::StartExpression {
+            next_parent = Some(i);
+        }
+
         let p = match node.classification {
             Classification::IterationOutput 
             | Classification::IterationSkip 
@@ -174,13 +197,22 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                 match left {
                     Some(i) => {
                         match parse_result.nodes[i].parent {
+                            Some(p) if parse_result.nodes[p].token.token_type == TokenType::StartGroup 
+                                        || parse_result.nodes[p].token.token_type == TokenType::StartExpression 
+                                    => {
+                                parse_result.nodes[i].parent = Some(*loc);
+                                parse_result.nodes[*loc].parent = Some(p);
+                                parse_result.nodes[p].right = Some(*loc);
+                            }
                             Some(p) => {
                                 // go up to nodes root and update its right to be this node
                                 let mut p_root = p;
                                 while true {
-                                    match parse_result.nodes[p_root].parent {
-                                        Some(p) => p_root = p,
-                                        None => {
+                                    match parse_result.nodes[p_root].parent  {
+                                        Some(p) if parse_result.nodes[p_root].token.token_type != TokenType::StartGroup 
+                                            && parse_result.nodes[p_root].token.token_type != TokenType::StartExpression 
+                                        => p_root = p,
+                                        _ => {
                                             parse_result.nodes[p].parent = Some(*loc);    
                                             parse_result.nodes[*loc].left = Some(p);
                                             break;
@@ -188,12 +220,13 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                                     }
                                 }
                             }
-                            None => {
+                            _ => {
                                 parse_result.nodes[i].parent = Some(*loc);
                             }
                         }
 
-                        if parse_result.nodes[i].token.token_type != TokenType::StartExpression {
+                        if parse_result.nodes[i].token.token_type != TokenType::StartExpression  
+                            && parse_result.nodes[i].token.token_type != TokenType::StartGroup {
                             match parse_result.nodes[i].left {
                                 Some(l) => {
                                     if parse_result.nodes[l].parent != Some(i) {
@@ -242,7 +275,8 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                             }
                         }
                         
-                        if parse_result.nodes[i].token.token_type != TokenType::StartExpression {
+                        if parse_result.nodes[i].token.token_type != TokenType::StartExpression 
+                            && parse_result.nodes[i].token.token_type != TokenType::StartGroup {
                             match parse_result.nodes[i].right {
                                 Some(r) => {
                                     if parse_result.nodes[r].parent != Some(i) {
@@ -276,25 +310,13 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         }
     }
 
-    // check for orphaned literals
     for i in literals {
-        match parse_result.nodes[i].parent {
-            Some(_) => (), // has parent, nothing to do
-            None => {
-                // orphan literals happen when they are the only value in a group
-                // check left to see if it is a start group
-                // assign as parent if so
-                match parse_result.nodes[i].left {
-                    Some(l) => if parse_result.nodes[l].token.token_type == TokenType::StartGroup {
-                        // parent will be assigned in group loop below
-                        // assign groups right for that to happen
-                        parse_result.nodes[l].right = Some(i);
-                        parse_result.nodes[i].right = None;
-                        parse_result.nodes[i].left = None;
-                    } else { unreachable!("Orphan literal not in group found at {}", i) }
-                    None => () // no left means this literal was the start of input, which is fine also
-                }
-            }
+        // set left and right to None
+        // might not be completly necessary but keeps the tree clean
+        if parse_result.nodes[i].token.token_type != TokenType::StartGroup
+            && parse_result.nodes[i].token.token_type != TokenType::StartExpression {
+            parse_result.nodes[i].left = None;
+            parse_result.nodes[i].right = None;
         }
     }
 
@@ -305,7 +327,7 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
     for i in groups {
         match parse_result.nodes[i].right {
             Some(r) => match parse_result.nodes[r].parent {
-                Some(p) => {
+                Some(p) if p != i => {
                     let mut p_root = p;
                     while true {
                         match parse_result.nodes[p_root].parent {
@@ -318,6 +340,7 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                         }
                     }
                 }
+                Some(_) => (), // right's parent is already assigned to the group
                 None => parse_result.nodes[r].parent = Some(i),
             }
             None => unimplemented!("no right assign to group node {}", i),
@@ -1467,6 +1490,24 @@ mod group_tests {
         //                  0            1
         //                  0 2  45 7 9  2  4
         let ast = ast_from("5 -> {4 + 3} ~~ 9");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(12), Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, Some(7));
+        ast.nodes.assert_node(5, Some(7), None, None);
+        ast.nodes.assert_node(7, Some(4), Some(5), Some(9));
+        ast.nodes.assert_node(9, Some(7), None, None);
+        ast.nodes.assert_node(12, None, Some(2), Some(14));
+        ast.nodes.assert_node(14, Some(12), None, None);
+
+        assert_eq!(ast.root, 12);
+    }
+
+    #[test]
+    fn surrounded_group() {
+        //                  0            1
+        //                  0 2  45 7 9  2  4
+        let ast = ast_from("5 -> (4 + 3) ~~ 9");
 
         ast.nodes.assert_node(0, Some(2), None, None);
         ast.nodes.assert_node(2, Some(12), Some(0), Some(4));
