@@ -196,6 +196,7 @@ fn process_node(name: &str,
         Classification::ReverseIterate => process_left_right(refs, i, InstructionSetBuilder::reverse_iterate)?,
         Classification::ReverseIterateToSingleValue => process_left_right(refs, i, InstructionSetBuilder::reverse_iterate_to_single_value)?,
         Classification::MultiIterate => process_left_right(refs, i, InstructionSetBuilder::multi_iterate)?,
+        Classification::OutputResult => process_left_right(refs, i, InstructionSetBuilder::output_result)?,
         Classification::ListSeparator => {
             match list_root {
                 false => {
@@ -945,6 +946,11 @@ mod binary_tests {
     #[test]
     fn multi_iterate() {
         assert_binary_op("<>>", InstructionSetBuilder::multi_iterate);
+    }
+
+    #[test]
+    fn output_result() {
+        assert_binary_op("\n\n", InstructionSetBuilder::output_result);
     }
 }
 
