@@ -115,6 +115,13 @@ fn process_node(name: &str,
                 i.resolve(&node.token.value)?;
             }
             TokenType::StartGroup => process_node(name, right_index()?, ast, i, false, conditional, refs)?,
+            TokenType::StartExpression => {
+                let id = refs.count;
+                refs.count += 1;
+                let name = format!("{}@sub_{}", name, id);
+                refs.subs.push(SubData::new(name.clone(), right_index()?, id, None));
+                i.put(ExpressionValue::expression(name.clone()))?;
+            }
             _ => unimplemented!()
         }
         Classification::Symbol => {
@@ -1101,6 +1108,28 @@ mod groups_and_sub_expressions {
         expected.perform_multiplication();
         expected.put(ExpressionValue::integer(9)).unwrap();
         expected.perform_multiplication();
+        expected.end_expression();
+
+        assert_eq!(instructions, expected);
+    }
+
+    #[test]
+    fn single_expression() {
+        let instructions = byte_code_from("5 -> {4 + 3} ~~ 9");
+
+        let mut expected = InstructionSetBuilder::new();
+        expected.start_expression("main");
+        expected.put(ExpressionValue::integer(5)).unwrap();
+        expected.put(ExpressionValue::expression("main@sub_0")).unwrap();
+        expected.make_link();
+        expected.put(ExpressionValue::integer(9)).unwrap();
+        expected.partially_apply();
+        expected.end_expression();
+
+        expected.start_expression("main@sub_0");
+        expected.put(ExpressionValue::integer(4)).unwrap();
+        expected.put(ExpressionValue::integer(3)).unwrap();
+        expected.perform_addition();
         expected.end_expression();
 
         assert_eq!(instructions, expected);

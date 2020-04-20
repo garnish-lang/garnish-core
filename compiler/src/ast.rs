@@ -193,18 +193,22 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                             }
                         }
 
-                        match parse_result.nodes[i].left {
-                            Some(l) => {
-                                if parse_result.nodes[l].parent != Some(i) {
-                                    parse_result.nodes[l].right = Some(*loc);
+                        if parse_result.nodes[i].token.token_type != TokenType::StartExpression {
+                            match parse_result.nodes[i].left {
+                                Some(l) => {
+                                    if parse_result.nodes[l].parent != Some(i) {
+                                        parse_result.nodes[l].right = Some(*loc);
+                                    }
                                 }
+                                None => ()
                             }
-                            None => ()
-                        }
 
-                        if parse_result.nodes[i].classification == Classification::Literal {
+                            if parse_result.nodes[i].classification == Classification::Literal {
+                                parse_result.nodes[i].left = None;
+                                parse_result.nodes[i].right = None;
+                            }
+                        } else {
                             parse_result.nodes[i].left = None;
-                            parse_result.nodes[i].right = None;
                         }
                     }
                     None => () // nothing to do
@@ -237,19 +241,23 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
                                 parse_result.nodes[i].parent = Some(*loc);
                             }
                         }
-
-                        match parse_result.nodes[i].right {
-                            Some(r) => {
-                                if parse_result.nodes[r].parent != Some(i) {
-                                    parse_result.nodes[r].left = Some(*loc);
+                        
+                        if parse_result.nodes[i].token.token_type != TokenType::StartExpression {
+                            match parse_result.nodes[i].right {
+                                Some(r) => {
+                                    if parse_result.nodes[r].parent != Some(i) {
+                                        parse_result.nodes[r].left = Some(*loc);
+                                    }
                                 }
+                                None => (),
                             }
-                            None => (),
-                        }
 
-                        if parse_result.nodes[i].classification == Classification::Literal {
+                            if parse_result.nodes[i].classification == Classification::Literal {
+                                parse_result.nodes[i].left = None;
+                                parse_result.nodes[i].right = None;
+                            }
+                        } else {
                             parse_result.nodes[i].left = None;
-                            parse_result.nodes[i].right = None;
                         }
                     }
                     None => () // nothing to do
@@ -1452,6 +1460,24 @@ mod group_tests {
         ast.nodes.assert_node(13, Some(12), None, None);
 
         assert_eq!(ast.root, 0);
+    }
+
+    #[test]
+    fn surrounded_expression() {
+        //                  0            1
+        //                  0 2  45 7 9  2  4
+        let ast = ast_from("5 -> {4 + 3} ~~ 9");
+
+        ast.nodes.assert_node(0, Some(2), None, None);
+        ast.nodes.assert_node(2, Some(12), Some(0), Some(4));
+        ast.nodes.assert_node(4, Some(2), None, Some(7));
+        ast.nodes.assert_node(5, Some(7), None, None);
+        ast.nodes.assert_node(7, Some(4), Some(5), Some(9));
+        ast.nodes.assert_node(9, Some(7), None, None);
+        ast.nodes.assert_node(12, None, Some(2), Some(14));
+        ast.nodes.assert_node(14, Some(12), None, None);
+
+        assert_eq!(ast.root, 12);
     }
 }
 
