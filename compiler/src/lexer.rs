@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use expr_lang_common::Result;
+use garnish_common::Result;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum TokenType {

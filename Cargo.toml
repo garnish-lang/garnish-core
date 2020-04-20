@@ -2,8 +2,8 @@
 
 [workspace]
 members = [
-    "expr_lang_runtime",
-    "expr_lang_common",
-    "expr_lang_instruction_set_builder",
+    "runtime",
+    "common",
+    "instruction_set_builder",
     "compiler"
 ]

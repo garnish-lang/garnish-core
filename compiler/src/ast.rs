@@ -1,5 +1,5 @@
 use crate::{ParseResult, Node, Token, TokenType, Classification};
-use expr_lang_common::Result;
+use garnish_common::Result;
 
 #[derive(Debug)]
 pub struct AST {

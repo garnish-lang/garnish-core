@@ -1,7 +1,7 @@
-use expr_lang_common::Result;
+use garnish_common::Result;
 use crate::{AST, Classification, TokenType, Node};
-use expr_lang_instruction_set_builder::InstructionSetBuilder;
-use expr_lang_common::ExpressionValue;
+use garnish_instruction_set_builder::InstructionSetBuilder;
+use garnish_common::ExpressionValue;
 
 struct SubData {
     name: String,
@@ -286,8 +286,8 @@ fn process_node(name: &str,
 #[cfg(test)]
 mod tests {
     use crate::{build_byte_code, make_ast, AST, Lexer, TokenType, Token, Node, Parser, Classification};
-    use expr_lang_instruction_set_builder::InstructionSetBuilder;
-    use expr_lang_common::{ExpressionValue};
+    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_common::{ExpressionValue};
 
     pub fn byte_code_from(s: &str) -> InstructionSetBuilder {
         let input = Lexer::new().lex(s).unwrap();
@@ -564,8 +564,8 @@ mod tests {
 
 #[cfg(test)]
 mod unary_tests {
-    use expr_lang_instruction_set_builder::InstructionSetBuilder;
-    use expr_lang_common::{ExpressionValue};
+    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_common::{ExpressionValue};
     use super::tests::byte_code_from;
 
     #[test]
@@ -651,8 +651,8 @@ mod unary_tests {
 
 #[cfg(test)]
 mod binary_tests {
-    use expr_lang_instruction_set_builder::InstructionSetBuilder;
-    use expr_lang_common::{ExpressionValue};
+    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_common::{ExpressionValue};
     use super::tests::byte_code_from;
 
     fn assert_binary_op(op_str: &str, op: fn(&mut InstructionSetBuilder) -> ()) {
@@ -956,8 +956,8 @@ mod binary_tests {
 
 #[cfg(test)]
 mod conditional_chain_tests {
-    use expr_lang_instruction_set_builder::InstructionSetBuilder;
-    use expr_lang_common::{ExpressionValue};
+    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_common::{ExpressionValue};
     use super::tests::byte_code_from;
 
     #[test]
@@ -1097,8 +1097,8 @@ mod conditional_chain_tests {
 
 #[cfg(test)]
 mod groups_and_sub_expressions {
-    use expr_lang_instruction_set_builder::InstructionSetBuilder;
-    use expr_lang_common::{ExpressionValue};
+    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_common::{ExpressionValue};
     use super::tests::byte_code_from;
 
     #[test]

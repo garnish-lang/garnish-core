@@ -1,4 +1,4 @@
-use expr_lang_common::Result;
+use garnish_common::Result;
 use std::fmt;
 
 use crate::{Token, TokenType};
