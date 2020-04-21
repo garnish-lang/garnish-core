@@ -1,6 +1,6 @@
 use crate::context::ExpressionContext;
 use crate::ExpressionRuntime;
-use garnish_common::{skip_type, DataType, ExpressionValueRef, Result};
+use garnish_lang_common::{skip_type, DataType, ExpressionValueRef, Result};
 use std::convert::TryFrom;
 
 impl ExpressionRuntime {
@@ -66,8 +66,8 @@ impl ExpressionRuntime {
 mod tests {
     use crate::context::ExpressionContext;
     use crate::runtime::ExpressionRuntime;
-    use garnish_common::{ExpressionValue, ExpressionValueRef};
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::{ExpressionValue, ExpressionValueRef};
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn invoke_expression() {

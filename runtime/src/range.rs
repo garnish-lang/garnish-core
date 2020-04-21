@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use garnish_common::{empty_range_flags, DataType, RangeFlags, Result};
+use garnish_lang_common::{empty_range_flags, DataType, RangeFlags, Result};
 
 use crate::ExpressionRuntime;
 
@@ -60,8 +60,8 @@ impl ExpressionRuntime {
 
 #[cfg(test)]
 mod tests {
-    use garnish_common::{empty_range_flags, DataType, ExpressionValue, RangeFlags};
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::{empty_range_flags, DataType, ExpressionValue, RangeFlags};
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::ExpressionRuntime;
 

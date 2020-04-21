@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-use garnish_common::{DataType, ExpressionValue, ExpressionValueConsumer, Result};
+use garnish_lang_common::{DataType, ExpressionValue, ExpressionValueConsumer, Result};
 
 use crate::runtime::ExpressionRuntime;
 
@@ -50,8 +50,8 @@ impl ExpressionRuntime {
 mod tests {
     use std::convert::TryInto;
 
-    use garnish_common::{DataType, DataVecWriter, ExpressionValue};
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::{DataType, DataVecWriter, ExpressionValue};
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::runtime::tests::data_slice;
     use crate::runtime::ExpressionRuntime;

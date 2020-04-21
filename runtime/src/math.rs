@@ -1,5 +1,5 @@
 use crate::runtime::ExpressionRuntime;
-use garnish_common::{skip_type, DataType, Result};
+use garnish_lang_common::{skip_type, DataType, Result};
 use std::convert::TryFrom;
 use std::ops::{Add, Div, Mul, Neg, Rem, Sub};
 
@@ -122,8 +122,8 @@ impl ExpressionRuntime {
 #[cfg(test)]
 mod tests {
     use crate::runtime::ExpressionRuntime;
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn addition_yields_proper_result() {

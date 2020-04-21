@@ -1,6 +1,6 @@
 use crate::context::ExpressionContext;
 use crate::ExpressionRuntime;
-use garnish_common::{Error, Instruction};
+use garnish_lang_common::{Error, Instruction};
 
 impl ExpressionRuntime {
     pub fn instruction_iter<'a, T>(
@@ -114,8 +114,8 @@ where
 mod tests {
     use crate::context::DefaultContext;
     use crate::runtime::ExpressionRuntime;
-    use garnish_common::{ExpressionValue, Instruction};
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::{ExpressionValue, Instruction};
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn instruction_iterator() {

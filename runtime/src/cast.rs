@@ -1,5 +1,5 @@
 use crate::ExpressionRuntime;
-use garnish_common::{
+use garnish_lang_common::{
     characters_to_bytes, has_end, has_start, has_step, is_end_exclusive, is_start_exclusive,
     read_integer, size_to_bytes, skip_byte_sizes, skip_size, skip_sizes, skip_type,
     skip_type_and_byte_size, skip_type_and_size, skip_type_and_sizes, DataType,
@@ -277,8 +277,8 @@ impl ExpressionRuntime {
 #[cfg(test)]
 mod tests {
     use crate::ExpressionRuntime;
-    use garnish_common::{DataType, ExpressionValue};
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::{DataType, ExpressionValue};
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn cast_unit_to_string() {

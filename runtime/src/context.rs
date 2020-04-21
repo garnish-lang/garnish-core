@@ -1,4 +1,4 @@
-use garnish_common::{ExpressionValue, ExpressionValueRef};
+use garnish_lang_common::{ExpressionValue, ExpressionValueRef};
 
 pub trait ExpressionContext {
     fn resolve(&self, name: String) -> ExpressionValue;

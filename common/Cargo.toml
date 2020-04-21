@@ -1,5 +1,5 @@
 [package]
-name = "garnish_common"
+name = "garnish_lang_common"
 version = "0.1.0"
 authors = ["Chad Collins <chad.collins@capitalone.com>"]
 edition = "2018"

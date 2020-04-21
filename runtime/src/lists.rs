@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use garnish_common::{
+use garnish_lang_common::{
     insert_associative_list_keys, size_to_bytes, skip_sizes, skip_type, DataType,
     ExpressionValueConsumer, Result,
 };
@@ -83,8 +83,8 @@ impl ExpressionRuntime {
 
 #[cfg(test)]
 mod tests {
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::runtime::ExpressionRuntime;
 

@@ -1,5 +1,5 @@
 use crate::ExpressionRuntime;
-use garnish_common::Result;
+use garnish_lang_common::Result;
 
 impl ExpressionRuntime {
     pub(crate) fn make_pair(&mut self) -> Result {
@@ -11,8 +11,8 @@ impl ExpressionRuntime {
 #[cfg(test)]
 mod tests {
     use crate::ExpressionRuntime;
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn make_pair() {

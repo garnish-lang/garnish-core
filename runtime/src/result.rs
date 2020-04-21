@@ -1,5 +1,5 @@
 use crate::ExpressionRuntime;
-use garnish_common::{ExpressionResult, Result};
+use garnish_lang_common::{ExpressionResult, Result};
 
 impl ExpressionRuntime {
     pub fn get_result(&self, index: usize) -> Result<Option<ExpressionResult>> {
@@ -39,8 +39,8 @@ impl ExpressionRuntime {
 #[cfg(test)]
 mod tests {
     use crate::ExpressionRuntime;
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn no_explicit_output_instruction_should_yield_implicit_result() {

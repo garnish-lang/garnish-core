@@ -1,5 +1,5 @@
 use crate::runtime::ExpressionRuntime;
-use garnish_common::{skip_type, DataType, Result};
+use garnish_lang_common::{skip_type, DataType, Result};
 use std::convert::TryFrom;
 use std::ops::{BitAnd, BitOr, BitXor, Shl, Shr};
 
@@ -64,8 +64,8 @@ impl ExpressionRuntime {
 #[cfg(test)]
 mod tests {
     use crate::ExpressionRuntime;
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn bitwise_and() {

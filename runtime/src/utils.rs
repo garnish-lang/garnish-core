@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 
-use garnish_common::{
+use garnish_lang_common::{
     character_type_to_bytes, float_type_to_bytes, has_end, has_start, has_step,
     number_type_to_bytes, range_type_to_bytes, read_byte_size, read_float, read_integer, read_size,
     size_to_bytes, size_type_to_bytes, skip_byte_size, skip_size, skip_type, skip_type_and_2_sizes,
@@ -395,8 +395,8 @@ impl ExpressionRuntime {
 
 #[cfg(test)]
 mod tests {
-    use garnish_common::{DataType, DataVecWriter, ExpressionValue};
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::{DataType, DataVecWriter, ExpressionValue};
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::runtime::tests::data_slice;
     use crate::runtime::ExpressionRuntime;
@@ -923,8 +923,8 @@ mod tests {
 
 #[cfg(test)]
 mod memory_tests {
-    use garnish_common::{DataType, DataVecWriter, ExpressionValue};
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::{DataType, DataVecWriter, ExpressionValue};
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::runtime::tests::data_slice;
     use crate::runtime::ExpressionRuntime;

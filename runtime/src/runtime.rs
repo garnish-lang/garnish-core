@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use garnish_common::InstructionSet;
+use garnish_lang_common::InstructionSet;
 
 use crate::iterate::IterationData;
 use crate::utils::insert_if_not_present;

@@ -1,5 +1,5 @@
 use crate::ExpressionRuntime;
-use garnish_common::{skip_type, DataType, Result};
+use garnish_lang_common::{skip_type, DataType, Result};
 use std::convert::TryFrom;
 
 impl ExpressionRuntime {
@@ -46,8 +46,8 @@ impl ExpressionRuntime {
 #[cfg(test)]
 mod tests {
     use crate::ExpressionRuntime;
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn make_link() {

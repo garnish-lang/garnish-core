@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use garnish_common::{Error, ExpressionResult, Instruction, Result};
+use garnish_lang_common::{Error, ExpressionResult, Instruction, Result};
 
 use crate::context::{DefaultContext, ExpressionContext};
 use crate::runtime::CallType;
@@ -214,8 +214,8 @@ impl ExpressionRuntime {
 
 #[cfg(test)]
 mod tests {
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::ExpressionRuntime;
 

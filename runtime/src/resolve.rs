@@ -1,6 +1,6 @@
 use crate::context::ExpressionContext;
 use crate::ExpressionRuntime;
-use garnish_common::Result;
+use garnish_lang_common::Result;
 
 impl ExpressionRuntime {
     pub(crate) fn resolve<T>(&mut self, context: &T) -> Result
@@ -24,8 +24,8 @@ impl ExpressionRuntime {
 mod tests {
     use crate::context::ExpressionContext;
     use crate::runtime::ExpressionRuntime;
-    use garnish_common::{ExpressionValue, ExpressionValueRef};
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::{ExpressionValue, ExpressionValueRef};
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn resolve_value_with_default_context() {

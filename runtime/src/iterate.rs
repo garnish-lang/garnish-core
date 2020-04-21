@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use garnish_common::{
+use garnish_lang_common::{
     is_end_exclusive, is_start_exclusive, skip_sizes, skip_type, skip_type_and_2_sizes,
     skip_type_and_size, DataType, Result,
 };
@@ -646,8 +646,8 @@ impl ExpressionRuntime {
 
 #[cfg(test)]
 mod tests {
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::runtime::ExpressionRuntime;
 

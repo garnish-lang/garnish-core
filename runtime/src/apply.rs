@@ -1,6 +1,6 @@
 use std::convert::{TryFrom, TryInto};
 
-use garnish_common::{
+use garnish_lang_common::{
     hash_of_character_list, insert_associative_list_keys, skip_sizes, skip_type,
     skip_type_and_2_sizes, skip_type_and_size, two_sizes_to_bytes, DataType,
     ExpressionValueConsumer, ExpressionValueRef, RangeFlags, Result,
@@ -441,8 +441,8 @@ impl ExpressionRuntime {
 
 #[cfg(test)]
 mod apply {
-    use garnish_common::{has_step, ExpressionValue, ExpressionValueRef};
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::{has_step, ExpressionValue, ExpressionValueRef};
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::{ExpressionContext, ExpressionRuntime};
 
@@ -737,8 +737,8 @@ mod apply {
 
 #[cfg(test)]
 mod partially_apply {
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::ExpressionRuntime;
 

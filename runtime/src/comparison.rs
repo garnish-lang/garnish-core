@@ -1,5 +1,5 @@
 use crate::ExpressionRuntime;
-use garnish_common::{
+use garnish_lang_common::{
     has_end, has_start, has_step, skip_byte_sizes, skip_size, skip_sizes, skip_type,
     skip_type_and_byte_size, skip_type_and_size, DataType, Result,
 };
@@ -337,8 +337,8 @@ impl ExpressionRuntime {
 #[cfg(test)]
 mod equality_tests {
     use crate::runtime::ExpressionRuntime;
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn unit_unit_equal() {
@@ -908,8 +908,8 @@ mod equality_tests {
 #[cfg(test)]
 mod inequality_tests {
     use crate::runtime::ExpressionRuntime;
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn unit_unit_equal() {
@@ -1479,8 +1479,8 @@ mod inequality_tests {
 #[cfg(test)]
 mod less_than_tests {
     use crate::ExpressionRuntime;
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn integer_integer_less_than_other() {
@@ -2254,8 +2254,8 @@ mod less_than_tests {
 #[cfg(test)]
 mod less_than_or_equal_tests {
     use crate::ExpressionRuntime;
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn integer_integer_less_than_other() {
@@ -3029,8 +3029,8 @@ mod less_than_or_equal_tests {
 #[cfg(test)]
 mod greater_than_tests {
     use crate::ExpressionRuntime;
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn integer_integer_less_than_other() {
@@ -3804,8 +3804,8 @@ mod greater_than_tests {
 #[cfg(test)]
 mod greater_than_or_equal_tests {
     use crate::ExpressionRuntime;
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn integer_integer_less_than_other() {
@@ -4579,8 +4579,8 @@ mod greater_than_or_equal_tests {
 #[cfg(test)]
 mod type_comparison_tests {
     use crate::ExpressionRuntime;
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     #[test]
     fn same_types_are_equal() {

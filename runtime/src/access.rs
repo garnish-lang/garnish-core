@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 use std::ops::Range;
 
-use garnish_common::{
+use garnish_lang_common::{
     get_value_with_hash, has_end, has_start, has_step, hash_of_character_list, is_end_exclusive,
     is_start_exclusive, skip_size, skip_sizes, skip_type, skip_type_and_2_sizes,
     skip_type_and_byte_size, skip_type_and_bytes_and_sizes, skip_type_and_size,
@@ -532,8 +532,8 @@ impl ExpressionRuntime {
 
 #[cfg(test)]
 mod tests {
-    use garnish_common::{DataType, ExpressionValue};
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::{DataType, ExpressionValue};
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::runtime::ExpressionRuntime;
 
@@ -1125,8 +1125,8 @@ mod tests {
 
 #[cfg(test)]
 mod range_tests {
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::ExpressionRuntime;
 
@@ -1660,8 +1660,8 @@ mod range_tests {
 
 #[cfg(test)]
 mod slice_tests {
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::ExpressionRuntime;
 
@@ -2003,8 +2003,8 @@ mod slice_tests {
 
 #[cfg(test)]
 mod link_tests {
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::ExpressionRuntime;
 

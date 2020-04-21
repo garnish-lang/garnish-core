@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::convert::TryInto;
 
-use garnish_common::{
+use garnish_lang_common::{
     CopyValue, DataType, DataVecWriter, ExpressionValue, ExpressionValueBuilder,
     ExpressionValueConsumer, Instruction, InstructionSet, Result,
 };
@@ -500,7 +500,7 @@ impl<'a> InstructionSet for &'a InstructionSetBuilder {
 
 #[cfg(test)]
 mod tests {
-    use garnish_common::{
+    use garnish_lang_common::{
         DataType, DataVecWriter, ExpressionValue, Instruction, RANGE_END_EXCLUSIVE, RANGE_HAS_STEP,
         RANGE_OPEN_END, RANGE_OPEN_START,
     };

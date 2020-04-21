@@ -1,8 +1,8 @@
 use std::cmp::Ordering;
 use std::convert::TryFrom;
 
-use garnish_common::Result;
-use garnish_common::{skip_type, DataType};
+use garnish_lang_common::Result;
+use garnish_lang_common::{skip_type, DataType};
 
 use crate::ExpressionRuntime;
 
@@ -75,8 +75,8 @@ impl ExpressionRuntime {
 
 #[cfg(test)]
 mod tests {
-    use garnish_common::ExpressionValue;
-    use garnish_instruction_set_builder::InstructionSetBuilder;
+    use garnish_lang_common::ExpressionValue;
+    use garnish_lang_instruction_set_builder::InstructionSetBuilder;
 
     use crate::ExpressionRuntime;
 
