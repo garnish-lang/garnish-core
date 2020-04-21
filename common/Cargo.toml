@@ -1,6 +1,6 @@
 [package]
 name = "garnish_lang_common"
-version = "0.1.0"
+version = "0.0.1-alpha"
 authors = ["Chad Collins <chad.collins@capitalone.com>"]
 edition = "2018"
 description = "Common library for core Garnish Lang packages."
