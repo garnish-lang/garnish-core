@@ -36,7 +36,6 @@ impl ExpressionValueConsumer for ExpressionRuntime {
 
     fn insert_all_at_value_cursor(&mut self, data: &[u8]) -> Result {
         if self.value_cursor + data.len() >= self.data.len() {
-            println!("data size {}", data.len());
             self.resize_data()?;
         }
 
