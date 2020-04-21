@@ -74,10 +74,10 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
     let mut literals: Vec<usize> = vec![];
     let mut next_parent: Option<usize> = None;
 
-    for (i, n) in parse_result.nodes.iter().enumerate() {
-        println!("{}, {:?}", i, n);
-    }
-    println!("------");
+    //for (i, n) in parse_result.nodes.iter().enumerate() {
+        //println!("{}, {:?}", i, n);
+    //}
+    //println!("------");
 
     for i in 0..parse_result.nodes.len() {
         match next_parent {
@@ -180,10 +180,10 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
     op_locations[20].1 = op_locations[20].1.iter().rev().map(|u| *u).collect();
 
     // for testing only
-    for (i, n) in parse_result.nodes.iter().enumerate() {
-        println!("{}, {:?}", i, n);
-    }
-    println!("------");
+    //for (i, n) in parse_result.nodes.iter().enumerate() {
+        //println!("{}, {:?}", i, n);
+    //}
+    //println!("------");
 
     for precedence in op_locations.iter() {
         for loc in precedence.1.iter() {
@@ -303,10 +303,10 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
             }
                 
             // for testing only
-            for (i, n) in parse_result.nodes.iter().enumerate() {
-                println!("{}, {:?}", i, n);
-            }
-            println!("------");
+            //for (i, n) in parse_result.nodes.iter().enumerate() {
+                //println!("{}, {:?}", i, n);
+            //}
+            //println!("------");
         }
     }
 
@@ -347,10 +347,10 @@ pub fn make_ast(mut parse_result: ParseResult) -> Result<AST> {
         }
                 
         // for testing only
-        for (i, n) in parse_result.nodes.iter().enumerate() {
-            println!("{}, {:?}", i, n);
-        }
-        println!("------");
+        //for (i, n) in parse_result.nodes.iter().enumerate() {
+            //println!("{}, {:?}", i, n);
+        //}
+        //println!("------");
     }
 
     let mut root_index = *parse_result.sub_expressions.get(0).unwrap(); // should always have 1
