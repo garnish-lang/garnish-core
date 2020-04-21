@@ -930,7 +930,7 @@ mod memory_tests {
     use crate::runtime::ExpressionRuntime;
 
     #[test]
-    fn copy_into_copies_unit_value() {
+    fn memory_resizes() {
         let mut instructions = InstructionSetBuilder::new();
 
         instructions.start_expression("main");
