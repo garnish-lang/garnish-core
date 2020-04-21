@@ -61,7 +61,7 @@ pub struct ExpressionRuntime {
 
 impl ExpressionRuntime {
     pub fn new<T: InstructionSet>(instructions: &T) -> ExpressionRuntime {
-        let mut d: Vec<u8> = vec![0; 1024 * 10];
+        let mut d: Vec<u8> = vec![0; 1024 * 5];
 
         let constant_data_size = instructions.get_data().len();
         for (i, v) in instructions.get_data().iter().enumerate() {
@@ -99,7 +99,7 @@ impl ExpressionRuntime {
             value_cursor: constant_data_size,
             ref_cursor: 0,
             call_stack: vec![],
-            registers: vec![0; 1024 * 5],
+            registers: vec![0; 1024],
             data: d,
             instructions: instructions.get_instructions().clone(),
             symbol_table,

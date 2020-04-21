@@ -62,6 +62,11 @@ impl ExpressionRuntime {
             let key_range_start = self.value_cursor;
             let key_area_range = key_range_start..skip_sizes(key_range_start, key_refs.len());
 
+            // make sure we have enough space for the key area
+            if self.value_cursor + key_area_range.len() > self.data.len() {
+                self.resize_data()?;
+            }
+
             insert_associative_list_keys(&mut self.data, key_area_range, &key_refs)?;
 
             // manually advance value cursor past key area

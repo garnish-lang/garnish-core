@@ -25,7 +25,7 @@ pub fn insert_if_not_present(s: &str, map: &mut HashMap<String, usize>) -> usize
 impl ExpressionValueConsumer for ExpressionRuntime {
     fn insert_at_value_cursor(&mut self, data: u8) -> Result {
         if self.value_cursor >= self.data.len() {
-            return Err("Out of memory".into());
+            self.resize_data()?;
         }
 
         self.data[self.value_cursor] = data;
@@ -35,8 +35,9 @@ impl ExpressionValueConsumer for ExpressionRuntime {
     }
 
     fn insert_all_at_value_cursor(&mut self, data: &[u8]) -> Result {
-        if self.value_cursor + data.len() >= self.data.len() + 1 {
-            return Err("Out of memory".into());
+        if self.value_cursor + data.len() >= self.data.len() {
+            println!("data size {}", data.len());
+            self.resize_data()?;
         }
 
         self.data[self.value_cursor..(self.value_cursor + data.len())].clone_from_slice(data);
@@ -72,6 +73,17 @@ impl ExpressionValueConsumer for ExpressionRuntime {
 }
 
 impl ExpressionRuntime {
+    pub(crate) fn resize_data(&mut self) -> Result {
+        // request double our current size
+        let additional = self.data.capacity() * 2;
+        self.data.resize(additional, 0);
+
+        // also resize registers to keep ratio 5/1
+        let additional = self.registers.capacity() * 2;
+        self.registers.resize(additional, 0);
+        Ok(())
+    }
+
     pub(crate) fn get_expression_start(&self, index: usize) -> Result<usize> {
         // need to check index before subtraction
         // to avoid potential panic! from subtraction underflow if zero
@@ -218,7 +230,8 @@ impl ExpressionRuntime {
     pub(crate) fn write_size_at(&mut self, index: usize, size: usize) -> Result {
         let sizes = size_to_bytes(size);
         if index + sizes.len() >= self.data.len() {
-            return Err("Out of memory".into());
+            println!("data size {}", sizes.len());
+            self.resize_data()?;
         }
 
         self.data[index..(index + sizes.len())].clone_from_slice(&sizes);
@@ -341,7 +354,8 @@ impl ExpressionRuntime {
 
     pub(crate) fn insert_data_value(&mut self, data: &[u8]) -> Result {
         if self.value_cursor + data.len() >= self.data.len() {
-            return Err("Out of memory".into());
+            println!("data size {}", data.len());
+            self.resize_data()?;
         }
 
         self.data[self.value_cursor..(self.value_cursor + data.len())].clone_from_slice(data);
@@ -907,3 +921,36 @@ mod tests {
         );
     }
 }
+
+#[cfg(test)]
+mod memory_tests {
+    use garnish_common::{DataType, DataVecWriter, ExpressionValue};
+    use garnish_instruction_set_builder::InstructionSetBuilder;
+
+    use crate::runtime::tests::data_slice;
+    use crate::runtime::ExpressionRuntime;
+
+    #[test]
+    fn copy_into_copies_unit_value() {
+        let mut instructions = InstructionSetBuilder::new();
+
+        instructions.start_expression("main");
+        instructions.put(ExpressionValue::integer(0)).unwrap();
+        instructions.put(ExpressionValue::integer(100000)).unwrap();
+        instructions.make_inclusive_range();
+        instructions.put(ExpressionValue::expression("iterate")).unwrap();
+        instructions.iterate();
+        instructions.end_expression();
+        
+        instructions.start_expression("iterate");
+        instructions.put_input();
+        instructions.end_expression();
+
+        let mut expression_runtime = ExpressionRuntime::new(&instructions);
+
+        let result = expression_runtime.execute("main");
+
+        assert!(result.is_ok());
+    }
+}
+
