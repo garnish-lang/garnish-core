@@ -13,4 +13,4 @@ readme = "../README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-garnish_lang_common = { path = "../common" }
+garnish_lang_common = "0.0.1-alpha"
