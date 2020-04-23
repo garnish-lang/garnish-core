@@ -49,8 +49,8 @@ dependencies = [
 name = "garnish_lang_runtime"
 version = "0.0.1-alpha"
 dependencies = [
- "garnish_lang_common 0.0.1-alpha",
- "garnish_lang_instruction_set_builder 0.0.1-alpha",
+ "garnish_lang_common 0.0.1-alpha (registry+https://github.com/rust-lang/crates.io-index)",
+ "garnish_lang_instruction_set_builder 0.0.1-alpha (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

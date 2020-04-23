@@ -5,6 +5,7 @@ use crate::utils::insert_associative_list_keys;
 use crate::value::range::{
     RANGE_END_EXCLUSIVE, RANGE_HAS_STEP, RANGE_OPEN_END, RANGE_OPEN_START, RANGE_START_EXCLUSIVE,
 };
+use crate::value::ExpressionValueRef;
 use crate::{Error, SIZE_LENGTH};
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
@@ -14,6 +15,7 @@ pub struct ExpressionValue {
     data: Vec<u8>,
     symbol_table: HashMap<String, usize>,
     error: Option<Error>,
+    start: usize,
 }
 
 impl<T> From<T> for ExpressionValue
@@ -23,10 +25,14 @@ where
     fn from(builder: T) -> ExpressionValue {
         let mut data: Vec<u8> = vec![];
         let mut symbol_table = HashMap::new();
+        let mut start = 0;
         symbol_table.insert("".to_string(), 0);
 
         let error = match builder.write_data(&mut data, &mut symbol_table) {
-            Ok(_) => None,
+            Ok(s) => {
+                start = s;
+                None
+            }
             Err(e) => Some(e),
         };
 
@@ -34,7 +40,14 @@ where
             data,
             symbol_table,
             error,
+            start,
         };
+    }
+}
+
+impl ExpressionValue {
+    pub fn reference(&self) -> Result<ExpressionValueRef> {
+        ExpressionValueRef::new_with_start(&self.data[..], Some(&self.symbol_table), self.start)
     }
 }
 
