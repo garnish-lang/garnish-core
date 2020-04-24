@@ -4,19 +4,34 @@ use crate::DataType;
 
 impl fmt::Display for ExpressionValueRef<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self.get_type() {
-            Err(e) => e.get_message().clone(),
-            Ok(t) => match t {
-                DataType::Unit => String::from("()"),
-                DataType::Integer => format!("{}", self.as_integer().unwrap()),
-                DataType::Float => format!("{}", self.as_float().unwrap()),
-                DataType::Character => format!("'{}'", self.as_string().unwrap()),
-                DataType::CharacterList => format!("\"{}\"", self.as_string().unwrap()),
-                DataType::Symbol => format!(":{}", self.as_string().unwrap()),
-                _ => String::new()
+        write!(f, "{}", format_value(self))
+    }
+}
+
+fn format_value(v: &ExpressionValueRef) -> String {
+    match v.get_type() {
+        Err(e) => e.get_message().clone(),
+        Ok(t) => match t {
+            DataType::Unit => String::from("()"),
+            DataType::Integer => format!("{}", v.as_integer().unwrap()),
+            DataType::Float => format!("{}", v.as_float().unwrap()),
+            DataType::Character => format!("'{}'", v.as_string().unwrap()),
+            DataType::CharacterList => format!("\"{}\"", v.as_string().unwrap()),
+            DataType::Symbol => format!(":{}", v.as_string().unwrap()),
+            DataType::Pair => format!("{} = {}",
+                format_value(&v.get_pair_left().unwrap()),
+                format_value(&v.get_pair_right().unwrap())),
+            DataType::List => {
+                let mut items: Vec<String> = vec![];
+
+                for i in 0..v.list_len().unwrap() {
+                    items.push(format_value(&v.get_list_item(i).unwrap()));
+                }
+                
+                items.join(", ")
             }
-        };
-        write!(f, "{}", s)
+            _ => String::new()
+        }
     }
 }
 
@@ -59,6 +74,27 @@ mod tests {
     fn symbol() {
         let value: ExpressionValue = ExpressionValue::symbol("my_symbol").into();
         assert_eq!(format!("{}", value.reference().unwrap()), ":my_symbol");
+    }
+
+    #[test]
+    fn pair() {
+        let value: ExpressionValue = ExpressionValue::pair(
+            ExpressionValue::symbol("my_symbol"),
+            ExpressionValue::integer(100)
+        ).into();
+
+        assert_eq!(format!("{}", value.reference().unwrap()), ":my_symbol = 100");
+    }
+
+    #[test]
+    fn list() {
+        let value: ExpressionValue = ExpressionValue::list()
+            .add(ExpressionValue::integer(10))
+            .add(ExpressionValue::integer(20))
+            .add(ExpressionValue::integer(30))
+        .into();
+
+        assert_eq!(format!("{}", value.reference().unwrap()), "10, 20, 30");
     }
 }
 
