@@ -21,6 +21,9 @@ fn format_value(v: &ExpressionValueRef) -> String {
             DataType::Pair => format!("{} = {}",
                 format_value(&v.get_pair_left().unwrap()),
                 format_value(&v.get_pair_right().unwrap())),
+            DataType::Range => format!("{}..{}",
+                format_value(&v.get_range_start().unwrap()),
+                format_value(&v.get_range_end().unwrap())),
             DataType::List => {
                 let mut items: Vec<String> = vec![];
 
@@ -84,6 +87,13 @@ mod tests {
         ).into();
 
         assert_eq!(format!("{}", value.reference().unwrap()), ":my_symbol = 100");
+    }
+
+    #[test]
+    fn range() {
+        let value: ExpressionValue = ExpressionValue::integer_range(Some(10), Some(20)).into();
+
+        assert_eq!(format!("{}", value.reference().unwrap()), "10..20");
     }
 
     #[test]
