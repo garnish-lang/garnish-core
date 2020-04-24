@@ -28,10 +28,13 @@ fn format_value(v: &ExpressionValueRef) -> String {
             DataType::CharacterList => format!("\"{}\"", v.as_string().unwrap()),
             DataType::Symbol => format!(":{}", v.as_string().unwrap()),
             DataType::Expression
-            | DataType::ExternalMethod => format!("{}~)", v.as_string().unwrap()),
+            | DataType::ExternalMethod => format!("{}", v.as_string().unwrap()),
             DataType::Pair => format!("{} = {}",
                 format_value(&v.get_pair_left().unwrap()),
                 format_value(&v.get_pair_right().unwrap())),
+            DataType::Partial => format!("{} ~~ {}",
+                format_value(&v.get_partial_base().unwrap()),
+                format_value(&v.get_partial_value().unwrap())),
             DataType::Range => {
                 let flags = v.get_range_flags().unwrap();
                 let op = match (is_start_exclusive(flags), is_end_exclusive(flags)) {
@@ -104,13 +107,19 @@ mod tests {
     #[test]
     fn expression() {
         let value: ExpressionValue = ExpressionValue::expression("my_symbol").into();
-        assert_eq!(format!("{}", value.reference().unwrap()), "my_symbol~)");
+        assert_eq!(format!("{}", value.reference().unwrap()), "my_symbol");
     }
 
     #[test]
     fn external_method() {
         let value: ExpressionValue = ExpressionValue::external_method("my_symbol").into();
-        assert_eq!(format!("{}", value.reference().unwrap()), "my_symbol~)");
+        assert_eq!(format!("{}", value.reference().unwrap()), "my_symbol");
+    }
+
+    #[test]
+    fn partial() {
+        let value: ExpressionValue = ExpressionValue::partial_expression("my_symbol", ExpressionValue::integer(10)).into();
+        assert_eq!(format!("{}", value.reference().unwrap()), "my_symbol ~~ 10");
     }
 
     #[test]
