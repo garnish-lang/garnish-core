@@ -26,9 +26,9 @@ fn format_value(v: &ExpressionValueRef) -> String {
             DataType::Float => format!("{}", v.as_float().unwrap()),
             DataType::Character => format!("'{}'", v.as_string().unwrap()),
             DataType::CharacterList => format!("\"{}\"", v.as_string().unwrap()),
-            DataType::Symbol
-            | DataType::Expression
-            | DataType::ExternalMethod => format!(":{}", v.as_string().unwrap()),
+            DataType::Symbol => format!(":{}", v.as_string().unwrap()),
+            DataType::Expression
+            | DataType::ExternalMethod => format!("{}~)", v.as_string().unwrap()),
             DataType::Pair => format!("{} = {}",
                 format_value(&v.get_pair_left().unwrap()),
                 format_value(&v.get_pair_right().unwrap())),
@@ -104,13 +104,13 @@ mod tests {
     #[test]
     fn expression() {
         let value: ExpressionValue = ExpressionValue::expression("my_symbol").into();
-        assert_eq!(format!("{}", value.reference().unwrap()), ":my_symbol");
+        assert_eq!(format!("{}", value.reference().unwrap()), "my_symbol~)");
     }
 
     #[test]
     fn external_method() {
         let value: ExpressionValue = ExpressionValue::external_method("my_symbol").into();
-        assert_eq!(format!("{}", value.reference().unwrap()), ":my_symbol");
+        assert_eq!(format!("{}", value.reference().unwrap()), "my_symbol~)");
     }
 
     #[test]
