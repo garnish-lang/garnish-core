@@ -1,10 +1,19 @@
 use std::fmt;
-use crate::value::ExpressionValueRef;
+use crate::value::{ExpressionValueRef, ExpressionValue};
 use crate::DataType;
 
 impl fmt::Display for ExpressionValueRef<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", format_value(self))
+    }
+}
+
+impl fmt::Display for ExpressionValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self.reference() {
+            Err(_) => write!(f, ""),
+            Ok(v) => v.fmt(f)
+        }
     }
 }
 
