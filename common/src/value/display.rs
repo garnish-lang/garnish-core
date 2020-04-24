@@ -1,5 +1,5 @@
 use std::fmt;
-use crate::value::{ExpressionValueRef, ExpressionValue};
+use crate::value::{ExpressionValueRef, ExpressionValue, is_start_exclusive, is_end_exclusive};
 use crate::DataType;
 
 impl fmt::Display for ExpressionValueRef<'_> {
@@ -26,13 +26,26 @@ fn format_value(v: &ExpressionValueRef) -> String {
             DataType::Float => format!("{}", v.as_float().unwrap()),
             DataType::Character => format!("'{}'", v.as_string().unwrap()),
             DataType::CharacterList => format!("\"{}\"", v.as_string().unwrap()),
-            DataType::Symbol => format!(":{}", v.as_string().unwrap()),
+            DataType::Symbol
+            | DataType::Expression
+            | DataType::ExternalMethod => format!(":{}", v.as_string().unwrap()),
             DataType::Pair => format!("{} = {}",
                 format_value(&v.get_pair_left().unwrap()),
                 format_value(&v.get_pair_right().unwrap())),
-            DataType::Range => format!("{}..{}",
-                format_value(&v.get_range_start().unwrap()),
-                format_value(&v.get_range_end().unwrap())),
+            DataType::Range => {
+                let flags = v.get_range_flags().unwrap();
+                let op = match (is_start_exclusive(flags), is_end_exclusive(flags)) {
+                    (false, false) => "..",
+                    (true, false) => ">..",
+                    (false, true) => "..<",
+                    (true, true) => ">..<"
+                };
+
+                format!("{}{}{}",
+                    format_value(&v.get_range_start().unwrap()),
+                    op,
+                    format_value(&v.get_range_end().unwrap()))
+            }
             DataType::List => {
                 let mut items: Vec<String> = vec![];
 
@@ -89,6 +102,18 @@ mod tests {
     }
 
     #[test]
+    fn expression() {
+        let value: ExpressionValue = ExpressionValue::expression("my_symbol").into();
+        assert_eq!(format!("{}", value.reference().unwrap()), ":my_symbol");
+    }
+
+    #[test]
+    fn external_method() {
+        let value: ExpressionValue = ExpressionValue::external_method("my_symbol").into();
+        assert_eq!(format!("{}", value.reference().unwrap()), ":my_symbol");
+    }
+
+    #[test]
     fn pair() {
         let value: ExpressionValue = ExpressionValue::pair(
             ExpressionValue::symbol("my_symbol"),
@@ -103,6 +128,27 @@ mod tests {
         let value: ExpressionValue = ExpressionValue::integer_range(Some(10), Some(20)).into();
 
         assert_eq!(format!("{}", value.reference().unwrap()), "10..20");
+    }
+
+    #[test]
+    fn start_exclusive_range() {
+        let value: ExpressionValue = ExpressionValue::integer_range(Some(10), Some(20)).exclude_start().into();
+
+        assert_eq!(format!("{}", value.reference().unwrap()), "10>..20");
+    }
+
+    #[test]
+    fn end_exclusive_range() {
+        let value: ExpressionValue = ExpressionValue::integer_range(Some(10), Some(20)).exclude_end().into();
+
+        assert_eq!(format!("{}", value.reference().unwrap()), "10..<20");
+    }
+
+    #[test]
+    fn exclusive_range() {
+        let value: ExpressionValue = ExpressionValue::integer_range(Some(10), Some(20)).exclude_start().exclude_end().into();
+
+        assert_eq!(format!("{}", value.reference().unwrap()), "10>..<20");
     }
 
     #[test]
