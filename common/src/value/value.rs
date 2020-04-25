@@ -452,14 +452,20 @@ impl ExpressionValueBuilder for AssociativeListBuilder {
     }
 }
 
-pub struct SliceBuilder {
-    list: AssociativeListBuilder,
+pub struct SliceBuilder<T>
+where 
+    T: ExpressionValueBuilder
+{
+    value: T,
     range: RangeBuilder<IntegerBuilder>,
 }
 
-impl ExpressionValueBuilder for SliceBuilder {
+impl<T> ExpressionValueBuilder for SliceBuilder<T>
+where 
+    T: ExpressionValueBuilder
+{
     fn write_data(&self, v: &mut Vec<u8>, symbol_table: &mut HashMap<String, usize>) -> Result<usize> {
-        let list_ref = self.list.write_data(v, symbol_table)?;
+        let list_ref = self.value.write_data(v, symbol_table)?;
         let range_ref = self.range.write_data(v, symbol_table)?;
 
         let pos = v.len();
@@ -635,8 +641,12 @@ impl ExpressionValue {
         }
     }
 
-    pub fn list_slice(list: AssociativeListBuilder, range: RangeBuilder<IntegerBuilder>) -> SliceBuilder {
-        SliceBuilder { list, range }
+    pub fn list_slice(list: AssociativeListBuilder, range: RangeBuilder<IntegerBuilder>) -> SliceBuilder<AssociativeListBuilder> {
+        SliceBuilder { value: list, range }
+    }
+
+    pub fn character_list_slice(character_list: CharacterListBuilder, range: RangeBuilder<IntegerBuilder>) -> SliceBuilder<CharacterListBuilder> {
+        SliceBuilder { value: character_list, range }
     }
 
     pub fn link<T, U>(first: T, second: U) -> LinkBuilder<T, U>
@@ -1076,6 +1086,48 @@ mod tests {
             .push_data_type(DataType::Slice)
             .push_size(15)
             .push_size(46);
+
+        assert_eq!(result.get_data().to_owned(), expected);
+    }
+
+    #[test]
+    fn character_list_slice() {
+        let result: ExpressionValue = ExpressionValue::character_list_slice(
+            ExpressionValue::character_list("bear".into()),
+            ExpressionValue::integer_range(Some(0), Some(1))
+        ).into();
+
+        let mut expected: Vec<u8> = vec![];
+        DataVecWriter::new(&mut expected)
+            .push_data_type(DataType::Character) // 0
+            .push_byte_size(1)
+            .push_character("b")
+            .push_data_type(DataType::Character) // 3
+            .push_byte_size(1)
+            .push_character("e")
+            .push_data_type(DataType::Character) // 6
+            .push_byte_size(1)
+            .push_character("a")
+            .push_data_type(DataType::Character) // 9
+            .push_byte_size(1)
+            .push_character("r")
+            .push_data_type(DataType::CharacterList) // 12
+            .push_size(4) // 13
+            .push_size(0) // 17
+            .push_size(3) // 21
+            .push_size(6) // 25
+            .push_size(9) // 29
+            .push_data_type(DataType::Integer) // 33
+            .push_integer(0)
+            .push_data_type(DataType::Integer) // 38
+            .push_integer(1)
+            .push_data_type(DataType::Range) // 43
+            .push_byte_size(0)
+            .push_size(33)
+            .push_size(38)
+            .push_data_type(DataType::Slice)
+            .push_size(12)
+            .push_size(43);
 
         assert_eq!(result.get_data().to_owned(), expected);
     }
