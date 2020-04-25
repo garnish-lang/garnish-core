@@ -1,94 +1,94 @@
 use std::fmt;
 use unicode_segmentation::UnicodeSegmentation;
 use crate::value::{ExpressionValueRef, ExpressionValue, is_start_exclusive, is_end_exclusive};
-use crate::DataType;
+use crate::{DataType, Result};
 
 impl fmt::Display for ExpressionValueRef<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", format_value(self))
+        write!(f, "{}", match format_value(self) {
+            Err(e) => e.get_message().clone(),
+            Ok(s) => s
+        })
     }
 }
 
 impl fmt::Display for ExpressionValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.reference() {
-            Err(_) => write!(f, ""),
+            Err(e) => write!(f, "{:?}", e),
             Ok(v) => v.fmt(f)
         }
     }
 }
 
-fn format_value(v: &ExpressionValueRef) -> String {
-    match v.get_type() {
-        Err(e) => e.get_message().clone(),
-        Ok(t) => match t {
-            DataType::Unit => String::from("()"),
-            DataType::Integer => format!("{}", v.as_integer().unwrap()),
-            DataType::Float => format!("{}", v.as_float().unwrap()),
-            DataType::Character => format!("'{}'", v.as_string().unwrap()),
-            DataType::CharacterList => format!("\"{}\"", v.as_string().unwrap()),
-            DataType::Symbol => format!(":{}", v.as_string().unwrap()),
-            DataType::Expression
-            | DataType::ExternalMethod => format!("{}", v.as_string().unwrap()),
-            DataType::Pair => format!("{} = {}",
-                format_value(&v.get_pair_left().unwrap()),
-                format_value(&v.get_pair_right().unwrap())),
-            DataType::Partial => format!("{} ~~ {}",
-                format_value(&v.get_partial_base().unwrap()),
-                format_value(&v.get_partial_value().unwrap())),
-            DataType::Link => format!("{} -> {}",
-                format_value(&v.get_link_value().unwrap()),
-                format_value(&v.get_link_next().unwrap())),
-            DataType::Range => {
-                let flags = v.get_range_flags().unwrap();
-                let op = match (is_start_exclusive(flags), is_end_exclusive(flags)) {
-                    (false, false) => "..",
-                    (true, false) => ">..",
-                    (false, true) => "..<",
-                    (true, true) => ">..<"
-                };
+fn format_value(v: &ExpressionValueRef) -> Result<String> {
+    Ok(match v.get_type()? {
+        DataType::Unit => String::from("()"),
+        DataType::Integer => format!("{}", v.as_integer()?),
+        DataType::Float => format!("{}", v.as_float()?),
+        DataType::Character => format!("'{}'", v.as_string()?),
+        DataType::CharacterList => format!("\"{}\"", v.as_string()?),
+        DataType::Symbol => format!(":{}", v.as_string()?),
+        DataType::Expression
+        | DataType::ExternalMethod => format!("{}", v.as_string()?),
+        DataType::Pair => format!("{} = {}",
+            format_value(&v.get_pair_left()?)?,
+            format_value(&v.get_pair_right()?)?),
+        DataType::Partial => format!("{} ~~ {}",
+            format_value(&v.get_partial_base()?)?,
+            format_value(&v.get_partial_value()?)?),
+        DataType::Link => format!("{} -> {}",
+            format_value(&v.get_link_value()?)?,
+            format_value(&v.get_link_next()?)?),
+        DataType::Range => {
+            let flags = v.get_range_flags()?;
+            let op = match (is_start_exclusive(flags), is_end_exclusive(flags)) {
+                (false, false) => "..",
+                (true, false) => ">..",
+                (false, true) => "..<",
+                (true, true) => ">..<"
+            };
 
-                format!("{}{}{}",
-                    format_value(&v.get_range_start().unwrap()),
-                    op,
-                    format_value(&v.get_range_end().unwrap()))
-            }
-            DataType::List => {
-                let mut items: Vec<String> = vec![];
-
-                for i in 0..v.list_len().unwrap() {
-                    items.push(format_value(&v.get_list_item(i).unwrap()));
-                }
-                
-                items.join(", ")
-            }
-            DataType::Slice => {
-                let range = v.get_slice_range().unwrap();
-                let start = range.get_range_start().unwrap().as_integer().unwrap() as usize;
-                let end = range.get_range_end().unwrap().as_integer().unwrap() as usize + 1;
-
-                let source = v.get_slice_source().unwrap();
-
-                match source.get_type().unwrap() {
-                    DataType::CharacterList => {
-                        let s = source.as_string().unwrap();
-                        s.graphemes(true).skip(start).take(end - start).collect::<String>()
-                    }
-                    DataType::List => {
-                        let mut items: Vec<String> = vec![];
-
-                        for i in start..end {
-                            items.push(format_value(&source.get_list_item(i).unwrap()));
-                        }
-
-                        items.join(", ")
-                    }
-                    t => format!("Cannot slice type of {}", t)
-                }
-            }
-            _ => String::new()
+            format!("{}{}{}",
+                format_value(&v.get_range_start()?)?,
+                op,
+                format_value(&v.get_range_end()?)?)
         }
-    }
+        DataType::List => {
+            let mut items: Vec<String> = vec![];
+
+            for i in 0..v.list_len()? {
+                items.push(format_value(&v.get_list_item(i)?)?);
+            }
+            
+            items.join(", ")
+        }
+        DataType::Slice => {
+            let range = v.get_slice_range()?;
+            let start = range.get_range_start()?.as_integer()? as usize;
+            let end = range.get_range_end()?.as_integer()? as usize + 1;
+
+            let source = v.get_slice_source()?;
+
+            match source.get_type()? {
+                DataType::CharacterList => {
+                    let s = source.as_string()?;
+                    s.graphemes(true).skip(start).take(end - start).collect::<String>()
+                }
+                DataType::List => {
+                    let mut items: Vec<String> = vec![];
+
+                    for i in start..end {
+                        items.push(format_value(&source.get_list_item(i)?)?);
+                    }
+
+                    items.join(", ")
+                }
+                t => format!("Cannot slice type of {}", t)
+            }
+        }
+        DataType::Reference => "".into(), // unsupported right now but should fail
+    })
 }
 
 #[cfg(test)]
