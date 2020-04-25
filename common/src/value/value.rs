@@ -452,6 +452,57 @@ impl ExpressionValueBuilder for AssociativeListBuilder {
     }
 }
 
+pub struct SliceBuilder {
+    list: AssociativeListBuilder,
+    range: RangeBuilder<IntegerBuilder>,
+}
+
+impl ExpressionValueBuilder for SliceBuilder {
+    fn write_data(&self, v: &mut Vec<u8>, symbol_table: &mut HashMap<String, usize>) -> Result<usize> {
+        let list_ref = self.list.write_data(v, symbol_table)?;
+        let range_ref = self.range.write_data(v, symbol_table)?;
+
+        let pos = v.len();
+
+        DataVecWriter::new(v)
+            .push_data_type(DataType::Slice)
+            .push_size(list_ref)
+            .push_size(range_ref);
+
+        Ok(pos)
+    }
+}
+
+pub struct LinkBuilder<T, U>
+where
+    T: ExpressionValueBuilder,
+    U: ExpressionValueBuilder
+{
+    first: T,
+    second: U,
+}
+
+impl<T, U> ExpressionValueBuilder for LinkBuilder<T, U>
+where
+    T: ExpressionValueBuilder,
+    U: ExpressionValueBuilder,
+{
+    fn write_data(&self, v: &mut Vec<u8>, symbol_table: &mut HashMap<String, usize>) -> Result<usize> {
+        let first_ref = self.first.write_data(v, symbol_table)?;
+        let second_ref = self.second.write_data(v, symbol_table)?;
+
+        let pos = v.len();
+
+        DataVecWriter::new(v)
+            .push_data_type(DataType::Link)
+            .push_size(first_ref)
+            .push_size(first_ref)
+            .push_size(second_ref);
+
+        Ok(pos)
+    }
+}
+
 impl ExpressionValue {
     pub fn get_data(&self) -> &Vec<u8> {
         &self.data
@@ -582,6 +633,18 @@ impl ExpressionValue {
             base: ExpressionValue::external_method(expression),
             value,
         }
+    }
+
+    pub fn list_slice(list: AssociativeListBuilder, range: RangeBuilder<IntegerBuilder>) -> SliceBuilder {
+        SliceBuilder { list, range }
+    }
+
+    pub fn link<T, U>(first: T, second: U) -> LinkBuilder<T, U>
+    where
+        T: ExpressionValueBuilder,
+        U: ExpressionValueBuilder,
+    {
+        LinkBuilder { first, second }
     }
 
     pub fn list() -> AssociativeListBuilder {
@@ -972,6 +1035,66 @@ mod tests {
             .push_data_type(DataType::Integer)
             .push_integer(100)
             .push_data_type(DataType::Partial)
+            .push_size(0)
+            .push_size(5);
+
+        assert_eq!(result.get_data().to_owned(), expected);
+    }
+
+    #[test]
+    fn list_slice() {
+        let result: ExpressionValue = ExpressionValue::list_slice(
+            ExpressionValue::list()
+                .add(ExpressionValue::integer(10))
+                .add(ExpressionValue::integer(20))
+                .add(ExpressionValue::integer(30)),
+            ExpressionValue::integer_range(Some(0), Some(1))
+        ).into();
+
+        let mut expected: Vec<u8> = vec![];
+        DataVecWriter::new(&mut expected)
+            .push_data_type(DataType::Integer) // 0
+            .push_integer(10)
+            .push_data_type(DataType::Integer) // 5
+            .push_integer(20)
+            .push_data_type(DataType::Integer) // 10
+            .push_integer(30)
+            .push_data_type(DataType::List) // 15
+            .push_size(3) // 16
+            .push_size(0)
+            .push_size(0)
+            .push_size(5)
+            .push_size(10)
+            .push_data_type(DataType::Integer) // 36
+            .push_integer(0)
+            .push_data_type(DataType::Integer) // 41
+            .push_integer(1)
+            .push_data_type(DataType::Range) // 46
+            .push_byte_size(0)
+            .push_size(36)
+            .push_size(41)
+            .push_data_type(DataType::Slice)
+            .push_size(15)
+            .push_size(46);
+
+        assert_eq!(result.get_data().to_owned(), expected);
+    }
+
+    #[test]
+    fn link() {
+        let result: ExpressionValue = ExpressionValue::link(
+            ExpressionValue::integer(10),
+            ExpressionValue::integer(20)
+        ).into();
+
+        let mut expected: Vec<u8> = vec![];
+        DataVecWriter::new(&mut expected)
+            .push_data_type(DataType::Integer) // 0
+            .push_integer(10)
+            .push_data_type(DataType::Integer) // 5
+            .push_integer(20)
+            .push_data_type(DataType::Link) // 10
+            .push_size(0) 
             .push_size(0)
             .push_size(5);
 
