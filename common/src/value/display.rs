@@ -87,7 +87,7 @@ fn format_value(v: &ExpressionValueRef) -> Result<String> {
                 t => format!("Cannot slice type of {}", t)
             }
         }
-        DataType::Reference => "".into(), // unsupported right now but should fail
+        DataType::Reference => "".into(), // unsupported right now but shouldn't fail
     })
 }
 
