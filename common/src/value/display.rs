@@ -1,4 +1,5 @@
 use std::fmt;
+use unicode_segmentation::UnicodeSegmentation;
 use crate::value::{ExpressionValueRef, ExpressionValue, is_start_exclusive, is_end_exclusive};
 use crate::DataType;
 
@@ -35,6 +36,9 @@ fn format_value(v: &ExpressionValueRef) -> String {
             DataType::Partial => format!("{} ~~ {}",
                 format_value(&v.get_partial_base().unwrap()),
                 format_value(&v.get_partial_value().unwrap())),
+            DataType::Link => format!("{} -> {}",
+                format_value(&v.get_link_value().unwrap()),
+                format_value(&v.get_link_next().unwrap())),
             DataType::Range => {
                 let flags = v.get_range_flags().unwrap();
                 let op = match (is_start_exclusive(flags), is_end_exclusive(flags)) {
@@ -57,6 +61,30 @@ fn format_value(v: &ExpressionValueRef) -> String {
                 }
                 
                 items.join(", ")
+            }
+            DataType::Slice => {
+                let range = v.get_slice_range().unwrap();
+                let start = range.get_range_start().unwrap().as_integer().unwrap() as usize;
+                let end = range.get_range_end().unwrap().as_integer().unwrap() as usize + 1;
+
+                let source = v.get_slice_source().unwrap();
+
+                match source.get_type().unwrap() {
+                    DataType::CharacterList => {
+                        let s = source.as_string().unwrap();
+                        s.graphemes(true).skip(start).take(end - start).collect::<String>()
+                    }
+                    DataType::List => {
+                        let mut items: Vec<String> = vec![];
+
+                        for i in start..end {
+                            items.push(format_value(&source.get_list_item(i).unwrap()));
+                        }
+
+                        items.join(", ")
+                    }
+                    t => format!("Cannot slice type of {}", t)
+                }
             }
             _ => String::new()
         }
@@ -158,6 +186,42 @@ mod tests {
         let value: ExpressionValue = ExpressionValue::integer_range(Some(10), Some(20)).exclude_start().exclude_end().into();
 
         assert_eq!(format!("{}", value.reference().unwrap()), "10>..<20");
+    }
+
+    #[test]
+    fn list_slice() {
+        let value: ExpressionValue = ExpressionValue::list_slice(
+            ExpressionValue::list()
+                .add(ExpressionValue::integer(10))
+                .add(ExpressionValue::integer(20))
+                .add(ExpressionValue::integer(30))
+                .add(ExpressionValue::integer(40))
+                .add(ExpressionValue::integer(50))
+                .add(ExpressionValue::integer(60)),
+            ExpressionValue::integer_range(Some(1), Some(3))
+        ).into();
+
+        assert_eq!(format!("{}", value.reference().unwrap()), "20, 30, 40");
+    }
+
+    #[test]
+    fn character_list_slice() {
+        let value: ExpressionValue = ExpressionValue::character_list_slice(
+            ExpressionValue::character_list("panda bear".into()),
+            ExpressionValue::integer_range(Some(2), Some(8))
+        ).into();
+
+        assert_eq!(format!("{}", value.reference().unwrap()), "nda bea");
+    }
+
+    #[test]
+    fn link() {
+        let value: ExpressionValue = ExpressionValue::link(
+            ExpressionValue::integer(10),
+            ExpressionValue::integer(20)
+        ).into();
+
+        assert_eq!(format!("{}", value.reference().unwrap()), "10 -> 20");
     }
 
     #[test]
