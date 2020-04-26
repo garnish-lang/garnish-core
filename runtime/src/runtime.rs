@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use garnish_lang_common::InstructionSet;
+use garnish_lang_common::{Result, InstructionSet};
 
 use crate::iterate::IterationData;
 use crate::utils::insert_if_not_present;
@@ -130,6 +130,12 @@ impl ExpressionRuntime {
             current_value,
             result_value,
         };
+    }
+
+    pub fn set_mem(&mut self, bytes: usize) -> Result {
+        self.data.resize(bytes, 0);
+        self.registers.resize(bytes / 5, 0);
+        Ok(())
     }
 }
 

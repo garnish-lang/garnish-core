@@ -74,13 +74,7 @@ impl ExpressionValueConsumer for ExpressionRuntime {
 impl ExpressionRuntime {
     pub(crate) fn resize_data(&mut self) -> Result {
         // request double our current size
-        let additional = self.data.capacity() * 2;
-        self.data.resize(additional, 0);
-
-        // also resize registers to keep ratio 5/1
-        let additional = self.registers.capacity() * 2;
-        self.registers.resize(additional, 0);
-        Ok(())
+        self.set_mem(self.data.capacity() * 2)
     }
 
     pub(crate) fn get_expression_start(&self, index: usize) -> Result<usize> {
