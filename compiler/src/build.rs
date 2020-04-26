@@ -25,11 +25,17 @@ struct SubInfo {
 pub fn build_byte_code(root_name: &str, ast: AST) -> Result<InstructionSetBuilder> {
     let mut instructions = InstructionSetBuilder::new();
 
+    append_ast_to_instructions(root_name, ast, &mut instructions)?;
+
+    return Ok(instructions);
+}
+
+pub fn append_ast_to_instructions(root_name: &str, ast: AST, instructions: &mut InstructionSetBuilder) -> Result<()> {
     if ast.nodes.is_empty() {
         instructions.start_expression(root_name);
         instructions.put(ExpressionValue::unit())?;
         instructions.end_expression();
-        return Ok(instructions);
+        return Ok(());
     }
     
     let mut info = SubInfo {
@@ -37,17 +43,18 @@ pub fn build_byte_code(root_name: &str, ast: AST) -> Result<InstructionSetBuilde
         subs: vec![],
         current: SubData::new("".into(), 0, 0, None),
     };
+
     info.subs.push(SubData::new(String::from(root_name), ast.root, 0, None));
 
     while !info.subs.is_empty() {
         info.current = info.subs.pop().unwrap();
 
         instructions.start_expression(info.current.name.clone());
-        process_node(&root_name, info.current.start.clone(), &ast, &mut instructions, false, None, &mut info)?;
+        process_node(&root_name, info.current.start.clone(), &ast, instructions, false, None, &mut info)?;
         instructions.end_expression();
     }
-
-    return Ok(instructions);
+    
+    Ok(())
 }
  
 fn process_node(name: &str,
