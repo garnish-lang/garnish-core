@@ -6,9 +6,12 @@ use crate::runtime::ExpressionRuntime;
 
 impl ExpressionRuntime {
     pub fn set_input(&mut self, value: &ExpressionValue) -> Result {
-        let start = self.constant_data_size;
-        self.input_stack.push(start);
         self.copy_into(value)?;
+
+        // input will be last ref on registers
+        let start = self.registers[self.ref_cursor - 1];
+        self.input_stack.push(start);
+
         self.input_size = value.get_data().len();
 
         Ok(())

@@ -266,6 +266,10 @@ impl ExpressionRuntime {
         self.insert_size_value(DataType::Symbol, symbol_value)
     }
 
+    pub(crate) fn insert_expression_value(&mut self, symbol_value: usize) -> Result {
+        self.insert_size_value(DataType::Expression, symbol_value)
+    }
+
     pub(crate) fn insert_list_value(&mut self, length: usize, key_count: usize) -> Result {
         // ideally use below line need to see if common ref cursor
         // manipulation can be used
