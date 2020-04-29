@@ -2,6 +2,7 @@ mod range;
 mod value;
 mod value_ref;
 mod display;
+mod to_owned;
 
 pub use range::*;
 pub use value::*;

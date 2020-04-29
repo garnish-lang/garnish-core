@@ -11,11 +11,12 @@ use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
 use unicode_segmentation::UnicodeSegmentation;
 
+#[derive(PartialEq, Eq, Debug)]
 pub struct ExpressionValue {
-    data: Vec<u8>,
-    symbol_table: HashMap<String, usize>,
-    error: Option<Error>,
-    start: usize,
+    pub(crate) data: Vec<u8>,
+    pub(crate) symbol_table: HashMap<String, usize>,
+    pub(crate) error: Option<Error>,
+    pub(crate) start: usize,
 }
 
 impl<T> From<T> for ExpressionValue
@@ -23,25 +24,7 @@ where
     T: ExpressionValueBuilder,
 {
     fn from(builder: T) -> ExpressionValue {
-        let mut data: Vec<u8> = vec![];
-        let mut symbol_table = HashMap::new();
-        let mut start = 0;
-        symbol_table.insert("".to_string(), 0);
-
-        let error = match builder.write_data(&mut data, &mut symbol_table) {
-            Ok(s) => {
-                start = s;
-                None
-            }
-            Err(e) => Some(e),
-        };
-
-        return ExpressionValue {
-            data,
-            symbol_table,
-            error,
-            start,
-        };
+        builder.build()
     }
 }
 
@@ -57,6 +40,28 @@ pub trait ExpressionValueBuilder {
         v: &mut Vec<u8>,
         symbol_table: &mut HashMap<String, usize>,
     ) -> Result<usize>;
+
+    fn build(&self) -> ExpressionValue {
+        let mut data: Vec<u8> = vec![];
+        let mut symbol_table = HashMap::new();
+        let mut start = 0;
+        symbol_table.insert("".to_string(), 0);
+
+        let error = match self.write_data(&mut data, &mut symbol_table) {
+            Ok(s) => {
+                start = s;
+                None
+            }
+            Err(e) => Some(e),
+        };
+
+        return ExpressionValue {
+            data,
+            symbol_table,
+            error,
+            start,
+        };
+    }
 }
 
 pub struct UnitBuilder {}
@@ -453,18 +458,22 @@ impl ExpressionValueBuilder for AssociativeListBuilder {
 }
 
 pub struct SliceBuilder<T>
-where 
-    T: ExpressionValueBuilder
+where
+    T: ExpressionValueBuilder,
 {
     value: T,
     range: RangeBuilder<IntegerBuilder>,
 }
 
 impl<T> ExpressionValueBuilder for SliceBuilder<T>
-where 
-    T: ExpressionValueBuilder
+where
+    T: ExpressionValueBuilder,
 {
-    fn write_data(&self, v: &mut Vec<u8>, symbol_table: &mut HashMap<String, usize>) -> Result<usize> {
+    fn write_data(
+        &self,
+        v: &mut Vec<u8>,
+        symbol_table: &mut HashMap<String, usize>,
+    ) -> Result<usize> {
         let list_ref = self.value.write_data(v, symbol_table)?;
         let range_ref = self.range.write_data(v, symbol_table)?;
 
@@ -482,7 +491,7 @@ where
 pub struct LinkBuilder<T, U>
 where
     T: ExpressionValueBuilder,
-    U: ExpressionValueBuilder
+    U: ExpressionValueBuilder,
 {
     first: T,
     second: U,
@@ -493,7 +502,11 @@ where
     T: ExpressionValueBuilder,
     U: ExpressionValueBuilder,
 {
-    fn write_data(&self, v: &mut Vec<u8>, symbol_table: &mut HashMap<String, usize>) -> Result<usize> {
+    fn write_data(
+        &self,
+        v: &mut Vec<u8>,
+        symbol_table: &mut HashMap<String, usize>,
+    ) -> Result<usize> {
         let first_ref = self.first.write_data(v, symbol_table)?;
         let second_ref = self.second.write_data(v, symbol_table)?;
 
@@ -641,12 +654,21 @@ impl ExpressionValue {
         }
     }
 
-    pub fn list_slice(list: AssociativeListBuilder, range: RangeBuilder<IntegerBuilder>) -> SliceBuilder<AssociativeListBuilder> {
+    pub fn list_slice(
+        list: AssociativeListBuilder,
+        range: RangeBuilder<IntegerBuilder>,
+    ) -> SliceBuilder<AssociativeListBuilder> {
         SliceBuilder { value: list, range }
     }
 
-    pub fn character_list_slice(character_list: CharacterListBuilder, range: RangeBuilder<IntegerBuilder>) -> SliceBuilder<CharacterListBuilder> {
-        SliceBuilder { value: character_list, range }
+    pub fn character_list_slice(
+        character_list: CharacterListBuilder,
+        range: RangeBuilder<IntegerBuilder>,
+    ) -> SliceBuilder<CharacterListBuilder> {
+        SliceBuilder {
+            value: character_list,
+            range,
+        }
     }
 
     pub fn link<T, U>(first: T, second: U) -> LinkBuilder<T, U>
@@ -1058,8 +1080,9 @@ mod tests {
                 .add(ExpressionValue::integer(10))
                 .add(ExpressionValue::integer(20))
                 .add(ExpressionValue::integer(30)),
-            ExpressionValue::integer_range(Some(0), Some(1))
-        ).into();
+            ExpressionValue::integer_range(Some(0), Some(1)),
+        )
+        .into();
 
         let mut expected: Vec<u8> = vec![];
         DataVecWriter::new(&mut expected)
@@ -1094,8 +1117,9 @@ mod tests {
     fn character_list_slice() {
         let result: ExpressionValue = ExpressionValue::character_list_slice(
             ExpressionValue::character_list("bear".into()),
-            ExpressionValue::integer_range(Some(0), Some(1))
-        ).into();
+            ExpressionValue::integer_range(Some(0), Some(1)),
+        )
+        .into();
 
         let mut expected: Vec<u8> = vec![];
         DataVecWriter::new(&mut expected)
@@ -1134,10 +1158,9 @@ mod tests {
 
     #[test]
     fn link() {
-        let result: ExpressionValue = ExpressionValue::link(
-            ExpressionValue::integer(10),
-            ExpressionValue::integer(20)
-        ).into();
+        let result: ExpressionValue =
+            ExpressionValue::link(ExpressionValue::integer(10), ExpressionValue::integer(20))
+                .into();
 
         let mut expected: Vec<u8> = vec![];
         DataVecWriter::new(&mut expected)
@@ -1146,7 +1169,7 @@ mod tests {
             .push_data_type(DataType::Integer) // 5
             .push_integer(20)
             .push_data_type(DataType::Link) // 10
-            .push_size(0) 
+            .push_size(0)
             .push_size(0)
             .push_size(5);
 

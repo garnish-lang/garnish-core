@@ -15,9 +15,9 @@ const UNIT_ARRAY: [u8; 1] = [1];
 
 #[derive(Debug)]
 pub struct ExpressionValueRef<'a> {
-    data: &'a [u8],
-    value_start: usize,
-    symbol_table: Option<&'a HashMap<String, usize>>,
+    pub(crate) data: &'a [u8],
+    pub(crate) value_start: usize,
+    pub(crate) symbol_table: Option<&'a HashMap<String, usize>>,
 }
 
 impl<'a> ExpressionValueRef<'a> {

@@ -2,7 +2,7 @@ use std::result;
 
 pub type Result<T = ()> = result::Result<T, Error>;
 
-#[derive(Debug, Clone)]
+#[derive(PartialEq, Eq, Debug, Clone)]
 pub struct Error {
     message: String,
 }
