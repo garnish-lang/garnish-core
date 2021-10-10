@@ -1,26 +1,19 @@
-mod access;
-mod apply;
-mod bitwise;
-mod cast;
-mod comparison;
-mod conditional;
-mod context;
-mod execute;
-mod input;
-mod instruction_iter;
-mod invoke;
-mod iterate;
-mod link;
-mod lists;
-mod logical;
-mod math;
-mod pair;
-mod put;
-mod range;
-mod resolve;
-mod result;
-mod runtime;
-mod utils;
+pub struct GarnishLangRuntime {
 
-pub use context::*;
-pub use runtime::ExpressionRuntime;
+}
+
+impl GarnishLangRuntime {
+    pub fn new() -> Self {
+        return GarnishLangRuntime {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::GarnishLangRuntime;
+
+    #[test]
+    fn create_runtime() {
+        GarnishLangRuntime::new();
+    }
+}

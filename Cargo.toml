@@ -2,8 +2,5 @@
 
 [workspace]
 members = [
-    "runtime",
-    "common",
-    "instruction_set_builder",
-    "compiler"
+    "runtime"
 ]
