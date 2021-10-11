@@ -51,7 +51,9 @@ impl ExpressionData {
 pub struct GarnishLangRuntime {
     data: Vec<ExpressionData>,
     instructions: Vec<InstructionData>,
-    instruction_cursor: usize
+    instruction_cursor: usize,
+    results: Vec<usize>,
+    jump_path: Vec<usize>,
 }
 
 impl GarnishLangRuntime {
@@ -59,7 +61,9 @@ impl GarnishLangRuntime {
         GarnishLangRuntime {
             data: vec![],
             instructions: vec![],
-            instruction_cursor: 0
+            instruction_cursor: 0,
+            results: vec![],
+            jump_path: vec![],
         }
     }
 
@@ -84,6 +88,13 @@ impl GarnishLangRuntime {
 
     pub fn get_current_instruction(&self) -> Option<&InstructionData> {
         self.instructions.get(self.instruction_cursor)
+    }
+
+    pub fn get_result(&self, i: usize) -> Option<&ExpressionData> {
+        match self.results.get(i) {
+            None => None,
+            Some(index) => self.data.get(*index)
+        }
     }
 
     pub fn advance_instruction(&mut self) -> Result<usize, String> {
@@ -119,6 +130,27 @@ impl GarnishLangRuntime {
 
                 self.add_data(ExpressionData::integer(left + right))?;
 
+                Ok(())
+            }
+        }
+    }
+
+    pub fn execute_expression(&mut self, index: usize) -> Result<(), String> {
+        match index < self.instructions.len() {
+            false => Result::Err("Given index is out of bounds.".to_string()),
+            true => {
+                self.jump_path.push(self.instruction_cursor);
+                self.instruction_cursor = index;
+                Ok(())
+            }
+        }
+    }
+
+    pub fn output_result(&mut self) -> Result<(), String> {
+        match self.data.len() {
+            0 => Result::Err("No enough data to perform output result peration.".to_string()),
+            n => {
+                self.results.push(n - 1);
                 Ok(())
             }
         }
@@ -243,6 +275,32 @@ mod tests {
         runtime.perform_addition().unwrap();
 
         assert_eq!(runtime.data.get(0).unwrap().bytes, 30i64.to_le_bytes());
+    }
+
+    #[test]
+    fn output_result() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.output_result().unwrap();
+
+        assert_eq!(runtime.get_result(0).unwrap().bytes, 10i64.to_le_bytes()); 
+    }
+
+    #[test]
+    fn execute_expression() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_instruction(Instruction::ExecuteExpression, Some(ExpressionData::reference(0))).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(ExpressionData::reference(0))).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.instruction_cursor = 1;
+        runtime.execute_expression(2).unwrap();
+
+        assert_eq!(runtime.instruction_cursor, 2);
+        assert_eq!(runtime.jump_path.get(0).unwrap().to_owned(), 1)
     }
 
     #[test]
