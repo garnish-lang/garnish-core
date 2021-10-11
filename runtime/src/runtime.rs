@@ -25,18 +25,34 @@ impl InstructionData {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum ExpressionDataType {
+    Unit = 1,
+    Reference,
+    Integer
+}
+
 #[derive(Clone)]
 pub struct ExpressionData {
+    data_type: ExpressionDataType,
     bytes: Vec<u8>
 }
 
 impl ExpressionData {
+    pub fn unit() -> ExpressionData {
+        ExpressionData { data_type: ExpressionDataType::Unit, bytes: vec![] }
+    }
+
     pub fn integer(i: i64) -> ExpressionData {
-        ExpressionData { bytes: i.to_le_bytes()[..].to_vec() }
+        ExpressionData { data_type: ExpressionDataType::Integer, bytes: i.to_le_bytes()[..].to_vec() }
     }
 
     pub fn reference(r: usize) -> ExpressionData {
-        ExpressionData { bytes: r.to_le_bytes()[..].to_vec() }
+        ExpressionData { data_type: ExpressionDataType::Reference, bytes: r.to_le_bytes()[..].to_vec() }
+    }
+
+    pub fn get_type(&self) -> ExpressionDataType {
+        self.data_type
     }
 
     pub fn as_integer(&self) -> Result<i64, String> {
@@ -189,11 +205,17 @@ impl GarnishLangRuntime {
 
 #[cfg(test)]
 mod tests {
-    use crate::{GarnishLangRuntime, ExpressionData, Instruction};
+    use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
 
     #[test]
     fn create_runtime() {
         GarnishLangRuntime::new();
+    }
+
+    #[test]
+    fn get_data_type_expression_data() {
+        let d = ExpressionData::unit();
+        assert_eq!(d.get_type(), ExpressionDataType::Unit);
     }
 
     #[test]
