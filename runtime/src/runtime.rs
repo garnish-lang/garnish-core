@@ -1,15 +1,28 @@
-use std::convert::TryInto;
+use std::{convert::TryInto};
 
 
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Instruction {
     Put = 1,
 }
 
+#[derive(Clone)]
 pub struct InstructionData {
     instruction: Instruction,
     data: Option<ExpressionData>
 }
 
+impl InstructionData {
+    pub fn get_instruction(&self) -> Instruction {
+        self.instruction
+    }
+
+    pub fn get_data(&self) -> Option<&ExpressionData> {
+        self.data.as_ref()
+    }
+}
+
+#[derive(Clone)]
 pub struct ExpressionData {
     bytes: Vec<u8>
 }
@@ -58,6 +71,10 @@ impl GarnishLangRuntime {
     pub fn add_instruction(&mut self, instruction: Instruction, data: Option<ExpressionData>) -> Result<(), String> {
         self.instructions.push(InstructionData { instruction, data });
         Ok(())
+    }
+
+    pub fn get_instruction(&self, i: usize) -> Option<&InstructionData> {
+        self.instructions.get(i)
     }
 
     pub fn perform_addition(&mut self) -> Result<(), String> {
@@ -131,6 +148,15 @@ mod tests {
         runtime.add_instruction(Instruction::Put, Some(ExpressionData::reference(0))).unwrap();
 
         assert_eq!(runtime.instructions.len(), 1);
+    }
+
+    #[test]
+    fn get_instruction() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_instruction(Instruction::Put, None).unwrap();
+
+        assert_eq!(runtime.get_instruction(0).unwrap().get_instruction(), Instruction::Put);
     }
 
     #[test]
