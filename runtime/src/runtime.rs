@@ -12,7 +12,7 @@ pub enum Instruction {
 #[derive(Clone)]
 pub struct InstructionData {
     instruction: Instruction,
-    data: Option<ExpressionData>
+    data: Option<usize>
 }
 
 impl InstructionData {
@@ -20,8 +20,8 @@ impl InstructionData {
         self.instruction
     }
 
-    pub fn get_data(&self) -> Option<&ExpressionData> {
-        self.data.as_ref()
+    pub fn get_data(&self) -> Option<usize> {
+        self.data
     }
 }
 
@@ -77,7 +77,7 @@ impl GarnishLangRuntime {
         Ok(())
     }
 
-    pub fn add_instruction(&mut self, instruction: Instruction, data: Option<ExpressionData>) -> Result<(), String> {
+    pub fn add_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> Result<(), String> {
         self.instructions.push(InstructionData { instruction, data });
         Ok(())
     }
@@ -218,7 +218,7 @@ mod tests {
     fn add_instruction() {
         let mut runtime = GarnishLangRuntime::new();
 
-        runtime.add_instruction(Instruction::Put, Some(ExpressionData::reference(0))).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
 
         assert_eq!(runtime.instructions.len(), 1);
     }
@@ -292,8 +292,8 @@ mod tests {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_instruction(Instruction::ExecuteExpression, Some(ExpressionData::reference(0))).unwrap();
-        runtime.add_instruction(Instruction::Put, Some(ExpressionData::reference(0))).unwrap();
+        runtime.add_instruction(Instruction::ExecuteExpression, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
         runtime.instruction_cursor = 1;
