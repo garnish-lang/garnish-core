@@ -50,7 +50,7 @@ impl GarnishLangRuntime {
         Ok(())
     }
 
-    pub fn add_reference(&mut self, reference: usize) -> Result<(), String> {
+    pub fn add_reference_data(&mut self, reference: usize) -> Result<(), String> {
         self.data.push(ExpressionData::reference(reference));
         Ok(())
     }
@@ -119,7 +119,7 @@ mod tests {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::integer(100)).unwrap();
-        runtime.add_reference(0).unwrap();
+        runtime.add_reference_data(0).unwrap();
 
         assert_eq!(runtime.data.len(), 2);
     }
