@@ -1,3 +1,5 @@
+use std::convert::TryInto;
+
 
 pub enum Instruction {
     Put = 1,
@@ -19,6 +21,14 @@ impl ExpressionData {
 
     pub fn reference(r: usize) -> ExpressionData {
         ExpressionData { bytes: r.to_le_bytes()[..].to_vec() }
+    }
+
+    pub fn as_integer(&self) -> Result<i64, String> {
+        let (bytes, _) = self.bytes.split_at(std::mem::size_of::<i64>());
+        Ok(i64::from_le_bytes(match bytes.try_into() {
+            Ok(v) => v,
+            Err(e) => Result::Err(e.to_string())?
+        }))
     }
 }
 
@@ -49,6 +59,24 @@ impl GarnishLangRuntime {
         self.instructions.push(InstructionData { instruction, data });
         Ok(())
     }
+
+    pub fn perform_addition(&mut self) -> Result<(), String> {
+        match self.data.len() {
+            0 | 1 => Result::Err("Not enough data to perform addition operation.".to_string()),
+            // 2 and greater
+            _ => {
+                let right_data = self.data.pop().unwrap();
+                let left_data = self.data.pop().unwrap();
+
+                let left = left_data.as_integer()?;
+                let right = right_data.as_integer()?;
+
+                self.add_data(ExpressionData::integer(left + right))?;
+
+                Ok(())
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -70,6 +98,11 @@ mod tests {
     fn reference_expression_data() {
         let d = ExpressionData::reference(1234567890);
         assert_eq!(d.bytes, 1234567890usize.to_le_bytes());
+    }
+
+    #[test]
+    fn expression_data_as_integer() {
+        assert_eq!(ExpressionData::reference(1234567890).as_integer().unwrap(), 1234567890)
     }
 
     #[test]
@@ -98,5 +131,16 @@ mod tests {
         runtime.add_instruction(Instruction::Put, Some(ExpressionData::reference(0))).unwrap();
 
         assert_eq!(runtime.instructions.len(), 1);
+    }
+
+    #[test]
+    fn perform_addition() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.perform_addition().unwrap();
+
+        assert_eq!(runtime.data.get(0).unwrap().bytes, 30i64.to_le_bytes());
     }
 }
