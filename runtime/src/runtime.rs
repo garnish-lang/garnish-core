@@ -46,6 +46,14 @@ impl ExpressionData {
             Err(e) => Result::Err(e.to_string())?
         }))
     }
+
+    pub fn as_reference(&self) -> Result<usize, String> {
+        let (bytes, _) = self.bytes.split_at(std::mem::size_of::<usize>());
+        Ok(usize::from_le_bytes(match bytes.try_into() {
+            Ok(v) => v,
+            Err(e) => Result::Err(e.to_string())?
+        }))
+    }
 }
 
 pub struct GarnishLangRuntime {
@@ -117,6 +125,10 @@ impl GarnishLangRuntime {
         }
     }
 
+    pub fn put(&mut self, i: usize) -> Result<(), String> {
+        self.add_reference_data(i)
+    }
+
     pub fn perform_addition(&mut self) -> Result<(), String> {
         match self.data.len() {
             0 | 1 => Result::Err("Not enough data to perform addition operation.".to_string()),
@@ -146,9 +158,15 @@ impl GarnishLangRuntime {
         }
     }
 
+    pub fn end_expression(&mut self) -> Result<(), String> {
+        self.instruction_cursor += 1;
+        self.results.push(self.data.len() - 1);
+        Ok(())
+    }
+
     pub fn output_result(&mut self) -> Result<(), String> {
         match self.data.len() {
-            0 => Result::Err("No enough data to perform output result peration.".to_string()),
+            0 => Result::Err("Not enough data to perform output result operation.".to_string()),
             n => {
                 self.results.push(n - 1);
                 Ok(())
@@ -301,6 +319,29 @@ mod tests {
 
         assert_eq!(runtime.instruction_cursor, 2);
         assert_eq!(runtime.jump_path.get(0).unwrap().to_owned(), 1)
+    }
+
+    #[test]
+    fn end_expression() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+
+        runtime.end_expression().unwrap();
+
+        assert_eq!(runtime.instruction_cursor, 1);
+        assert_eq!(runtime.get_result(0).unwrap().bytes, 10i64.to_le_bytes());
+    }
+
+    #[test]
+    fn put() {
+        let mut runtime = GarnishLangRuntime::new();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+
+        runtime.put(0).unwrap();
+
+        assert_eq!(runtime.data.get(1).unwrap().as_reference().unwrap(), 0);
     }
 
     #[test]
