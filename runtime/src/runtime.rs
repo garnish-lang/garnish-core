@@ -4,6 +4,9 @@ use std::{convert::TryInto};
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Instruction {
     Put = 1,
+    EndExpression,
+    ExecuteExpression,
+    PerformAddition,
 }
 
 #[derive(Clone)]
@@ -47,14 +50,16 @@ impl ExpressionData {
 
 pub struct GarnishLangRuntime {
     data: Vec<ExpressionData>,
-    instructions: Vec<InstructionData>
+    instructions: Vec<InstructionData>,
+    instruction_cursor: usize
 }
 
 impl GarnishLangRuntime {
     pub fn new() -> Self {
         GarnishLangRuntime {
             data: vec![],
-            instructions: vec![]
+            instructions: vec![],
+            instruction_cursor: 0
         }
     }
 
@@ -75,6 +80,30 @@ impl GarnishLangRuntime {
 
     pub fn get_instruction(&self, i: usize) -> Option<&InstructionData> {
         self.instructions.get(i)
+    }
+
+    pub fn get_current_instruction(&self) -> Option<&InstructionData> {
+        self.instructions.get(self.instruction_cursor)
+    }
+
+    pub fn advance_instruction(&mut self) -> Result<usize, String> {
+        match self.instruction_cursor + 1 >= self.instructions.len() {
+            true => Result::Err("No instructions left.".to_string()),
+            false => {
+                self.instruction_cursor += 1;
+                Ok(self.instruction_cursor)
+            }
+        }
+    }
+
+    pub fn set_instruction_cursor(&mut self, i: usize) -> Result<usize, String> {
+        match i >= self.instructions.len() {
+            true => Result::Err("Instruction doesn't exist.".to_string()),
+            false => {
+                self.instruction_cursor = i;
+                Ok(self.instruction_cursor)
+            }
+        }
     }
 
     pub fn perform_addition(&mut self) -> Result<(), String> {
@@ -157,6 +186,40 @@ mod tests {
         runtime.add_instruction(Instruction::Put, None).unwrap();
 
         assert_eq!(runtime.get_instruction(0).unwrap().get_instruction(), Instruction::Put);
+    }
+
+    #[test]
+    fn get_current_instruction() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_instruction(Instruction::Put, None).unwrap();
+
+        assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::Put);
+    }
+
+    #[test]
+    fn advance_instruction() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_instruction(Instruction::Put, None).unwrap();
+        runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+        runtime.advance_instruction().unwrap();
+
+        assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::EndExpression);
+    }
+
+    #[test]
+    fn set_instruction_cursor() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_instruction(Instruction::Put, None).unwrap();
+        runtime.add_instruction(Instruction::Put, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.set_instruction_cursor(2).unwrap();
+
+        assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::PerformAddition);
     }
 
     #[test]
