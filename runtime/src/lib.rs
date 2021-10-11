@@ -95,7 +95,7 @@ mod tests {
     fn add_instruction() {
         let mut runtime = GarnishLangRuntime::new();
 
-        runtime.add_instruction(Instruction::Put, Some(ExpressionData::reference(0)));
+        runtime.add_instruction(Instruction::Put, Some(ExpressionData::reference(0))).unwrap();
 
         assert_eq!(runtime.instructions.len(), 1);
     }
