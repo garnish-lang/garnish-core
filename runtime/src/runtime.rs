@@ -123,6 +123,18 @@ impl GarnishLangRuntime {
             }
         }
     }
+
+    pub fn execute_current_instruction(&mut self) -> Result<(), String> {
+        match self.instructions.get(self.instruction_cursor) {
+            None => Result::Err("No instructions left.".to_string()),
+            Some(instruction_data) => {
+                match instruction_data.instruction {
+                    Instruction::PerformAddition => self.perform_addition(),
+                    _ => Result::Err("Not Implemented".to_string()),
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -229,6 +241,19 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.perform_addition().unwrap();
+
+        assert_eq!(runtime.data.get(0).unwrap().bytes, 30i64.to_le_bytes());
+    }
+
+    #[test]
+    fn execute_current_instruction() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.execute_current_instruction().unwrap();
 
         assert_eq!(runtime.data.get(0).unwrap().bytes, 30i64.to_le_bytes());
     }
