@@ -206,11 +206,11 @@ impl GarnishLangRuntime {
 
     pub fn execute_expression(&mut self, index: usize) -> Result<(), String> {
         trace!("Entering Execute Expression");
-        match index < self.instructions.len() {
+        match index > 0 && index <= self.instructions.len() {
             false => Result::Err("Given index is out of bounds.".to_string()),
             true => {
                 self.jump_path.push(self.instruction_cursor);
-                self.instruction_cursor = index;
+                self.instruction_cursor = index - 1;
                 Ok(())
             }
         }
@@ -224,7 +224,7 @@ impl GarnishLangRuntime {
                 self.results.push(self.data.len() - 1);
             }
             Some(jump_point) => {
-                self.instruction_cursor = jump_point + 1;
+                self.instruction_cursor = jump_point;
             }
         }
 
@@ -449,7 +449,7 @@ mod tests {
         runtime.instruction_cursor = 1;
         runtime.execute_expression(2).unwrap();
 
-        assert_eq!(runtime.instruction_cursor, 2);
+        assert_eq!(runtime.instruction_cursor, 1);
         assert_eq!(runtime.jump_path.get(0).unwrap().to_owned(), 1)
     }
 
@@ -481,7 +481,7 @@ mod tests {
         runtime.set_instruction_cursor(2).unwrap();
         runtime.end_expression().unwrap();
 
-        assert_eq!(runtime.instruction_cursor, 5);
+        assert_eq!(runtime.instruction_cursor, 4);
     }
 
     #[test]
