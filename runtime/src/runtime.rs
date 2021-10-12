@@ -177,8 +177,19 @@ impl GarnishLangRuntime {
         })
     }
 
+    pub fn push_input(&mut self) -> Result<(), String> {
+        trace!("Instruction - Push Input");
+
+        self.inputs.push(match self.data.len() > 0 {
+            true => self.data.len() - 1,
+            false => Result::Err(format!("No data available to push as input."))?
+        });
+
+        Ok(())
+    }
+
     pub fn put_result(&mut self) -> Result<(), String> {
-        trace!("Instruction - Put Input");
+        trace!("Instruction - Put Result");
 
         self.add_reference_data(match self.results.last() {
             None => Result::Err(format!("No inputs available to put reference."))?,
@@ -522,6 +533,18 @@ mod tests {
         runtime.put_input().unwrap();
 
         assert_eq!(runtime.data.get(2).unwrap(), &ExpressionData::reference(1));
+    }
+
+    #[test]
+    fn push_input() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.push_input().unwrap();
+
+        assert_eq!(runtime.inputs.get(0).unwrap(), &1);
     }
 
     #[test]
