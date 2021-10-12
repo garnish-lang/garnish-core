@@ -1,4 +1,5 @@
 use std::{convert::TryInto};
+use log::{trace};
 
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -155,10 +156,12 @@ impl GarnishLangRuntime {
     }
 
     pub fn put(&mut self, i: usize) -> Result<(), String> {
+        trace!("Entering Put {:?}", i);
         self.add_reference_data(i)
     }
 
     pub fn perform_addition(&mut self) -> Result<(), String> {
+        trace!("Entering Addition");
         match self.data.len() {
             0 | 1 => Result::Err("Not enough data to perform addition operation.".to_string()),
             // 2 and greater
@@ -182,11 +185,10 @@ impl GarnishLangRuntime {
                     _ => left_data
                 };
 
-                println!("{:?}", right_data);
-                println!("{:?}", left_data);
-
                 let left = left_data.as_integer()?;
                 let right = right_data.as_integer()?;
+
+                trace!("Performing {:?} + {:?}", right, left);
 
                 self.add_data(ExpressionData::integer(left + right))?;
 
@@ -196,6 +198,7 @@ impl GarnishLangRuntime {
     }
 
     pub fn execute_expression(&mut self, index: usize) -> Result<(), String> {
+        trace!("Entering Execute Expression");
         match index < self.instructions.len() {
             false => Result::Err("Given index is out of bounds.".to_string()),
             true => {
@@ -207,6 +210,7 @@ impl GarnishLangRuntime {
     }
 
     pub fn end_expression(&mut self) -> Result<(), String> {
+        trace!("Entering End Expression");
         match self.jump_path.pop() {
             None => {
                 self.instruction_cursor += 1;
@@ -221,6 +225,7 @@ impl GarnishLangRuntime {
     }
 
     pub fn output_result(&mut self) -> Result<(), String> {
+        trace!("Entering Output Result");
         match self.data.len() {
             0 => Result::Err("Not enough data to perform output result operation.".to_string()),
             n => {
