@@ -89,7 +89,7 @@ impl GarnishLangRuntime {
         GarnishLangRuntime {
             data: vec![],
             instructions: vec![InstructionData { instruction: Instruction::EndExecution, data: None }],
-            instruction_cursor: 0,
+            instruction_cursor: 1,
             results: vec![],
             jump_path: vec![],
             inputs: vec![]
@@ -357,7 +357,6 @@ mod tests {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_instruction(Instruction::Put, None).unwrap();
-        runtime.advance_instruction().unwrap();
 
         assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::Put);
     }
@@ -370,8 +369,6 @@ mod tests {
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
         runtime.advance_instruction().unwrap();
-        runtime.advance_instruction().unwrap();
-
 
         assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::EndExpression);
     }
@@ -463,7 +460,7 @@ mod tests {
 
         runtime.end_expression().unwrap();
 
-        assert_eq!(runtime.instruction_cursor, 1);
+        assert_eq!(runtime.instruction_cursor, 2);
         assert_eq!(runtime.get_result(0).unwrap().bytes, 10i64.to_le_bytes());
     }
 
@@ -503,7 +500,6 @@ mod tests {
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.advance_instruction().unwrap();
         runtime.execute_current_instruction().unwrap();
 
         assert_eq!(runtime.data.get(0).unwrap().bytes, 30i64.to_le_bytes());
