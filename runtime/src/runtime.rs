@@ -34,7 +34,7 @@ pub enum ExpressionDataType {
     Integer
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct ExpressionData {
     data_type: ExpressionDataType,
     bytes: Vec<u8>
@@ -166,6 +166,24 @@ impl GarnishLangRuntime {
     pub fn put(&mut self, i: usize) -> Result<(), String> {
         trace!("Instruction - Put | Data - {:?}", i);
         self.add_reference_data(i)
+    }
+
+    pub fn put_input(&mut self) -> Result<(), String> {
+        trace!("Instruction - Put Input");
+
+        self.add_reference_data(match self.inputs.last() {
+            None => Result::Err(format!("No inputs available to put reference."))?,
+            Some(r) => *r
+        })
+    }
+
+    pub fn put_result(&mut self) -> Result<(), String> {
+        trace!("Instruction - Put Input");
+
+        self.add_reference_data(match self.results.last() {
+            None => Result::Err(format!("No inputs available to put reference."))?,
+            Some(r) => *r
+        })
     }
 
     pub fn perform_addition(&mut self) -> Result<(), String> {
@@ -490,6 +508,34 @@ mod tests {
         runtime.put(0).unwrap();
 
         assert_eq!(runtime.data.get(1).unwrap().as_reference().unwrap(), 0);
+    }
+
+    #[test]
+    fn put_input() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.add_input_reference(1).unwrap();
+
+        runtime.put_input().unwrap();
+
+        assert_eq!(runtime.data.get(2).unwrap(), &ExpressionData::reference(1));
+    }
+
+    #[test]
+    fn put_result() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.results.push(1);
+
+        runtime.put_result().unwrap();
+
+        assert_eq!(runtime.data.get(2).unwrap(), &ExpressionData::reference(1));
     }
 
     #[test]
