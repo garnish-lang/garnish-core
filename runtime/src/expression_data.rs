@@ -47,7 +47,6 @@ impl ExpressionData {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use crate::{ExpressionData, ExpressionDataType};
