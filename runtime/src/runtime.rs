@@ -155,6 +155,12 @@ impl GarnishLangRuntime {
         }
     }
 
+    pub fn end_execution(&mut self) -> Result<(), String> {
+        self.instruction_cursor = self.instructions.len();
+
+        Ok(())
+    }
+
     pub fn put(&mut self, i: usize) -> Result<(), String> {
         trace!("Entering Put {:?}", i);
         self.add_reference_data(i)
@@ -250,7 +256,7 @@ impl GarnishLangRuntime {
                         None => Result::Err(format!("No address given with put instruction.")),
                         Some(i ) => self.put(i)
                     }
-                    _ => Result::Err("Not Implemented".to_string()),
+                    // _ => Result::Err("Not Implemented".to_string()),
                 }
             }
         }
@@ -368,6 +374,21 @@ mod tests {
         runtime.set_instruction_cursor(2).unwrap();
 
         assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::PerformAddition);
+    }
+
+    #[test]
+    fn end_execution() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_instruction(Instruction::Put, None).unwrap();
+        runtime.add_instruction(Instruction::Put, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.set_instruction_cursor(2).unwrap();
+
+        runtime.end_execution().unwrap();
+
+        assert_eq!(runtime.instruction_cursor, 3);
     }
 
     #[test]
