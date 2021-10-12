@@ -8,6 +8,7 @@ pub enum Instruction {
     EndExpression,
     ExecuteExpression,
     PerformAddition,
+    EndExecution,
 }
 
 #[derive(Clone, Debug)]
@@ -87,7 +88,7 @@ impl GarnishLangRuntime {
     pub fn new() -> Self {
         GarnishLangRuntime {
             data: vec![],
-            instructions: vec![],
+            instructions: vec![InstructionData { instruction: Instruction::EndExecution, data: None }],
             instruction_cursor: 0,
             results: vec![],
             jump_path: vec![],
@@ -256,6 +257,7 @@ impl GarnishLangRuntime {
                         None => Result::Err(format!("No address given with put instruction.")),
                         Some(i ) => self.put(i)
                     }
+                    Instruction::EndExecution => self.end_execution()
                     // _ => Result::Err("Not Implemented".to_string()),
                 }
             }
@@ -270,6 +272,13 @@ mod tests {
     #[test]
     fn create_runtime() {
         GarnishLangRuntime::new();
+    }
+
+    #[test]
+    fn end_execution_inserted_for_new() {
+        let runtime = GarnishLangRuntime::new();
+
+        assert_eq!(runtime.get_instruction(0).unwrap().instruction, Instruction::EndExecution);
     }
 
     #[test]
@@ -320,7 +329,7 @@ mod tests {
 
         runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
 
-        assert_eq!(runtime.instructions.len(), 1);
+        assert_eq!(runtime.instructions.len(), 2);
     }
 
     #[test]
@@ -339,7 +348,7 @@ mod tests {
 
         runtime.add_instruction(Instruction::Put, None).unwrap();
 
-        assert_eq!(runtime.get_instruction(0).unwrap().get_instruction(), Instruction::Put);
+        assert_eq!(runtime.get_instruction(1).unwrap().get_instruction(), Instruction::Put);
     }
 
     #[test]
@@ -347,6 +356,7 @@ mod tests {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_instruction(Instruction::Put, None).unwrap();
+        runtime.advance_instruction().unwrap();
 
         assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::Put);
     }
@@ -359,6 +369,8 @@ mod tests {
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
         runtime.advance_instruction().unwrap();
+        runtime.advance_instruction().unwrap();
+
 
         assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::EndExpression);
     }
@@ -371,7 +383,7 @@ mod tests {
         runtime.add_instruction(Instruction::Put, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.set_instruction_cursor(2).unwrap();
+        runtime.set_instruction_cursor(3).unwrap();
 
         assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::PerformAddition);
     }
@@ -384,11 +396,11 @@ mod tests {
         runtime.add_instruction(Instruction::Put, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.set_instruction_cursor(2).unwrap();
+        runtime.set_instruction_cursor(3).unwrap();
 
         runtime.end_execution().unwrap();
 
-        assert_eq!(runtime.instruction_cursor, 3);
+        assert_eq!(runtime.instruction_cursor, 4);
     }
 
     #[test]
@@ -490,6 +502,7 @@ mod tests {
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
+        runtime.advance_instruction().unwrap();
         runtime.execute_current_instruction().unwrap();
 
         assert_eq!(runtime.data.get(0).unwrap().bytes, 30i64.to_le_bytes());
