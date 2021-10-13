@@ -25,6 +25,19 @@ impl GarnishLangRuntime {
     }
 
     pub fn add_data(&mut self, data: ExpressionData) -> Result<(), String> {
+        // Check if give a reference of reference
+        // flatten reference to point to non-Reference data
+        let data = match data.get_type() {
+            ExpressionDataType::Reference => match self.data.get(data.as_reference().unwrap()) {
+                None => Result::Err(format!("Reference given doesn't not exist in data."))?,
+                Some(d) => match d.get_type() {
+                    ExpressionDataType::Reference => d.clone(),
+                    _ => data
+                }
+            }
+            _ => data
+        };
+
         self.data.push(data);
         Ok(())
     }
@@ -246,6 +259,17 @@ mod tests {
         runtime.add_data(ExpressionData::integer(100)).unwrap();
 
         assert_eq!(runtime.data.len(), 1);
+    }
+
+    #[test]
+    fn add_reference_of_reference_falls_through() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(100)).unwrap();
+        runtime.add_data(ExpressionData::reference(0)).unwrap();
+        runtime.add_data(ExpressionData::reference(1)).unwrap();
+
+        assert_eq!(runtime.data.get(2).unwrap().as_reference().unwrap(), 0);
     }
 
     #[test]
