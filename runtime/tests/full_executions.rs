@@ -28,12 +28,9 @@ fn adding_numbers_with_sub_expression() {
                 println!("{:?}", e);
                 break;
             },
-            Ok(_) => match runtime.advance_instruction() {
-                Err(e) => {
-                    println!("{:?}", e);
-                    break;
-                }
-                Ok(_) => ()
+            Ok(data) => match data.get_state() {
+                GarnishLangRuntimeState::Running => (),
+                GarnishLangRuntimeState::End => break
             }
         }
     }

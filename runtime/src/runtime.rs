@@ -1,9 +1,10 @@
 use std::collections::HashMap;
 
 use log::{trace};
+use crate::GarnishLangRuntimeData;
 use crate::instruction::*;
 use crate::expression_data::*;
-use crate::result::{result, error, GarnishLangRuntimeResult};
+use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
 
 #[derive(Debug)]
 pub struct GarnishLangRuntime {
@@ -83,16 +84,6 @@ impl GarnishLangRuntime {
         match self.results.get(i) {
             None => None,
             Some(index) => self.data.get(*index)
-        }
-    }
-
-    pub fn advance_instruction(&mut self) -> GarnishLangRuntimeResult {
-        match self.instruction_cursor + 1 >= self.instructions.len() {
-            true => Err(error(format!("No instructions left."))),
-            false => {
-                self.instruction_cursor += 1;
-                Ok(())
-            }
         }
     }
 
@@ -294,32 +285,43 @@ impl GarnishLangRuntime {
         }
     }
 
-    pub fn execute_current_instruction(&mut self) -> GarnishLangRuntimeResult {
+    pub fn execute_current_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
         match self.instructions.get(self.instruction_cursor) {
-            None => Err(error(format!("No instructions left."))),
+            None => Err(error(format!("No instructions left.")))?,
             Some(instruction_data) => {
                 match instruction_data.instruction {
-                    Instruction::PerformAddition => self.perform_addition(),
-                    Instruction::EndExpression => self.end_expression(),
+                    Instruction::PerformAddition => self.perform_addition()?,
+                    Instruction::EndExpression => self.end_expression()?,
                     Instruction::ExecuteExpression => match instruction_data.data {
-                        None => Err(error(format!("No address given with execute expression instruction."))),
-                        Some(i ) => self.execute_expression(i)
+                        None => Err(error(format!("No address given with execute expression instruction.")))?,
+                        Some(i ) => self.execute_expression(i)?
                     }
                     Instruction::ExecuteIfTrue => match instruction_data.data {
-                        None => Err(error(format!("No address given with execute expression instruction."))),
-                        Some(i ) => self.execute_if_true(i)
+                        None => Err(error(format!("No address given with execute expression instruction.")))?,
+                        Some(i ) => self.execute_if_true(i)?
                     }
                     Instruction::ExecuteIfFalse => match instruction_data.data {
-                        None => Err(error(format!("No address given with execute expression instruction."))),
-                        Some(i ) => self.execute_if_false(i)
+                        None => Err(error(format!("No address given with execute expression instruction.")))?,
+                        Some(i ) => self.execute_if_false(i)?
                     }
                     Instruction::Put => match instruction_data.data {
-                        None => Err(error(format!("No address given with put instruction."))),
-                        Some(i ) => self.put(i)
+                        None => Err(error(format!("No address given with put instruction.")))?,
+                        Some(i ) => self.put(i)?
                     }
-                    Instruction::EndExecution => self.end_execution()
-                    // _ => Result::Err("Not Implemented".to_string()),
+                    Instruction::EndExecution => self.end_execution()?
                 }
+            }
+        }
+
+        self.advance_instruction()
+    }
+
+    fn advance_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
+        match self.instruction_cursor + 1 >= self.instructions.len() {
+            true => Ok(GarnishLangRuntimeData::new(GarnishLangRuntimeState::End)),
+            false => {
+                self.instruction_cursor += 1;
+                Ok(GarnishLangRuntimeData::new(GarnishLangRuntimeState::Running))
             }
         }
     }

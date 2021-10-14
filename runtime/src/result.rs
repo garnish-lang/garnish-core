@@ -1,8 +1,14 @@
 pub type GarnishLangRuntimeResult<T=()> = Result<T, GarnishLangRuntimeError>;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum GarnishLangRuntimeState {
+    Running,
+    End
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct GarnishLangRuntimeData {
-    message: String,
+    state: GarnishLangRuntimeState,
 }
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -11,12 +17,12 @@ pub struct GarnishLangRuntimeError {
 }
 
 impl GarnishLangRuntimeData {
-    pub fn new(message: String) -> Self {
-        return GarnishLangRuntimeData { message }
+    pub fn new(state: GarnishLangRuntimeState) -> Self {
+        return GarnishLangRuntimeData { state }
     }
 
-    pub fn get_message(&self) -> &String {
-        &self.message
+    pub fn get_state(&self) -> GarnishLangRuntimeState {
+        self.state
     }
 }
 
@@ -28,10 +34,6 @@ impl GarnishLangRuntimeError {
     pub fn get_message(&self) -> &String {
         &self.message
     }
-}
-
-pub fn result() -> GarnishLangRuntimeData {
-    GarnishLangRuntimeData::new("".to_string())
 }
 
 pub fn error(message: String) -> GarnishLangRuntimeError {
