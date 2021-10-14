@@ -1,28 +1,40 @@
-use std::{convert::TryInto};
+use std::{collections::HashMap, convert::TryInto};
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ExpressionDataType {
     Unit = 1,
     Reference,
-    Integer
+    Integer,
+    Symbol,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ExpressionData {
     pub(crate) data_type: ExpressionDataType,
-    pub(crate) bytes: Vec<u8>
+    pub(crate) bytes: Vec<u8>,
+    pub(crate) symbols: HashMap<String, usize>,
 }
 
 impl ExpressionData {
+    fn new(data_type: ExpressionDataType, bytes: Vec<u8>) -> ExpressionData {
+        ExpressionData { data_type, bytes, symbols: HashMap::new() }
+    }
+
     pub fn unit() -> ExpressionData {
-        ExpressionData { data_type: ExpressionDataType::Unit, bytes: vec![] }
+        ExpressionData::new(ExpressionDataType::Unit, vec![])
     }
 
     pub fn integer(i: i64) -> ExpressionData {
-        ExpressionData { data_type: ExpressionDataType::Integer, bytes: i.to_le_bytes()[..].to_vec() }
+        ExpressionData::new(ExpressionDataType::Integer, i.to_le_bytes()[..].to_vec())
     }
 
     pub fn reference(r: usize) -> ExpressionData {
-        ExpressionData { data_type: ExpressionDataType::Reference, bytes: r.to_le_bytes()[..].to_vec() }
+        ExpressionData::new(ExpressionDataType::Reference, r.to_le_bytes()[..].to_vec())
+    }
+
+    pub fn symbol_from_string(s: String) -> ExpressionData {
+        let mut d = ExpressionData::new(ExpressionDataType::Symbol, 1usize.to_le_bytes().to_vec());
+        d.symbols.insert(s, 1);
+        d
     }
 
     pub fn get_type(&self) -> ExpressionDataType {
@@ -53,23 +65,37 @@ mod tests {
     #[test]
     fn get_data_type_expression_data() {
         let d = ExpressionData::unit();
+
         assert_eq!(d.get_type(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn integer_expression_data() {
         let d = ExpressionData::integer(1234567890);
+
+        assert_eq!(d.data_type, ExpressionDataType::Integer);
         assert_eq!(d.bytes, 1234567890i64.to_le_bytes());
     }
 
     #[test]
     fn reference_expression_data() {
         let d = ExpressionData::reference(1234567890);
+
+        assert_eq!(d.data_type, ExpressionDataType::Reference);
         assert_eq!(d.bytes, 1234567890usize.to_le_bytes());
     }
 
     #[test]
     fn expression_data_as_integer() {
         assert_eq!(ExpressionData::integer(1234567890).as_integer().unwrap(), 1234567890)
+    }
+
+    #[test]
+    fn symbol_from_string() {
+        let d = ExpressionData::symbol_from_string("my_symbol".to_string());
+
+        assert_eq!(d.data_type, ExpressionDataType::Symbol);
+        assert_eq!(d.bytes, 1usize.to_le_bytes());
+        assert_eq!(*d.symbols.get("my_symbol").unwrap(), 1);
     }
 }
