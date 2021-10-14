@@ -1,4 +1,6 @@
-use std::{collections::HashMap, convert::TryInto};
+use std::{collections::HashMap, convert::TryInto, hash::Hasher};
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash};
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ExpressionDataType {
     Unit = 1,
@@ -11,7 +13,7 @@ pub enum ExpressionDataType {
 pub struct ExpressionData {
     pub(crate) data_type: ExpressionDataType,
     pub(crate) bytes: Vec<u8>,
-    pub(crate) symbols: HashMap<String, usize>,
+    pub(crate) symbols: HashMap<String, u64>,
 }
 
 impl ExpressionData {
@@ -32,8 +34,12 @@ impl ExpressionData {
     }
 
     pub fn symbol_from_string(s: String) -> ExpressionData {
-        let mut d = ExpressionData::new(ExpressionDataType::Symbol, 1usize.to_le_bytes().to_vec());
-        d.symbols.insert(s, 1);
+        let mut h = DefaultHasher::new();
+        s.hash(&mut h);
+        let hv = h.finish();
+
+        let mut d = ExpressionData::new(ExpressionDataType::Symbol, hv.to_le_bytes().to_vec());
+        d.symbols.insert(s, hv);
         d
     }
 
@@ -60,6 +66,9 @@ impl ExpressionData {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
     use crate::{ExpressionData, ExpressionDataType};
 
     #[test]
@@ -94,8 +103,12 @@ mod tests {
     fn symbol_from_string() {
         let d = ExpressionData::symbol_from_string("my_symbol".to_string());
 
+        let mut h = DefaultHasher::new();
+        "my_symbol".hash(&mut h);
+        let hv = h.finish();
+
         assert_eq!(d.data_type, ExpressionDataType::Symbol);
-        assert_eq!(d.bytes, 1usize.to_le_bytes());
-        assert_eq!(*d.symbols.get("my_symbol").unwrap(), 1);
+        assert_eq!(d.bytes, hv.to_le_bytes());
+        assert_eq!(*d.symbols.get("my_symbol").unwrap(), hv);
     }
 }
