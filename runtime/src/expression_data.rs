@@ -1,6 +1,6 @@
-use std::{collections::HashMap, convert::TryInto, hash::Hasher};
 use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash};
+use std::hash::Hash;
+use std::{collections::HashMap, convert::TryInto, hash::Hasher};
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ExpressionDataType {
     Unit = 1,
@@ -18,7 +18,11 @@ pub struct ExpressionData {
 
 impl ExpressionData {
     fn new(data_type: ExpressionDataType, bytes: Vec<u8>) -> ExpressionData {
-        ExpressionData { data_type, bytes, symbols: HashMap::new() }
+        ExpressionData {
+            data_type,
+            bytes,
+            symbols: HashMap::new(),
+        }
     }
 
     pub fn unit() -> ExpressionData {
@@ -57,7 +61,7 @@ impl ExpressionData {
         let (bytes, _) = self.bytes.split_at(std::mem::size_of::<i64>());
         Ok(i64::from_le_bytes(match bytes.try_into() {
             Ok(v) => v,
-            Err(e) => Result::Err(e.to_string())?
+            Err(e) => Result::Err(e.to_string())?,
         }))
     }
 
@@ -65,7 +69,7 @@ impl ExpressionData {
         let (bytes, _) = self.bytes.split_at(std::mem::size_of::<usize>());
         Ok(usize::from_le_bytes(match bytes.try_into() {
             Ok(v) => v,
-            Err(e) => Result::Err(e.to_string())?
+            Err(e) => Result::Err(e.to_string())?,
         }))
     }
 
@@ -73,7 +77,7 @@ impl ExpressionData {
         let (bytes, _) = self.bytes.split_at(std::mem::size_of::<u64>());
         Ok(u64::from_le_bytes(match bytes.try_into() {
             Ok(v) => v,
-            Err(e) => Result::Err(e.to_string())?
+            Err(e) => Result::Err(e.to_string())?,
         }))
     }
 
@@ -81,7 +85,7 @@ impl ExpressionData {
         // calling this method assumes only one symbol available
         match self.symbols.keys().next() {
             None => Err("No symbols in expression data".to_string()),
-            Some(v) => Ok(v.clone())
+            Some(v) => Ok(v.clone()),
         }
     }
 }
@@ -118,7 +122,10 @@ mod tests {
 
     #[test]
     fn expression_data_as_integer() {
-        assert_eq!(ExpressionData::integer(1234567890).as_integer().unwrap(), 1234567890)
+        assert_eq!(
+            ExpressionData::integer(1234567890).as_integer().unwrap(),
+            1234567890
+        )
     }
 
     #[test]

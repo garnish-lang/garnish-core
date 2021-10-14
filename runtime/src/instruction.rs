@@ -13,7 +13,7 @@ pub enum Instruction {
 #[derive(Clone, Debug)]
 pub struct InstructionData {
     pub(crate) instruction: Instruction,
-    pub(crate) data: Option<usize>
+    pub(crate) data: Option<usize>,
 }
 
 impl InstructionData {
@@ -27,6 +27,4 @@ impl InstructionData {
 }
 
 #[cfg(test)]
-mod tests {
-
-}
+mod tests {}

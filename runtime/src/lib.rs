@@ -1,9 +1,9 @@
-mod runtime;
-mod instruction;
 mod expression_data;
+mod instruction;
 mod result;
+mod runtime;
 
-pub use runtime::*;
-pub use instruction::*;
 pub use expression_data::*;
+pub use instruction::*;
 pub use result::*;
+pub use runtime::*;

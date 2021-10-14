@@ -12,13 +12,23 @@ fn adding_numbers_with_sub_expression() {
 
     runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
     runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
-    runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
-    runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+    runtime
+        .add_instruction(Instruction::PerformAddition, None)
+        .unwrap();
+    runtime
+        .add_instruction(Instruction::EndExpression, None)
+        .unwrap();
 
     runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
-    runtime.add_instruction(Instruction::ExecuteExpression, Some(1)).unwrap();
-    runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
-    runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+    runtime
+        .add_instruction(Instruction::ExecuteExpression, Some(1))
+        .unwrap();
+    runtime
+        .add_instruction(Instruction::PerformAddition, None)
+        .unwrap();
+    runtime
+        .add_instruction(Instruction::EndExpression, None)
+        .unwrap();
 
     runtime.set_instruction_cursor(4).unwrap();
 
@@ -27,11 +37,11 @@ fn adding_numbers_with_sub_expression() {
             Err(e) => {
                 println!("{:?}", e);
                 break;
-            },
+            }
             Ok(data) => match data.get_state() {
                 GarnishLangRuntimeState::Running => (),
-                GarnishLangRuntimeState::End => break
-            }
+                GarnishLangRuntimeState::End => break,
+            },
         }
     }
 
