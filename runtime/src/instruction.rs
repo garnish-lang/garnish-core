@@ -6,6 +6,7 @@ pub enum Instruction {
     ExecuteExpression,
     PerformAddition,
     EndExecution,
+    ExecuteIfTrue,
 }
 
 #[derive(Clone, Debug)]
