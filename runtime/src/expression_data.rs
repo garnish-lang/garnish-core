@@ -26,20 +26,26 @@ impl ExpressionData {
     }
 
     pub fn integer(i: i64) -> ExpressionData {
-        ExpressionData::new(ExpressionDataType::Integer, i.to_le_bytes()[..].to_vec())
+        ExpressionData::new(ExpressionDataType::Integer, i.to_le_bytes().to_vec())
     }
 
     pub fn reference(r: usize) -> ExpressionData {
-        ExpressionData::new(ExpressionDataType::Reference, r.to_le_bytes()[..].to_vec())
+        ExpressionData::new(ExpressionDataType::Reference, r.to_le_bytes().to_vec())
     }
 
-    pub fn symbol_from_string(s: String) -> ExpressionData {
+    pub fn symbol(name: &String, value: u64) -> ExpressionData {
+        let mut d = ExpressionData::new(ExpressionDataType::Symbol, value.to_le_bytes().to_vec());
+        d.symbols.insert(name.clone(), value);
+        d
+    }
+
+    pub fn symbol_from_string(s: &String) -> ExpressionData {
         let mut h = DefaultHasher::new();
         s.hash(&mut h);
         let hv = h.finish();
 
         let mut d = ExpressionData::new(ExpressionDataType::Symbol, hv.to_le_bytes().to_vec());
-        d.symbols.insert(s, hv);
+        d.symbols.insert(s.clone(), hv);
         d
     }
 
@@ -100,8 +106,17 @@ mod tests {
     }
 
     #[test]
+    fn symbol() {
+        let d = ExpressionData::symbol(&"false".to_string(), 0);
+
+        assert_eq!(d.data_type, ExpressionDataType::Symbol);
+        assert_eq!(d.bytes, 0u64.to_le_bytes());
+        assert_eq!(*d.symbols.get("false").unwrap(), 0);
+    }
+
+    #[test]
     fn symbol_from_string() {
-        let d = ExpressionData::symbol_from_string("my_symbol".to_string());
+        let d = ExpressionData::symbol_from_string(&"my_symbol".to_string());
 
         let mut h = DefaultHasher::new();
         "my_symbol".hash(&mut h);
