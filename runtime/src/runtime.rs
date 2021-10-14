@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use log::{trace};
 use crate::instruction::*;
 use crate::expression_data::*;
@@ -11,6 +13,7 @@ pub struct GarnishLangRuntime {
     results: Vec<usize>,
     jump_path: Vec<usize>,
     inputs: Vec<usize>,
+    symbols: HashMap<String, u64>,
 }
 
 impl GarnishLangRuntime {
@@ -21,7 +24,8 @@ impl GarnishLangRuntime {
             instruction_cursor: 1,
             results: vec![],
             jump_path: vec![],
-            inputs: vec![]
+            inputs: vec![],
+            symbols: HashMap::new()
         }
     }
 
@@ -35,6 +39,10 @@ impl GarnishLangRuntime {
                     ExpressionDataType::Reference => d.clone(),
                     _ => data
                 }
+            }
+            ExpressionDataType::Symbol => {
+                self.symbols.extend(data.symbols.clone());
+                data
             }
             _ => data
         };
@@ -514,5 +522,19 @@ mod tests {
         runtime.execute_current_instruction().unwrap();
 
         assert_eq!(runtime.data.get(0).unwrap().bytes, 30i64.to_le_bytes());
+    }
+
+    #[test]
+    fn add_symbol() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
+
+        let false_sym = runtime.symbols.get("false").unwrap();
+        let false_data = runtime.data.get(0).unwrap();
+
+        assert_eq!(false_sym, &0);
+        assert_eq!(false_data.as_symbol_name().unwrap(), "false".to_string());
+        assert_eq!(false_data.as_symbol_value().unwrap(), 0u64);
     }
 }

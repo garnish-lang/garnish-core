@@ -68,6 +68,22 @@ impl ExpressionData {
             Err(e) => Result::Err(e.to_string())?
         }))
     }
+
+    pub fn as_symbol_value(&self) -> Result<u64, String> {
+        let (bytes, _) = self.bytes.split_at(std::mem::size_of::<u64>());
+        Ok(u64::from_le_bytes(match bytes.try_into() {
+            Ok(v) => v,
+            Err(e) => Result::Err(e.to_string())?
+        }))
+    }
+
+    pub fn as_symbol_name(&self) -> Result<String, String> {
+        // calling this method assumes only one symbol available
+        match self.symbols.keys().next() {
+            None => Err("No symbols in expression data".to_string()),
+            Some(v) => Ok(v.clone())
+        }
+    }
 }
 
 #[cfg(test)]
@@ -125,5 +141,23 @@ mod tests {
         assert_eq!(d.data_type, ExpressionDataType::Symbol);
         assert_eq!(d.bytes, hv.to_le_bytes());
         assert_eq!(*d.symbols.get("my_symbol").unwrap(), hv);
+    }
+
+    #[test]
+    fn as_symbol_value() {
+        let d = ExpressionData::symbol_from_string(&"my_symbol".to_string());
+
+        let mut h = DefaultHasher::new();
+        "my_symbol".hash(&mut h);
+        let hv = h.finish();
+
+        assert_eq!(d.as_symbol_value().unwrap(), hv);
+    }
+
+    #[test]
+    fn as_symbol_name() {
+        let d = ExpressionData::symbol_from_string(&"my_symbol".to_string());
+
+        assert_eq!(d.as_symbol_name().unwrap(), "my_symbol".to_string());
     }
 }
