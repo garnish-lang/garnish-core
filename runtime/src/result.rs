@@ -1,4 +1,4 @@
-pub type GarnishLangRuntimeResult<T=()> = Result<GarnishLangRuntimeData<T>, GarnishLangRuntimeError>;
+pub type GarnishLangRuntimeResult<T=()> = Result<T, GarnishLangRuntimeError>;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct GarnishLangRuntimeData<T> {

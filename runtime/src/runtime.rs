@@ -48,17 +48,17 @@ impl GarnishLangRuntime {
         };
 
         self.data.push(data);
-        Ok(result())
+        Ok(())
     }
 
     pub fn add_reference_data(&mut self, reference: usize) -> GarnishLangRuntimeResult{
         self.data.push(ExpressionData::reference(reference));
-        Ok(result())
+        Ok(())
     }
 
     pub fn add_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> GarnishLangRuntimeResult {
         self.instructions.push(InstructionData { instruction, data });
-        Ok(result())
+        Ok(())
     }
 
     pub fn add_input_reference(&mut self, reference: usize) -> GarnishLangRuntimeResult {
@@ -66,7 +66,7 @@ impl GarnishLangRuntime {
             false => Err(error(format!("Input reference beyond bounds of data."))),
             true => {
                 self.inputs.push(reference);
-                Ok(result())
+                Ok(())
             }
         }
     }
@@ -91,7 +91,7 @@ impl GarnishLangRuntime {
             true => Err(error(format!("No instructions left."))),
             false => {
                 self.instruction_cursor += 1;
-                Ok(result())
+                Ok(())
             }
         }
     }
@@ -101,7 +101,7 @@ impl GarnishLangRuntime {
             true => Err(error(format!("Instruction doesn't exist."))),
             false => {
                 self.instruction_cursor = i;
-                Ok(result())
+                Ok(())
             }
         }
     }
@@ -110,7 +110,7 @@ impl GarnishLangRuntime {
         trace!("Instruction - End Execution");
         self.instruction_cursor = self.instructions.len();
 
-        Ok(result())
+        Ok(())
     }
 
     pub fn put(&mut self, i: usize) -> GarnishLangRuntimeResult {
@@ -135,7 +135,7 @@ impl GarnishLangRuntime {
             false => Err(error(format!("No data available to push as input.")))?
         });
 
-        Ok(result())
+        Ok(())
     }
 
     pub fn put_result(&mut self) -> GarnishLangRuntimeResult {
@@ -191,7 +191,7 @@ impl GarnishLangRuntime {
 
                 self.add_data(ExpressionData::integer(left + right))?;
 
-                Ok(result())
+                Ok(())
             }
         }
     }
@@ -203,7 +203,7 @@ impl GarnishLangRuntime {
             true => {
                 self.jump_path.push(self.instruction_cursor);
                 self.instruction_cursor = index - 1;
-                Ok(result())
+                Ok(())
             }
         }
     }
@@ -233,7 +233,7 @@ impl GarnishLangRuntime {
                         }
                     }
                 };
-                Ok(result())
+                Ok(())
             }
         }
     }
@@ -263,7 +263,7 @@ impl GarnishLangRuntime {
                         _ => ()
                     }
                 };
-                Ok(result())
+                Ok(())
             }
         }
     }
@@ -280,7 +280,7 @@ impl GarnishLangRuntime {
             }
         }
 
-        Ok(result())
+        Ok(())
     }
 
     pub fn output_result(&mut self) -> GarnishLangRuntimeResult {
@@ -289,7 +289,7 @@ impl GarnishLangRuntime {
             0 => Err(error(format!("Not enough data to perform output result operation."))),
             n => {
                 self.results.push(n - 1);
-                Ok(result())
+                Ok(())
             }
         }
     }
