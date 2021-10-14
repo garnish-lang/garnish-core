@@ -25,12 +25,12 @@ fn adding_numbers_with_sub_expression() {
     loop {
         match runtime.execute_current_instruction() {
             Err(e) => {
-                println!("{}", e);
+                println!("{:?}", e);
                 break;
             },
             Ok(_) => match runtime.advance_instruction() {
                 Err(e) => {
-                    println!("{}", e);
+                    println!("{:?}", e);
                     break;
                 }
                 Ok(_) => ()

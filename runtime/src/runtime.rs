@@ -1,6 +1,7 @@
 use log::{trace};
 use crate::instruction::*;
 use crate::expression_data::*;
+use crate::result::{result, error, GarnishLangRuntimeResult};
 
 #[derive(Debug)]
 pub struct GarnishLangRuntime {
@@ -24,12 +25,12 @@ impl GarnishLangRuntime {
         }
     }
 
-    pub fn add_data(&mut self, data: ExpressionData) -> Result<(), String> {
+    pub fn add_data(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult {
         // Check if give a reference of reference
         // flatten reference to point to non-Reference data
         let data = match data.get_type() {
             ExpressionDataType::Reference => match self.data.get(data.as_reference().unwrap()) {
-                None => Result::Err(format!("Reference given doesn't not exist in data."))?,
+                None => Err(error(format!("Reference given doesn't not exist in data.")))?,
                 Some(d) => match d.get_type() {
                     ExpressionDataType::Reference => d.clone(),
                     _ => data
@@ -39,25 +40,25 @@ impl GarnishLangRuntime {
         };
 
         self.data.push(data);
-        Ok(())
+        Ok(result())
     }
 
-    pub fn add_reference_data(&mut self, reference: usize) -> Result<(), String> {
+    pub fn add_reference_data(&mut self, reference: usize) -> GarnishLangRuntimeResult{
         self.data.push(ExpressionData::reference(reference));
-        Ok(())
+        Ok(result())
     }
 
-    pub fn add_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> Result<(), String> {
+    pub fn add_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> GarnishLangRuntimeResult {
         self.instructions.push(InstructionData { instruction, data });
-        Ok(())
+        Ok(result())
     }
 
-    pub fn add_input_reference(&mut self, reference: usize) -> Result<(), String> {
+    pub fn add_input_reference(&mut self, reference: usize) -> GarnishLangRuntimeResult {
         match reference < self.data.len() {
-            false => Result::Err("Input reference beyond bounds of data.".to_owned()),
+            false => Err(error(format!("Input reference beyond bounds of data."))),
             true => {
                 self.inputs.push(reference);
-                Ok(())
+                Ok(result())
             }
         }
     }
@@ -77,117 +78,129 @@ impl GarnishLangRuntime {
         }
     }
 
-    pub fn advance_instruction(&mut self) -> Result<usize, String> {
+    pub fn advance_instruction(&mut self) -> GarnishLangRuntimeResult {
         match self.instruction_cursor + 1 >= self.instructions.len() {
-            true => Result::Err("No instructions left.".to_string()),
+            true => Err(error(format!("No instructions left."))),
             false => {
                 self.instruction_cursor += 1;
-                Ok(self.instruction_cursor)
+                Ok(result())
             }
         }
     }
 
-    pub fn set_instruction_cursor(&mut self, i: usize) -> Result<usize, String> {
+    pub fn set_instruction_cursor(&mut self, i: usize) -> GarnishLangRuntimeResult {
         match i >= self.instructions.len() {
-            true => Result::Err("Instruction doesn't exist.".to_string()),
+            true => Err(error(format!("Instruction doesn't exist."))),
             false => {
                 self.instruction_cursor = i;
-                Ok(self.instruction_cursor)
+                Ok(result())
             }
         }
     }
 
-    pub fn end_execution(&mut self) -> Result<(), String> {
+    pub fn end_execution(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - End Execution");
         self.instruction_cursor = self.instructions.len();
 
-        Ok(())
+        Ok(result())
     }
 
-    pub fn put(&mut self, i: usize) -> Result<(), String> {
+    pub fn put(&mut self, i: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put | Data - {:?}", i);
         self.add_reference_data(i)
     }
 
-    pub fn put_input(&mut self) -> Result<(), String> {
+    pub fn put_input(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put Input");
 
         self.add_reference_data(match self.inputs.last() {
-            None => Result::Err(format!("No inputs available to put reference."))?,
+            None => Err(error(format!("No inputs available to put reference.")))?,
             Some(r) => *r
         })
     }
 
-    pub fn push_input(&mut self) -> Result<(), String> {
+    pub fn push_input(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Push Input");
 
         self.inputs.push(match self.data.len() > 0 {
             true => self.data.len() - 1,
-            false => Result::Err(format!("No data available to push as input."))?
+            false => Err(error(format!("No data available to push as input.")))?
         });
 
-        Ok(())
+        Ok(result())
     }
 
-    pub fn put_result(&mut self) -> Result<(), String> {
+    pub fn put_result(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put Result");
 
         self.add_reference_data(match self.results.last() {
-            None => Result::Err(format!("No inputs available to put reference."))?,
+            None => Err(error(format!("No inputs available to put reference.")))?,
             Some(r) => *r
         })
     }
 
-    pub fn perform_addition(&mut self) -> Result<(), String> {
+    pub fn perform_addition(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Addition");
         match self.data.len() {
-            0 | 1 => Result::Err("Not enough data to perform addition operation.".to_string()),
+            0 | 1 => Err(error(format!("Not enough data to perform addition operation."))),
             // 2 and greater
             _ => {
                 let right_data = &self.data.pop().unwrap();
                 let left_data = &self.data.pop().unwrap();
 
                 let right_data = match right_data.get_type() {
-                    ExpressionDataType::Reference => match self.data.get(right_data.as_reference()?) {
-                        None => Result::Err(format!("Reference value doesn't reference existing value."))?,
+                    ExpressionDataType::Reference => match self.data.get(match right_data.as_reference() {
+                        Ok(v) => v,
+                        Err(e) => Err(error(e))?
+                    }) {
+                        None => Err(error(format!("Reference value doesn't reference existing value.")))?,
                         Some(data) => data
                     },
                     _ => right_data
                 };
 
                 let left_data = match left_data.get_type() {
-                    ExpressionDataType::Reference => match self.data.get(left_data.as_reference()?) {
-                        None => Result::Err(format!("Reference value doesn't reference existing value."))?,
+                    ExpressionDataType::Reference => match self.data.get(match left_data.as_reference() {
+                        Ok(v) => v,
+                        Err(e) => Err(error(e))?
+                    }) {
+                        None => Err(error(format!("Reference value doesn't reference existing value.")))?,
                         Some(data) => data
                     },
                     _ => left_data
                 };
 
-                let left = left_data.as_integer()?;
-                let right = right_data.as_integer()?;
+                let left = match left_data.as_integer() {
+                    Ok(v) => v,
+                    Err(e) => Err(error(e))?
+                };
+                let right = match right_data.as_integer() {
+                    Ok(v) => v,
+                    Err(e) => Err(error(e))?
+                };
 
                 trace!("Performing {:?} + {:?}", right, left);
 
                 self.add_data(ExpressionData::integer(left + right))?;
 
-                Ok(())
+                Ok(result())
             }
         }
     }
 
-    pub fn execute_expression(&mut self, index: usize) -> Result<(), String> {
+    pub fn execute_expression(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Execute Expression | Data - {:?}", index);
         match index > 0 && index <= self.instructions.len() {
-            false => Result::Err("Given index is out of bounds.".to_string()),
+            false => Err(error(format!("Given index is out of bounds."))),
             true => {
                 self.jump_path.push(self.instruction_cursor);
                 self.instruction_cursor = index - 1;
-                Ok(())
+                Ok(result())
             }
         }
     }
 
-    pub fn end_expression(&mut self) -> Result<(), String> {
+    pub fn end_expression(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - End Expression");
         match self.jump_path.pop() {
             None => {
@@ -199,33 +212,33 @@ impl GarnishLangRuntime {
             }
         }
 
-        Ok(())
+        Ok(result())
     }
 
-    pub fn output_result(&mut self) -> Result<(), String> {
+    pub fn output_result(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Output Result");
         match self.data.len() {
-            0 => Result::Err("Not enough data to perform output result operation.".to_string()),
+            0 => Err(error(format!("Not enough data to perform output result operation."))),
             n => {
                 self.results.push(n - 1);
-                Ok(())
+                Ok(result())
             }
         }
     }
 
-    pub fn execute_current_instruction(&mut self) -> Result<(), String> {
+    pub fn execute_current_instruction(&mut self) -> GarnishLangRuntimeResult {
         match self.instructions.get(self.instruction_cursor) {
-            None => Result::Err("No instructions left.".to_string()),
+            None => Err(error(format!("No instructions left."))),
             Some(instruction_data) => {
                 match instruction_data.instruction {
                     Instruction::PerformAddition => self.perform_addition(),
                     Instruction::EndExpression => self.end_expression(),
                     Instruction::ExecuteExpression => match instruction_data.data {
-                        None => Result::Err(format!("No address given with execute expression instruction.")),
+                        None => Err(error(format!("No address given with execute expression instruction."))),
                         Some(i ) => self.execute_expression(i)
                     }
                     Instruction::Put => match instruction_data.data {
-                        None => Result::Err(format!("No address given with put instruction.")),
+                        None => Err(error(format!("No address given with put instruction."))),
                         Some(i ) => self.put(i)
                     }
                     Instruction::EndExecution => self.end_execution()

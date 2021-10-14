@@ -1,5 +1,4 @@
 use std::{convert::TryInto};
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ExpressionDataType {
     Unit = 1,
@@ -71,6 +70,6 @@ mod tests {
 
     #[test]
     fn expression_data_as_integer() {
-        assert_eq!(ExpressionData::reference(1234567890).as_integer().unwrap(), 1234567890)
+        assert_eq!(ExpressionData::integer(1234567890).as_integer().unwrap(), 1234567890)
     }
 }
