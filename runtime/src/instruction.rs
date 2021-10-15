@@ -12,6 +12,7 @@ pub enum Instruction {
     EndExecution,
     ExecuteIfTrue,
     ExecuteIfFalse,
+    EqualityComparison,
 }
 
 #[derive(Clone, Debug)]

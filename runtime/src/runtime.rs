@@ -306,6 +306,48 @@ impl GarnishLangRuntime {
         }
     }
 
+    pub fn equality_comparison(&mut self) -> GarnishLangRuntimeResult {
+        trace!("Instruction - Equality Comparison");
+        match self.data.len() {
+            0 | 1 => Err(error(format!("Not enough data to perform addition operation."))),
+            // 2 and greater
+            _ => {
+                let right_addr = self.addr_of_raw_data(self.data.len() - 1)?;
+                let left_addr = self.addr_of_raw_data(self.data.len() - 2)?;
+                let right_data = self.get_data(right_addr)?;
+                let left_data = self.get_data(left_addr)?;
+
+                let result = match (left_data.get_type(), right_data.get_type()) {
+                    (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+                        let left = match left_data.as_integer() {
+                            Ok(v) => v,
+                            Err(e) => Err(error(e))?,
+                        };
+                        let right = match right_data.as_integer() {
+                            Ok(v) => v,
+                            Err(e) => Err(error(e))?,
+                        };
+
+                        trace!("Comparing {:?} == {:?}", left, right);
+
+                        left == right
+                    }
+                    (l, r) => Err(error(format!("Comparison between types not implemented {:?} and {:?}", l, r)))?,
+                };
+
+                self.data.pop();
+                self.data.pop();
+
+                self.add_data(match result {
+                    true => ExpressionData::symbol(&"true".to_string(), 1),
+                    false => ExpressionData::symbol(&"false".to_string(), 0),
+                })?;
+
+                Ok(())
+            }
+        }
+    }
+
     pub fn execute_current_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
         match self.instructions.get(self.instruction_cursor) {
             None => Err(error(format!("No instructions left.")))?,
@@ -315,6 +357,7 @@ impl GarnishLangRuntime {
                 Instruction::PutResult => self.put_result()?,
                 Instruction::PushInput => self.push_input()?,
                 Instruction::EndExpression => self.end_expression()?,
+                Instruction::EqualityComparison => self.equality_comparison()?,
                 Instruction::ExecuteExpression => match instruction_data.data {
                     None => Err(error(format!("No address given with execute expression instruction.")))?,
                     Some(i) => self.execute_expression(i)?,
@@ -817,5 +860,33 @@ mod tests {
         let result = runtime.remove_data(10);
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn equality_true() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+
+        runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.data.get(0).unwrap().as_symbol_value().unwrap(), 1);
+    }
+
+    #[test]
+    fn equality_false() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.data.get(0).unwrap().as_symbol_value().unwrap(), 0);
     }
 }
