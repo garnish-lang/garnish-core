@@ -158,34 +158,10 @@ impl GarnishLangRuntime {
             0 | 1 => Err(error(format!("Not enough data to perform addition operation."))),
             // 2 and greater
             _ => {
-                let right_data = &self.data.pop().unwrap();
-                let left_data = &self.data.pop().unwrap();
-
-                let right_data = match right_data.get_type() {
-                    ExpressionDataType::Reference => {
-                        match self.data.get(match right_data.as_reference() {
-                            Ok(v) => v,
-                            Err(e) => Err(error(e))?,
-                        }) {
-                            None => Err(error(format!("Reference value doesn't reference existing value.")))?,
-                            Some(data) => data,
-                        }
-                    }
-                    _ => right_data,
-                };
-
-                let left_data = match left_data.get_type() {
-                    ExpressionDataType::Reference => {
-                        match self.data.get(match left_data.as_reference() {
-                            Ok(v) => v,
-                            Err(e) => Err(error(e))?,
-                        }) {
-                            None => Err(error(format!("Reference value doesn't reference existing value.")))?,
-                            Some(data) => data,
-                        }
-                    }
-                    _ => left_data,
-                };
+                let right_addr = self.addr_of_raw_data(self.data.len() - 1)?;
+                let left_addr = self.addr_of_raw_data(self.data.len() - 2)?;
+                let right_data = self.get_data(right_addr)?;
+                let left_data = self.get_data(left_addr)?;
 
                 let left = match left_data.as_integer() {
                     Ok(v) => v,
@@ -197,6 +173,9 @@ impl GarnishLangRuntime {
                 };
 
                 trace!("Performing {:?} + {:?}", right, left);
+
+                self.data.pop();
+                self.data.pop();
 
                 self.add_data(ExpressionData::integer(left + right))?;
 
@@ -222,25 +201,34 @@ impl GarnishLangRuntime {
         match index > 0 && index <= self.instructions.len() {
             false => Err(error(format!("Given index is out of bounds."))),
             true => {
-                match self.data.last() {
-                    None => Err(error(format!("No data available.")))?,
-                    Some(d) => match d.get_type() {
-                        ExpressionDataType::Symbol => match d.as_symbol_value() {
-                            Err(e) => Err(error(e))?,
-                            Ok(v) => match v {
-                                0 => (),
-                                _ => {
-                                    self.jump_path.push(self.instruction_cursor);
-                                    self.instruction_cursor = index - 1;
-                                }
-                            },
+                let i = self.addr_of_raw_data(self.data.len() - 1)?;
+                let d = self.get_data(i)?;
+                match d.get_type() {
+                    ExpressionDataType::Symbol => match d.as_symbol_value() {
+                        Err(e) => Err(error(e))?,
+                        Ok(v) => match v {
+                            0 => (),
+                            _ => {
+                                trace!(
+                                    "Jumping from symbol {:?} with value {:?}",
+                                    d.as_symbol_name().unwrap_or("[NO_SYMBOL_NAME]".to_string()),
+                                    v
+                                );
+                                self.jump_path.push(self.instruction_cursor);
+                                self.instruction_cursor = index - 1;
+                            }
                         },
-                        ExpressionDataType::Unit => (),
-                        _ => {
-                            self.jump_path.push(self.instruction_cursor);
-                            self.instruction_cursor = index - 1;
-                        }
                     },
+                    ExpressionDataType::Unit => (),
+                    _ => {
+                        trace!(
+                            "Jumping from non Unit value of type {:?} with addr {:?}",
+                            d.get_type(),
+                            self.data.len() - 1
+                        );
+                        self.jump_path.push(self.instruction_cursor);
+                        self.instruction_cursor = index - 1;
+                    }
                 };
                 Ok(())
             }
@@ -252,25 +240,29 @@ impl GarnishLangRuntime {
         match index > 0 && index <= self.instructions.len() {
             false => Err(error(format!("Given index is out of bounds."))),
             true => {
-                match self.data.last() {
-                    None => Err(error(format!("No data available.")))?,
-                    Some(d) => match d.get_type() {
-                        ExpressionDataType::Symbol => match d.as_symbol_value() {
-                            Err(e) => Err(error(e))?,
-                            Ok(v) => match v {
-                                0 => {
-                                    self.jump_path.push(self.instruction_cursor);
-                                    self.instruction_cursor = index - 1;
-                                }
-                                _ => (),
-                            },
+                let i = self.addr_of_raw_data(self.data.len() - 1)?;
+                let d = self.get_data(i)?;
+                match d.get_type() {
+                    ExpressionDataType::Symbol => match d.as_symbol_value() {
+                        Err(e) => Err(error(e))?,
+                        Ok(v) => match v {
+                            0 => {
+                                trace!(
+                                    "Jumping from Zero symbol with name {:?}",
+                                    d.as_symbol_name().unwrap_or("[NO_SYMBOL_NAME]".to_string())
+                                );
+                                self.jump_path.push(self.instruction_cursor);
+                                self.instruction_cursor = index - 1;
+                            }
+                            _ => (),
                         },
-                        ExpressionDataType::Unit => {
-                            self.jump_path.push(self.instruction_cursor);
-                            self.instruction_cursor = index - 1;
-                        }
-                        _ => (),
                     },
+                    ExpressionDataType::Unit => {
+                        trace!("Jumping from Unit value with addr {:?}", self.data.len() - 1);
+                        self.jump_path.push(self.instruction_cursor);
+                        self.instruction_cursor = index - 1;
+                    }
+                    _ => (),
                 };
                 Ok(())
             }
@@ -319,6 +311,9 @@ impl GarnishLangRuntime {
             None => Err(error(format!("No instructions left.")))?,
             Some(instruction_data) => match instruction_data.instruction {
                 Instruction::PerformAddition => self.perform_addition()?,
+                Instruction::PutInput => self.put_input()?,
+                Instruction::PutResult => self.put_result()?,
+                Instruction::PushInput => self.push_input()?,
                 Instruction::EndExpression => self.end_expression()?,
                 Instruction::ExecuteExpression => match instruction_data.data {
                     None => Err(error(format!("No address given with execute expression instruction.")))?,
@@ -345,6 +340,26 @@ impl GarnishLangRuntime {
         }
 
         self.advance_instruction()
+    }
+
+    fn get_data(&self, index: usize) -> GarnishLangRuntimeResult<&ExpressionData> {
+        match self.data.get(index) {
+            None => Err(error(format!("No data at addr {:?}", index))),
+            Some(d) => Ok(d),
+        }
+    }
+
+    fn addr_of_raw_data<'a>(&self, addr: usize) -> GarnishLangRuntimeResult<usize> {
+        Ok(match self.data.get(addr) {
+            None => Err(error(format!("No data at addr {:?}", addr)))?,
+            Some(d) => match d.get_type() {
+                ExpressionDataType::Reference => match d.as_reference() {
+                    Err(e) => Err(error(e))?,
+                    Ok(i) => i,
+                },
+                _ => addr,
+            },
+        })
     }
 
     fn advance_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
@@ -381,6 +396,16 @@ mod tests {
         runtime.add_data(ExpressionData::integer(100)).unwrap();
 
         assert_eq!(runtime.data.len(), 1);
+    }
+
+    #[test]
+    fn add_data_returns_addr() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 0);
+        assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 1);
+        assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 2);
+        assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 3);
     }
 
     #[test]
@@ -421,6 +446,18 @@ mod tests {
         runtime.add_input_reference(0).unwrap();
 
         assert_eq!(runtime.inputs.get(0).unwrap().to_owned(), 0);
+    }
+
+    #[test]
+    fn add_input_reference_with_data_addr() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        let addr = runtime.add_data(ExpressionData::integer(10)).unwrap();
+
+        runtime.add_input_reference(addr).unwrap();
+
+        assert_eq!(runtime.inputs.get(0).unwrap().to_owned(), 1);
     }
 
     #[test]
