@@ -2,6 +2,7 @@
 
 pub enum Instruction {
     Put = 1,
+    Jump,
     EndExpression,
     ExecuteExpression,
     PerformAddition,
