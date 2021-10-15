@@ -33,7 +33,7 @@ impl GarnishLangRuntime {
         }
     }
 
-    pub fn add_data(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult {
+    pub fn add_data(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<usize> {
         // Check if give a reference of reference
         // flatten reference to point to non-Reference data
         let data = match data.get_type() {
@@ -51,13 +51,24 @@ impl GarnishLangRuntime {
             _ => data,
         };
 
+        let addr = self.data.len();
         self.data.push(data);
-        Ok(())
+        Ok(addr)
     }
 
     pub fn add_reference_data(&mut self, reference: usize) -> GarnishLangRuntimeResult {
         self.data.push(ExpressionData::reference(reference));
         Ok(())
+    }
+
+    pub fn remove_data(&mut self, from: usize) -> GarnishLangRuntimeResult {
+        match from < self.data.len() {
+            true => {
+                self.data = Vec::from(&self.data[..from]);
+                Ok(())
+            }
+            false => Err(error(format!("Given address is beyond data size."))),
+        }
     }
 
     pub fn add_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> GarnishLangRuntimeResult {
@@ -732,5 +743,42 @@ mod tests {
 
         assert!(runtime.jump_path.is_empty());
         assert_eq!(runtime.instruction_cursor, 3);
+    }
+
+    #[test]
+    fn remove_data() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        let addr = runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.remove_data(addr).unwrap();
+
+        assert_eq!(runtime.data.len(), 4);
+    }
+
+    #[test]
+    fn remove_data_out_of_bounds() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+
+        let result = runtime.remove_data(10);
+
+        assert!(result.is_err());
     }
 }
