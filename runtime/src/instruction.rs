@@ -10,8 +10,8 @@ pub enum Instruction {
     ExecuteExpression,
     PerformAddition,
     EndExecution,
-    ExecuteIfTrue,
-    ExecuteIfFalse,
+    JumpIfTrue,
+    JumpIfFalse,
     EqualityComparison,
 }
 

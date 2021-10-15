@@ -101,6 +101,11 @@ impl GarnishLangRuntime {
         }
     }
 
+    pub fn clear_results(&mut self) -> GarnishLangRuntimeResult {
+        self.results.clear();
+        Ok(())
+    }
+
     pub fn set_instruction_cursor(&mut self, i: usize) -> GarnishLangRuntimeResult {
         match i >= self.instructions.len() {
             true => Err(error(format!("Instruction doesn't exist."))),
@@ -196,7 +201,7 @@ impl GarnishLangRuntime {
         }
     }
 
-    pub fn execute_if_true(&mut self, index: usize) -> GarnishLangRuntimeResult {
+    pub fn jump_if_true(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Execute Expression If True | Data - {:?}", index);
         match index > 0 && index <= self.instructions.len() {
             false => Err(error(format!("Given index is out of bounds."))),
@@ -214,7 +219,6 @@ impl GarnishLangRuntime {
                                     d.as_symbol_name().unwrap_or("[NO_SYMBOL_NAME]".to_string()),
                                     v
                                 );
-                                self.jump_path.push(self.instruction_cursor);
                                 self.instruction_cursor = index - 1;
                             }
                         },
@@ -226,7 +230,6 @@ impl GarnishLangRuntime {
                             d.get_type(),
                             self.data.len() - 1
                         );
-                        self.jump_path.push(self.instruction_cursor);
                         self.instruction_cursor = index - 1;
                     }
                 };
@@ -235,7 +238,7 @@ impl GarnishLangRuntime {
         }
     }
 
-    pub fn execute_if_false(&mut self, index: usize) -> GarnishLangRuntimeResult {
+    pub fn jump_if_false(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Execute Expression If False | Data - {:?}", index);
         match index > 0 && index <= self.instructions.len() {
             false => Err(error(format!("Given index is out of bounds."))),
@@ -251,7 +254,6 @@ impl GarnishLangRuntime {
                                     "Jumping from Zero symbol with name {:?}",
                                     d.as_symbol_name().unwrap_or("[NO_SYMBOL_NAME]".to_string())
                                 );
-                                self.jump_path.push(self.instruction_cursor);
                                 self.instruction_cursor = index - 1;
                             }
                             _ => (),
@@ -259,7 +261,6 @@ impl GarnishLangRuntime {
                     },
                     ExpressionDataType::Unit => {
                         trace!("Jumping from Unit value with addr {:?}", self.data.len() - 1);
-                        self.jump_path.push(self.instruction_cursor);
                         self.instruction_cursor = index - 1;
                     }
                     _ => (),
@@ -274,7 +275,7 @@ impl GarnishLangRuntime {
         match self.jump_path.pop() {
             None => {
                 self.instruction_cursor += 1;
-                self.results.push(self.data.len() - 1);
+                self.results.push(self.addr_of_raw_data(self.data.len() - 1)?);
             }
             Some(jump_point) => {
                 self.instruction_cursor = jump_point;
@@ -289,7 +290,7 @@ impl GarnishLangRuntime {
         match self.data.len() {
             0 => Err(error(format!("Not enough data to perform output result operation."))),
             n => {
-                self.results.push(n - 1);
+                self.results.push(self.addr_of_raw_data(n - 1)?);
                 Ok(())
             }
         }
@@ -362,13 +363,13 @@ impl GarnishLangRuntime {
                     None => Err(error(format!("No address given with execute expression instruction.")))?,
                     Some(i) => self.execute_expression(i)?,
                 },
-                Instruction::ExecuteIfTrue => match instruction_data.data {
+                Instruction::JumpIfTrue => match instruction_data.data {
                     None => Err(error(format!("No address given with execute expression instruction.")))?,
-                    Some(i) => self.execute_if_true(i)?,
+                    Some(i) => self.jump_if_true(i)?,
                 },
-                Instruction::ExecuteIfFalse => match instruction_data.data {
+                Instruction::JumpIfFalse => match instruction_data.data {
                     None => Err(error(format!("No address given with execute expression instruction.")))?,
-                    Some(i) => self.execute_if_false(i)?,
+                    Some(i) => self.jump_if_false(i)?,
                 },
                 Instruction::Put => match instruction_data.data {
                     None => Err(error(format!("No address given with put instruction.")))?,
@@ -596,6 +597,18 @@ mod tests {
     }
 
     #[test]
+    fn clear_results() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.output_result().unwrap();
+
+        runtime.clear_results().unwrap();
+
+        assert!(runtime.results.is_empty());
+    }
+
+    #[test]
     fn execute_expression() {
         let mut runtime = GarnishLangRuntime::new();
 
@@ -720,91 +733,91 @@ mod tests {
     }
 
     #[test]
-    fn execute_if_true_when_true() {
+    fn jump_if_true_when_true() {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::symbol(&"true".to_string(), 1)).unwrap();
-        runtime.add_instruction(Instruction::ExecuteIfTrue, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.execute_if_true(3).unwrap();
+        runtime.jump_if_true(3).unwrap();
 
         assert_eq!(runtime.instruction_cursor, 2);
     }
 
     #[test]
-    fn execute_if_true_when_unit() {
+    fn jump_if_true_when_unit() {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::unit()).unwrap();
-        runtime.add_instruction(Instruction::ExecuteIfTrue, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.execute_if_true(3).unwrap();
+        runtime.jump_if_true(3).unwrap();
 
         assert_eq!(runtime.instruction_cursor, 1);
     }
 
     #[test]
-    fn execute_if_true_when_false() {
+    fn jump_if_true_when_false() {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
-        runtime.add_instruction(Instruction::ExecuteIfTrue, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.execute_if_true(3).unwrap();
+        runtime.jump_if_true(3).unwrap();
 
         assert_eq!(runtime.instruction_cursor, 1);
     }
 
     #[test]
-    fn execute_if_false_when_true() {
+    fn jump_if_false_when_true() {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::symbol(&"true".to_string(), 1)).unwrap();
-        runtime.add_instruction(Instruction::ExecuteIfFalse, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.execute_if_false(3).unwrap();
+        runtime.jump_if_false(3).unwrap();
 
         assert_eq!(runtime.instruction_cursor, 1);
     }
 
     #[test]
-    fn execute_if_false_when_unit() {
+    fn jump_if_false_when_unit() {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::unit()).unwrap();
-        runtime.add_instruction(Instruction::ExecuteIfFalse, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.execute_if_false(3).unwrap();
+        runtime.jump_if_false(3).unwrap();
 
         assert_eq!(runtime.instruction_cursor, 2);
     }
 
     #[test]
-    fn execute_if_false_when_false() {
+    fn jump_if_false_when_false() {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
-        runtime.add_instruction(Instruction::ExecuteIfFalse, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.execute_if_false(3).unwrap();
+        runtime.jump_if_false(3).unwrap();
 
         assert_eq!(runtime.instruction_cursor, 2);
     }
@@ -814,7 +827,7 @@ mod tests {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
-        runtime.add_instruction(Instruction::ExecuteIfFalse, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
         runtime.add_instruction(Instruction::Jump, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
