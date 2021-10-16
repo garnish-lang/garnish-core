@@ -168,23 +168,28 @@ impl GarnishLangRuntime {
                 let right_data = self.get_data(right_addr)?;
                 let left_data = self.get_data(left_addr)?;
 
-                let left = match left_data.as_integer() {
-                    Ok(v) => v,
-                    Err(e) => Err(error(e))?,
-                };
-                let right = match right_data.as_integer() {
-                    Ok(v) => v,
-                    Err(e) => Err(error(e))?,
-                };
+                match (left_data.get_type(), right_data.get_type()) {
+                    (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+                        let left = match left_data.as_integer() {
+                            Ok(v) => v,
+                            Err(e) => Err(error(e))?,
+                        };
+                        let right = match right_data.as_integer() {
+                            Ok(v) => v,
+                            Err(e) => Err(error(e))?,
+                        };
 
-                trace!("Performing {:?} + {:?}", right, left);
+                        trace!("Performing {:?} + {:?}", left, right);
 
-                self.data.pop();
-                self.data.pop();
+                        self.data.pop();
+                        self.data.pop();
 
-                self.add_data(ExpressionData::integer(left + right))?;
+                        self.add_data(ExpressionData::integer(left + right))?;
 
-                Ok(())
+                        Ok(())
+                    }
+                    (l, r) => Err(error(format!("Cannot perform addition with types {:?} and {:?}", l, r))),
+                }
             }
         }
     }
@@ -208,6 +213,14 @@ impl GarnishLangRuntime {
             true => {
                 let i = self.addr_of_raw_data(self.data.len() - 1)?;
                 let d = self.get_data(i)?;
+                let remove_data = match self.get_instruction(self.instruction_cursor + 1) {
+                    None => true,
+                    Some(instruction) => match instruction.instruction {
+                        Instruction::JumpIfFalse => false,
+                        _ => true,
+                    },
+                };
+
                 match d.get_type() {
                     ExpressionDataType::Symbol => match d.as_symbol_value() {
                         Err(e) => Err(error(e))?,
@@ -233,6 +246,11 @@ impl GarnishLangRuntime {
                         self.instruction_cursor = index - 1;
                     }
                 };
+
+                if remove_data {
+                    self.data.pop();
+                }
+
                 Ok(())
             }
         }
@@ -245,6 +263,14 @@ impl GarnishLangRuntime {
             true => {
                 let i = self.addr_of_raw_data(self.data.len() - 1)?;
                 let d = self.get_data(i)?;
+                let remove_data = match self.get_instruction(self.instruction_cursor + 1) {
+                    None => true,
+                    Some(instruction) => match instruction.instruction {
+                        Instruction::JumpIfTrue => false,
+                        _ => true,
+                    },
+                };
+
                 match d.get_type() {
                     ExpressionDataType::Symbol => match d.as_symbol_value() {
                         Err(e) => Err(error(e))?,
@@ -265,6 +291,11 @@ impl GarnishLangRuntime {
                     }
                     _ => (),
                 };
+
+                if remove_data {
+                    self.data.pop();
+                }
+
                 Ok(())
             }
         }
@@ -574,7 +605,7 @@ mod tests {
     }
 
     #[test]
-    fn perform_addition_with_references() {
+    fn perform_addition_through_references() {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
@@ -584,6 +615,17 @@ mod tests {
         runtime.perform_addition().unwrap();
 
         assert_eq!(runtime.data.get(2).unwrap().bytes, 30i64.to_le_bytes());
+    }
+
+    #[test]
+    fn perform_addition_with_non_integers() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol(&"sym1".to_string(), 1)).unwrap();
+        runtime.add_data(ExpressionData::symbol(&"sym2".to_string(), 2)).unwrap();
+        let result = runtime.perform_addition();
+
+        assert!(result.is_err());
     }
 
     #[test]
@@ -744,6 +786,7 @@ mod tests {
 
         runtime.jump_if_true(3).unwrap();
 
+        assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 2);
     }
 
@@ -759,6 +802,7 @@ mod tests {
 
         runtime.jump_if_true(3).unwrap();
 
+        assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 1);
     }
 
@@ -774,6 +818,7 @@ mod tests {
 
         runtime.jump_if_true(3).unwrap();
 
+        assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 1);
     }
 
@@ -789,6 +834,7 @@ mod tests {
 
         runtime.jump_if_false(3).unwrap();
 
+        assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 1);
     }
 
@@ -804,6 +850,7 @@ mod tests {
 
         runtime.jump_if_false(3).unwrap();
 
+        assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 2);
     }
 
@@ -819,7 +866,50 @@ mod tests {
 
         runtime.jump_if_false(3).unwrap();
 
+        assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 2);
+    }
+
+    #[test]
+    fn conditional_execute_double_check_removes_data_after_last_true_false() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
+        runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.jump_if_true(4).unwrap();
+
+        assert_eq!(runtime.data.len(), 1);
+
+        runtime.jump_if_false(4).unwrap();
+
+        assert!(runtime.data.is_empty());
+        assert_eq!(runtime.instruction_cursor, 3);
+    }
+
+    #[test]
+    fn conditional_execute_double_check_removes_data_after_last_false_true() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol(&"true".to_string(), 0)).unwrap();
+        runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.jump_if_false(4).unwrap();
+
+        assert_eq!(runtime.data.len(), 1);
+
+        runtime.jump_if_true(4).unwrap();
+
+        assert!(runtime.data.is_empty());
+        assert_eq!(runtime.instruction_cursor, 3);
     }
 
     #[test]

@@ -91,6 +91,7 @@ fn conditionals_and_inputs() {
 
         runtime.remove_data(addr).unwrap();
         runtime.set_instruction_cursor(13).unwrap();
+        runtime.clear_results().unwrap();
     }
 }
 
@@ -148,4 +149,33 @@ fn multiple_conditions() {
         runtime.remove_data(addr).unwrap();
         runtime.clear_results().unwrap();
     }
+}
+
+#[test]
+fn value_before_jump() {
+    let mut runtime = GarnishLangRuntime::new();
+
+    runtime.add_data(ExpressionData::integer(100)).unwrap();
+    runtime.add_data(ExpressionData::integer(200)).unwrap();
+    runtime.add_data(ExpressionData::integer(300)).unwrap();
+
+    runtime.add_instruction(Instruction::Put, Some(0)).unwrap(); // 1
+    runtime.add_instruction(Instruction::Jump, Some(8)).unwrap();
+
+    // 3
+    runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
+    runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
+    runtime.add_instruction(Instruction::JumpIfTrue, Some(1)).unwrap();
+
+    // 8
+    runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+    runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+    runtime.set_instruction_cursor(3).unwrap();
+
+    execute_all_instructions(&mut runtime);
+
+    assert_eq!(runtime.get_result(0).unwrap().as_integer().unwrap(), 200);
 }
