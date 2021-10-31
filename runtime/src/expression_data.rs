@@ -1,12 +1,14 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::{collections::HashMap, convert::TryInto, hash::Hasher};
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ExpressionDataType {
     Unit = 1,
     Reference,
     Integer,
     Symbol,
+    Pair,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -41,6 +43,10 @@ impl ExpressionData {
         let mut d = ExpressionData::new(ExpressionDataType::Symbol, value.to_le_bytes().to_vec());
         d.symbols.insert(name.clone(), value);
         d
+    }
+
+    pub fn pair(left: usize, right: usize) -> ExpressionData {
+        ExpressionData::new(ExpressionDataType::Pair, [left.to_le_bytes(), right.to_le_bytes()].concat())
     }
 
     pub fn symbol_from_string(s: &String) -> ExpressionData {
@@ -88,6 +94,21 @@ impl ExpressionData {
             Some(v) => Ok(v.clone()),
         }
     }
+
+    pub fn as_pair(&self) -> Result<(usize, usize), String> {
+        let (left_bytes, remaining) = self.bytes.split_at(std::mem::size_of::<usize>());
+        let (right_bytes, _) = remaining.split_at(std::mem::size_of::<usize>());
+        Ok((
+            usize::from_le_bytes(match left_bytes.try_into() {
+                Ok(v) => v,
+                Err(e) => Result::Err(e.to_string())?,
+            }),
+            usize::from_le_bytes(match right_bytes.try_into() {
+                Ok(v) => v,
+                Err(e) => Result::Err(e.to_string())?,
+            }),
+        ))
+    }
 }
 
 #[cfg(test)]
@@ -122,10 +143,7 @@ mod tests {
 
     #[test]
     fn expression_data_as_integer() {
-        assert_eq!(
-            ExpressionData::integer(1234567890).as_integer().unwrap(),
-            1234567890
-        )
+        assert_eq!(ExpressionData::integer(1234567890).as_integer().unwrap(), 1234567890)
     }
 
     #[test]
@@ -166,5 +184,27 @@ mod tests {
         let d = ExpressionData::symbol_from_string(&"my_symbol".to_string());
 
         assert_eq!(d.as_symbol_name().unwrap(), "my_symbol".to_string());
+    }
+
+    #[test]
+    fn pair() {
+        let d = ExpressionData::pair(2, 5);
+
+        let two = 2usize.to_le_bytes();
+        let five = 5usize.to_le_bytes();
+        let expected = [two, five].concat();
+
+        assert_eq!(d.get_type(), ExpressionDataType::Pair);
+        assert_eq!(d.bytes[..], expected[..]);
+    }
+
+    #[test]
+    fn as_pair() {
+        let d = ExpressionData::pair(2, 5);
+
+        let (left, right) = d.as_pair().unwrap();
+
+        assert_eq!(left, 2);
+        assert_eq!(right, 5);
     }
 }
