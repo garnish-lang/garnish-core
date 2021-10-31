@@ -13,6 +13,7 @@ pub enum Instruction {
     JumpIfTrue,
     JumpIfFalse,
     EqualityComparison,
+    MakePair,
 }
 
 #[derive(Clone, Debug)]

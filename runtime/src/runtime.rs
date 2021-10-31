@@ -380,6 +380,20 @@ impl GarnishLangRuntime {
         }
     }
 
+    pub fn make_pair(&mut self) -> GarnishLangRuntimeResult {
+        match self.data.len() {
+            0 | 1 => Err(error(format!("Not enough data to make a pair value."))),
+            _ => {
+                let right_addr = self.addr_of_raw_data(self.data.len() - 1)?;
+                let left_addr = self.addr_of_raw_data(self.data.len() - 2)?;
+
+                self.add_data(ExpressionData::pair(left_addr, right_addr))?;
+
+                Ok(())
+            }
+        }
+    }
+
     pub fn execute_current_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
         match self.instructions.get(self.instruction_cursor) {
             None => Err(error(format!("No instructions left.")))?,
@@ -411,6 +425,7 @@ impl GarnishLangRuntime {
                     None => Err(error(format!("No address given with execute expression instruction.")))?,
                     Some(i) => self.jump(i)?,
                 },
+                Instruction::MakePair => self.make_pair()?,
             },
         }
 
@@ -450,7 +465,7 @@ impl GarnishLangRuntime {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionData, GarnishLangRuntime, Instruction};
+    use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
 
     #[test]
     fn create_runtime() {
@@ -991,5 +1006,20 @@ mod tests {
         runtime.equality_comparison().unwrap();
 
         assert_eq!(runtime.data.get(0).unwrap().as_symbol_value().unwrap(), 0);
+    }
+
+    #[test]
+    fn make_pair() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::symbol_from_string(&"my_symbol".to_string())).unwrap();
+
+        runtime.add_instruction(Instruction::MakePair, None).unwrap();
+
+        runtime.make_pair().unwrap();
+
+        assert_eq!(runtime.data.get(2).unwrap().get_type(), ExpressionDataType::Pair);
+        assert_eq!(runtime.data.get(2).unwrap().as_pair().unwrap(), (0, 1));
     }
 }
