@@ -179,3 +179,29 @@ fn value_before_jump() {
 
     assert_eq!(runtime.get_result(0).unwrap().as_integer().unwrap(), 200);
 }
+
+#[test]
+fn pair_with_pair() {
+    let mut runtime = GarnishLangRuntime::new();
+
+    runtime.add_data(ExpressionData::integer(100)).unwrap();
+    runtime.add_data(ExpressionData::integer(200)).unwrap();
+    runtime.add_data(ExpressionData::integer(300)).unwrap();
+
+    // 1
+    runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
+    runtime.add_instruction(Instruction::MakePair, None).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+    runtime.add_instruction(Instruction::MakePair, None).unwrap();
+    runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+    execute_all_instructions(&mut runtime);
+
+    let (first_left, first_right) = runtime.get_result(0).unwrap().as_pair().unwrap();
+    let (second_left, second_right) = runtime.get_data(first_left).unwrap().as_pair().unwrap();
+
+    assert_eq!(runtime.get_data(first_right).unwrap().as_integer().unwrap(), 100);
+    assert_eq!(runtime.get_data(second_left).unwrap().as_integer().unwrap(), 200);
+    assert_eq!(runtime.get_data(second_right).unwrap().as_integer().unwrap(), 300);
+}

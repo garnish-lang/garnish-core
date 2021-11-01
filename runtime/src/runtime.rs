@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::vec;
 
 use crate::expression_data::*;
 use crate::instruction::*;
@@ -9,6 +10,7 @@ use log::trace;
 #[derive(Debug)]
 pub struct GarnishLangRuntime {
     data: Vec<ExpressionData>,
+    reference_stack: Vec<usize>,
     instructions: Vec<InstructionData>,
     instruction_cursor: usize,
     results: Vec<usize>,
@@ -21,6 +23,7 @@ impl GarnishLangRuntime {
     pub fn new() -> Self {
         GarnishLangRuntime {
             data: vec![],
+            reference_stack: vec![],
             instructions: vec![InstructionData {
                 instruction: Instruction::EndExecution,
                 data: None,
@@ -54,6 +57,10 @@ impl GarnishLangRuntime {
         let addr = self.data.len();
         self.data.push(data);
         Ok(addr)
+    }
+
+    pub fn get_data(&self, index: usize) -> Option<&ExpressionData> {
+        self.data.get(index)
     }
 
     pub fn add_reference_data(&mut self, reference: usize) -> GarnishLangRuntimeResult {
@@ -125,6 +132,7 @@ impl GarnishLangRuntime {
 
     pub fn put(&mut self, i: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put | Data - {:?}", i);
+        self.reference_stack.push(self.data.len());
         self.add_reference_data(i)
     }
 
@@ -165,8 +173,8 @@ impl GarnishLangRuntime {
             _ => {
                 let right_addr = self.addr_of_raw_data(self.data.len() - 1)?;
                 let left_addr = self.addr_of_raw_data(self.data.len() - 2)?;
-                let right_data = self.get_data(right_addr)?;
-                let left_data = self.get_data(left_addr)?;
+                let right_data = self.get_data_internal(right_addr)?;
+                let left_data = self.get_data_internal(left_addr)?;
 
                 match (left_data.get_type(), right_data.get_type()) {
                     (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
@@ -212,7 +220,7 @@ impl GarnishLangRuntime {
             false => Err(error(format!("Given index is out of bounds."))),
             true => {
                 let i = self.addr_of_raw_data(self.data.len() - 1)?;
-                let d = self.get_data(i)?;
+                let d = self.get_data_internal(i)?;
                 let remove_data = match self.get_instruction(self.instruction_cursor + 1) {
                     None => true,
                     Some(instruction) => match instruction.instruction {
@@ -262,7 +270,7 @@ impl GarnishLangRuntime {
             false => Err(error(format!("Given index is out of bounds."))),
             true => {
                 let i = self.addr_of_raw_data(self.data.len() - 1)?;
-                let d = self.get_data(i)?;
+                let d = self.get_data_internal(i)?;
                 let remove_data = match self.get_instruction(self.instruction_cursor + 1) {
                     None => true,
                     Some(instruction) => match instruction.instruction {
@@ -346,8 +354,8 @@ impl GarnishLangRuntime {
             _ => {
                 let right_addr = self.addr_of_raw_data(self.data.len() - 1)?;
                 let left_addr = self.addr_of_raw_data(self.data.len() - 2)?;
-                let right_data = self.get_data(right_addr)?;
-                let left_data = self.get_data(left_addr)?;
+                let right_data = self.get_data_internal(right_addr)?;
+                let left_data = self.get_data_internal(left_addr)?;
 
                 let result = match (left_data.get_type(), right_data.get_type()) {
                     (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
@@ -381,12 +389,16 @@ impl GarnishLangRuntime {
     }
 
     pub fn make_pair(&mut self) -> GarnishLangRuntimeResult {
-        match self.data.len() {
+        match self.reference_stack.len() {
             0 | 1 => Err(error(format!("Not enough data to make a pair value."))),
             _ => {
-                let right_addr = self.addr_of_raw_data(self.data.len() - 1)?;
-                let left_addr = self.addr_of_raw_data(self.data.len() - 2)?;
+                let right_ref = self.reference_stack.pop().unwrap();
+                let left_ref = self.reference_stack.pop().unwrap();
 
+                let right_addr = self.addr_of_raw_data(right_ref)?;
+                let left_addr = self.addr_of_raw_data(left_ref)?;
+
+                self.reference_stack.push(self.data.len());
                 self.add_data(ExpressionData::pair(left_addr, right_addr))?;
 
                 Ok(())
@@ -432,7 +444,7 @@ impl GarnishLangRuntime {
         self.advance_instruction()
     }
 
-    fn get_data(&self, index: usize) -> GarnishLangRuntimeResult<&ExpressionData> {
+    fn get_data_internal(&self, index: usize) -> GarnishLangRuntimeResult<&ExpressionData> {
         match self.data.get(index) {
             None => Err(error(format!("No data at addr {:?}", index))),
             Some(d) => Ok(d),
@@ -486,6 +498,16 @@ mod tests {
         runtime.add_data(ExpressionData::integer(100)).unwrap();
 
         assert_eq!(runtime.data.len(), 1);
+    }
+
+    #[test]
+    fn get_data() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(100)).unwrap();
+        runtime.add_data(ExpressionData::integer(200)).unwrap();
+
+        assert_eq!(runtime.get_data(1).unwrap().as_integer().unwrap(), 200);
     }
 
     #[test]
@@ -1015,11 +1037,17 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::symbol_from_string(&"my_symbol".to_string())).unwrap();
 
+        runtime.reference_stack.push(0);
+        runtime.reference_stack.push(1);
+
         runtime.add_instruction(Instruction::MakePair, None).unwrap();
 
         runtime.make_pair().unwrap();
 
         assert_eq!(runtime.data.get(2).unwrap().get_type(), ExpressionDataType::Pair);
         assert_eq!(runtime.data.get(2).unwrap().as_pair().unwrap(), (0, 1));
+
+        assert_eq!(runtime.reference_stack.len(), 1);
+        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
     }
 }
