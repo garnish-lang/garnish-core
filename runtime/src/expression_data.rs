@@ -9,6 +9,7 @@ pub enum ExpressionDataType {
     Integer,
     Symbol,
     Pair,
+    List,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -47,6 +48,17 @@ impl ExpressionData {
 
     pub fn pair(left: usize, right: usize) -> ExpressionData {
         ExpressionData::new(ExpressionDataType::Pair, [left.to_le_bytes(), right.to_le_bytes()].concat())
+    }
+
+    pub fn list(refs: Vec<usize>) -> ExpressionData {
+        let mut vec_of_bytes: Vec<[u8; std::mem::size_of::<usize>()]> = vec![];
+        vec_of_bytes.push(refs.len().to_le_bytes());
+
+        for r in refs {
+            vec_of_bytes.push(r.to_le_bytes());
+        }
+
+        ExpressionData::new(ExpressionDataType::List, vec_of_bytes.concat())
     }
 
     pub fn symbol_from_string(s: &String) -> ExpressionData {
@@ -108,6 +120,29 @@ impl ExpressionData {
                 Err(e) => Result::Err(e.to_string())?,
             }),
         ))
+    }
+
+    pub fn as_list(&self) -> Result<Vec<usize>, String> {
+        let (len_bytes, mut remaining) = self.bytes.split_at(std::mem::size_of::<usize>());
+        let mut list = vec![];
+
+        let len = usize::from_le_bytes(match len_bytes.try_into() {
+            Ok(v) => v,
+            Err(e) => Result::Err(e.to_string())?,
+        });
+
+        for _ in 0..len {
+            let (value, next) = remaining.split_at(std::mem::size_of::<usize>());
+
+            list.push(usize::from_le_bytes(match value.try_into() {
+                Ok(v) => v,
+                Err(e) => Result::Err(e.to_string())?,
+            }));
+
+            remaining = next
+        }
+
+        Ok(list)
     }
 }
 
@@ -206,5 +241,30 @@ mod tests {
 
         assert_eq!(left, 2);
         assert_eq!(right, 5);
+    }
+
+    #[test]
+    fn list() {
+        let d = ExpressionData::list(vec![1, 2, 3]);
+
+        let one = 1usize.to_le_bytes();
+        let two = 2usize.to_le_bytes();
+        let three = 3usize.to_le_bytes();
+        let expected = [three, one, two, three].concat();
+
+        assert_eq!(d.get_type(), ExpressionDataType::List);
+        assert_eq!(d.bytes[..], expected[..]);
+    }
+
+    #[test]
+    fn as_list() {
+        let d = ExpressionData::list(vec![1, 2, 3]);
+
+        let list = d.as_list().unwrap();
+
+        assert_eq!(list.len(), 3);
+        assert_eq!(list[0], 1);
+        assert_eq!(list[1], 2);
+        assert_eq!(list[2], 3);
     }
 }
