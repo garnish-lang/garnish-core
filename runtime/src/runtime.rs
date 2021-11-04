@@ -406,6 +406,25 @@ impl GarnishLangRuntime {
         }
     }
 
+    pub fn make_list(&mut self, len: usize) -> GarnishLangRuntimeResult {
+        match self.reference_stack.len() >= len {
+            false => Err(error(format!("Not enough references to make list of size {:?}", len))),
+            true => {
+                let mut list = vec![];
+                for _ in 0..len {
+                    list.push(self.reference_stack.pop().unwrap());
+                }
+
+                list.reverse();
+
+                self.reference_stack.push(self.data.len());
+                self.add_data(ExpressionData::list(list))?;
+
+                Ok(())
+            }
+        }
+    }
+
     pub fn execute_current_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
         match self.instructions.get(self.instruction_cursor) {
             None => Err(error(format!("No instructions left.")))?,
@@ -438,6 +457,10 @@ impl GarnishLangRuntime {
                     Some(i) => self.jump(i)?,
                 },
                 Instruction::MakePair => self.make_pair()?,
+                Instruction::MakeList => match instruction_data.data {
+                    None => Err(error(format!("No address given with execute expression instruction.")))?,
+                    Some(i) => self.make_list(i)?,
+                },
             },
         }
 
@@ -1049,5 +1072,26 @@ mod tests {
 
         assert_eq!(runtime.reference_stack.len(), 1);
         assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
+    }
+
+    #[test]
+    fn make_list() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.reference_stack.push(0);
+        runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
+
+        runtime.add_instruction(Instruction::MakeList, Some(3)).unwrap();
+
+        runtime.make_list(3).unwrap();
+
+        println!("{:?}", runtime);
+        let list = runtime.data.get(3).unwrap().as_list().unwrap();
+        assert_eq!(list, vec![0, 1, 2]);
     }
 }
