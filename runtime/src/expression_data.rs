@@ -10,6 +10,7 @@ pub enum ExpressionDataType {
     Symbol,
     Pair,
     List,
+    Expression,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -59,6 +60,10 @@ impl ExpressionData {
         }
 
         ExpressionData::new(ExpressionDataType::List, vec_of_bytes.concat())
+    }
+
+    pub fn expression(i: usize) -> ExpressionData {
+        ExpressionData::new(ExpressionDataType::Expression, i.to_le_bytes().to_vec())
     }
 
     pub fn symbol_from_string(s: &String) -> ExpressionData {
@@ -143,6 +148,14 @@ impl ExpressionData {
         }
 
         Ok(list)
+    }
+
+    pub fn as_expression(&self) -> Result<usize, String> {
+        let (bytes, _) = self.bytes.split_at(std::mem::size_of::<usize>());
+        Ok(usize::from_le_bytes(match bytes.try_into() {
+            Ok(v) => v,
+            Err(e) => Result::Err(e.to_string())?,
+        }))
     }
 }
 
@@ -266,5 +279,20 @@ mod tests {
         assert_eq!(list[0], 1);
         assert_eq!(list[1], 2);
         assert_eq!(list[2], 3);
+    }
+
+    #[test]
+    fn expression() {
+        let d = ExpressionData::expression(1);
+
+        assert_eq!(d.data_type, ExpressionDataType::Expression);
+        assert_eq!(d.bytes, 1usize.to_le_bytes());
+    }
+
+    #[test]
+    fn as_expression() {
+        let d = ExpressionData::expression(1);
+
+        assert_eq!(d.as_expression().unwrap(), 1usize)
     }
 }
