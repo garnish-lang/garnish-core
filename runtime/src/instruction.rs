@@ -16,6 +16,7 @@ pub enum Instruction {
     MakePair,
     MakeList,
     Apply,
+    Reapply,
 }
 
 #[derive(Clone, Debug)]

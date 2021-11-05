@@ -454,7 +454,8 @@ impl GarnishLangRuntime {
 
                         // Expression stores index of expression table, look up actual instruction index
 
-                        self.set_instruction_cursor(next_instruction)?;
+                        self.jump_path.push(self.instruction_cursor);
+                        self.set_instruction_cursor(next_instruction - 1)?;
                         self.inputs.push(right_addr);
 
                         Ok(())
@@ -464,6 +465,23 @@ impl GarnishLangRuntime {
                         left_data.get_type()
                     ))),
                 }
+            }
+        }
+    }
+
+    pub fn reapply(&mut self, index: usize) -> GarnishLangRuntimeResult {
+        match self.reference_stack.len() {
+            0 => Err(error(format!("Not enough references to perform reapply."))),
+            _ => {
+                let right_ref = self.reference_stack.pop().unwrap();
+
+                let right_addr = self.addr_of_raw_data(right_ref)?;
+
+                self.set_instruction_cursor(index - 1)?;
+                self.inputs.pop();
+                self.inputs.push(right_addr);
+
+                Ok(())
             }
         }
     }
@@ -505,6 +523,10 @@ impl GarnishLangRuntime {
                     Some(i) => self.make_list(i)?,
                 },
                 Instruction::Apply => self.apply()?,
+                Instruction::Reapply => match instruction_data.data {
+                    None => Err(error(format!("No address given with execute expression instruction.")))?,
+                    Some(i) => self.reapply(i)?,
+                },
             },
         }
 
@@ -1169,7 +1191,8 @@ mod tests {
         runtime.apply().unwrap();
 
         assert_eq!(*runtime.inputs.get(0).unwrap(), 2);
-        assert_eq!(runtime.instruction_cursor, 1)
+        assert_eq!(runtime.instruction_cursor, 0);
+        assert_eq!(*runtime.jump_path.get(0).unwrap(), 7);
     }
 
     #[test]
@@ -1179,28 +1202,37 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::expression(0)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_data(ExpressionData::integer(30)).unwrap();
+        runtime.add_data(ExpressionData::integer(40)).unwrap();
 
         // 1
         runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
         runtime.add_instruction(Instruction::PutInput, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.add_instruction(Instruction::PutResult, None).unwrap();
+        runtime.add_instruction(Instruction::Reapply, None).unwrap();
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
-        // 5
+        // 7
         runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
         runtime.add_instruction(Instruction::Apply, None).unwrap();
 
         runtime.expression_table.push(1);
 
-        runtime.reference_stack.push(1);
-        runtime.reference_stack.push(2);
+        runtime.reference_stack.push(4);
 
-        runtime.set_instruction_cursor(7).unwrap();
+        runtime.inputs.push(2);
+        runtime.results.push(4);
+        runtime.jump_path.push(9);
 
-        runtime.apply().unwrap();
+        runtime.set_instruction_cursor(5).unwrap();
 
-        assert_eq!(*runtime.inputs.get(0).unwrap(), 2);
-        assert_eq!(runtime.instruction_cursor, 1)
+        runtime.reapply(1).unwrap();
+
+        assert_eq!(runtime.inputs.len(), 1);
+        assert_eq!(*runtime.inputs.get(0).unwrap(), 4);
+        assert_eq!(runtime.instruction_cursor, 0);
+        assert_eq!(*runtime.jump_path.get(0).unwrap(), 9);
     }
 }
