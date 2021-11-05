@@ -15,6 +15,7 @@ pub enum Instruction {
     EqualityComparison,
     MakePair,
     MakeList,
+    Apply,
 }
 
 #[derive(Clone, Debug)]

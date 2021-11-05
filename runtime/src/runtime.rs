@@ -17,6 +17,7 @@ pub struct GarnishLangRuntime {
     jump_path: Vec<usize>,
     inputs: Vec<usize>,
     symbols: HashMap<String, u64>,
+    expression_table: Vec<usize>,
 }
 
 impl GarnishLangRuntime {
@@ -33,6 +34,7 @@ impl GarnishLangRuntime {
             jump_path: vec![],
             inputs: vec![],
             symbols: HashMap::new(),
+            expression_table: vec![],
         }
     }
 
@@ -425,6 +427,45 @@ impl GarnishLangRuntime {
         }
     }
 
+    pub fn apply(&mut self) -> GarnishLangRuntimeResult {
+        match self.reference_stack.len() {
+            0 | 1 => Err(error(format!("Not enough references to perform apply."))),
+            _ => {
+                let right_ref = self.reference_stack.pop().unwrap();
+                let left_ref = self.reference_stack.pop().unwrap();
+
+                let right_addr = self.addr_of_raw_data(right_ref)?;
+                let left_addr = self.addr_of_raw_data(left_ref)?;
+
+                let left_data = self.get_data_internal(left_addr)?;
+                match left_data.get_type() {
+                    ExpressionDataType::Expression => {
+                        let expression_index = match left_data.as_expression() {
+                            Err(err) => Err(error(err))?,
+                            Ok(v) => v,
+                        };
+
+                        let next_instruction = match self.expression_table.get(expression_index) {
+                            Some(v) => v,
+                            None => Err(error(format!("No expression registered at index {:?}.", expression_index)))?,
+                        };
+
+                        // Expression stores index of expression table, look up actual instruction index
+
+                        self.set_instruction_cursor(*next_instruction)?;
+                        self.inputs.push(right_addr);
+
+                        Ok(())
+                    }
+                    _ => Err(error(format!(
+                        "Data type {:?} not supported on left side of apply operation.",
+                        left_data.get_type()
+                    ))),
+                }
+            }
+        }
+    }
+
     pub fn execute_current_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
         match self.instructions.get(self.instruction_cursor) {
             None => Err(error(format!("No instructions left.")))?,
@@ -461,6 +502,7 @@ impl GarnishLangRuntime {
                     None => Err(error(format!("No address given with execute expression instruction.")))?,
                     Some(i) => self.make_list(i)?,
                 },
+                Instruction::Apply => self.apply()?,
             },
         }
 
@@ -1093,5 +1135,37 @@ mod tests {
         println!("{:?}", runtime);
         let list = runtime.data.get(3).unwrap().as_list().unwrap();
         assert_eq!(list, vec![0, 1, 2]);
+    }
+
+    #[test]
+    fn apply() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::expression(0)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        // 1
+        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::PutInput, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+        // 5
+        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
+        runtime.add_instruction(Instruction::Apply, None).unwrap();
+
+        runtime.expression_table.push(1);
+
+        runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
+
+        runtime.set_instruction_cursor(7).unwrap();
+
+        runtime.apply().unwrap();
+
+        assert_eq!(*runtime.inputs.get(0).unwrap(), 2);
+        assert_eq!(runtime.instruction_cursor, 1)
     }
 }
