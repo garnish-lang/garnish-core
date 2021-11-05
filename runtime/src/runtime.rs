@@ -149,11 +149,13 @@ impl GarnishLangRuntime {
 
     pub fn push_input(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Push Input");
-
-        self.inputs.push(match self.data.len() > 0 {
+        let r = self.addr_of_raw_data(match self.data.len() > 0 {
             true => self.data.len() - 1,
             false => Err(error(format!("No data available to push as input.")))?,
-        });
+        })?;
+
+        self.inputs.push(r);
+        self.results.push(r);
 
         Ok(())
     }
@@ -833,6 +835,7 @@ mod tests {
         runtime.push_input().unwrap();
 
         assert_eq!(runtime.inputs.get(0).unwrap(), &1);
+        assert_eq!(runtime.results.get(0).unwrap(), &1);
     }
 
     #[test]
@@ -1139,6 +1142,38 @@ mod tests {
 
     #[test]
     fn apply() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::expression(0)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        // 1
+        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::PutInput, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+        // 5
+        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
+        runtime.add_instruction(Instruction::Apply, None).unwrap();
+
+        runtime.expression_table.push(1);
+
+        runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
+
+        runtime.set_instruction_cursor(7).unwrap();
+
+        runtime.apply().unwrap();
+
+        assert_eq!(*runtime.inputs.get(0).unwrap(), 2);
+        assert_eq!(runtime.instruction_cursor, 1)
+    }
+
+    #[test]
+    fn reapply() {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
