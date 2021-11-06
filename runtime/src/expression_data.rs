@@ -51,11 +51,17 @@ impl ExpressionData {
         ExpressionData::new(ExpressionDataType::Pair, [left.to_le_bytes(), right.to_le_bytes()].concat())
     }
 
-    pub fn list(refs: Vec<usize>) -> ExpressionData {
+    pub fn list(refs: Vec<usize>, association_refs: Vec<usize>) -> ExpressionData {
         let mut vec_of_bytes: Vec<[u8; std::mem::size_of::<usize>()]> = vec![];
         vec_of_bytes.push(refs.len().to_le_bytes());
 
         for r in refs {
+            vec_of_bytes.push(r.to_le_bytes());
+        }
+
+        vec_of_bytes.push(association_refs.len().to_le_bytes());
+
+        for r in association_refs {
             vec_of_bytes.push(r.to_le_bytes());
         }
 
@@ -127,9 +133,10 @@ impl ExpressionData {
         ))
     }
 
-    pub fn as_list(&self) -> Result<Vec<usize>, String> {
+    pub fn as_list(&self) -> Result<(Vec<usize>, Vec<usize>), String> {
         let (len_bytes, mut remaining) = self.bytes.split_at(std::mem::size_of::<usize>());
         let mut list = vec![];
+        let mut associative_list = vec![];
 
         let len = usize::from_le_bytes(match len_bytes.try_into() {
             Ok(v) => v,
@@ -147,7 +154,26 @@ impl ExpressionData {
             remaining = next
         }
 
-        Ok(list)
+        // associative refs
+        let (len_bytes, mut remaining) = remaining.split_at(std::mem::size_of::<usize>());
+
+        let len = usize::from_le_bytes(match len_bytes.try_into() {
+            Ok(v) => v,
+            Err(e) => Result::Err(e.to_string())?,
+        });
+
+        for _ in 0..len {
+            let (value, next) = remaining.split_at(std::mem::size_of::<usize>());
+
+            associative_list.push(usize::from_le_bytes(match value.try_into() {
+                Ok(v) => v,
+                Err(e) => Result::Err(e.to_string())?,
+            }));
+
+            remaining = next
+        }
+
+        Ok((list, associative_list))
     }
 
     pub fn as_expression(&self) -> Result<usize, String> {
@@ -163,6 +189,7 @@ impl ExpressionData {
 mod tests {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
+    use std::vec;
 
     use crate::{ExpressionData, ExpressionDataType};
 
@@ -258,12 +285,13 @@ mod tests {
 
     #[test]
     fn list() {
-        let d = ExpressionData::list(vec![1, 2, 3]);
+        let d = ExpressionData::list(vec![1, 2, 3], vec![]);
 
         let one = 1usize.to_le_bytes();
         let two = 2usize.to_le_bytes();
         let three = 3usize.to_le_bytes();
-        let expected = [three, one, two, three].concat();
+        let zero = 0usize.to_le_bytes();
+        let expected = [three, one, two, three, zero].concat();
 
         assert_eq!(d.get_type(), ExpressionDataType::List);
         assert_eq!(d.bytes[..], expected[..]);
@@ -271,14 +299,31 @@ mod tests {
 
     #[test]
     fn as_list() {
-        let d = ExpressionData::list(vec![1, 2, 3]);
+        let d = ExpressionData::list(vec![1, 2, 3], vec![]);
 
-        let list = d.as_list().unwrap();
+        let (list, associations) = d.as_list().unwrap();
 
         assert_eq!(list.len(), 3);
         assert_eq!(list[0], 1);
         assert_eq!(list[1], 2);
         assert_eq!(list[2], 3);
+        assert_eq!(associations.len(), 0);
+    }
+
+    #[test]
+    fn list_with_associations() {
+        let d = ExpressionData::list(vec![1, 2, 3], vec![4, 5, 6]);
+
+        let one = 1usize.to_le_bytes();
+        let two = 2usize.to_le_bytes();
+        let three = 3usize.to_le_bytes();
+        let four = 4usize.to_le_bytes();
+        let five = 5usize.to_le_bytes();
+        let six = 6usize.to_le_bytes();
+        let expected = [three, one, two, three, three, four, five, six].concat();
+
+        assert_eq!(d.get_type(), ExpressionDataType::List);
+        assert_eq!(d.bytes[..], expected[..]);
     }
 
     #[test]

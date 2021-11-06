@@ -440,7 +440,7 @@ impl GarnishLangRuntime {
                 list.reverse();
 
                 self.reference_stack.push(self.data.len());
-                self.add_data(ExpressionData::list(list))?;
+                self.add_data(ExpressionData::list(list, vec![]))?;
 
                 Ok(())
             }
@@ -1205,7 +1205,7 @@ mod tests {
 
         println!("{:?}", runtime);
         let list = runtime.data.get(3).unwrap().as_list().unwrap();
-        assert_eq!(list, vec![0, 1, 2]);
+        assert_eq!(list, (vec![0, 1, 2], vec![]));
     }
 
     #[test]
