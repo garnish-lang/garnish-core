@@ -433,14 +433,61 @@ impl GarnishLangRuntime {
             false => Err(error(format!("Not enough references to make list of size {:?}", len))),
             true => {
                 let mut list = vec![];
+                let mut associative_list = vec![];
+
                 for _ in 0..len {
-                    list.push(self.reference_stack.pop().unwrap());
+                    let r = match self.reference_stack.pop() {
+                        Some(i) => self.addr_of_raw_data(i)?,
+                        None => Err(error(format!("Not enough references for list of len {:?}", len)))?,
+                    };
+
+                    let data = self.get_data_internal(r)?;
+
+                    match data.get_type() {
+                        ExpressionDataType::Pair => {
+                            let pair = self.get_data_internal(r)?;
+                            let left = self.addr_of_raw_data(match pair.as_pair() {
+                                Err(e) => Err(error(e))?,
+                                Ok((left, _)) => left,
+                            })?;
+
+                            let left_data = self.get_data_internal(left)?;
+                            match left_data.get_type() {
+                                ExpressionDataType::Symbol => associative_list.push(r),
+                                _ => (),
+                            }
+                        }
+                        _ => (), // Other values are just simple items
+                    }
+
+                    list.push(r);
                 }
 
                 list.reverse();
 
+                // reorder associative values by modulo value
+                let mut ordered = vec![0usize; associative_list.len()];
+                for index in 0..associative_list.len() {
+                    let item = associative_list[index];
+                    let mut i = item % associative_list.len();
+                    let mut count = 0;
+                    while ordered[i] != 0 {
+                        i += 1;
+                        if i >= associative_list.len() {
+                            i = 0;
+                        }
+
+                        count += 1;
+                        if count > associative_list.len() {
+                            return Err(error(format!("Could not place associative value")));
+                        }
+                    }
+
+                    ordered[i] = item;
+                }
+
                 self.reference_stack.push(self.data.len());
-                self.add_data(ExpressionData::list(list, vec![]))?;
+                self.add_data(ExpressionData::list(list, ordered))?;
 
                 Ok(())
             }
@@ -1203,9 +1250,36 @@ mod tests {
 
         runtime.make_list(3).unwrap();
 
-        println!("{:?}", runtime);
         let list = runtime.data.get(3).unwrap().as_list().unwrap();
         assert_eq!(list, (vec![0, 1, 2], vec![]));
+    }
+
+    #[test]
+    fn make_list_with_associations() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::symbol_from_string(&"two".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_data(ExpressionData::symbol_from_string(&"three".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(30)).unwrap();
+        // 6
+        runtime.add_data(ExpressionData::pair(0, 1)).unwrap();
+        runtime.add_data(ExpressionData::pair(2, 3)).unwrap();
+        runtime.add_data(ExpressionData::pair(4, 5)).unwrap();
+
+        runtime.reference_stack.push(6);
+        runtime.reference_stack.push(7);
+        runtime.reference_stack.push(8);
+
+        runtime.add_instruction(Instruction::MakeList, Some(3)).unwrap();
+
+        runtime.make_list(3).unwrap();
+
+        println!("{:?}", runtime.data.get(9).unwrap());
+        let list = runtime.data.get(9).unwrap().as_list().unwrap();
+        assert_eq!(list, (vec![6, 7, 8], vec![6, 7, 8]));
     }
 
     #[test]
