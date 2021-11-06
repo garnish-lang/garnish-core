@@ -205,3 +205,57 @@ fn pair_with_pair() {
     assert_eq!(runtime.get_data(second_left).unwrap().as_integer().unwrap(), 200);
     assert_eq!(runtime.get_data(second_right).unwrap().as_integer().unwrap(), 300);
 }
+
+#[test]
+fn add_5_loop() {
+    // 5 ~> {
+    //     $ + 5 @ get number and add 5 to make next element of new list
+
+    //     ? == 25 => ? !> ^~ ?
+    // }
+
+    let mut runtime = GarnishLangRuntime::new();
+
+    runtime.add_data(ExpressionData::integer(5)).unwrap();
+    runtime.add_data(ExpressionData::integer(25)).unwrap();
+    runtime.add_data(ExpressionData::expression(0)).unwrap();
+
+    // 1 - subexpression
+    runtime.add_instruction(Instruction::PutInput, None).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+    runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+    runtime.add_instruction(Instruction::PushResult, None).unwrap();
+
+    // 5
+    runtime.add_instruction(Instruction::PutResult, None).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+    runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
+    runtime.add_instruction(Instruction::JumpIfFalse, Some(11)).unwrap();
+    runtime.add_instruction(Instruction::PutResult, None).unwrap();
+    runtime.add_instruction(Instruction::Jump, Some(13)).unwrap();
+
+    // 11
+    runtime.add_instruction(Instruction::PutResult, None).unwrap();
+    runtime.add_instruction(Instruction::Reapply, Some(1)).unwrap();
+
+    // 13
+    runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+    // 14 - main
+    runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+    runtime.add_instruction(Instruction::Apply, None).unwrap();
+    runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+    runtime.add_expression(1).unwrap();
+
+    runtime.set_instruction_cursor(14).unwrap();
+
+    execute_all_instructions(&mut runtime);
+
+    println!("{:#?}", runtime);
+
+    let last_result = runtime.get_result(runtime.result_count() - 1).unwrap();
+
+    assert_eq!(last_result.as_integer().unwrap(), 25);
+}

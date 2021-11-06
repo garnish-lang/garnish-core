@@ -5,6 +5,7 @@ pub enum Instruction {
     PutInput,
     PutResult,
     PushInput,
+    PushResult,
     Jump,
     EndExpression,
     ExecuteExpression,

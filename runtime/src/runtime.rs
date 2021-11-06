@@ -65,6 +65,16 @@ impl GarnishLangRuntime {
         self.data.get(index)
     }
 
+    pub fn add_expression(&mut self, index: usize) -> GarnishLangRuntimeResult {
+        match index < self.instructions.len() {
+            false => Err(error(format!("No instruction at {:?} to register as expression.", index)))?,
+            true => {
+                self.expression_table.push(index);
+                Ok(())
+            }
+        }
+    }
+
     pub fn add_reference_data(&mut self, reference: usize) -> GarnishLangRuntimeResult {
         self.data.push(ExpressionData::reference(reference));
         Ok(())
@@ -110,6 +120,10 @@ impl GarnishLangRuntime {
         }
     }
 
+    pub fn result_count(&self) -> usize {
+        self.results.len()
+    }
+
     pub fn clear_results(&mut self) -> GarnishLangRuntimeResult {
         self.results.clear();
         Ok(())
@@ -141,6 +155,7 @@ impl GarnishLangRuntime {
     pub fn put_input(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put Input");
 
+        self.reference_stack.push(self.data.len());
         self.add_reference_data(match self.inputs.last() {
             None => Err(error(format!("No inputs available to put reference.")))?,
             Some(r) => *r,
@@ -163,8 +178,9 @@ impl GarnishLangRuntime {
     pub fn put_result(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put Result");
 
+        self.reference_stack.push(self.data.len());
         self.add_reference_data(match self.results.last() {
-            None => Err(error(format!("No inputs available to put reference.")))?,
+            None => Err(error(format!("No results available to put reference.")))?,
             Some(r) => *r,
         })
     }
@@ -328,7 +344,7 @@ impl GarnishLangRuntime {
         Ok(())
     }
 
-    pub fn output_result(&mut self) -> GarnishLangRuntimeResult {
+    pub fn push_result(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Output Result");
         match self.data.len() {
             0 => Err(error(format!("Not enough data to perform output result operation."))),
@@ -393,6 +409,7 @@ impl GarnishLangRuntime {
     }
 
     pub fn make_pair(&mut self) -> GarnishLangRuntimeResult {
+        trace!("Instruction - Make Pair");
         match self.reference_stack.len() {
             0 | 1 => Err(error(format!("Not enough data to make a pair value."))),
             _ => {
@@ -411,6 +428,7 @@ impl GarnishLangRuntime {
     }
 
     pub fn make_list(&mut self, len: usize) -> GarnishLangRuntimeResult {
+        trace!("Instruction - Make List | Length - {:?}", len);
         match self.reference_stack.len() >= len {
             false => Err(error(format!("Not enough references to make list of size {:?}", len))),
             true => {
@@ -430,6 +448,7 @@ impl GarnishLangRuntime {
     }
 
     pub fn apply(&mut self) -> GarnishLangRuntimeResult {
+        trace!("Instruction - Apply");
         match self.reference_stack.len() {
             0 | 1 => Err(error(format!("Not enough references to perform apply."))),
             _ => {
@@ -470,6 +489,7 @@ impl GarnishLangRuntime {
     }
 
     pub fn reapply(&mut self, index: usize) -> GarnishLangRuntimeResult {
+        trace!("Instruction - Reapply | Data - {:?}", index);
         match self.reference_stack.len() {
             0 => Err(error(format!("Not enough references to perform reapply."))),
             _ => {
@@ -494,6 +514,7 @@ impl GarnishLangRuntime {
                 Instruction::PutInput => self.put_input()?,
                 Instruction::PutResult => self.put_result()?,
                 Instruction::PushInput => self.push_input()?,
+                Instruction::PushResult => self.push_result()?,
                 Instruction::EndExpression => self.end_expression()?,
                 Instruction::EqualityComparison => self.equality_comparison()?,
                 Instruction::ExecuteExpression => match instruction_data.data {
@@ -597,6 +618,27 @@ mod tests {
         runtime.add_data(ExpressionData::integer(200)).unwrap();
 
         assert_eq!(runtime.get_data(1).unwrap().as_integer().unwrap(), 200);
+    }
+
+    #[test]
+    fn add_expression() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+        runtime.add_expression(1).unwrap();
+
+        assert_eq!(runtime.expression_table.len(), 1);
+        assert_eq!(*runtime.expression_table.get(0).unwrap(), 1);
+    }
+
+    #[test]
+    fn add_expression_out_of_bounds() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+        let result = runtime.add_expression(5);
+
+        assert!(result.is_err());
     }
 
     #[test]
@@ -755,11 +797,23 @@ mod tests {
     }
 
     #[test]
-    fn output_result() {
+    fn result_count() {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.output_result().unwrap();
+        runtime.add_instruction(Instruction::PushResult, None).unwrap();
+        runtime.push_result().unwrap();
+
+        assert_eq!(runtime.result_count(), 1);
+    }
+
+    #[test]
+    fn push_result() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_instruction(Instruction::PushResult, None).unwrap();
+        runtime.push_result().unwrap();
 
         assert_eq!(runtime.get_result(0).unwrap().bytes, 10i64.to_le_bytes());
     }
@@ -769,7 +823,7 @@ mod tests {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.output_result().unwrap();
+        runtime.push_result().unwrap();
 
         runtime.clear_results().unwrap();
 
@@ -831,6 +885,7 @@ mod tests {
         runtime.put(0).unwrap();
 
         assert_eq!(runtime.data.get(1).unwrap().as_reference().unwrap(), 0);
+        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 1);
     }
 
     #[test]
@@ -845,6 +900,7 @@ mod tests {
         runtime.put_input().unwrap();
 
         assert_eq!(runtime.data.get(2).unwrap(), &ExpressionData::reference(1));
+        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
     }
 
     #[test]
@@ -872,6 +928,7 @@ mod tests {
         runtime.put_result().unwrap();
 
         assert_eq!(runtime.data.get(2).unwrap(), &ExpressionData::reference(1));
+        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
     }
 
     #[test]
