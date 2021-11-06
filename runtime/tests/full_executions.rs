@@ -253,8 +253,6 @@ fn add_5_loop() {
 
     execute_all_instructions(&mut runtime);
 
-    println!("{:#?}", runtime);
-
     let last_result = runtime.get_result(runtime.result_count() - 1).unwrap();
 
     assert_eq!(last_result.as_integer().unwrap(), 25);
