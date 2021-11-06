@@ -13,7 +13,7 @@ pub struct GarnishLangRuntime {
     reference_stack: Vec<usize>,
     instructions: Vec<InstructionData>,
     instruction_cursor: usize,
-    results: Vec<usize>,
+    current_result: Option<usize>,
     jump_path: Vec<usize>,
     inputs: Vec<usize>,
     symbols: HashMap<String, u64>,
@@ -30,7 +30,7 @@ impl GarnishLangRuntime {
                 data: None,
             }],
             instruction_cursor: 1,
-            results: vec![],
+            current_result: None,
             jump_path: vec![],
             inputs: vec![],
             symbols: HashMap::new(),
@@ -113,19 +113,15 @@ impl GarnishLangRuntime {
         self.instructions.get(self.instruction_cursor)
     }
 
-    pub fn get_result(&self, i: usize) -> Option<&ExpressionData> {
-        match self.results.get(i) {
+    pub fn get_result(&self) -> Option<&ExpressionData> {
+        match self.current_result {
             None => None,
-            Some(index) => self.data.get(*index),
+            Some(i) => self.data.get(i),
         }
     }
 
-    pub fn result_count(&self) -> usize {
-        self.results.len()
-    }
-
-    pub fn clear_results(&mut self) -> GarnishLangRuntimeResult {
-        self.results.clear();
+    pub fn clear_result(&mut self) -> GarnishLangRuntimeResult {
+        self.current_result = None;
         Ok(())
     }
 
@@ -170,7 +166,7 @@ impl GarnishLangRuntime {
         })?;
 
         self.inputs.push(r);
-        self.results.push(r);
+        self.current_result = Some(r);
 
         Ok(())
     }
@@ -178,11 +174,15 @@ impl GarnishLangRuntime {
     pub fn put_result(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put Result");
 
-        self.reference_stack.push(self.data.len());
-        self.add_reference_data(match self.results.last() {
-            None => Err(error(format!("No results available to put reference.")))?,
-            Some(r) => *r,
-        })
+        match self.current_result {
+            None => Err(error(format!("No result available to put reference.")))?,
+            Some(i) => {
+                self.reference_stack.push(self.data.len());
+                self.add_reference_data(i)?;
+            }
+        }
+
+        Ok(())
     }
 
     pub fn perform_addition(&mut self) -> GarnishLangRuntimeResult {
@@ -334,7 +334,7 @@ impl GarnishLangRuntime {
         match self.jump_path.pop() {
             None => {
                 self.instruction_cursor += 1;
-                self.results.push(self.addr_of_raw_data(self.data.len() - 1)?);
+                self.current_result = Some(self.addr_of_raw_data(self.data.len() - 1)?);
             }
             Some(jump_point) => {
                 self.instruction_cursor = jump_point;
@@ -349,7 +349,7 @@ impl GarnishLangRuntime {
         match self.data.len() {
             0 => Err(error(format!("Not enough data to perform output result operation."))),
             n => {
-                self.results.push(self.addr_of_raw_data(n - 1)?);
+                self.current_result = Some(self.addr_of_raw_data(n - 1)?);
                 Ok(())
             }
         }
@@ -797,17 +797,6 @@ mod tests {
     }
 
     #[test]
-    fn result_count() {
-        let mut runtime = GarnishLangRuntime::new();
-
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_instruction(Instruction::PushResult, None).unwrap();
-        runtime.push_result().unwrap();
-
-        assert_eq!(runtime.result_count(), 1);
-    }
-
-    #[test]
     fn push_result() {
         let mut runtime = GarnishLangRuntime::new();
 
@@ -815,19 +804,19 @@ mod tests {
         runtime.add_instruction(Instruction::PushResult, None).unwrap();
         runtime.push_result().unwrap();
 
-        assert_eq!(runtime.get_result(0).unwrap().bytes, 10i64.to_le_bytes());
+        assert_eq!(runtime.get_result().unwrap().bytes, 10i64.to_le_bytes());
     }
 
     #[test]
-    fn clear_results() {
+    fn clear_result() {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.push_result().unwrap();
 
-        runtime.clear_results().unwrap();
+        runtime.clear_result().unwrap();
 
-        assert!(runtime.results.is_empty());
+        assert!(runtime.current_result.is_none());
     }
 
     #[test]
@@ -856,7 +845,7 @@ mod tests {
         runtime.end_expression().unwrap();
 
         assert_eq!(runtime.instruction_cursor, 2);
-        assert_eq!(runtime.get_result(0).unwrap().bytes, 10i64.to_le_bytes());
+        assert_eq!(runtime.get_result().unwrap().bytes, 10i64.to_le_bytes());
     }
 
     #[test]
@@ -913,7 +902,7 @@ mod tests {
         runtime.push_input().unwrap();
 
         assert_eq!(runtime.inputs.get(0).unwrap(), &1);
-        assert_eq!(runtime.results.get(0).unwrap(), &1);
+        assert_eq!(runtime.current_result.unwrap(), 1usize);
     }
 
     #[test]
@@ -923,7 +912,7 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.results.push(1);
+        runtime.current_result = Some(1);
 
         runtime.put_result().unwrap();
 
@@ -1280,7 +1269,7 @@ mod tests {
         runtime.reference_stack.push(4);
 
         runtime.inputs.push(2);
-        runtime.results.push(4);
+        runtime.current_result = Some(4);
         runtime.jump_path.push(9);
 
         runtime.set_instruction_cursor(5).unwrap();

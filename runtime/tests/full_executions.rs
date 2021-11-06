@@ -39,7 +39,7 @@ fn adding_numbers_with_sub_expression() {
 
     execute_all_instructions(&mut runtime);
 
-    assert_eq!(runtime.get_result(0).unwrap().as_integer().unwrap(), 600)
+    assert_eq!(runtime.get_result().unwrap().as_integer().unwrap(), 600)
 }
 
 #[test]
@@ -87,11 +87,11 @@ fn conditionals_and_inputs() {
 
         execute_all_instructions(&mut runtime);
 
-        assert_eq!(runtime.get_result(0).unwrap().as_integer().unwrap(), expected);
+        assert_eq!(runtime.get_result().unwrap().as_integer().unwrap(), expected);
 
         runtime.remove_data(addr).unwrap();
         runtime.set_instruction_cursor(13).unwrap();
-        runtime.clear_results().unwrap();
+        runtime.clear_result().unwrap();
     }
 }
 
@@ -144,10 +144,10 @@ fn multiple_conditions() {
 
         execute_all_instructions(&mut runtime);
 
-        assert_eq!(runtime.get_result(0).unwrap().as_integer().unwrap(), expected);
+        assert_eq!(runtime.get_result().unwrap().as_integer().unwrap(), expected);
 
         runtime.remove_data(addr).unwrap();
-        runtime.clear_results().unwrap();
+        runtime.clear_result().unwrap();
     }
 }
 
@@ -177,7 +177,7 @@ fn value_before_jump() {
 
     execute_all_instructions(&mut runtime);
 
-    assert_eq!(runtime.get_result(0).unwrap().as_integer().unwrap(), 200);
+    assert_eq!(runtime.get_result().unwrap().as_integer().unwrap(), 200);
 }
 
 #[test]
@@ -198,7 +198,7 @@ fn pair_with_pair() {
 
     execute_all_instructions(&mut runtime);
 
-    let (first_left, first_right) = runtime.get_result(0).unwrap().as_pair().unwrap();
+    let (first_left, first_right) = runtime.get_result().unwrap().as_pair().unwrap();
     let (second_left, second_right) = runtime.get_data(first_left).unwrap().as_pair().unwrap();
 
     assert_eq!(runtime.get_data(first_right).unwrap().as_integer().unwrap(), 100);
@@ -253,7 +253,7 @@ fn add_5_loop() {
 
     execute_all_instructions(&mut runtime);
 
-    let last_result = runtime.get_result(runtime.result_count() - 1).unwrap();
+    let last_result = runtime.get_result().unwrap();
 
     assert_eq!(last_result.as_integer().unwrap(), 25);
 }
