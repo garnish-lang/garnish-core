@@ -553,6 +553,93 @@ impl GarnishLangRuntime {
         }
     }
 
+    pub fn access(&mut self) -> GarnishLangRuntimeResult {
+        trace!("Instruction - Access");
+        match self.reference_stack.len() {
+            0 | 1 => Err(error(format!("Not enough references to perform access operation."))),
+            _ => {
+                let right_ref = self.reference_stack.pop().unwrap();
+                let left_ref = self.reference_stack.pop().unwrap();
+
+                let right_addr = self.addr_of_raw_data(right_ref)?;
+                let left_addr = self.addr_of_raw_data(left_ref)?;
+
+                let left_data = self.get_data_internal(left_addr)?;
+                let right_data = self.get_data_internal(right_addr)?;
+
+                match (left_data.get_type(), right_data.get_type()) {
+                    (ExpressionDataType::List, ExpressionDataType::Symbol) => {
+                        let sym_val = match right_data.as_symbol_value() {
+                            Err(e) => Err(error(e))?,
+                            Ok(v) => v,
+                        };
+
+                        let (_, assocations) = match left_data.as_list() {
+                            Err(e) => Err(error(e))?,
+                            Ok(v) => v,
+                        };
+
+                        let mut i = sym_val as usize % assocations.len();
+                        let mut count = 0;
+
+                        loop {
+                            // check to make sure item has same symbol
+                            let r = self.addr_of_raw_data(assocations[i])?;
+                            let data = self.get_data_internal(r)?; // this should be a pair
+
+                            // should have symbol on left
+                            match data.get_type() {
+                                ExpressionDataType::Pair => {
+                                    match data.as_pair() {
+                                        Err(e) => Err(error(e))?,
+                                        Ok((left, right)) => {
+                                            let left_r = self.addr_of_raw_data(left)?;
+                                            let left_data = self.get_data_internal(left_r)?;
+
+                                            match left_data.get_type() {
+                                                ExpressionDataType::Symbol => {
+                                                    let v = match left_data.as_symbol_value() {
+                                                        Err(e) => Err(error(e))?,
+                                                        Ok(v) => v,
+                                                    };
+
+                                                    if v == sym_val {
+                                                        // found match
+                                                        // insert pair right as value
+
+                                                        self.add_reference_data(right)?;
+                                                        break;
+                                                    }
+                                                }
+                                                t => Err(error(format!("Association created with non-symbol type {:?} on pair left.", t)))?,
+                                            }
+                                        }
+                                    };
+                                }
+                                t => Err(error(format!("Association created with non-pair type {:?}.", t)))?,
+                            }
+
+                            i += 1;
+                            if i >= assocations.len() {
+                                i = 0;
+                            }
+
+                            count += 1;
+                            if count > assocations.len() {
+                                return Err(error(format!("Could not find associative value with given symbol.")));
+                            }
+                        }
+                    }
+                    (l, r) => Err(error(format!(
+                        "Access operation with {:?} on the left and {:?} on the right is not supported.",
+                        l, r
+                    )))?,
+                }
+                Ok(())
+            }
+        }
+    }
+
     pub fn execute_current_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
         match self.instructions.get(self.instruction_cursor) {
             None => Err(error(format!("No instructions left.")))?,
@@ -595,6 +682,7 @@ impl GarnishLangRuntime {
                     None => Err(error(format!("No address given with execute expression instruction.")))?,
                     Some(i) => self.reapply(i)?,
                 },
+                Instruction::Access => self.access()?,
             },
         }
 
@@ -1354,5 +1442,25 @@ mod tests {
         assert_eq!(*runtime.inputs.get(0).unwrap(), 4);
         assert_eq!(runtime.instruction_cursor, 0);
         assert_eq!(*runtime.jump_path.get(0).unwrap(), 9);
+    }
+
+    #[test]
+    fn access() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::pair(0, 1)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![2], vec![2])).unwrap();
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+
+        runtime.add_instruction(Instruction::Access, None).unwrap();
+
+        runtime.reference_stack.push(3);
+        runtime.reference_stack.push(4);
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_data(5).unwrap().as_reference().unwrap(), 1);
     }
 }
