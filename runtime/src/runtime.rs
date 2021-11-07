@@ -626,7 +626,9 @@ impl GarnishLangRuntime {
 
                             count += 1;
                             if count > assocations.len() {
-                                return Err(error(format!("Could not find associative value with given symbol.")));
+                                self.reference_stack.push(self.data.len());
+                                self.add_data(ExpressionData::unit())?;
+                                break;
                             }
                         }
                     }
@@ -1462,5 +1464,26 @@ mod tests {
         runtime.access().unwrap();
 
         assert_eq!(runtime.get_data(5).unwrap().as_reference().unwrap(), 1);
+    }
+
+    #[test]
+    fn access_with_non_existent_key() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::pair(0, 1)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![2], vec![2])).unwrap();
+        runtime.add_data(ExpressionData::symbol_from_string(&"two".to_string())).unwrap();
+
+        runtime.add_instruction(Instruction::Access, None).unwrap();
+
+        runtime.reference_stack.push(3);
+        runtime.reference_stack.push(4);
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.reference_stack.len(), 1);
+        assert_eq!(runtime.get_data(5).unwrap().get_type(), ExpressionDataType::Unit);
     }
 }
