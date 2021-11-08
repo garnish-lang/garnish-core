@@ -19,6 +19,7 @@ pub enum Instruction {
     Apply,
     Reapply,
     Access,
+    Resolve,
 }
 
 #[derive(Clone, Debug)]

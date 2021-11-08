@@ -642,6 +642,41 @@ impl GarnishLangRuntime {
         }
     }
 
+    pub fn resolve(&mut self) -> GarnishLangRuntimeResult {
+        let r = self.reference_stack.pop().unwrap();
+        let addr = self.addr_of_raw_data(r)?;
+
+        // check result
+        match self.current_result {
+            None => (),
+            Some(result_ref) => match self.get_access_addr(addr, result_ref)? {
+                None => (),
+                Some(i) => {
+                    self.add_reference_data(i)?;
+                    return Ok(());
+                }
+            },
+        }
+
+        // check input
+        match self.inputs.last() {
+            None => (),
+            Some(list_ref) => match self.get_access_addr(addr, *list_ref)? {
+                None => (),
+                Some(i) => {
+                    self.add_reference_data(i)?;
+                    return Ok(());
+                }
+            },
+        }
+
+        // default to unit
+
+        self.reference_stack.push(self.data.len());
+        self.add_data(ExpressionData::unit())?;
+        Ok(())
+    }
+
     pub fn execute_current_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
         match self.instructions.get(self.instruction_cursor) {
             None => Err(error(format!("No instructions left.")))?,
@@ -685,6 +720,7 @@ impl GarnishLangRuntime {
                     Some(i) => self.reapply(i)?,
                 },
                 Instruction::Access => self.access()?,
+                Instruction::Resolve => self.resolve()?,
             },
         }
 
@@ -718,6 +754,81 @@ impl GarnishLangRuntime {
                 self.instruction_cursor += 1;
                 Ok(GarnishLangRuntimeData::new(GarnishLangRuntimeState::Running))
             }
+        }
+    }
+
+    fn get_access_addr(&self, sym: usize, list: usize) -> GarnishLangRuntimeResult<Option<usize>> {
+        let sym_addr = self.addr_of_raw_data(sym)?;
+        let list_addr = self.addr_of_raw_data(list)?;
+
+        let sym_data = self.get_data_internal(sym_addr)?;
+        let list_data = self.get_data_internal(list_addr)?;
+
+        match (list_data.get_type(), sym_data.get_type()) {
+            (ExpressionDataType::List, ExpressionDataType::Symbol) => {
+                let sym_val = match sym_data.as_symbol_value() {
+                    Err(e) => Err(error(e))?,
+                    Ok(v) => v,
+                };
+
+                let (_, assocations) = match list_data.as_list() {
+                    Err(e) => Err(error(e))?,
+                    Ok(v) => v,
+                };
+
+                let mut i = sym_val as usize % assocations.len();
+                let mut count = 0;
+
+                loop {
+                    // check to make sure item has same symbol
+                    let r = self.addr_of_raw_data(assocations[i])?;
+                    let data = self.get_data_internal(r)?; // this should be a pair
+
+                    // should have symbol on left
+                    match data.get_type() {
+                        ExpressionDataType::Pair => {
+                            match data.as_pair() {
+                                Err(e) => Err(error(e))?,
+                                Ok((left, right)) => {
+                                    let left_r = self.addr_of_raw_data(left)?;
+                                    let left_data = self.get_data_internal(left_r)?;
+
+                                    match left_data.get_type() {
+                                        ExpressionDataType::Symbol => {
+                                            let v = match left_data.as_symbol_value() {
+                                                Err(e) => Err(error(e))?,
+                                                Ok(v) => v,
+                                            };
+
+                                            if v == sym_val {
+                                                // found match
+                                                // insert pair right as value
+                                                return Ok(Some(right));
+                                            }
+                                        }
+                                        t => Err(error(format!("Association created with non-symbol type {:?} on pair left.", t)))?,
+                                    }
+                                }
+                            };
+                        }
+                        t => Err(error(format!("Association created with non-pair type {:?}.", t)))?,
+                    }
+
+                    i += 1;
+                    if i >= assocations.len() {
+                        i = 0;
+                    }
+
+                    count += 1;
+                    if count > assocations.len() {
+                        return Ok(None);
+                    }
+                }
+            }
+            (l, r) => Err(error(format!(
+                "Access operation with {:?} on the left and {:?} on the right is not supported.",
+                l, r
+            )))?,
         }
     }
 }
@@ -1484,6 +1595,67 @@ mod tests {
         runtime.access().unwrap();
 
         assert_eq!(runtime.reference_stack.len(), 1);
+        assert_eq!(runtime.get_data(5).unwrap().get_type(), ExpressionDataType::Unit);
+    }
+
+    #[test]
+    fn resolve_from_result() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::pair(0, 1)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![2], vec![2])).unwrap();
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+
+        runtime.add_instruction(Instruction::Resolve, None).unwrap();
+
+        runtime.reference_stack.push(4);
+
+        runtime.current_result = Some(3);
+
+        runtime.resolve().unwrap();
+
+        assert_eq!(runtime.get_data(5).unwrap().as_reference().unwrap(), 1);
+    }
+
+    #[test]
+    fn resolve_from_input() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::pair(0, 1)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![2], vec![2])).unwrap();
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+
+        runtime.add_instruction(Instruction::Resolve, None).unwrap();
+
+        runtime.reference_stack.push(4);
+
+        runtime.add_input_reference(3).unwrap();
+
+        runtime.resolve().unwrap();
+
+        assert_eq!(runtime.get_data(5).unwrap().as_reference().unwrap(), 1);
+    }
+
+    #[test]
+    fn resolve_not_found_is_unit() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::pair(0, 1)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![2], vec![2])).unwrap();
+        runtime.add_data(ExpressionData::symbol_from_string(&"two".to_string())).unwrap();
+
+        runtime.add_instruction(Instruction::Resolve, None).unwrap();
+
+        runtime.reference_stack.push(4);
+
+        runtime.resolve().unwrap();
+
         assert_eq!(runtime.get_data(5).unwrap().get_type(), ExpressionDataType::Unit);
     }
 }
