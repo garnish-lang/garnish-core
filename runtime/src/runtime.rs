@@ -561,81 +561,14 @@ impl GarnishLangRuntime {
                 let right_ref = self.reference_stack.pop().unwrap();
                 let left_ref = self.reference_stack.pop().unwrap();
 
-                let right_addr = self.addr_of_raw_data(right_ref)?;
-                let left_addr = self.addr_of_raw_data(left_ref)?;
-
-                let left_data = self.get_data_internal(left_addr)?;
-                let right_data = self.get_data_internal(right_addr)?;
-
-                match (left_data.get_type(), right_data.get_type()) {
-                    (ExpressionDataType::List, ExpressionDataType::Symbol) => {
-                        let sym_val = match right_data.as_symbol_value() {
-                            Err(e) => Err(error(e))?,
-                            Ok(v) => v,
-                        };
-
-                        let (_, assocations) = match left_data.as_list() {
-                            Err(e) => Err(error(e))?,
-                            Ok(v) => v,
-                        };
-
-                        let mut i = sym_val as usize % assocations.len();
-                        let mut count = 0;
-
-                        loop {
-                            // check to make sure item has same symbol
-                            let r = self.addr_of_raw_data(assocations[i])?;
-                            let data = self.get_data_internal(r)?; // this should be a pair
-
-                            // should have symbol on left
-                            match data.get_type() {
-                                ExpressionDataType::Pair => {
-                                    match data.as_pair() {
-                                        Err(e) => Err(error(e))?,
-                                        Ok((left, right)) => {
-                                            let left_r = self.addr_of_raw_data(left)?;
-                                            let left_data = self.get_data_internal(left_r)?;
-
-                                            match left_data.get_type() {
-                                                ExpressionDataType::Symbol => {
-                                                    let v = match left_data.as_symbol_value() {
-                                                        Err(e) => Err(error(e))?,
-                                                        Ok(v) => v,
-                                                    };
-
-                                                    if v == sym_val {
-                                                        // found match
-                                                        // insert pair right as value
-
-                                                        self.add_reference_data(right)?;
-                                                        break;
-                                                    }
-                                                }
-                                                t => Err(error(format!("Association created with non-symbol type {:?} on pair left.", t)))?,
-                                            }
-                                        }
-                                    };
-                                }
-                                t => Err(error(format!("Association created with non-pair type {:?}.", t)))?,
-                            }
-
-                            i += 1;
-                            if i >= assocations.len() {
-                                i = 0;
-                            }
-
-                            count += 1;
-                            if count > assocations.len() {
-                                self.reference_stack.push(self.data.len());
-                                self.add_data(ExpressionData::unit())?;
-                                break;
-                            }
-                        }
+                match self.get_access_addr(right_ref, left_ref)? {
+                    None => {
+                        self.reference_stack.push(self.data.len());
+                        self.add_data(ExpressionData::unit())?;
                     }
-                    (l, r) => Err(error(format!(
-                        "Access operation with {:?} on the left and {:?} on the right is not supported.",
-                        l, r
-                    )))?,
+                    Some(i) => {
+                        self.add_reference_data(i)?;
+                    }
                 }
                 Ok(())
             }
