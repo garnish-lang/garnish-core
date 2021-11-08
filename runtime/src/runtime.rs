@@ -576,6 +576,7 @@ impl GarnishLangRuntime {
     }
 
     pub fn resolve(&mut self) -> GarnishLangRuntimeResult {
+        trace!("Instruction - Resolve");
         let r = self.reference_stack.pop().unwrap();
         let addr = self.addr_of_raw_data(r)?;
 
@@ -604,7 +605,6 @@ impl GarnishLangRuntime {
         }
 
         // default to unit
-
         self.reference_stack.push(self.data.len());
         self.add_data(ExpressionData::unit())?;
         Ok(())
