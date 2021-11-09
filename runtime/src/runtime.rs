@@ -626,11 +626,11 @@ impl GarnishLangRuntime {
                     Some(i) => self.execute_expression(i)?,
                 },
                 Instruction::JumpIfTrue => match instruction_data.data {
-                    None => Err(error(format!("No address given with execute expression instruction.")))?,
+                    None => Err(error(format!("No address given with jump if true instruction.")))?,
                     Some(i) => self.jump_if_true(i)?,
                 },
                 Instruction::JumpIfFalse => match instruction_data.data {
-                    None => Err(error(format!("No address given with execute expression instruction.")))?,
+                    None => Err(error(format!("No address given with jump if false instruction.")))?,
                     Some(i) => self.jump_if_false(i)?,
                 },
                 Instruction::Put => match instruction_data.data {
@@ -639,17 +639,17 @@ impl GarnishLangRuntime {
                 },
                 Instruction::EndExecution => self.end_execution()?,
                 Instruction::Jump => match instruction_data.data {
-                    None => Err(error(format!("No address given with execute expression instruction.")))?,
+                    None => Err(error(format!("No address given with jump instruction.")))?,
                     Some(i) => self.jump(i)?,
                 },
                 Instruction::MakePair => self.make_pair()?,
                 Instruction::MakeList => match instruction_data.data {
-                    None => Err(error(format!("No address given with execute expression instruction.")))?,
+                    None => Err(error(format!("No address given with make list instruction.")))?,
                     Some(i) => self.make_list(i)?,
                 },
                 Instruction::Apply => self.apply()?,
                 Instruction::Reapply => match instruction_data.data {
-                    None => Err(error(format!("No address given with execute expression instruction.")))?,
+                    None => Err(error(format!("No address given with reapply instruction.")))?,
                     Some(i) => self.reapply(i)?,
                 },
                 Instruction::Access => self.access()?,
