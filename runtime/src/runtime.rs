@@ -667,7 +667,7 @@ impl GarnishLangRuntime {
         }
     }
 
-    fn addr_of_raw_data<'a>(&self, addr: usize) -> GarnishLangRuntimeResult<usize> {
+    fn addr_of_raw_data(&self, addr: usize) -> GarnishLangRuntimeResult<usize> {
         Ok(match self.data.get(addr) {
             None => Err(error(format!("No data at addr {:?}", addr)))?,
             Some(d) => match d.get_type() {
