@@ -9,12 +9,17 @@ use log::trace;
 
 pub trait GarnishLangRuntimeContext {
     fn resolve(&mut self, symbol_addr: usize, runtime: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool>;
+    fn apply(&mut self, external_value: usize, input_addr: usize, runtime: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool>;
 }
 
 pub struct EmptyContext {}
 
 impl GarnishLangRuntimeContext for EmptyContext {
     fn resolve(&mut self, _: usize, _: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
+        Ok(false)
+    }
+
+    fn apply(&mut self, _: usize, _: usize, _: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
         Ok(false)
     }
 }
@@ -510,7 +515,7 @@ impl GarnishLangRuntime {
         }
     }
 
-    pub fn apply(&mut self) -> GarnishLangRuntimeResult {
+    pub fn apply<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
         trace!("Instruction - Apply");
         match self.reference_stack.len() {
             0 | 1 => Err(error(format!("Not enough references to perform apply."))),
@@ -541,6 +546,28 @@ impl GarnishLangRuntime {
                         self.inputs.push(right_addr);
 
                         Ok(())
+                    }
+                    ExpressionDataType::External => {
+                        let external_value = match left_data.as_external() {
+                            Err(err) => Err(error(err))?,
+                            Ok(v) => v,
+                        };
+
+                        match context {
+                            None => {
+                                self.reference_stack.push(self.data.len());
+                                self.add_data(ExpressionData::unit())?;
+                                Ok(())
+                            }
+                            Some(c) => match c.apply(external_value, right_addr, self)? {
+                                true => Ok(()),
+                                false => {
+                                    self.reference_stack.push(self.data.len());
+                                    self.add_data(ExpressionData::unit())?;
+                                    Ok(())
+                                }
+                            },
+                        }
                     }
                     _ => Err(error(format!(
                         "Data type {:?} not supported on left side of apply operation.",
@@ -675,7 +702,7 @@ impl GarnishLangRuntime {
                     None => Err(error(format!("No address given with make list instruction.")))?,
                     Some(i) => self.make_list(i)?,
                 },
-                Instruction::Apply => self.apply()?,
+                Instruction::Apply => self.apply(context)?,
                 Instruction::Reapply => match instruction_data.data {
                     None => Err(error(format!("No address given with reapply instruction.")))?,
                     Some(i) => self.reapply(i)?,
@@ -1474,7 +1501,7 @@ mod tests {
 
         runtime.set_instruction_cursor(7).unwrap();
 
-        runtime.apply().unwrap();
+        runtime.apply::<EmptyContext>(None).unwrap();
 
         assert_eq!(*runtime.inputs.get(0).unwrap(), 2);
         assert_eq!(runtime.instruction_cursor, 0);
@@ -1639,7 +1666,7 @@ mod tests {
         impl GarnishLangRuntimeContext for MyContext {
             fn resolve(&mut self, sym_addr: usize, runtime: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
                 match runtime.get_data(sym_addr) {
-                    None => Err(error(format!("Symbol address given, {:?} to resolve not found in runtime.", sym_addr)))?,
+                    None => Err(error(format!("Symbol address, {:?}, given to resolve not found in runtime.", sym_addr)))?,
                     Some(data) => match data.get_type() {
                         ExpressionDataType::Symbol => {
                             let addr = runtime.get_data_len();
@@ -1651,6 +1678,10 @@ mod tests {
                     },
                 }
             }
+
+            fn apply(&mut self, _: usize, _: usize, _: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
+                Ok(false)
+            }
         }
 
         let mut context = MyContext {};
@@ -1660,5 +1691,54 @@ mod tests {
         assert_eq!(runtime.get_data(1).unwrap().as_integer().unwrap(), 100);
         assert_eq!(runtime.reference_stack.get(0).unwrap(), &2);
         assert_eq!(runtime.get_data(2).unwrap().as_reference().unwrap(), 1);
+    }
+
+    #[test]
+    fn apply_from_context() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::external(3)).unwrap();
+        runtime.add_data(ExpressionData::integer(100)).unwrap();
+
+        runtime.add_instruction(Instruction::Resolve, None).unwrap();
+
+        runtime.reference_stack.push(0);
+        runtime.reference_stack.push(1);
+
+        struct MyContext {}
+
+        impl GarnishLangRuntimeContext for MyContext {
+            fn resolve(&mut self, _: usize, _: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
+                Ok(false)
+            }
+
+            fn apply(&mut self, external_value: usize, input_addr: usize, runtime: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
+                assert_eq!(external_value, 3);
+
+                let value = match runtime.get_data(input_addr) {
+                    None => Err(error(format!("Input address given to external apply doesn't have data.")))?,
+                    Some(data) => match data.get_type() {
+                        ExpressionDataType::Integer => match data.as_integer() {
+                            Err(e) => Err(error(e))?,
+                            Ok(i) => i * 2,
+                        },
+                        _ => return Ok(false),
+                    },
+                };
+
+                let addr = runtime.get_data_len();
+                runtime.add_data(ExpressionData::integer(value))?;
+                runtime.put(addr)?;
+                Ok(true)
+            }
+        }
+
+        let mut context = MyContext {};
+
+        runtime.apply(Some(&mut context)).unwrap();
+
+        assert_eq!(runtime.get_data(2).unwrap().as_integer().unwrap(), 200);
+        assert_eq!(runtime.reference_stack.get(0).unwrap(), &3);
+        assert_eq!(runtime.get_data(3).unwrap().as_reference().unwrap(), 2);
     }
 }

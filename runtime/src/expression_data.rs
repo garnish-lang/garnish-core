@@ -11,6 +11,7 @@ pub enum ExpressionDataType {
     Pair,
     List,
     Expression,
+    External,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -70,6 +71,10 @@ impl ExpressionData {
 
     pub fn expression(i: usize) -> ExpressionData {
         ExpressionData::new(ExpressionDataType::Expression, i.to_le_bytes().to_vec())
+    }
+
+    pub fn external(i: usize) -> ExpressionData {
+        ExpressionData::new(ExpressionDataType::External, i.to_le_bytes().to_vec())
     }
 
     pub fn symbol_from_string(s: &String) -> ExpressionData {
@@ -177,6 +182,14 @@ impl ExpressionData {
     }
 
     pub fn as_expression(&self) -> Result<usize, String> {
+        let (bytes, _) = self.bytes.split_at(std::mem::size_of::<usize>());
+        Ok(usize::from_le_bytes(match bytes.try_into() {
+            Ok(v) => v,
+            Err(e) => Result::Err(e.to_string())?,
+        }))
+    }
+
+    pub fn as_external(&self) -> Result<usize, String> {
         let (bytes, _) = self.bytes.split_at(std::mem::size_of::<usize>());
         Ok(usize::from_le_bytes(match bytes.try_into() {
             Ok(v) => v,
@@ -339,5 +352,20 @@ mod tests {
         let d = ExpressionData::expression(1);
 
         assert_eq!(d.as_expression().unwrap(), 1usize)
+    }
+
+    #[test]
+    fn external() {
+        let d = ExpressionData::external(1);
+
+        assert_eq!(d.data_type, ExpressionDataType::External);
+        assert_eq!(d.bytes, 1usize.to_le_bytes());
+    }
+
+    #[test]
+    fn as_external() {
+        let d = ExpressionData::external(1);
+
+        assert_eq!(d.as_external().unwrap(), 1usize)
     }
 }
