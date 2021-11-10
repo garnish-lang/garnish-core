@@ -2,7 +2,7 @@ use garnish_lang_runtime::*;
 
 fn execute_all_instructions(runtime: &mut GarnishLangRuntime) {
     loop {
-        match runtime.execute_current_instruction() {
+        match runtime.execute_current_instruction::<EmptyContext>(None) {
             Err(e) => {
                 println!("{:?}", e);
                 break;

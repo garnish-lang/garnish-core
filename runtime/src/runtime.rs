@@ -7,6 +7,18 @@ use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
 use crate::GarnishLangRuntimeData;
 use log::trace;
 
+pub trait GarnishLangRuntimeContext {
+    fn resolve(&mut self, symbol_addr: usize, runtime: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool>;
+}
+
+pub struct EmptyContext {}
+
+impl GarnishLangRuntimeContext for EmptyContext {
+    fn resolve(&mut self, _: usize, _: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
+        Ok(false)
+    }
+}
+
 #[derive(Debug)]
 pub struct GarnishLangRuntime {
     data: Vec<ExpressionData>,
@@ -63,6 +75,10 @@ impl GarnishLangRuntime {
 
     pub fn get_data(&self, index: usize) -> Option<&ExpressionData> {
         self.data.get(index)
+    }
+
+    pub fn get_data_len(&self) -> usize {
+        self.data.len()
     }
 
     pub fn add_expression(&mut self, index: usize) -> GarnishLangRuntimeResult {
@@ -575,7 +591,7 @@ impl GarnishLangRuntime {
         }
     }
 
-    pub fn resolve(&mut self) -> GarnishLangRuntimeResult {
+    pub fn resolve<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
         trace!("Instruction - Resolve");
         let r = self.reference_stack.pop().unwrap();
         let addr = self.addr_of_raw_data(r)?;
@@ -604,13 +620,25 @@ impl GarnishLangRuntime {
             },
         }
 
+        // check context
+        match context {
+            None => (),
+            Some(c) => match c.resolve(r, self)? {
+                true => return Ok(()), // context resovled end look up
+                false => (),           // not resolved fall through
+            },
+        }
+
         // default to unit
         self.reference_stack.push(self.data.len());
         self.add_data(ExpressionData::unit())?;
         Ok(())
     }
 
-    pub fn execute_current_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
+    pub fn execute_current_instruction<T: GarnishLangRuntimeContext>(
+        &mut self,
+        context: Option<&mut T>,
+    ) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
         match self.instructions.get(self.instruction_cursor) {
             None => Err(error(format!("No instructions left.")))?,
             Some(instruction_data) => match instruction_data.instruction {
@@ -653,7 +681,7 @@ impl GarnishLangRuntime {
                     Some(i) => self.reapply(i)?,
                 },
                 Instruction::Access => self.access()?,
-                Instruction::Resolve => self.resolve()?,
+                Instruction::Resolve => self.resolve(context)?,
             },
         }
 
@@ -768,7 +796,11 @@ impl GarnishLangRuntime {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
+    use crate::result::error;
+
+    use crate::{
+        EmptyContext, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeContext, GarnishLangRuntimeResult, Instruction,
+    };
 
     #[test]
     fn create_runtime() {
@@ -1109,7 +1141,7 @@ mod tests {
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.execute_current_instruction().unwrap();
+        runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.data.get(0).unwrap().bytes, 30i64.to_le_bytes());
     }
@@ -1547,7 +1579,7 @@ mod tests {
 
         runtime.current_result = Some(3);
 
-        runtime.resolve().unwrap();
+        runtime.resolve::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_data(5).unwrap().as_reference().unwrap(), 1);
     }
@@ -1568,7 +1600,7 @@ mod tests {
 
         runtime.add_input_reference(3).unwrap();
 
-        runtime.resolve().unwrap();
+        runtime.resolve::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_data(5).unwrap().as_reference().unwrap(), 1);
     }
@@ -1587,8 +1619,46 @@ mod tests {
 
         runtime.reference_stack.push(4);
 
-        runtime.resolve().unwrap();
+        runtime.resolve::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_data(5).unwrap().get_type(), ExpressionDataType::Unit);
+    }
+
+    #[test]
+    fn resolve_from_context() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+
+        runtime.add_instruction(Instruction::Resolve, None).unwrap();
+
+        runtime.reference_stack.push(0);
+
+        struct MyContext {}
+
+        impl GarnishLangRuntimeContext for MyContext {
+            fn resolve(&mut self, sym_addr: usize, runtime: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
+                match runtime.get_data(sym_addr) {
+                    None => Err(error(format!("Symbol address given, {:?} to resolve not found in runtime.", sym_addr)))?,
+                    Some(data) => match data.get_type() {
+                        ExpressionDataType::Symbol => {
+                            let addr = runtime.get_data_len();
+                            runtime.add_data(ExpressionData::integer(100))?;
+                            runtime.put(addr)?;
+                            Ok(true)
+                        }
+                        t => Err(error(format!("Address given to resolve is of type {:?}. Expected symbol type.", t)))?,
+                    },
+                }
+            }
+        }
+
+        let mut context = MyContext {};
+
+        runtime.resolve(Some(&mut context)).unwrap();
+
+        assert_eq!(runtime.get_data(1).unwrap().as_integer().unwrap(), 100);
+        assert_eq!(runtime.reference_stack.get(0).unwrap(), &2);
+        assert_eq!(runtime.get_data(2).unwrap().as_reference().unwrap(), 1);
     }
 }
