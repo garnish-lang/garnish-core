@@ -2,5 +2,6 @@
 
 [workspace]
 members = [
-    "runtime"
+    "runtime",
+    "compiler"
 ]
