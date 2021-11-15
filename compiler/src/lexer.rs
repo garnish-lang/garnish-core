@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, vec};
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum TokenType {
@@ -59,6 +59,7 @@ pub enum TokenType {
     NewLine,
 }
 
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub struct LexerSymbolNode {
     value: char,
     token_type: Option<TokenType>,
@@ -77,6 +78,14 @@ impl LexerSymbolNode {
     pub fn get_child(&self, key: &char) -> Option<&LexerSymbolNode> {
         self.children.get(key)
     }
+}
+
+#[derive(Debug, PartialOrd, Eq, PartialEq, Clone)]
+pub struct LexerToken {
+    text: String,
+    token_type: TokenType,
+    row: usize,
+    column: usize,
 }
 
 // fn insert_node(chars: &Vec<char>, i: usize, s: String, children: &mut HashMap<String, LexerSymbolNode>, t: TokenType) {
@@ -213,9 +222,42 @@ pub fn create_symbol_tree(symbol_list: Vec<(String, TokenType)>) -> LexerSymbolN
     root
 }
 
+pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
+    let mut tokens = vec![];
+    let mut current_characters = String::new();
+
+    let symbol_tree = create_symbol_tree(vec![("+".to_string(), TokenType::PlusSign)]);
+    let mut current_symbol = None;
+
+    let mut text_row = 0;
+    let mut text_column = 0;
+    for c in input.chars() {
+        current_characters.push(c);
+        let symbol = symbol_tree.get_child(&c);
+        match symbol {
+            Some(node) => tokens.push(LexerToken {
+                text: current_characters.clone(),
+                token_type: match node.token_type {
+                    Some(t) => t,
+                    None => Err(format!("No token type at row {:?} and column {:?}", text_row, text_column))?,
+                },
+                row: text_row,
+                column: text_column,
+            }),
+            None => (),
+        }
+        current_symbol = symbol;
+        text_row += 1;
+    }
+
+    Ok(tokens)
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::{lexer::create_symbol_tree, TokenType};
+    use std::vec;
+
+    use crate::{lex, lexer::create_symbol_tree, LexerToken, TokenType};
 
     #[test]
     fn access_single_string() {
@@ -243,5 +285,20 @@ mod tests {
         assert_eq!(child_2.value, '*');
         assert_eq!(child_2.token_type, Some(TokenType::ExponentialSign));
         assert!(child_2.children.is_empty());
+    }
+
+    #[test]
+    fn lex_single_one_character_symbol() {
+        let result = lex(&"+".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "+".to_string(),
+                token_type: TokenType::PlusSign,
+                column: 0,
+                row: 0
+            }]
+        )
     }
 }
