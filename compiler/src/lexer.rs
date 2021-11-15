@@ -1,7 +1,8 @@
-use std::{collections::HashMap, vec};
+use std::{collections::HashMap, iter, vec};
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum TokenType {
+    Unknown,
     PlusSign,
     MinusSign,
     MultiplicationSign,
@@ -227,26 +228,50 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
     let mut current_characters = String::new();
 
     let symbol_tree = create_symbol_tree(vec![("+".to_string(), TokenType::PlusSign)]);
-    let mut current_symbol = None;
+    let mut current_symbol = &symbol_tree;
+    let mut current_token_type = None;
 
     let mut text_row = 0;
     let mut text_column = 0;
-    for c in input.chars() {
-        current_characters.push(c);
-        let symbol = symbol_tree.get_child(&c);
-        match symbol {
-            Some(node) => tokens.push(LexerToken {
-                text: current_characters.clone(),
-                token_type: match node.token_type {
-                    Some(t) => t,
-                    None => Err(format!("No token type at row {:?} and column {:?}", text_row, text_column))?,
-                },
-                row: text_row,
-                column: text_column,
-            }),
-            None => (),
+
+    for c in input.chars().chain(iter::once(' ')) {
+        match current_symbol.get_child(&c) {
+            Some(node) => {
+                // set 'current' values
+                current_characters.push(c);
+                current_token_type = node.token_type;
+                current_symbol = node;
+            }
+            None => {
+                // no sub token, end current
+                tokens.push(LexerToken {
+                    text: current_characters,
+                    token_type: match current_token_type {
+                        Some(t) => t,
+                        None => Err(format!("No token type at row {:?} and column {:?}", text_row, text_column))?,
+                    },
+                    // actual token is determined after current, minus 1 to make accurate
+                    row: text_row - 1,
+                    column: text_column,
+                });
+
+                // set default for new if next token isn't a symbol
+                current_characters = String::new();
+                current_symbol = &symbol_tree;
+                current_token_type = None;
+
+                // start new from root of tree
+                match symbol_tree.get_child(&c) {
+                    Some(node) => {
+                        // set 'current' values
+                        current_characters.push(c);
+                        current_token_type = node.token_type;
+                        current_symbol = node;
+                    }
+                    None => (),
+                }
+            }
         }
-        current_symbol = symbol;
         text_row += 1;
     }
 
@@ -300,5 +325,34 @@ mod tests {
                 row: 0
             }]
         )
+    }
+
+    #[test]
+    fn lex_three_one_character_symbol() {
+        let result = lex(&"+++".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 0,
+                    row: 1
+                },
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 0,
+                    row: 2
+                }
+            ]
+        );
     }
 }
