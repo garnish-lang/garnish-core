@@ -1,3 +1,4 @@
+use log::trace;
 use std::{collections::HashMap, iter, vec};
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
@@ -223,7 +224,16 @@ pub fn create_symbol_tree(symbol_list: Vec<(String, TokenType)>) -> LexerSymbolN
     root
 }
 
+#[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
+enum LexingState {
+    NoToken,
+    Symbol,
+    Spaces,
+}
+
 pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
+    trace!("Begining lexing");
+
     let mut tokens = vec![];
     let mut current_characters = String::new();
 
@@ -233,46 +243,138 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
 
     let mut text_row = 0;
     let mut text_column = 0;
+    let mut token_start_column = 0;
 
-    for c in input.chars().chain(iter::once(' ')) {
-        match current_symbol.get_child(&c) {
-            Some(node) => {
-                // set 'current' values
-                current_characters.push(c);
-                current_token_type = node.token_type;
-                current_symbol = node;
-            }
-            None => {
-                // no sub token, end current
-                tokens.push(LexerToken {
-                    text: current_characters,
-                    token_type: match current_token_type {
-                        Some(t) => t,
-                        None => Err(format!("No token type at row {:?} and column {:?}", text_row, text_column))?,
-                    },
-                    // actual token is determined after current, minus 1 to make accurate
-                    row: text_row - 1,
-                    column: text_column,
-                });
+    let mut state = LexingState::NoToken;
 
-                // set default for new if next token isn't a symbol
-                current_characters = String::new();
-                current_symbol = &symbol_tree;
-                current_token_type = None;
+    for c in input.chars().chain(iter::once('\0')) {
+        trace!("Character {:?} at ({:?}, {:?})", c, text_column, text_row);
 
-                // start new from root of tree
-                match symbol_tree.get_child(&c) {
+        if state == LexingState::NoToken {
+            trace!("Beginning new token");
+
+            // start new token
+            if current_symbol.get_child(&c).is_some() {
+                state = LexingState::Symbol;
+                match current_symbol.get_child(&c) {
+                    None => unreachable!(),
                     Some(node) => {
-                        // set 'current' values
                         current_characters.push(c);
                         current_token_type = node.token_type;
                         current_symbol = node;
                     }
-                    None => (),
+                }
+                trace!("Symbol started");
+            } else if c == ' ' || c == '\t' {
+                state = LexingState::Spaces;
+                current_token_type = Some(TokenType::HorizontalSpace);
+                trace!("Horizontal spaces started");
+            }
+
+            token_start_column = text_column;
+        } else {
+            trace!("Continuing token");
+
+            // continue/end tokens
+            match state {
+                LexingState::NoToken => (),
+                LexingState::Symbol => {
+                    trace!("Continuing symbol");
+                    match current_symbol.get_child(&c) {
+                        Some(node) => {
+                            // set 'current' values
+                            current_characters.push(c);
+                            current_token_type = node.token_type;
+                            current_symbol = node;
+                        }
+                        None => {
+                            trace!("Ending symbol");
+                            state = LexingState::NoToken;
+
+                            // no sub token, end current
+                            tokens.push(LexerToken {
+                                text: current_characters,
+                                token_type: match current_token_type {
+                                    Some(t) => t,
+                                    None => Err(format!("No token type at row {:?} and column {:?}", text_row, text_column))?,
+                                },
+                                row: text_row,
+                                // actual token is determined after current, minus 1 to make accurate
+                                column: token_start_column,
+                            });
+
+                            // set default for new if next token isn't a symbol
+                            current_characters = String::new();
+                            current_symbol = &symbol_tree;
+                            current_token_type = None;
+
+                            // start new
+                            trace!("Beginning new token");
+
+                            // start new token
+                            if current_symbol.get_child(&c).is_some() {
+                                state = LexingState::Symbol;
+                                match current_symbol.get_child(&c) {
+                                    None => unreachable!(),
+                                    Some(node) => {
+                                        current_characters.push(c);
+                                        current_token_type = node.token_type;
+                                        current_symbol = node;
+                                    }
+                                }
+                                trace!("Symbol started");
+                            } else if c == ' ' || c == '\t' {
+                                state = LexingState::Spaces;
+                                current_token_type = Some(TokenType::HorizontalSpace);
+                                trace!("Horizontal spaces started");
+                            }
+
+                            token_start_column = text_column;
+                        }
+                    }
+                }
+                LexingState::Spaces => {
+                    if c != ' ' && c != '\t' {
+                        trace!("Ending horizontal space");
+                        state = LexingState::NoToken;
+
+                        // end of horizontal space, create token and start new
+                        tokens.push(LexerToken {
+                            text: " ".to_string(),
+                            token_type: TokenType::HorizontalSpace,
+                            row: text_row,
+                            // actual token is determined after current, minus 1 to make accurate
+                            column: token_start_column,
+                        });
+
+                        // start new
+                        trace!("Beginning new token");
+
+                        // start new token
+                        if current_symbol.get_child(&c).is_some() {
+                            state = LexingState::Symbol;
+                            match current_symbol.get_child(&c) {
+                                None => unreachable!(),
+                                Some(node) => {
+                                    current_characters.push(c);
+                                    current_token_type = node.token_type;
+                                    current_symbol = node;
+                                }
+                            }
+                            trace!("Symbol started");
+                        } else if c == ' ' || c == '\t' {
+                            state = LexingState::Spaces;
+                            current_token_type = Some(TokenType::HorizontalSpace);
+                            trace!("Horizontal spaces started");
+                        }
+
+                        token_start_column = text_column;
+                    }
                 }
             }
         }
-        text_row += 1;
+
+        text_column += 1;
     }
 
     Ok(tokens)
@@ -343,15 +445,68 @@ mod tests {
                 LexerToken {
                     text: "+".to_string(),
                     token_type: TokenType::PlusSign,
-                    column: 0,
-                    row: 1
+                    column: 1,
+                    row: 0
                 },
                 LexerToken {
                     text: "+".to_string(),
                     token_type: TokenType::PlusSign,
-                    column: 0,
-                    row: 2
+                    column: 2,
+                    row: 0
                 }
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_three_one_character_symbol_with_spaces() {
+        let result = lex(&"    +     +      +      ".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::HorizontalSpace,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 4,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::HorizontalSpace,
+                    column: 5,
+                    row: 0
+                },
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 10,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::HorizontalSpace,
+                    column: 11,
+                    row: 0
+                },
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 17,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::HorizontalSpace,
+                    column: 18,
+                    row: 0
+                },
             ]
         );
     }
