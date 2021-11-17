@@ -130,6 +130,7 @@ enum LexingState {
     Symbol,
     Spaces,
     NewLine,
+    Number,
 }
 
 fn start_token<'a>(
@@ -168,9 +169,15 @@ fn start_token<'a>(
         *state = LexingState::NewLine;
         *current_token_type = Some(TokenType::NewLine);
         trace!("New line started");
+    } else if c.is_numeric() {
+        current_characters.push(c);
+        *state = LexingState::Number;
+        *current_token_type = Some(TokenType::Number);
+        trace!("Number started");
     } else if c == '\0' {
         *state = LexingState::NoToken;
         *current_token_type = None;
+        trace!("Null character found, skipping.");
         return;
     }
 
@@ -247,6 +254,29 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
 
                             true
                         }
+                    }
+                }
+
+                LexingState::Number => {
+                    if c.is_numeric() {
+                        current_characters.push(c);
+                        false
+                    } else {
+                        trace!("Ending number");
+                        state = LexingState::NoToken;
+
+                        // end of horizontal space, create token and start new
+                        tokens.push(LexerToken {
+                            text: current_characters,
+                            token_type: TokenType::Number,
+                            row: text_row,
+                            // actual token is determined after current, minus 1 to make accurate
+                            column: token_start_column,
+                        });
+
+                        current_characters = String::new();
+
+                        true
                     }
                 }
                 LexingState::Spaces => {
@@ -510,6 +540,35 @@ mod tests {
                     token_type: TokenType::NewLine,
                     column: 1,
                     row: 2
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_numbers() {
+        let result = lex(&"12345 67890".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "12345".to_string(),
+                    token_type: TokenType::Number,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::HorizontalSpace,
+                    column: 5,
+                    row: 0
+                },
+                LexerToken {
+                    text: "67890".to_string(),
+                    token_type: TokenType::Number,
+                    column: 6,
+                    row: 0
                 },
             ]
         );
