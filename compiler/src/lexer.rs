@@ -59,6 +59,7 @@ pub enum TokenType {
     Identifier,
     HorizontalSpace,
     NewLine,
+    Annotation,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -132,6 +133,7 @@ enum LexingState {
     NewLine,
     Number,
     Indentifier,
+    Annotation,
 }
 
 fn start_token<'a>(
@@ -192,6 +194,10 @@ fn start_token<'a>(
         *state = LexingState::Indentifier;
         *current_token_type = Some(TokenType::Identifier);
         trace!("Identifier started");
+    } else if c == '@' {
+        current_characters.push(c);
+        *state = LexingState::Annotation;
+        *current_token_type = Some(TokenType::Annotation);
     }
 
     *token_start_row = text_row;
@@ -278,6 +284,16 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                     // one new line charcter per token
                     // end immediately
                     true
+                }
+                LexingState::Annotation => {
+                    // annotations continue until end of line
+                    // for simplicity we include entire line as the token
+                    if c == '\n' || c == '\0' {
+                        true
+                    } else {
+                        current_characters.push(c);
+                        false
+                    }
                 }
             }
         };
@@ -643,6 +659,65 @@ mod tests {
                     column: 8,
                     row: 0
                 },
+            ]
+        );
+    }
+
+    #[test]
+    fn annotation() {
+        let result = lex(&"@ This is a comment".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "@ This is a comment".to_string(),
+                token_type: TokenType::Annotation,
+                column: 0,
+                row: 0
+            },]
+        );
+    }
+
+    #[test]
+    fn annotation_no_space_after() {
+        let result = lex(&"@This is a comment".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "@This is a comment".to_string(),
+                token_type: TokenType::Annotation,
+                column: 0,
+                row: 0
+            },]
+        );
+    }
+
+    #[test]
+    fn annotation_with_newline_and_identifier() {
+        let result = lex(&"@This is a comment\nmy_value".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "@This is a comment".to_string(),
+                    token_type: TokenType::Annotation,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "\n".to_string(),
+                    token_type: TokenType::NewLine,
+                    column: 18,
+                    row: 0
+                },
+                LexerToken {
+                    text: "my_value".to_string(),
+                    token_type: TokenType::Identifier,
+                    column: 0,
+                    row: 1
+                }
             ]
         );
     }
