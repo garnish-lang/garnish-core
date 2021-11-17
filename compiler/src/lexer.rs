@@ -460,7 +460,7 @@ mod tests {
 
     #[test]
     fn lex_three_one_character_symbol_with_spaces() {
-        let result = lex(&"    +     +      +      ".to_string()).unwrap();
+        let result = lex(&"    +  \t  +\t\t\t\t\t\t+      ".to_string()).unwrap();
 
         assert_eq!(
             result,
