@@ -247,37 +247,62 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
 
     let mut state = LexingState::NoToken;
 
+    fn start_token<'a>(
+        c: char,
+        current_symbol: &mut &'a LexerSymbolNode,
+        symbol_tree: &'a LexerSymbolNode,
+        state: &mut LexingState,
+        current_characters: &mut String,
+        current_token_type: &mut Option<TokenType>,
+        token_start_column: &mut usize,
+        text_column: usize,
+    ) {
+        trace!("Beginning new token");
+        *current_characters = String::new();
+        *current_symbol = symbol_tree;
+        *current_token_type = None;
+
+        // start new token
+        if current_symbol.get_child(&c).is_some() {
+            *state = LexingState::Symbol;
+            match current_symbol.get_child(&c) {
+                None => unreachable!(),
+                Some(node) => {
+                    current_characters.push(c);
+                    *current_token_type = node.token_type;
+                    *current_symbol = node;
+                }
+            }
+            trace!("Symbol started");
+        } else if c == ' ' || c == '\t' {
+            *state = LexingState::Spaces;
+            *current_token_type = Some(TokenType::HorizontalSpace);
+            trace!("Horizontal spaces started");
+        }
+
+        *token_start_column = text_column;
+    }
+
     for c in input.chars().chain(iter::once('\0')) {
         trace!("Character {:?} at ({:?}, {:?})", c, text_column, text_row);
 
         if state == LexingState::NoToken {
-            trace!("Beginning new token");
-
-            // start new token
-            if current_symbol.get_child(&c).is_some() {
-                state = LexingState::Symbol;
-                match current_symbol.get_child(&c) {
-                    None => unreachable!(),
-                    Some(node) => {
-                        current_characters.push(c);
-                        current_token_type = node.token_type;
-                        current_symbol = node;
-                    }
-                }
-                trace!("Symbol started");
-            } else if c == ' ' || c == '\t' {
-                state = LexingState::Spaces;
-                current_token_type = Some(TokenType::HorizontalSpace);
-                trace!("Horizontal spaces started");
-            }
-
-            token_start_column = text_column;
+            start_token(
+                c,
+                &mut current_symbol,
+                &symbol_tree,
+                &mut state,
+                &mut current_characters,
+                &mut current_token_type,
+                &mut token_start_column,
+                text_column,
+            );
         } else {
             trace!("Continuing token");
 
             // continue/end tokens
-            match state {
-                LexingState::NoToken => (),
+            let start_new = match state {
+                LexingState::NoToken => false,
                 LexingState::Symbol => {
                     trace!("Continuing symbol");
                     match current_symbol.get_child(&c) {
@@ -286,6 +311,8 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                             current_characters.push(c);
                             current_token_type = node.token_type;
                             current_symbol = node;
+
+                            false
                         }
                         None => {
                             trace!("Ending symbol");
@@ -308,28 +335,7 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                             current_symbol = &symbol_tree;
                             current_token_type = None;
 
-                            // start new
-                            trace!("Beginning new token");
-
-                            // start new token
-                            if current_symbol.get_child(&c).is_some() {
-                                state = LexingState::Symbol;
-                                match current_symbol.get_child(&c) {
-                                    None => unreachable!(),
-                                    Some(node) => {
-                                        current_characters.push(c);
-                                        current_token_type = node.token_type;
-                                        current_symbol = node;
-                                    }
-                                }
-                                trace!("Symbol started");
-                            } else if c == ' ' || c == '\t' {
-                                state = LexingState::Spaces;
-                                current_token_type = Some(TokenType::HorizontalSpace);
-                                trace!("Horizontal spaces started");
-                            }
-
-                            token_start_column = text_column;
+                            true
                         }
                     }
                 }
@@ -347,30 +353,24 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                             column: token_start_column,
                         });
 
-                        // start new
-                        trace!("Beginning new token");
-
-                        // start new token
-                        if current_symbol.get_child(&c).is_some() {
-                            state = LexingState::Symbol;
-                            match current_symbol.get_child(&c) {
-                                None => unreachable!(),
-                                Some(node) => {
-                                    current_characters.push(c);
-                                    current_token_type = node.token_type;
-                                    current_symbol = node;
-                                }
-                            }
-                            trace!("Symbol started");
-                        } else if c == ' ' || c == '\t' {
-                            state = LexingState::Spaces;
-                            current_token_type = Some(TokenType::HorizontalSpace);
-                            trace!("Horizontal spaces started");
-                        }
-
-                        token_start_column = text_column;
+                        true
+                    } else {
+                        false
                     }
                 }
+            };
+
+            if start_new {
+                start_token(
+                    c,
+                    &mut current_symbol,
+                    &symbol_tree,
+                    &mut state,
+                    &mut current_characters,
+                    &mut current_token_type,
+                    &mut token_start_column,
+                    text_column,
+                );
             }
         }
 
