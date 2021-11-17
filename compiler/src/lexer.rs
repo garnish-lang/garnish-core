@@ -59,6 +59,17 @@ pub struct LexerToken {
     column: usize,
 }
 
+impl LexerToken {
+    pub fn new(text: String, token_type: TokenType, row: usize, column: usize) -> LexerToken {
+        LexerToken {
+            text,
+            token_type,
+            row,
+            column,
+        }
+    }
+}
+
 pub fn create_symbol_tree(symbol_list: Vec<(&str, TokenType)>) -> LexerSymbolNode {
     let mut root = LexerSymbolNode {
         value: '\0',
@@ -306,16 +317,16 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
 
         if start_new {
             if state != LexingState::NoToken {
-                tokens.push(LexerToken {
-                    text: current_characters,
-                    token_type: match current_token_type {
+                tokens.push(LexerToken::new(
+                    current_characters,
+                    match current_token_type {
                         Some(t) => t,
                         None => Err(format!("No token type at row {:?} and column {:?}", text_row, text_column))?,
                     },
-                    row: token_start_row,
+                    token_start_row,
                     // actual token is determined after current, minus 1 to make accurate
-                    column: token_start_column,
-                });
+                    token_start_column,
+                ));
             }
 
             // set default for new if next token isn't a symbol
