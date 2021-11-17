@@ -87,7 +87,7 @@ pub fn create_symbol_tree(symbol_list: Vec<(&str, TokenType)>) -> LexerSymbolNod
                     },
                 );
             } else {
-                // has key
+                // has child
                 if last {
                     // update token type
                     match current.children.get_mut(&c) {
