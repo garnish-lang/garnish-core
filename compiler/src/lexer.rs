@@ -5,40 +5,9 @@ use std::{collections::HashMap, iter, vec};
 pub enum TokenType {
     Unknown,
     PlusSign,
-    MinusSign,
     MultiplicationSign,
-    DivisionSign,
-    IntegerDivisionOperator,
-    ModuloOperator,
     ExponentialSign,
-    LogicalAndOperator,
-    LogicalOrOperator,
-    LogicalXorOperator,
-    LogicalNotOperator,
-    TypeCastOperator,
-    EqualityOperator,
-    InequalityOperator,
-    LessThanOperator,
-    LessThanOrEqualOperator,
-    GreaterThanOperator,
-    GreaterThanOrEqualOperator,
-    TypeComparisonOperator,
-    BitwiseAndOperator,
-    BitwiseOrOperator,
-    BitwiseXorOperator,
-    BitwiseNotOperator,
-    BitwiseLeftShiftOperator,
-    BitwiseRightShiftOperator,
-    DotOperator,
-    RangeOperator,
-    StartExclusiveRangeOperator,
-    EndExclusiveRangeOperator,
-    ExclusiveRangeOperator,
-    PairOperator,
-    LinkOperator,
-    ConditionalTrueOperator,
-    ConditionalFalseOperator,
-    SymbolOperator,
+    UnitLiteral,
     StartExpression,
     EndExpression,
     StartGroup,
@@ -46,20 +15,19 @@ pub enum TokenType {
     Result,
     Input,
     Comma,
-    UnitLiteral,
-    ApplyOperator,
-    PartiallyApplyOperator,
-    PipeOperator,
-    InfixOperator,
-    PrefixOperator,
-    SuffixOperator,
-    Character,
-    CharacterList,
+    Symbol,
     Number,
     Identifier,
     HorizontalSpace,
     NewLine,
     Annotation,
+    Apply,
+    ApplyIfFalse,
+    ApplyIfTrue,
+    ApplyTo,
+    Reapply,
+    EmptyApply,
+    Equality,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -91,7 +59,7 @@ pub struct LexerToken {
     column: usize,
 }
 
-pub fn create_symbol_tree(symbol_list: Vec<(String, TokenType)>) -> LexerSymbolNode {
+pub fn create_symbol_tree(symbol_list: Vec<(&str, TokenType)>) -> LexerSymbolNode {
     let mut root = LexerSymbolNode {
         value: '\0',
         token_type: None,
@@ -100,17 +68,35 @@ pub fn create_symbol_tree(symbol_list: Vec<(String, TokenType)>) -> LexerSymbolN
 
     for (characters, token_type) in symbol_list {
         let mut current = &mut root;
+        let len = characters.len();
 
-        for c in characters.chars() {
+        for (i, c) in characters.chars().enumerate() {
+            let last = i >= len - 1;
             if !current.children.contains_key(&c) {
+                let t = match last {
+                    true => Some(token_type),
+                    false => None,
+                };
+
                 current.children.insert(
                     c,
                     LexerSymbolNode {
                         value: c,
-                        token_type: Some(token_type),
+                        token_type: t,
                         children: HashMap::new(),
                     },
                 );
+            } else {
+                // has key
+                if last {
+                    // update token type
+                    match current.children.get_mut(&c) {
+                        Some(node) => {
+                            node.token_type = Some(token_type);
+                        }
+                        None => unreachable!(),
+                    }
+                }
             }
 
             match current.children.get_mut(&c) {
@@ -210,7 +196,27 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
     let mut tokens = vec![];
     let mut current_characters = String::new();
 
-    let symbol_tree = create_symbol_tree(vec![("+".to_string(), TokenType::PlusSign)]);
+    let symbol_tree = create_symbol_tree(vec![
+        ("+", TokenType::PlusSign),
+        ("*", TokenType::MultiplicationSign),
+        ("**", TokenType::ExponentialSign),
+        ("()", TokenType::UnitLiteral),
+        ("{", TokenType::StartExpression),
+        ("}", TokenType::EndExpression),
+        ("(", TokenType::StartGroup),
+        (")", TokenType::EndGroup),
+        ("$?", TokenType::Result),
+        ("$", TokenType::Input),
+        (",", TokenType::Comma),
+        (":", TokenType::Symbol),
+        ("~", TokenType::Apply),
+        ("!>", TokenType::ApplyIfFalse),
+        ("?>", TokenType::ApplyIfTrue),
+        ("~>", TokenType::ApplyTo),
+        ("~^", TokenType::Reapply),
+        ("~~", TokenType::EmptyApply),
+        ("==", TokenType::Equality),
+    ]);
     let mut current_symbol = &symbol_tree;
     let mut current_token_type = None;
 
@@ -348,7 +354,7 @@ mod tests {
 
     #[test]
     fn access_single_string() {
-        let root = create_symbol_tree(vec![("+".to_string(), TokenType::PlusSign)]);
+        let root = create_symbol_tree(vec![("+", TokenType::PlusSign)]);
 
         let child = root.get_child(&'+').unwrap();
         assert_eq!(child.get_value(), '+');
@@ -358,10 +364,22 @@ mod tests {
 
     #[test]
     fn nested_symbols() {
-        let root = create_symbol_tree(vec![
-            ("*".to_string(), TokenType::MultiplicationSign),
-            ("**".to_string(), TokenType::ExponentialSign),
-        ]);
+        let root = create_symbol_tree(vec![("*", TokenType::MultiplicationSign), ("**", TokenType::ExponentialSign)]);
+
+        let child_1 = root.get_child(&'*').unwrap();
+        let child_2 = child_1.get_child(&'*').unwrap();
+
+        assert_eq!(child_1.value, '*');
+        assert_eq!(child_1.token_type, Some(TokenType::MultiplicationSign));
+
+        assert_eq!(child_2.value, '*');
+        assert_eq!(child_2.token_type, Some(TokenType::ExponentialSign));
+        assert!(child_2.children.is_empty());
+    }
+
+    #[test]
+    fn nested_symbols_longer_first() {
+        let root = create_symbol_tree(vec![("**", TokenType::ExponentialSign), ("*", TokenType::MultiplicationSign)]);
 
         let child_1 = root.get_child(&'*').unwrap();
         let child_2 = child_1.get_child(&'*').unwrap();
@@ -383,6 +401,246 @@ mod tests {
             vec![LexerToken {
                 text: "+".to_string(),
                 token_type: TokenType::PlusSign,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn apply_if_true_symbol() {
+        let result = lex(&"?>".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "?>".to_string(),
+                token_type: TokenType::ApplyIfTrue,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn apply_if_false_symbol() {
+        let result = lex(&"!>".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "!>".to_string(),
+                token_type: TokenType::ApplyIfFalse,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn equality_symbol() {
+        let result = lex(&"==".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "==".to_string(),
+                token_type: TokenType::Equality,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn input_symbol() {
+        let result = lex(&"$".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "$".to_string(),
+                token_type: TokenType::Input,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn result_symbol() {
+        let result = lex(&"$?".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "$?".to_string(),
+                token_type: TokenType::Result,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn apply_symbol() {
+        let result = lex(&"~".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "~".to_string(),
+                token_type: TokenType::Apply,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn empty_apply_symbol() {
+        let result = lex(&"~~".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "~~".to_string(),
+                token_type: TokenType::EmptyApply,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn reapply_symbol() {
+        let result = lex(&"~^".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "~^".to_string(),
+                token_type: TokenType::Reapply,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn apply_to_symbol() {
+        let result = lex(&"~>".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "~>".to_string(),
+                token_type: TokenType::ApplyTo,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn symbol_symbol() {
+        let result = lex(&":".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ":".to_string(),
+                token_type: TokenType::Symbol,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn start_group_symbol() {
+        let result = lex(&"(".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "(".to_string(),
+                token_type: TokenType::StartGroup,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn end_group_symbol() {
+        let result = lex(&")".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ")".to_string(),
+                token_type: TokenType::EndGroup,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn start_expression_symbol() {
+        let result = lex(&"{".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "{".to_string(),
+                token_type: TokenType::StartExpression,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn end_expression_symbol() {
+        let result = lex(&"}".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "}".to_string(),
+                token_type: TokenType::EndExpression,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn comma_symbol() {
+        let result = lex(&",".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ",".to_string(),
+                token_type: TokenType::Comma,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn unit_literal_symbol() {
+        let result = lex(&"()".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "()".to_string(),
+                token_type: TokenType::UnitLiteral,
                 column: 0,
                 row: 0
             }]
