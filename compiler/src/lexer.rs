@@ -142,7 +142,9 @@ fn start_token<'a>(
     current_characters: &mut String,
     current_token_type: &mut Option<TokenType>,
     token_start_column: &mut usize,
+    token_start_row: &mut usize,
     text_column: usize,
+    text_row: usize,
 ) {
     trace!("Beginning new token");
     *current_characters = String::new();
@@ -162,11 +164,13 @@ fn start_token<'a>(
         }
         trace!("Symbol started");
     } else if c == ' ' || c == '\t' {
+        current_characters.push(c);
         *state = LexingState::Spaces;
         *current_token_type = Some(TokenType::HorizontalSpace);
         trace!("Horizontal spaces started");
     } else if c.is_ascii_whitespace() {
         // any other white space
+        current_characters.push(c);
         *state = LexingState::NewLine;
         *current_token_type = Some(TokenType::NewLine);
         trace!("New line started");
@@ -190,6 +194,7 @@ fn start_token<'a>(
         trace!("Identifier started");
     }
 
+    *token_start_row = text_row;
     *token_start_column = text_column;
 }
 
@@ -206,28 +211,20 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
     let mut text_row = 0;
     let mut text_column = 0;
     let mut token_start_column = 0;
+    let mut token_start_row = 0;
 
     let mut state = LexingState::NoToken;
 
     for c in input.chars().chain(iter::once('\0')) {
         trace!("Character {:?} at ({:?}, {:?})", c, text_column, text_row);
 
-        if state == LexingState::NoToken {
-            start_token(
-                c,
-                &mut current_symbol,
-                &symbol_tree,
-                &mut state,
-                &mut current_characters,
-                &mut current_token_type,
-                &mut token_start_column,
-                text_column,
-            );
+        let start_new = if state == LexingState::NoToken {
+            true
         } else {
             trace!("Continuing token");
 
             // continue/end tokens
-            let start_new = match state {
+            match state {
                 LexingState::NoToken => false,
                 LexingState::Symbol => {
                     trace!("Continuing symbol");
@@ -242,25 +239,6 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                         }
                         None => {
                             trace!("Ending symbol");
-                            state = LexingState::NoToken;
-
-                            // no sub token, end current
-                            tokens.push(LexerToken {
-                                text: current_characters,
-                                token_type: match current_token_type {
-                                    Some(t) => t,
-                                    None => Err(format!("No token type at row {:?} and column {:?}", text_row, text_column))?,
-                                },
-                                row: text_row,
-                                // actual token is determined after current, minus 1 to make accurate
-                                column: token_start_column,
-                            });
-
-                            // set default for new if next token isn't a symbol
-                            current_characters = String::new();
-                            current_symbol = &symbol_tree;
-                            current_token_type = None;
-
                             true
                         }
                     }
@@ -271,19 +249,6 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                         false
                     } else {
                         trace!("Ending number");
-                        state = LexingState::NoToken;
-
-                        // end of horizontal space, create token and start new
-                        tokens.push(LexerToken {
-                            text: current_characters,
-                            token_type: TokenType::Number,
-                            row: text_row,
-                            // actual token is determined after current, minus 1 to make accurate
-                            column: token_start_column,
-                        });
-
-                        current_characters = String::new();
-
                         true
                     }
                 }
@@ -292,74 +257,63 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                         current_characters.push(c);
                         false
                     } else {
-                        // end
-
                         trace!("Ending identifier");
-                        state = LexingState::NoToken;
-
-                        // end of horizontal space, create token and start new
-                        tokens.push(LexerToken {
-                            text: current_characters,
-                            token_type: TokenType::Identifier,
-                            row: text_row,
-                            // actual token is determined after current, minus 1 to make accurate
-                            column: token_start_column,
-                        });
-
-                        current_characters = String::new();
-
                         true
                     }
                 }
                 LexingState::Spaces => {
                     if c != ' ' && c != '\t' {
                         trace!("Ending horizontal space");
-                        state = LexingState::NoToken;
-
-                        // end of horizontal space, create token and start new
-                        tokens.push(LexerToken {
-                            text: " ".to_string(),
-                            token_type: TokenType::HorizontalSpace,
-                            row: text_row,
-                            // actual token is determined after current, minus 1 to make accurate
-                            column: token_start_column,
-                        });
-
                         true
                     } else {
+                        current_characters.push(c);
                         false
                     }
                 }
                 LexingState::NewLine => {
-                    // one new line charcter per token
-                    // end immediately
-                    tokens.push(LexerToken {
-                        text: "\n".to_string(),
-                        token_type: TokenType::NewLine,
-                        row: text_row,
-                        // actual token is determined after current, minus 1 to make accurate
-                        column: token_start_column,
-                    });
-
+                    // wrap coordinates to new line
                     text_column = 0;
                     text_row += 1;
 
+                    // one new line charcter per token
+                    // end immediately
                     true
                 }
-            };
-
-            if start_new {
-                start_token(
-                    c,
-                    &mut current_symbol,
-                    &symbol_tree,
-                    &mut state,
-                    &mut current_characters,
-                    &mut current_token_type,
-                    &mut token_start_column,
-                    text_column,
-                );
             }
+        };
+
+        if start_new {
+            if state != LexingState::NoToken {
+                tokens.push(LexerToken {
+                    text: current_characters,
+                    token_type: match current_token_type {
+                        Some(t) => t,
+                        None => Err(format!("No token type at row {:?} and column {:?}", text_row, text_column))?,
+                    },
+                    row: token_start_row,
+                    // actual token is determined after current, minus 1 to make accurate
+                    column: token_start_column,
+                });
+            }
+
+            // set default for new if next token isn't a symbol
+            state = LexingState::NoToken;
+            current_characters = String::new();
+            current_symbol = &symbol_tree;
+            current_token_type = None;
+
+            start_token(
+                c,
+                &mut current_symbol,
+                &symbol_tree,
+                &mut state,
+                &mut current_characters,
+                &mut current_token_type,
+                &mut token_start_column,
+                &mut &mut token_start_row,
+                text_column,
+                text_row,
+            );
         }
 
         if c != '\0' {
@@ -485,7 +439,7 @@ mod tests {
             result,
             vec![
                 LexerToken {
-                    text: " ".to_string(),
+                    text: "    ".to_string(),
                     token_type: TokenType::HorizontalSpace,
                     column: 0,
                     row: 0
@@ -497,7 +451,7 @@ mod tests {
                     row: 0
                 },
                 LexerToken {
-                    text: " ".to_string(),
+                    text: "  \t  ".to_string(),
                     token_type: TokenType::HorizontalSpace,
                     column: 5,
                     row: 0
@@ -509,7 +463,7 @@ mod tests {
                     row: 0
                 },
                 LexerToken {
-                    text: " ".to_string(),
+                    text: "\t\t\t\t\t\t".to_string(),
                     token_type: TokenType::HorizontalSpace,
                     column: 11,
                     row: 0
@@ -521,7 +475,7 @@ mod tests {
                     row: 0
                 },
                 LexerToken {
-                    text: " ".to_string(),
+                    text: "      ".to_string(),
                     token_type: TokenType::HorizontalSpace,
                     column: 18,
                     row: 0
