@@ -131,6 +131,7 @@ enum LexingState {
     Spaces,
     NewLine,
     Number,
+    Indentifier,
 }
 
 fn start_token<'a>(
@@ -179,6 +180,14 @@ fn start_token<'a>(
         *current_token_type = None;
         trace!("Null character found, skipping.");
         return;
+    } else if c.is_alphanumeric() || c == '_' {
+        // catch all to create identifiers
+        // any disallowed characters will have a blacklist made for them
+
+        current_characters.push(c);
+        *state = LexingState::Indentifier;
+        *current_token_type = Some(TokenType::Identifier);
+        trace!("Identifier started");
     }
 
     *token_start_column = text_column;
@@ -256,7 +265,6 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                         }
                     }
                 }
-
                 LexingState::Number => {
                     if c.is_numeric() {
                         current_characters.push(c);
@@ -269,6 +277,30 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                         tokens.push(LexerToken {
                             text: current_characters,
                             token_type: TokenType::Number,
+                            row: text_row,
+                            // actual token is determined after current, minus 1 to make accurate
+                            column: token_start_column,
+                        });
+
+                        current_characters = String::new();
+
+                        true
+                    }
+                }
+                LexingState::Indentifier => {
+                    if c.is_alphanumeric() || c == '_' {
+                        current_characters.push(c);
+                        false
+                    } else {
+                        // end
+
+                        trace!("Ending identifier");
+                        state = LexingState::NoToken;
+
+                        // end of horizontal space, create token and start new
+                        tokens.push(LexerToken {
+                            text: current_characters,
+                            token_type: TokenType::Identifier,
                             row: text_row,
                             // actual token is determined after current, minus 1 to make accurate
                             column: token_start_column,
@@ -300,7 +332,7 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                 }
                 LexingState::NewLine => {
                     // one new line charcter per token
-                    // end immediatly
+                    // end immediately
                     tokens.push(LexerToken {
                         text: "\n".to_string(),
                         token_type: TokenType::NewLine,
@@ -568,6 +600,93 @@ mod tests {
                     text: "67890".to_string(),
                     token_type: TokenType::Number,
                     column: 6,
+                    row: 0
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_numbers_with_symbol() {
+        let result = lex(&"12345+67890".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "12345".to_string(),
+                    token_type: TokenType::Number,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 5,
+                    row: 0
+                },
+                LexerToken {
+                    text: "67890".to_string(),
+                    token_type: TokenType::Number,
+                    column: 6,
+                    row: 0
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_identifiers() {
+        let result = lex(&"value_1 Value_2".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "value_1".to_string(),
+                    token_type: TokenType::Identifier,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::HorizontalSpace,
+                    column: 7,
+                    row: 0
+                },
+                LexerToken {
+                    text: "Value_2".to_string(),
+                    token_type: TokenType::Identifier,
+                    column: 8,
+                    row: 0
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_identifiers_with_symbol() {
+        let result = lex(&"value_1+Value_2".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "value_1".to_string(),
+                    token_type: TokenType::Identifier,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 7,
+                    row: 0
+                },
+                LexerToken {
+                    text: "Value_2".to_string(),
+                    token_type: TokenType::Identifier,
+                    column: 8,
                     row: 0
                 },
             ]
