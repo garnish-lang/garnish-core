@@ -229,6 +229,7 @@ enum LexingState {
     NoToken,
     Symbol,
     Spaces,
+    NewLine,
 }
 
 pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
@@ -278,6 +279,15 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
             *state = LexingState::Spaces;
             *current_token_type = Some(TokenType::HorizontalSpace);
             trace!("Horizontal spaces started");
+        } else if c.is_ascii_whitespace() {
+            // any other white space
+            *state = LexingState::NewLine;
+            *current_token_type = Some(TokenType::NewLine);
+            trace!("New line started");
+        } else if c == '\0' {
+            *state = LexingState::NoToken;
+            *current_token_type = None;
+            return;
         }
 
         *token_start_column = text_column;
@@ -358,6 +368,22 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                         false
                     }
                 }
+                LexingState::NewLine => {
+                    // one new line charcter per token
+                    // end immediatly
+                    tokens.push(LexerToken {
+                        text: "\n".to_string(),
+                        token_type: TokenType::NewLine,
+                        row: text_row,
+                        // actual token is determined after current, minus 1 to make accurate
+                        column: token_start_column,
+                    });
+
+                    text_column = 0;
+                    text_row += 1;
+
+                    true
+                }
             };
 
             if start_new {
@@ -374,7 +400,9 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
             }
         }
 
-        text_column += 1;
+        if c != '\0' {
+            text_column += 1;
+        }
     }
 
     Ok(tokens)
@@ -459,6 +487,35 @@ mod tests {
     }
 
     #[test]
+    fn skip_null_characters() {
+        let result = lex(&"+\0+\0+".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 1,
+                    row: 0
+                },
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 2,
+                    row: 0
+                }
+            ]
+        );
+    }
+
+    #[test]
     fn lex_three_one_character_symbol_with_spaces() {
         let result = lex(&"    +  \t  +\t\t\t\t\t\t+      ".to_string()).unwrap();
 
@@ -506,6 +563,53 @@ mod tests {
                     token_type: TokenType::HorizontalSpace,
                     column: 18,
                     row: 0
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_new_lines() {
+        let result = lex(&"+\n+\n+\n".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "\n".to_string(),
+                    token_type: TokenType::NewLine,
+                    column: 1,
+                    row: 0
+                },
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 0,
+                    row: 1
+                },
+                LexerToken {
+                    text: "\n".to_string(),
+                    token_type: TokenType::NewLine,
+                    column: 1,
+                    row: 1
+                },
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 0,
+                    row: 2
+                },
+                LexerToken {
+                    text: "\n".to_string(),
+                    token_type: TokenType::NewLine,
+                    column: 1,
+                    row: 2
                 },
             ]
         );
