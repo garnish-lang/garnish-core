@@ -132,6 +132,51 @@ enum LexingState {
     NewLine,
 }
 
+fn start_token<'a>(
+    c: char,
+    current_symbol: &mut &'a LexerSymbolNode,
+    symbol_tree: &'a LexerSymbolNode,
+    state: &mut LexingState,
+    current_characters: &mut String,
+    current_token_type: &mut Option<TokenType>,
+    token_start_column: &mut usize,
+    text_column: usize,
+) {
+    trace!("Beginning new token");
+    *current_characters = String::new();
+    *current_symbol = symbol_tree;
+    *current_token_type = None;
+
+    // start new token
+    if current_symbol.get_child(&c).is_some() {
+        *state = LexingState::Symbol;
+        match current_symbol.get_child(&c) {
+            None => unreachable!(),
+            Some(node) => {
+                current_characters.push(c);
+                *current_token_type = node.token_type;
+                *current_symbol = node;
+            }
+        }
+        trace!("Symbol started");
+    } else if c == ' ' || c == '\t' {
+        *state = LexingState::Spaces;
+        *current_token_type = Some(TokenType::HorizontalSpace);
+        trace!("Horizontal spaces started");
+    } else if c.is_ascii_whitespace() {
+        // any other white space
+        *state = LexingState::NewLine;
+        *current_token_type = Some(TokenType::NewLine);
+        trace!("New line started");
+    } else if c == '\0' {
+        *state = LexingState::NoToken;
+        *current_token_type = None;
+        return;
+    }
+
+    *token_start_column = text_column;
+}
+
 pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
     trace!("Begining lexing");
 
@@ -147,51 +192,6 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
     let mut token_start_column = 0;
 
     let mut state = LexingState::NoToken;
-
-    fn start_token<'a>(
-        c: char,
-        current_symbol: &mut &'a LexerSymbolNode,
-        symbol_tree: &'a LexerSymbolNode,
-        state: &mut LexingState,
-        current_characters: &mut String,
-        current_token_type: &mut Option<TokenType>,
-        token_start_column: &mut usize,
-        text_column: usize,
-    ) {
-        trace!("Beginning new token");
-        *current_characters = String::new();
-        *current_symbol = symbol_tree;
-        *current_token_type = None;
-
-        // start new token
-        if current_symbol.get_child(&c).is_some() {
-            *state = LexingState::Symbol;
-            match current_symbol.get_child(&c) {
-                None => unreachable!(),
-                Some(node) => {
-                    current_characters.push(c);
-                    *current_token_type = node.token_type;
-                    *current_symbol = node;
-                }
-            }
-            trace!("Symbol started");
-        } else if c == ' ' || c == '\t' {
-            *state = LexingState::Spaces;
-            *current_token_type = Some(TokenType::HorizontalSpace);
-            trace!("Horizontal spaces started");
-        } else if c.is_ascii_whitespace() {
-            // any other white space
-            *state = LexingState::NewLine;
-            *current_token_type = Some(TokenType::NewLine);
-            trace!("New line started");
-        } else if c == '\0' {
-            *state = LexingState::NoToken;
-            *current_token_type = None;
-            return;
-        }
-
-        *token_start_column = text_column;
-    }
 
     for c in input.chars().chain(iter::once('\0')) {
         trace!("Character {:?} at ({:?}, {:?})", c, text_column, text_row);
