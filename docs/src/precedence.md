@@ -4,7 +4,7 @@
 | 2          | () {}                                                              | Groupings        | left-right    |
 | 3          | .                                                                  | Access           | left-right    |
 | 4          | ~~                                                                 | Empty Apply      | left-right    |
-| 5          | + - ! !! expr`                                                     | Unary Prefix     | right-left    |
+| 5          | ++ -- ! !! expr`                                                   | Unary Prefix     | right-left    |
 | 6          | `expr                                                              | Suffix Apply     | left-right    |
 | 7          | #>                                                                 | Type Cast        | left-right    |
 | 8          | **                                                                 | Arithmetic 1     | left-right    |
