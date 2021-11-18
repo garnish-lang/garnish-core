@@ -68,6 +68,10 @@ impl LexerToken {
             column,
         }
     }
+
+    pub fn get_token_type(&self) -> TokenType {
+        self.token_type
+    }
 }
 
 pub fn create_symbol_tree(symbol_list: Vec<(&str, TokenType)>) -> LexerSymbolNode {
