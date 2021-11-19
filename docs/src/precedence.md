@@ -25,4 +25,5 @@
 | 23         | ,                                                                  | Create List      | left-right    |
 | 24         | \`expr\`                                                           | Infix Apply      | left-right    |
 | 25         | !> ?>                                                              | Conditional      | left-right    |
-| 26         | ~ ~>                                                               | Functional       | left-right    |
+| 26         | ~ ~>                                                               | Functional 1     | left-right    |
+| 27         | ^~                                                                 | Functional 2     | left-right    |

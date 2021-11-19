@@ -10,9 +10,22 @@ pub enum Definition {
     AbsoluteValue,
 }
 
+#[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
+pub enum Associativity {
+    LeftToRight,
+    RightToLeft,
+}
+
 impl Definition {
     pub fn is_value_like(self) -> bool {
         self == Definition::Number
+    }
+
+    pub fn associativity(self) -> Associativity {
+        match self {
+            Definition::AbsoluteValue => Associativity::RightToLeft,
+            _ => Associativity::LeftToRight,
+        }
     }
 }
 
@@ -114,6 +127,16 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
             }
             TokenType::AbsoluteValue => {
                 trace!("Parsing AbsoluteValue token");
+
+                let parent = next_parent;
+                next_parent = Some(i);
+
+                (Definition::AbsoluteValue, parent, None, assumed_right)
+            }
+            TokenType::PlusSign => {
+                trace!("Parsing PlusSign token");
+
+                let my_definition = Definition::Addition;
                 next_parent = Some(i);
 
                 let mut true_left = last_left;
@@ -121,7 +144,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
                 let mut count = 0;
 
-                // go up tree until no parent
+                // // go up tree until no parent
                 trace!("Searching parent chain for true left");
                 while let Some(parent_index) = parent {
                     trace!("Walking: {:?}", parent_index);
@@ -141,16 +164,14 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     }
                 }
 
-                let mut parent = None;
-
                 // update last_left parent
                 match true_left {
-                    None => (), // allowed
+                    None => (), // allowed, likely the begining of input, group or sub-expression
                     Some(left) => match nodes.get_mut(left) {
                         None => Err(format!("Index assigned to last left has no value in nodes. {:?}", left))?,
                         Some(node) => {
-                            let my_priority = match priority_map.get(&Definition::AbsoluteValue) {
-                                None => Err(format!("Definition '{:?}' not registered in priority map.", Definition::AbsoluteValue))?,
+                            let my_priority = match priority_map.get(&my_definition) {
+                                None => Err(format!("Definition '{:?}' not registered in priority map.", my_definition))?,
                                 Some(priority) => *priority,
                             };
 
@@ -162,55 +183,11 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                             // lower priority means lower in tree
                             // lowest priority gets parent set
                             if my_priority < their_priority {
-                                parent = true_left;
+                                // commented to suppress warning, will need later
+                                // parent = true_left;
                             } else {
-                                // current is unary operator, it's value is on the right
-                                // don't set left's parent to it
-                                // node.parent = Some(i);
+                                node.parent = Some(i);
                             }
-                        }
-                    },
-                }
-
-                (Definition::AbsoluteValue, parent, None, assumed_right)
-            }
-            TokenType::PlusSign => {
-                trace!("Parsing PlusSign token");
-                next_parent = Some(i);
-
-                let mut true_left = last_left;
-                let mut parent = last_left;
-
-                let mut count = 0;
-
-                // go up tree until no parent
-                trace!("Searching parent chain for true left");
-                while let Some(parent_index) = parent {
-                    trace!("Walking: {:?}", parent_index);
-                    match nodes.get(parent_index) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
-                        Some(node) => {
-                            let n: &ParseNode = node;
-                            true_left = Some(parent_index);
-                            parent = n.parent
-                        }
-                    };
-
-                    // safty net, max iterations to len of nodes
-                    count += 1;
-                    if count > nodes.len() {
-                        return Err(format!("Max iterations reached when searching for last parent."));
-                    }
-                }
-
-                // update last_left parent
-                match true_left {
-                    None => (), // allowed
-                    Some(left) => match nodes.get_mut(left) {
-                        None => Err(format!("Index assigned to last left has no value in nodes. {:?}", left))?,
-                        Some(node) => {
-                            let n: &mut ParseNode = node;
-                            n.parent = Some(i);
                         }
                     },
                 }
@@ -508,5 +485,106 @@ mod tests {
         assert_eq!(second_five.get_parent().unwrap(), 2);
         assert!(second_five.get_left().is_none());
         assert!(second_five.get_right().is_none());
+    }
+
+    #[test]
+    fn three_absolute_value_operations() {
+        let tokens = vec![
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 0);
+
+        let first_abs = result.get_node(0).unwrap();
+        let second_abs = result.get_node(1).unwrap();
+        let third_abs = result.get_node(2).unwrap();
+
+        let five = result.get_node(3).unwrap();
+
+        assert_eq!(first_abs.get_definition(), Definition::AbsoluteValue);
+        assert!(first_abs.get_parent().is_none());
+        assert!(first_abs.get_left().is_none());
+        assert_eq!(first_abs.get_right().unwrap(), 1);
+
+        assert_eq!(second_abs.get_definition(), Definition::AbsoluteValue);
+        assert_eq!(second_abs.get_parent().unwrap(), 0);
+        assert!(second_abs.get_left().is_none());
+        assert_eq!(second_abs.get_right().unwrap(), 2);
+
+        assert_eq!(third_abs.get_definition(), Definition::AbsoluteValue);
+        assert_eq!(third_abs.get_parent().unwrap(), 1);
+        assert!(third_abs.get_left().is_none());
+        assert_eq!(third_abs.get_right().unwrap(), 3);
+
+        assert_eq!(five.get_definition(), Definition::Number);
+        assert_eq!(five.get_parent().unwrap(), 2);
+        assert!(five.get_left().is_none());
+        assert!(five.get_right().is_none());
+    }
+
+    #[test]
+    fn three_addition_operations() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 5);
+
+        let first_plus = result.get_node(1).unwrap();
+        let second_plus = result.get_node(3).unwrap();
+        let third_plus = result.get_node(5).unwrap();
+
+        let first_five = result.get_node(0).unwrap();
+        let second_five = result.get_node(2).unwrap();
+        let third_five = result.get_node(4).unwrap();
+        let fourth_five = result.get_node(6).unwrap();
+
+        assert_eq!(first_five.get_definition(), Definition::Number);
+        assert_eq!(first_five.get_parent().unwrap(), 1);
+        assert!(first_five.get_left().is_none());
+        assert!(first_five.get_right().is_none());
+
+        assert_eq!(second_five.get_definition(), Definition::Number);
+        assert_eq!(second_five.get_parent().unwrap(), 1);
+        assert!(second_five.get_left().is_none());
+        assert!(second_five.get_right().is_none());
+
+        assert_eq!(third_five.get_definition(), Definition::Number);
+        assert_eq!(third_five.get_parent().unwrap(), 3);
+        assert!(third_five.get_left().is_none());
+        assert!(third_five.get_right().is_none());
+
+        assert_eq!(fourth_five.get_definition(), Definition::Number);
+        assert_eq!(fourth_five.get_parent().unwrap(), 5);
+        assert!(fourth_five.get_left().is_none());
+        assert!(fourth_five.get_right().is_none());
+
+        assert_eq!(first_plus.get_definition(), Definition::Addition);
+        assert_eq!(first_plus.get_parent().unwrap(), 3);
+        assert_eq!(first_plus.get_left().unwrap(), 0);
+        assert_eq!(first_plus.get_right().unwrap(), 2);
+
+        assert_eq!(second_plus.get_definition(), Definition::Addition);
+        assert_eq!(second_plus.get_parent().unwrap(), 5);
+        assert_eq!(second_plus.get_left().unwrap(), 1);
+        assert_eq!(second_plus.get_right().unwrap(), 4);
+
+        assert_eq!(third_plus.get_definition(), Definition::Addition);
+        assert!(third_plus.get_parent().is_none());
+        assert_eq!(third_plus.get_left().unwrap(), 3);
+        assert_eq!(third_plus.get_right().unwrap(), 6);
     }
 }
