@@ -103,7 +103,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
         let (definition, parent, left, right) = match token.get_token_type() {
             TokenType::Number => {
                 let parent = match last_left {
-                    None => Some(i + 1),
+                    None => assumed_right,
                     Some(left) => Some(left),
                 };
 
@@ -186,6 +186,21 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 mod tests {
     use crate::lexer::*;
     use crate::*;
+
+    #[test]
+    fn single_number() {
+        let tokens = vec![LexerToken::new("5".to_string(), TokenType::Number, 0, 0)];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 0);
+
+        let root = result.get_node(0).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::Number);
+        assert!(root.get_left().is_none());
+        assert!(root.get_right().is_none());
+    }
 
     #[test]
     fn addition() {
@@ -283,5 +298,28 @@ mod tests {
         assert_eq!(left.get_definition(), Definition::Number);
         assert!(left.get_left().is_none());
         assert!(left.get_right().is_none());
+    }
+
+    #[test]
+    fn absolute_value_reversed() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 1);
+
+        let right = result.get_node(0).unwrap();
+        let root = result.get_node(1).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::AbsoluteValue);
+        assert!(root.get_left().is_none());
+        assert!(root.get_right().is_none());
+
+        assert_eq!(right.get_definition(), Definition::Number);
+        assert!(right.get_left().is_none());
+        assert!(right.get_right().is_none());
     }
 }
