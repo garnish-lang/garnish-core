@@ -5,6 +5,7 @@ use std::{collections::HashMap, iter, vec};
 pub enum TokenType {
     Unknown,
     PlusSign,
+    AbsoluteValue,
     MultiplicationSign,
     ExponentialSign,
     UnitLiteral,
@@ -213,6 +214,7 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
 
     let symbol_tree = create_symbol_tree(vec![
         ("+", TokenType::PlusSign),
+        ("++", TokenType::AbsoluteValue),
         ("*", TokenType::MultiplicationSign),
         ("**", TokenType::ExponentialSign),
         ("()", TokenType::UnitLiteral),
@@ -416,6 +418,21 @@ mod tests {
             vec![LexerToken {
                 text: "+".to_string(),
                 token_type: TokenType::PlusSign,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn absolute_value() {
+        let result = lex(&"++".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "++".to_string(),
+                token_type: TokenType::AbsoluteValue,
                 column: 0,
                 row: 0
             }]
@@ -664,26 +681,26 @@ mod tests {
 
     #[test]
     fn lex_three_one_character_symbol() {
-        let result = lex(&"+++".to_string()).unwrap();
+        let result = lex(&"$$$".to_string()).unwrap();
 
         assert_eq!(
             result,
             vec![
                 LexerToken {
-                    text: "+".to_string(),
-                    token_type: TokenType::PlusSign,
+                    text: "$".to_string(),
+                    token_type: TokenType::Input,
                     column: 0,
                     row: 0
                 },
                 LexerToken {
-                    text: "+".to_string(),
-                    token_type: TokenType::PlusSign,
+                    text: "$".to_string(),
+                    token_type: TokenType::Input,
                     column: 1,
                     row: 0
                 },
                 LexerToken {
-                    text: "+".to_string(),
-                    token_type: TokenType::PlusSign,
+                    text: "$".to_string(),
+                    token_type: TokenType::Input,
                     column: 2,
                     row: 0
                 }
