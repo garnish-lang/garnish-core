@@ -1,5 +1,5 @@
 use log::trace;
-use std::{collections::HashMap, hash::Hash, iter};
+use std::{collections::HashMap, hash::Hash};
 
 use crate::lexer::*;
 
@@ -7,6 +7,7 @@ use crate::lexer::*;
 pub enum Definition {
     Addition,
     Number,
+    AbsoluteValue,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone)]
@@ -70,10 +71,11 @@ fn make_priority_map() -> (HashMap<Definition, usize>, Vec<Vec<usize>>) {
     let mut map = HashMap::new();
 
     map.insert(Definition::Number, 1);
+    map.insert(Definition::AbsoluteValue, 5);
     map.insert(Definition::Addition, 9);
 
     let mut priority_table = vec![];
-    for _ in 0..=9 {
+    for _ in 0..=26 {
         priority_table.push(vec![]);
     }
 
@@ -107,6 +109,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
                 (Definition::Number, parent, None, None)
             }
+            TokenType::AbsoluteValue => (Definition::AbsoluteValue, None, None, assumed_right),
             TokenType::PlusSign => (Definition::Addition, None, last_left, assumed_right),
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
@@ -253,6 +256,29 @@ mod tests {
         assert_eq!(root.get_definition(), Definition::Addition);
         assert_eq!(root.get_left().unwrap(), 0);
         assert!(root.get_right().is_none());
+
+        assert_eq!(left.get_definition(), Definition::Number);
+        assert!(left.get_left().is_none());
+        assert!(left.get_right().is_none());
+    }
+
+    #[test]
+    fn absolute_value() {
+        let tokens = vec![
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 0);
+
+        let root = result.get_node(0).unwrap();
+        let left = result.get_node(1).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::AbsoluteValue);
+        assert_eq!(root.get_right().unwrap(), 1);
+        assert!(root.get_left().is_none());
 
         assert_eq!(left.get_definition(), Definition::Number);
         assert!(left.get_left().is_none());
