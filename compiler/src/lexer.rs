@@ -29,6 +29,8 @@ pub enum TokenType {
     Reapply,
     EmptyApply,
     Equality,
+    Period,
+    Pair,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -242,6 +244,8 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
         ("~^", TokenType::Reapply),
         ("~~", TokenType::EmptyApply),
         ("==", TokenType::Equality),
+        ("=", TokenType::Pair),
+        (".", TokenType::Period),
     ]);
     let mut current_symbol = &symbol_tree;
     let mut current_token_type = None;
@@ -427,6 +431,36 @@ mod tests {
             vec![LexerToken {
                 text: "+".to_string(),
                 token_type: TokenType::PlusSign,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn pair() {
+        let result = lex(&"=".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "=".to_string(),
+                token_type: TokenType::Pair,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn period() {
+        let result = lex(&".".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ".".to_string(),
+                token_type: TokenType::Period,
                 column: 0,
                 row: 0
             }]
