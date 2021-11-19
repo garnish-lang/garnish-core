@@ -5,9 +5,12 @@ use crate::lexer::*;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
 pub enum Definition {
-    Addition,
     Number,
+    Identifier,
     AbsoluteValue,
+    EmptyApply,
+    Addition,
+    Equality,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
@@ -90,8 +93,11 @@ fn make_priority_map() -> (HashMap<Definition, usize>, Vec<Vec<usize>>) {
     let mut map = HashMap::new();
 
     map.insert(Definition::Number, 1);
+    map.insert(Definition::Identifier, 1);
+    map.insert(Definition::EmptyApply, 4);
     map.insert(Definition::AbsoluteValue, 5);
     map.insert(Definition::Addition, 9);
+    map.insert(Definition::Equality, 14);
 
     let mut priority_table = vec![];
     for _ in 0..=26 {
@@ -124,6 +130,29 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
             TokenType::Number => {
                 trace!("Parsing Number token");
                 (Definition::Number, next_parent, None, None)
+            }
+            TokenType::Identifier => {
+                trace!("Parsing Identifier token");
+                (Definition::Identifier, next_parent, None, None)
+            }
+            TokenType::EmptyApply => {
+                trace!("Parsing EmptyApply token");
+
+                let parent = next_parent;
+                next_parent = Some(i);
+
+                match last_left {
+                    None => (), // allowed
+                    Some(left) => match nodes.get_mut(left) {
+                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                        Some(left_node) => {
+                            let n: &mut ParseNode = left_node;
+                            n.parent = Some(i);
+                        }
+                    },
+                }
+
+                (Definition::EmptyApply, parent, last_left, None)
             }
             TokenType::AbsoluteValue => {
                 trace!("Parsing AbsoluteValue token");
@@ -191,13 +220,73 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                         }
                     },
                 }
-                (Definition::Addition, None, true_left, assumed_right)
+                (my_definition, None, true_left, assumed_right)
+            }
+            TokenType::Equality => {
+                trace!("Parsing PlusSign token");
+
+                let my_definition = Definition::Equality;
+                next_parent = Some(i);
+
+                let mut true_left = last_left;
+                let mut parent = last_left;
+
+                let mut count = 0;
+
+                // // go up tree until no parent
+                trace!("Searching parent chain for true left");
+                while let Some(parent_index) = parent {
+                    trace!("Walking: {:?}", parent_index);
+                    match nodes.get(parent_index) {
+                        None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
+                        Some(node) => {
+                            let n: &ParseNode = node;
+                            true_left = Some(parent_index);
+                            parent = n.parent
+                        }
+                    };
+
+                    // safty net, max iterations to len of nodes
+                    count += 1;
+                    if count > nodes.len() {
+                        return Err(format!("Max iterations reached when searching for last parent."));
+                    }
+                }
+
+                // update last_left parent
+                match true_left {
+                    None => (), // allowed, likely the begining of input, group or sub-expression
+                    Some(left) => match nodes.get_mut(left) {
+                        None => Err(format!("Index assigned to last left has no value in nodes. {:?}", left))?,
+                        Some(node) => {
+                            let my_priority = match priority_map.get(&my_definition) {
+                                None => Err(format!("Definition '{:?}' not registered in priority map.", my_definition))?,
+                                Some(priority) => *priority,
+                            };
+
+                            let their_priority = match priority_map.get(&node.definition) {
+                                None => Err(format!("Definition '{:?}' not registered in priority map.", node.definition))?,
+                                Some(priority) => *priority,
+                            };
+
+                            // lower priority means lower in tree
+                            // lowest priority gets parent set
+                            if my_priority < their_priority {
+                                // commented to suppress warning, will need later
+                                // parent = true_left;
+                            } else {
+                                node.parent = Some(i);
+                            }
+                        }
+                    },
+                }
+                (my_definition, None, true_left, assumed_right)
             }
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
 
         trace!(
-            "Defined as {:?} with relation ships parent {:?} left {:?} right {:?}",
+            "Defined as {:?} with relationships parent {:?} left {:?} right {:?}",
             definition,
             parent,
             left,
@@ -285,6 +374,21 @@ mod tests {
     }
 
     #[test]
+    fn single_identifier() {
+        let tokens = vec![LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0)];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 0);
+
+        let root = result.get_node(0).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::Identifier);
+        assert!(root.get_left().is_none());
+        assert!(root.get_right().is_none());
+    }
+
+    #[test]
     fn addition() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
@@ -301,6 +405,35 @@ mod tests {
         let right = result.get_node(2).unwrap();
 
         assert_eq!(root.get_definition(), Definition::Addition);
+        assert_eq!(root.get_left().unwrap(), 0);
+        assert_eq!(root.get_right().unwrap(), 2);
+
+        assert_eq!(left.get_definition(), Definition::Number);
+        assert!(left.get_left().is_none());
+        assert!(left.get_right().is_none());
+
+        assert_eq!(right.get_definition(), Definition::Number);
+        assert!(right.get_left().is_none());
+        assert!(right.get_right().is_none());
+    }
+
+    #[test]
+    fn equality() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 1);
+
+        let left = result.get_node(0).unwrap();
+        let root = result.get_node(1).unwrap();
+        let right = result.get_node(2).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::Equality);
         assert_eq!(root.get_left().unwrap(), 0);
         assert_eq!(root.get_right().unwrap(), 2);
 
@@ -381,6 +514,30 @@ mod tests {
         assert_eq!(right.get_parent().unwrap(), 0);
         assert!(right.get_left().is_none());
         assert!(right.get_right().is_none());
+    }
+
+    #[test]
+    fn empty_apply() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 1);
+
+        let left = result.get_node(0).unwrap();
+        let root = result.get_node(1).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::EmptyApply);
+        assert_eq!(root.get_left().unwrap(), 0);
+        assert!(root.get_right().is_none());
+
+        assert_eq!(left.get_definition(), Definition::Identifier);
+        assert_eq!(left.get_parent().unwrap(), 1);
+        assert!(left.get_left().is_none());
+        assert!(left.get_right().is_none());
     }
 
     #[test]
