@@ -10,6 +10,12 @@ pub enum Definition {
     AbsoluteValue,
 }
 
+impl Definition {
+    pub fn is_value_like(self) -> bool {
+        self == Definition::Number
+    }
+}
+
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone)]
 pub struct ParseNode {
     definition: Definition,
@@ -88,6 +94,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
     let mut nodes = vec![];
 
+    let mut next_parent = None;
     let mut last_left = None;
 
     for (i, token) in lex_tokens.iter().enumerate() {
@@ -102,15 +109,113 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
         let (definition, parent, left, right) = match token.get_token_type() {
             TokenType::Number => {
-                let parent = match last_left {
-                    None => assumed_right,
-                    Some(left) => Some(left),
-                };
-
-                (Definition::Number, parent, None, None)
+                trace!("Parsing Number token");
+                (Definition::Number, next_parent, None, None)
             }
-            TokenType::AbsoluteValue => (Definition::AbsoluteValue, None, None, assumed_right),
-            TokenType::PlusSign => (Definition::Addition, None, last_left, assumed_right),
+            TokenType::AbsoluteValue => {
+                trace!("Parsing AbsoluteValue token");
+                next_parent = Some(i);
+
+                let mut true_left = last_left;
+                let mut parent = last_left;
+
+                let mut count = 0;
+
+                // go up tree until no parent
+                trace!("Searching parent chain for true left");
+                while let Some(parent_index) = parent {
+                    trace!("Walking: {:?}", parent_index);
+                    match nodes.get(parent_index) {
+                        None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
+                        Some(node) => {
+                            let n: &ParseNode = node;
+                            true_left = Some(parent_index);
+                            parent = n.parent
+                        }
+                    };
+
+                    // safty net, max iterations to len of nodes
+                    count += 1;
+                    if count > nodes.len() {
+                        return Err(format!("Max iterations reached when searching for last parent."));
+                    }
+                }
+
+                let mut parent = None;
+
+                // update last_left parent
+                match true_left {
+                    None => (), // allowed
+                    Some(left) => match nodes.get_mut(left) {
+                        None => Err(format!("Index assigned to last left has no value in nodes. {:?}", left))?,
+                        Some(node) => {
+                            let my_priority = match priority_map.get(&Definition::AbsoluteValue) {
+                                None => Err(format!("Definition '{:?}' not registered in priority map.", Definition::AbsoluteValue))?,
+                                Some(priority) => *priority,
+                            };
+
+                            let their_priority = match priority_map.get(&node.definition) {
+                                None => Err(format!("Definition '{:?}' not registered in priority map.", node.definition))?,
+                                Some(priority) => *priority,
+                            };
+
+                            // lower priority means lower in tree
+                            // lowest priority gets parent set
+                            if my_priority < their_priority {
+                                parent = true_left;
+                            } else {
+                                // current is unary operator, it's value is on the right
+                                // don't set left's parent to it
+                                // node.parent = Some(i);
+                            }
+                        }
+                    },
+                }
+
+                (Definition::AbsoluteValue, parent, None, assumed_right)
+            }
+            TokenType::PlusSign => {
+                trace!("Parsing PlusSign token");
+                next_parent = Some(i);
+
+                let mut true_left = last_left;
+                let mut parent = last_left;
+
+                let mut count = 0;
+
+                // go up tree until no parent
+                trace!("Searching parent chain for true left");
+                while let Some(parent_index) = parent {
+                    trace!("Walking: {:?}", parent_index);
+                    match nodes.get(parent_index) {
+                        None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
+                        Some(node) => {
+                            let n: &ParseNode = node;
+                            true_left = Some(parent_index);
+                            parent = n.parent
+                        }
+                    };
+
+                    // safty net, max iterations to len of nodes
+                    count += 1;
+                    if count > nodes.len() {
+                        return Err(format!("Max iterations reached when searching for last parent."));
+                    }
+                }
+
+                // update last_left parent
+                match true_left {
+                    None => (), // allowed
+                    Some(left) => match nodes.get_mut(left) {
+                        None => Err(format!("Index assigned to last left has no value in nodes. {:?}", left))?,
+                        Some(node) => {
+                            let n: &mut ParseNode = node;
+                            n.parent = Some(i);
+                        }
+                    },
+                }
+                (Definition::Addition, None, true_left, assumed_right)
+            }
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
 
@@ -174,7 +279,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
         // safty net, max iterations to len of nodes
         count += 1;
-        if count >= nodes.len() {
+        if count > nodes.len() {
             return Err(format!("Max iterations reached when searching for root node."));
         }
     }
@@ -289,15 +394,16 @@ mod tests {
         assert_eq!(result.get_root(), 0);
 
         let root = result.get_node(0).unwrap();
-        let left = result.get_node(1).unwrap();
+        let right = result.get_node(1).unwrap();
 
         assert_eq!(root.get_definition(), Definition::AbsoluteValue);
         assert_eq!(root.get_right().unwrap(), 1);
         assert!(root.get_left().is_none());
 
-        assert_eq!(left.get_definition(), Definition::Number);
-        assert!(left.get_left().is_none());
-        assert!(left.get_right().is_none());
+        assert_eq!(right.get_definition(), Definition::Number);
+        assert_eq!(right.get_parent().unwrap(), 0);
+        assert!(right.get_left().is_none());
+        assert!(right.get_right().is_none());
     }
 
     #[test]
@@ -309,17 +415,98 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
+        assert_eq!(result.get_root(), 0);
 
-        let right = result.get_node(0).unwrap();
+        let left = result.get_node(0).unwrap();
         let root = result.get_node(1).unwrap();
 
         assert_eq!(root.get_definition(), Definition::AbsoluteValue);
         assert!(root.get_left().is_none());
         assert!(root.get_right().is_none());
 
-        assert_eq!(right.get_definition(), Definition::Number);
-        assert!(right.get_left().is_none());
-        assert!(right.get_right().is_none());
+        assert_eq!(left.get_definition(), Definition::Number);
+        assert!(left.get_parent().is_none());
+        assert!(left.get_left().is_none());
+        assert!(left.get_right().is_none());
+    }
+
+    #[test]
+    fn absolute_value_then_addition() {
+        let tokens = vec![
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 2);
+
+        let root = result.get_node(2).unwrap();
+
+        let abs_sign = result.get_node(0).unwrap();
+
+        let first_five = result.get_node(1).unwrap();
+        let second_five = result.get_node(3).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::Addition);
+        assert_eq!(root.get_left().unwrap(), 0);
+        assert_eq!(root.get_right().unwrap(), 3);
+
+        assert_eq!(abs_sign.get_definition(), Definition::AbsoluteValue);
+        assert_eq!(abs_sign.get_parent().unwrap(), 2);
+        assert!(abs_sign.get_left().is_none());
+        assert_eq!(abs_sign.get_right().unwrap(), 1);
+
+        assert_eq!(first_five.get_definition(), Definition::Number);
+        assert_eq!(first_five.get_parent().unwrap(), 0);
+        assert!(first_five.get_left().is_none());
+        assert!(first_five.get_right().is_none());
+
+        assert_eq!(second_five.get_definition(), Definition::Number);
+        assert_eq!(second_five.get_parent().unwrap(), 2);
+        assert!(second_five.get_left().is_none());
+        assert!(second_five.get_right().is_none());
+    }
+
+    #[test]
+    fn addition_then_absolute_value() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 1);
+
+        let root = result.get_node(1).unwrap();
+
+        let abs_sign = result.get_node(2).unwrap();
+
+        let first_five = result.get_node(0).unwrap();
+        let second_five = result.get_node(3).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::Addition);
+        assert_eq!(root.get_left().unwrap(), 0);
+        assert_eq!(root.get_right().unwrap(), 2);
+
+        assert_eq!(abs_sign.get_definition(), Definition::AbsoluteValue);
+        assert_eq!(abs_sign.get_parent().unwrap(), 1);
+        assert!(abs_sign.get_left().is_none());
+        assert_eq!(abs_sign.get_right().unwrap(), 3);
+
+        assert_eq!(first_five.get_definition(), Definition::Number);
+        assert_eq!(first_five.get_parent().unwrap(), 1);
+        assert!(first_five.get_left().is_none());
+        assert!(first_five.get_right().is_none());
+
+        assert_eq!(second_five.get_definition(), Definition::Number);
+        assert_eq!(second_five.get_parent().unwrap(), 2);
+        assert!(second_five.get_left().is_none());
+        assert!(second_five.get_right().is_none());
     }
 }
