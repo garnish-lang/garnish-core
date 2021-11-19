@@ -138,7 +138,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
             TokenType::EmptyApply => {
                 trace!("Parsing EmptyApply token");
 
-                let parent = next_parent;
+                let mut parent = next_parent;
                 next_parent = Some(i);
 
                 match last_left {
@@ -147,7 +147,23 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                         None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
                         Some(left_node) => {
                             let n: &mut ParseNode = left_node;
+                            let new_parent = n.parent;
                             n.parent = Some(i);
+
+                            match new_parent {
+                                None => (), // nothing additional
+                                Some(parent_index) => match nodes.get_mut(parent_index) {
+                                    None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
+                                    Some(parent_node) => {
+                                        let pn: &mut ParseNode = parent_node;
+                                        // make their parent, my parent
+                                        parent = Some(parent_index);
+
+                                        // update their parent to point at us
+                                        pn.right = Some(i);
+                                    }
+                                },
+                            }
                         }
                     },
                 }
@@ -682,6 +698,68 @@ mod tests {
         assert_eq!(five.get_parent().unwrap(), 2);
         assert!(five.get_left().is_none());
         assert!(five.get_right().is_none());
+    }
+
+    #[test]
+    fn unary_different_associativity_and_priority() {
+        let tokens = vec![
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("value".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 0);
+
+        let first_abs = result.get_node(0).unwrap();
+        let second_abs = result.get_node(1).unwrap();
+        let third_abs = result.get_node(2).unwrap();
+
+        let value = result.get_node(3).unwrap();
+
+        let first_apply = result.get_node(4).unwrap();
+        let second_apply = result.get_node(5).unwrap();
+        let third_apply = result.get_node(6).unwrap();
+
+        assert_eq!(first_abs.get_definition(), Definition::AbsoluteValue);
+        assert!(first_abs.get_parent().is_none());
+        assert!(first_abs.get_left().is_none());
+        assert_eq!(first_abs.get_right().unwrap(), 1);
+
+        assert_eq!(second_abs.get_definition(), Definition::AbsoluteValue);
+        assert_eq!(second_abs.get_parent().unwrap(), 0);
+        assert!(second_abs.get_left().is_none());
+        assert_eq!(second_abs.get_right().unwrap(), 2);
+
+        assert_eq!(third_abs.get_definition(), Definition::AbsoluteValue);
+        assert_eq!(third_abs.get_parent().unwrap(), 1);
+        assert!(third_abs.get_left().is_none());
+        assert_eq!(third_abs.get_right().unwrap(), 6);
+
+        assert_eq!(value.get_definition(), Definition::Number);
+        assert_eq!(value.get_parent().unwrap(), 4);
+        assert!(value.get_left().is_none());
+        assert!(value.get_right().is_none());
+
+        assert_eq!(first_apply.get_definition(), Definition::EmptyApply);
+        assert_eq!(first_apply.get_parent().unwrap(), 5);
+        assert_eq!(first_apply.get_left().unwrap(), 3);
+        assert!(first_apply.get_right().is_none());
+
+        assert_eq!(second_apply.get_definition(), Definition::EmptyApply);
+        assert_eq!(second_apply.get_parent().unwrap(), 6);
+        assert_eq!(second_apply.get_left().unwrap(), 4);
+        assert!(second_apply.get_right().is_none());
+
+        assert_eq!(third_apply.get_definition(), Definition::EmptyApply);
+        assert_eq!(third_apply.get_parent().unwrap(), 2);
+        assert_eq!(third_apply.get_left().unwrap(), 5);
+        assert!(third_apply.get_right().is_none());
     }
 
     #[test]
