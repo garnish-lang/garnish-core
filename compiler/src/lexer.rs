@@ -241,7 +241,7 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
         ("!>", TokenType::ApplyIfFalse),
         ("?>", TokenType::ApplyIfTrue),
         ("~>", TokenType::ApplyTo),
-        ("~^", TokenType::Reapply),
+        ("^~", TokenType::Reapply),
         ("~~", TokenType::EmptyApply),
         ("==", TokenType::Equality),
         ("=", TokenType::Pair),
@@ -589,12 +589,12 @@ mod tests {
 
     #[test]
     fn reapply_symbol() {
-        let result = lex(&"~^".to_string()).unwrap();
+        let result = lex(&"^~".to_string()).unwrap();
 
         assert_eq!(
             result,
             vec![LexerToken {
-                text: "~^".to_string(),
+                text: "^~".to_string(),
                 token_type: TokenType::Reapply,
                 column: 0,
                 row: 0
