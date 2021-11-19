@@ -1,5 +1,5 @@
 use log::trace;
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, iter};
 
 use crate::lexer::*;
 
@@ -90,6 +90,14 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
     for (i, token) in lex_tokens.iter().enumerate() {
         trace!("Token {:?}", token.get_token_type());
+
+        // most operations will have their right be the next element
+        // corrects are made after the fact
+        let assumed_right = match i + 1 >= lex_tokens.len() {
+            true => None,
+            false => Some(i + 1),
+        };
+
         let (definition, parent, left, right) = match token.get_token_type() {
             TokenType::Number => {
                 let parent = match last_left {
@@ -99,7 +107,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
                 (Definition::Number, parent, None, None)
             }
-            TokenType::PlusSign => (Definition::Addition, None, last_left, Some(i + 1)),
+            TokenType::PlusSign => (Definition::Addition, None, last_left, assumed_right),
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
 
@@ -198,10 +206,56 @@ mod tests {
 
         assert_eq!(left.get_definition(), Definition::Number);
         assert!(left.get_left().is_none());
-        assert!(left.get_left().is_none());
+        assert!(left.get_right().is_none());
 
         assert_eq!(right.get_definition(), Definition::Number);
+        assert!(right.get_left().is_none());
         assert!(right.get_right().is_none());
+    }
+
+    #[test]
+    fn partial_addition_no_left() {
+        let tokens = vec![
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 0);
+
+        let root = result.get_node(0).unwrap();
+        let right = result.get_node(1).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::Addition);
+        assert!(root.get_left().is_none());
+        assert_eq!(root.get_right().unwrap(), 1);
+
+        assert_eq!(right.get_definition(), Definition::Number);
+        assert!(right.get_left().is_none());
         assert!(right.get_right().is_none());
+    }
+
+    #[test]
+    fn partial_addition_no_right() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 1);
+
+        let left = result.get_node(0).unwrap();
+        let root = result.get_node(1).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::Addition);
+        assert_eq!(root.get_left().unwrap(), 0);
+        assert!(root.get_right().is_none());
+
+        assert_eq!(left.get_definition(), Definition::Number);
+        assert!(left.get_left().is_none());
+        assert!(left.get_right().is_none());
     }
 }

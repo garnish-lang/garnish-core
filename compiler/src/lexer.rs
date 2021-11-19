@@ -70,6 +70,15 @@ impl LexerToken {
         }
     }
 
+    pub fn empty() -> LexerToken {
+        LexerToken {
+            text: "".to_string(),
+            token_type: TokenType::Unknown,
+            row: 0,
+            column: 0,
+        }
+    }
+
     pub fn get_token_type(&self) -> TokenType {
         self.token_type
     }
