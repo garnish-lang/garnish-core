@@ -1205,4 +1205,44 @@ mod tests {
         assert!(property_id.get_left().is_none());
         assert!(property_id.get_right().is_none());
     }
+
+    #[test]
+    fn suffix_unary_with_binary_operation() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 1);
+
+        let empty_apply = result.get_node(3).unwrap();
+        let addition = result.get_node(1).unwrap();
+
+        let value_id = result.get_node(0).unwrap();
+        let property_id = result.get_node(2).unwrap();
+
+        assert_eq!(empty_apply.get_definition(), Definition::EmptyApply);
+        assert_eq!(empty_apply.get_parent().unwrap(), 1);
+        assert_eq!(empty_apply.get_left().unwrap(), 2);
+        assert!(empty_apply.get_right().is_none());
+
+        assert_eq!(addition.get_definition(), Definition::Addition);
+        assert!(addition.get_parent().is_none());
+        assert_eq!(addition.get_left().unwrap(), 0);
+        assert_eq!(addition.get_right().unwrap(), 3);
+
+        assert_eq!(value_id.get_definition(), Definition::Identifier);
+        assert_eq!(value_id.get_parent().unwrap(), 1);
+        assert!(value_id.get_left().is_none());
+        assert!(value_id.get_right().is_none());
+
+        assert_eq!(property_id.get_definition(), Definition::Identifier);
+        assert_eq!(property_id.get_parent().unwrap(), 3);
+        assert!(property_id.get_left().is_none());
+        assert!(property_id.get_right().is_none());
+    }
 }
