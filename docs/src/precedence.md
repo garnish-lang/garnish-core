@@ -20,7 +20,7 @@
 | 18         | &&                                                                 | Logical And      | left-right    |
 | 19         | ^^                                                                 | Logical Xor      | left-right    |
 | 20         | &#124;&#124;                                                       | Logical Or       | left-right    |
-| 21         | =                                                                  | Create Pair      | right-left    |
+| 21         | =                                                                  | Create Pair      | left-right    |
 | 22         | ->                                                                 | Create Link      | left-right    |
 | 23         | ,                                                                  | Create List      | left-right    |
 | 24         | \`expr\`                                                           | Infix Apply      | left-right    |
