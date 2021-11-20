@@ -96,7 +96,7 @@ fn make_priority_map() -> (HashMap<Definition, usize>, Vec<Vec<usize>>) {
     map.insert(Definition::Identifier, 1);
     map.insert(Definition::EmptyApply, 4);
     map.insert(Definition::AbsoluteValue, 5);
-    map.insert(Definition::Addition, 9);
+    map.insert(Definition::Addition, 10);
     map.insert(Definition::Equality, 14);
 
     let mut priority_table = vec![];
@@ -209,37 +209,54 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     }
                 }
 
+                let mut new_parent = None;
+                let mut new_left = true_left;
+
                 // update last_left parent
                 match true_left {
                     None => (), // allowed, likely the begining of input, group or sub-expression
                     Some(left) => match nodes.get_mut(left) {
                         None => Err(format!("Index assigned to last left has no value in nodes. {:?}", left))?,
                         Some(node) => {
+                            let n: &mut ParseNode = node;
                             let my_priority = match priority_map.get(&my_definition) {
                                 None => Err(format!("Definition '{:?}' not registered in priority map.", my_definition))?,
                                 Some(priority) => *priority,
                             };
 
-                            let their_priority = match priority_map.get(&node.definition) {
-                                None => Err(format!("Definition '{:?}' not registered in priority map.", node.definition))?,
+                            let their_priority = match priority_map.get(&n.definition) {
+                                None => Err(format!("Definition '{:?}' not registered in priority map.", n.definition))?,
                                 Some(priority) => *priority,
                             };
 
                             // lower priority means lower in tree
                             // lowest priority gets parent set
                             if my_priority < their_priority {
-                                // commented to suppress warning, will need later
-                                // parent = true_left;
+                                new_parent = true_left;
+                                new_left = node.right;
+                                node.right = Some(i);
+
+                                // set true left's right's parent to us
+                                match new_left {
+                                    None => (), // allowed, unary prefix
+                                    Some(right_index) => match nodes.get_mut(right_index) {
+                                        None => Err(format!("Index assigned to node has no value in node list. {:?}", right_index))?,
+                                        Some(right_node) => {
+                                            let rn: &mut ParseNode = right_node;
+                                            rn.parent = Some(i);
+                                        }
+                                    },
+                                }
                             } else {
                                 node.parent = Some(i);
                             }
                         }
                     },
                 }
-                (my_definition, None, true_left, assumed_right)
+                (my_definition, new_parent, new_left, assumed_right)
             }
             TokenType::Equality => {
-                trace!("Parsing PlusSign token");
+                trace!("Parsing Equality token");
 
                 let my_definition = Definition::Equality;
                 next_parent = Some(i);
@@ -269,6 +286,9 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     }
                 }
 
+                let mut new_parent = None;
+                let mut new_left = true_left;
+
                 // update last_left parent
                 match true_left {
                     None => (), // allowed, likely the begining of input, group or sub-expression
@@ -288,15 +308,28 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                             // lower priority means lower in tree
                             // lowest priority gets parent set
                             if my_priority < their_priority {
-                                // commented to suppress warning, will need later
-                                // parent = true_left;
+                                new_parent = true_left;
+                                new_left = node.right;
+                                node.right = Some(i);
+
+                                // set true left's right's parent to us
+                                match new_left {
+                                    None => (), // allowed, unary prefix
+                                    Some(right_index) => match nodes.get_mut(right_index) {
+                                        None => Err(format!("Index assigned to node has no value in node list. {:?}", right_index))?,
+                                        Some(right_node) => {
+                                            let rn: &mut ParseNode = right_node;
+                                            rn.parent = Some(i);
+                                        }
+                                    },
+                                }
                             } else {
                                 node.parent = Some(i);
                             }
                         }
                     },
                 }
-                (my_definition, None, true_left, assumed_right)
+                (my_definition, new_parent, new_left, assumed_right)
             }
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
@@ -821,5 +854,189 @@ mod tests {
         assert!(third_plus.get_parent().is_none());
         assert_eq!(third_plus.get_left().unwrap(), 3);
         assert_eq!(third_plus.get_right().unwrap(), 6);
+    }
+    #[test]
+    fn binary_operations_different_priority() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 4
+        ];
+
+        // 5 == 5 + 5
+
+        //         ==
+        //     5      +
+        //          5   5
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 1);
+
+        let first_plus = result.get_node(3).unwrap();
+
+        let first_equality = result.get_node(1).unwrap();
+
+        let first_five = result.get_node(0).unwrap();
+        let second_five = result.get_node(2).unwrap();
+        let third_five = result.get_node(4).unwrap();
+
+        assert_eq!(first_five.get_definition(), Definition::Number);
+        assert_eq!(first_five.get_parent().unwrap(), 1);
+        assert!(first_five.get_left().is_none());
+        assert!(first_five.get_right().is_none());
+
+        assert_eq!(second_five.get_definition(), Definition::Number);
+        assert_eq!(second_five.get_parent().unwrap(), 3);
+        assert!(second_five.get_left().is_none());
+        assert!(second_five.get_right().is_none());
+
+        assert_eq!(third_five.get_definition(), Definition::Number);
+        assert_eq!(third_five.get_parent().unwrap(), 3);
+        assert!(third_five.get_left().is_none());
+        assert!(third_five.get_right().is_none());
+
+        assert_eq!(first_plus.get_definition(), Definition::Addition);
+        assert_eq!(first_plus.get_parent().unwrap(), 1);
+        assert_eq!(first_plus.get_left().unwrap(), 2);
+        assert_eq!(first_plus.get_right().unwrap(), 4);
+
+        assert_eq!(first_equality.get_definition(), Definition::Equality);
+        assert!(first_equality.get_parent().is_none());
+        assert_eq!(first_equality.get_left().unwrap(), 0);
+        assert_eq!(first_equality.get_right().unwrap(), 3);
+    }
+
+    #[test]
+    fn multiple_binary_operations() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 4
+            LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 8
+            LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 12
+            LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        // 5 == 5 + 5 == 5 + 5 == 5 + 5 == 5
+
+        //                              ==
+        //                       ==         5
+        //               ==          +
+        //         ==         +     5  5
+        //     5      +     5   5
+        //          5   5
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 13);
+
+        let first_plus = result.get_node(3).unwrap();
+        let second_plus = result.get_node(7).unwrap();
+        let third_plus = result.get_node(11).unwrap();
+
+        let first_equality = result.get_node(1).unwrap();
+        let second_equality = result.get_node(5).unwrap();
+        let third_equality = result.get_node(9).unwrap();
+        let fourth_equality = result.get_node(13).unwrap();
+
+        let first_five = result.get_node(0).unwrap();
+        let second_five = result.get_node(2).unwrap();
+        let third_five = result.get_node(4).unwrap();
+        let fourth_five = result.get_node(6).unwrap();
+        let fifth_five = result.get_node(8).unwrap();
+        let sixth_five = result.get_node(10).unwrap();
+        let seventh_five = result.get_node(12).unwrap();
+        let eigth_five = result.get_node(14).unwrap();
+
+        assert_eq!(first_five.get_definition(), Definition::Number);
+        assert_eq!(first_five.get_parent().unwrap(), 1);
+        assert!(first_five.get_left().is_none());
+        assert!(first_five.get_right().is_none());
+
+        assert_eq!(second_five.get_definition(), Definition::Number);
+        assert_eq!(second_five.get_parent().unwrap(), 3);
+        assert!(second_five.get_left().is_none());
+        assert!(second_five.get_right().is_none());
+
+        assert_eq!(third_five.get_definition(), Definition::Number);
+        assert_eq!(third_five.get_parent().unwrap(), 3);
+        assert!(third_five.get_left().is_none());
+        assert!(third_five.get_right().is_none());
+
+        assert_eq!(fourth_five.get_definition(), Definition::Number);
+        assert_eq!(fourth_five.get_parent().unwrap(), 7);
+        assert!(fourth_five.get_left().is_none());
+        assert!(fourth_five.get_right().is_none());
+
+        assert_eq!(fifth_five.get_definition(), Definition::Number);
+        assert_eq!(fifth_five.get_parent().unwrap(), 7);
+        assert!(fifth_five.get_left().is_none());
+        assert!(fifth_five.get_right().is_none());
+
+        assert_eq!(sixth_five.get_definition(), Definition::Number);
+        assert_eq!(sixth_five.get_parent().unwrap(), 11);
+        assert!(sixth_five.get_left().is_none());
+        assert!(sixth_five.get_right().is_none());
+
+        assert_eq!(seventh_five.get_definition(), Definition::Number);
+        assert_eq!(seventh_five.get_parent().unwrap(), 11);
+        assert!(seventh_five.get_left().is_none());
+        assert!(seventh_five.get_right().is_none());
+
+        assert_eq!(eigth_five.get_definition(), Definition::Number);
+        assert_eq!(eigth_five.get_parent().unwrap(), 13);
+        assert!(eigth_five.get_left().is_none());
+        assert!(eigth_five.get_right().is_none());
+
+        // Additions
+
+        assert_eq!(first_plus.get_definition(), Definition::Addition);
+        assert_eq!(first_plus.get_parent().unwrap(), 1);
+        assert_eq!(first_plus.get_left().unwrap(), 2);
+        assert_eq!(first_plus.get_right().unwrap(), 4);
+
+        assert_eq!(second_plus.get_definition(), Definition::Addition);
+        assert_eq!(second_plus.get_parent().unwrap(), 5);
+        assert_eq!(second_plus.get_left().unwrap(), 6);
+        assert_eq!(second_plus.get_right().unwrap(), 8);
+
+        assert_eq!(third_plus.get_definition(), Definition::Addition);
+        assert_eq!(third_plus.get_parent().unwrap(), 9);
+        assert_eq!(third_plus.get_left().unwrap(), 10);
+        assert_eq!(third_plus.get_right().unwrap(), 12);
+
+        // Equalities
+
+        assert_eq!(first_equality.get_definition(), Definition::Equality);
+        assert_eq!(first_equality.get_parent().unwrap(), 5);
+        assert_eq!(first_equality.get_left().unwrap(), 0);
+        assert_eq!(first_equality.get_right().unwrap(), 3);
+
+        assert_eq!(second_equality.get_definition(), Definition::Equality);
+        assert_eq!(second_equality.get_parent().unwrap(), 9);
+        assert_eq!(second_equality.get_left().unwrap(), 1);
+        assert_eq!(second_equality.get_right().unwrap(), 7);
+
+        assert_eq!(third_equality.get_definition(), Definition::Equality);
+        assert_eq!(third_equality.get_parent().unwrap(), 13);
+        assert_eq!(third_equality.get_left().unwrap(), 5);
+        assert_eq!(third_equality.get_right().unwrap(), 11);
+
+        assert_eq!(fourth_equality.get_definition(), Definition::Equality);
+        assert!(fourth_equality.get_parent().is_none());
+        assert_eq!(fourth_equality.get_left().unwrap(), 9);
+        assert_eq!(fourth_equality.get_right().unwrap(), 14);
     }
 }
