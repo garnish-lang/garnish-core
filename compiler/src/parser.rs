@@ -14,6 +14,7 @@ pub enum Definition {
     Pair,
     Access,
     List,
+    Drop,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
@@ -195,27 +196,50 @@ fn parse_token(
 
 pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
     trace!("Starting parse");
-    let (priority_map, mut priority_table) = make_priority_map();
+    let (priority_map, _) = make_priority_map();
 
     let mut nodes = vec![];
 
     let mut next_parent = None;
     let mut last_left = None;
+    let mut check_for_list = false;
+    let mut last_token = LexerToken::empty();
+    let mut next_last_left = None;
 
-    for (i, token) in lex_tokens.iter().enumerate() {
+    for (_, token) in lex_tokens.iter().enumerate() {
         trace!("Token {:?}", token.get_token_type());
+
+        let id = nodes.len();
 
         // most operations will have their right be the next element
         // corrects are made after the fact
-        let assumed_right = match i + 1 >= lex_tokens.len() {
+        let assumed_right = match id + 1 >= lex_tokens.len() {
             true => None,
-            false => Some(i + 1),
+            false => Some(id + 1),
         };
 
         let (definition, parent, left, right) = match token.get_token_type() {
             TokenType::Number => {
                 trace!("Parsing Number token");
-                (Definition::Number, next_parent, None, None)
+
+                let mut parent = next_parent;
+
+                if check_for_list {
+                    trace!("List flag is set, creating list node before current node.");
+                    // use current id for list token
+                    let list_info = parse_token(id, Definition::List, last_left, Some(id + 1), &mut nodes, &priority_map)?;
+                    nodes.push(ParseNode::new(list_info.0, list_info.1, list_info.2, list_info.3, last_token.clone()));
+
+                    // update parent to point to list node just created
+                    parent = Some(id);
+
+                    // last left is the node we are about to create
+                    next_last_left = Some(nodes.len());
+
+                    check_for_list = false;
+                }
+
+                (Definition::Number, parent, None, None)
             }
             TokenType::Identifier => {
                 trace!("Parsing Identifier token");
@@ -271,7 +295,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
                 let new_left = true_left;
                 let mut parent = None;
-                next_parent = Some(i);
+                next_parent = Some(id);
 
                 match true_left {
                     None => (), // allowed
@@ -284,7 +308,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                                 let new_parent = n.parent;
 
                                 match new_parent {
-                                    None => Some(i), // nothing additional
+                                    None => Some(id), // nothing additional
                                     Some(parent_index) => match nodes.get_mut(parent_index) {
                                         None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
                                         Some(parent_node) => {
@@ -302,9 +326,9 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                                                 parent = Some(parent_index);
 
                                                 // update their parent to point at us
-                                                pn.right = Some(i);
+                                                pn.right = Some(id);
 
-                                                Some(i)
+                                                Some(id)
                                             } else {
                                                 unreachable!() // waiting to be proven wrong
 
@@ -335,39 +359,59 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                 trace!("Parsing AbsoluteValue token");
 
                 let parent = next_parent;
-                next_parent = Some(i);
+                next_parent = Some(id);
 
                 (Definition::AbsoluteValue, parent, None, assumed_right)
+            }
+            TokenType::HorizontalSpace => {
+                trace!("Parsing HorizontalSpace token");
+
+                // need to check for list
+                // will be list if previous token and next token are value-like
+                match last_left {
+                    None => (), // ignore, spaces at begining of input can't create a list
+                    Some(left) => match nodes.get(left) {
+                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                        Some(left_node) => {
+                            if left_node.definition.is_value_like() {
+                                trace!("Will check next token for value-like to make list");
+                                check_for_list = true;
+                            }
+                        }
+                    },
+                }
+
+                (Definition::Drop, None, None, None)
             }
             TokenType::Comma => {
                 trace!("Parsing Comma token");
 
-                next_parent = Some(i);
-                parse_token(i, Definition::List, last_left, assumed_right, &mut nodes, &priority_map)?
+                next_parent = Some(id);
+                parse_token(id, Definition::List, last_left, assumed_right, &mut nodes, &priority_map)?
             }
             TokenType::Pair => {
                 trace!("Parsing Pair token");
 
-                next_parent = Some(i);
-                parse_token(i, Definition::Pair, last_left, assumed_right, &mut nodes, &priority_map)?
+                next_parent = Some(id);
+                parse_token(id, Definition::Pair, last_left, assumed_right, &mut nodes, &priority_map)?
             }
             TokenType::Period => {
                 trace!("Parsing Period token");
 
-                next_parent = Some(i);
-                parse_token(i, Definition::Access, last_left, assumed_right, &mut nodes, &priority_map)?
+                next_parent = Some(id);
+                parse_token(id, Definition::Access, last_left, assumed_right, &mut nodes, &priority_map)?
             }
             TokenType::PlusSign => {
                 trace!("Parsing PlusSign token");
 
-                next_parent = Some(i);
-                parse_token(i, Definition::Addition, last_left, assumed_right, &mut nodes, &priority_map)?
+                next_parent = Some(id);
+                parse_token(id, Definition::Addition, last_left, assumed_right, &mut nodes, &priority_map)?
             }
             TokenType::Equality => {
                 trace!("Parsing Equality token");
 
-                next_parent = Some(i);
-                parse_token(i, Definition::Equality, last_left, assumed_right, &mut nodes, &priority_map)?
+                next_parent = Some(id);
+                parse_token(id, Definition::Equality, last_left, assumed_right, &mut nodes, &priority_map)?
             }
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
@@ -380,16 +424,26 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
             right
         );
 
-        match priority_map.get(&definition) {
-            None => Err(format!("Definition '{:?}' not registered in priority map.", definition))?,
-            Some(priority) => match priority_table.get_mut(*priority) {
-                None => Err(format!("No priority table regisitered at level {:?}", priority))?,
-                Some(table) => table.push(i),
-            },
+        if definition != Definition::Drop {
+            nodes.push(ParseNode::new(definition, parent, left, right, token.clone()));
+            last_left = match next_last_left {
+                Some(i) => {
+                    next_last_left = None;
+                    Some(i)
+                }
+                None => Some(id),
+            };
         }
 
-        nodes.push(ParseNode::new(definition, parent, left, right, token.clone()));
-        last_left = Some(i);
+        last_token = token.clone();
+
+        // match priority_map.get(&definition) {
+        //     None => Err(format!("Definition '{:?}' not registered in priority map.", definition))?,
+        //     Some(priority) => match priority_table.get_mut(*priority) {
+        //         None => Err(format!("No priority table regisitered at level {:?}", priority))?,
+        //         Some(table) => table.push(id),
+        //     },
+        // }
     }
 
     // for table in priority_table.iter() {
@@ -1325,6 +1379,39 @@ mod lists {
         ];
 
         let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 1);
+
+        let first_five = result.get_node(0).unwrap();
+        let list = result.get_node(1).unwrap();
+        let second_five = result.get_node(2).unwrap();
+
+        assert_eq!(list.get_definition(), Definition::List);
+        assert!(list.get_parent().is_none());
+        assert_eq!(list.get_left().unwrap(), 0);
+        assert_eq!(list.get_right().unwrap(), 2);
+
+        assert_eq!(first_five.get_definition(), Definition::Number);
+        assert_eq!(first_five.get_parent().unwrap(), 1);
+        assert!(first_five.get_left().is_none());
+        assert!(first_five.get_right().is_none());
+
+        assert_eq!(second_five.get_definition(), Definition::Number);
+        assert_eq!(second_five.get_parent().unwrap(), 1);
+        assert!(second_five.get_left().is_none());
+        assert!(second_five.get_right().is_none());
+    }
+    #[test]
+    fn two_item_space_list() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        println!("{:#?}", result);
 
         assert_eq!(result.get_root(), 1);
 
