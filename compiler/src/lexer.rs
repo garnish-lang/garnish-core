@@ -34,13 +34,13 @@ pub enum TokenType {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
-pub struct LexerSymbolNode {
+pub struct LexerOperatorNode {
     value: char,
     token_type: Option<TokenType>,
-    children: HashMap<char, LexerSymbolNode>,
+    children: HashMap<char, LexerOperatorNode>,
 }
 
-impl LexerSymbolNode {
+impl LexerOperatorNode {
     pub fn get_value(&self) -> char {
         self.value
     }
@@ -49,7 +49,7 @@ impl LexerSymbolNode {
         self.token_type
     }
 
-    pub fn get_child(&self, key: &char) -> Option<&LexerSymbolNode> {
+    pub fn get_child(&self, key: &char) -> Option<&LexerOperatorNode> {
         self.children.get(key)
     }
 }
@@ -86,8 +86,8 @@ impl LexerToken {
     }
 }
 
-pub fn create_symbol_tree(symbol_list: Vec<(&str, TokenType)>) -> LexerSymbolNode {
-    let mut root = LexerSymbolNode {
+pub fn create_operator_tree(symbol_list: Vec<(&str, TokenType)>) -> LexerOperatorNode {
+    let mut root = LexerOperatorNode {
         value: '\0',
         token_type: None,
         children: HashMap::new(),
@@ -107,7 +107,7 @@ pub fn create_symbol_tree(symbol_list: Vec<(&str, TokenType)>) -> LexerSymbolNod
 
                 current.children.insert(
                     c,
-                    LexerSymbolNode {
+                    LexerOperatorNode {
                         value: c,
                         token_type: t,
                         children: HashMap::new(),
@@ -141,7 +141,7 @@ pub fn create_symbol_tree(symbol_list: Vec<(&str, TokenType)>) -> LexerSymbolNod
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 enum LexingState {
     NoToken,
-    Symbol,
+    Operator,
     Spaces,
     NewLine,
     Number,
@@ -151,8 +151,8 @@ enum LexingState {
 
 fn start_token<'a>(
     c: char,
-    current_symbol: &mut &'a LexerSymbolNode,
-    symbol_tree: &'a LexerSymbolNode,
+    current_operator: &mut &'a LexerOperatorNode,
+    operator_tree: &'a LexerOperatorNode,
     state: &mut LexingState,
     current_characters: &mut String,
     current_token_type: &mut Option<TokenType>,
@@ -163,21 +163,21 @@ fn start_token<'a>(
 ) {
     trace!("Beginning new token");
     *current_characters = String::new();
-    *current_symbol = symbol_tree;
+    *current_operator = operator_tree;
     *current_token_type = None;
 
     // start new token
-    if current_symbol.get_child(&c).is_some() {
-        *state = LexingState::Symbol;
-        match current_symbol.get_child(&c) {
+    if current_operator.get_child(&c).is_some() {
+        *state = LexingState::Operator;
+        match current_operator.get_child(&c) {
             None => unreachable!(),
             Some(node) => {
                 current_characters.push(c);
                 *current_token_type = node.token_type;
-                *current_symbol = node;
+                *current_operator = node;
             }
         }
-        trace!("Symbol started");
+        trace!("Operator started");
     } else if c == ' ' || c == '\t' {
         current_characters.push(c);
         *state = LexingState::Spaces;
@@ -223,7 +223,7 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
     let mut tokens = vec![];
     let mut current_characters = String::new();
 
-    let symbol_tree = create_symbol_tree(vec![
+    let operator_tree = create_operator_tree(vec![
         ("+", TokenType::PlusSign),
         ("++", TokenType::AbsoluteValue),
         ("*", TokenType::MultiplicationSign),
@@ -247,7 +247,7 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
         ("=", TokenType::Pair),
         (".", TokenType::Period),
     ]);
-    let mut current_symbol = &symbol_tree;
+    let mut current_operator = &operator_tree;
     let mut current_token_type = None;
 
     let mut text_row = 0;
@@ -268,19 +268,19 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
             // continue/end tokens
             match state {
                 LexingState::NoToken => false,
-                LexingState::Symbol => {
-                    trace!("Continuing symbol");
-                    match current_symbol.get_child(&c) {
+                LexingState::Operator => {
+                    trace!("Continuing operator");
+                    match current_operator.get_child(&c) {
                         Some(node) => {
                             // set 'current' values
                             current_characters.push(c);
                             current_token_type = node.token_type;
-                            current_symbol = node;
+                            current_operator = node;
 
                             false
                         }
                         None => {
-                            trace!("Ending symbol");
+                            trace!("Ending operator");
                             true
                         }
                     }
@@ -351,13 +351,13 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
             // set default for new if next token isn't a symbol
             state = LexingState::NoToken;
             current_characters = String::new();
-            current_symbol = &symbol_tree;
+            current_operator = &operator_tree;
             current_token_type = None;
 
             start_token(
                 c,
-                &mut current_symbol,
-                &symbol_tree,
+                &mut current_operator,
+                &operator_tree,
                 &mut state,
                 &mut current_characters,
                 &mut current_token_type,
@@ -380,11 +380,11 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
 mod tests {
     use std::vec;
 
-    use crate::{lex, lexer::create_symbol_tree, LexerToken, TokenType};
+    use crate::{lex, lexer::create_operator_tree, LexerToken, TokenType};
 
     #[test]
     fn access_single_string() {
-        let root = create_symbol_tree(vec![("+", TokenType::PlusSign)]);
+        let root = create_operator_tree(vec![("+", TokenType::PlusSign)]);
 
         let child = root.get_child(&'+').unwrap();
         assert_eq!(child.get_value(), '+');
@@ -394,7 +394,7 @@ mod tests {
 
     #[test]
     fn nested_symbols() {
-        let root = create_symbol_tree(vec![("*", TokenType::MultiplicationSign), ("**", TokenType::ExponentialSign)]);
+        let root = create_operator_tree(vec![("*", TokenType::MultiplicationSign), ("**", TokenType::ExponentialSign)]);
 
         let child_1 = root.get_child(&'*').unwrap();
         let child_2 = child_1.get_child(&'*').unwrap();
@@ -409,7 +409,7 @@ mod tests {
 
     #[test]
     fn nested_symbols_longer_first() {
-        let root = create_symbol_tree(vec![("**", TokenType::ExponentialSign), ("*", TokenType::MultiplicationSign)]);
+        let root = create_operator_tree(vec![("**", TokenType::ExponentialSign), ("*", TokenType::MultiplicationSign)]);
 
         let child_1 = root.get_child(&'*').unwrap();
         let child_2 = child_1.get_child(&'*').unwrap();
