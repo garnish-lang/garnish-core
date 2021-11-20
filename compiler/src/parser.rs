@@ -15,6 +15,10 @@ pub enum Definition {
     Access,
     List,
     Drop,
+    Symbol,
+    Input,
+    Result,
+    Unit,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
@@ -26,6 +30,11 @@ pub enum Associativity {
 impl Definition {
     pub fn is_value_like(self) -> bool {
         self == Definition::Number
+            || self == Definition::Identifier
+            || self == Definition::Symbol
+            || self == Definition::Unit
+            || self == Definition::Input
+            || self == Definition::Result
     }
 
     pub fn associativity(self) -> Associativity {
@@ -194,6 +203,37 @@ fn parse_token(
     Ok((definition, new_parent, new_left, right))
 }
 
+fn parse_value_like(
+    id: usize,
+    definition: Definition,
+    check_for_list: &mut bool,
+    parent: Option<usize>,
+    next_last_left: &mut Option<usize>,
+    nodes: &mut Vec<ParseNode>,
+    last_left: Option<usize>,
+    priority_map: &HashMap<Definition, usize>,
+    last_token: LexerToken,
+) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), String> {
+    let mut new_parent = parent;
+
+    if *check_for_list {
+        trace!("List flag is set, creating list node before current node.");
+        // use current id for list token
+        let list_info = parse_token(id, Definition::List, last_left, Some(id + 1), nodes, &priority_map)?;
+        nodes.push(ParseNode::new(list_info.0, list_info.1, list_info.2, list_info.3, last_token.clone()));
+
+        // update parent to point to list node just created
+        new_parent = Some(id);
+
+        // last left is the node we are about to create
+        *next_last_left = Some(nodes.len());
+
+        *check_for_list = false;
+    }
+
+    Ok((definition, new_parent, None, None))
+}
+
 pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
     trace!("Starting parse");
     let (priority_map, _) = make_priority_map();
@@ -222,28 +262,92 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
             TokenType::Number => {
                 trace!("Parsing Number token");
 
-                let mut parent = next_parent;
+                parse_value_like(
+                    id,
+                    Definition::Number,
+                    &mut check_for_list,
+                    next_parent,
+                    &mut next_last_left,
+                    &mut nodes,
+                    last_left,
+                    &priority_map,
+                    last_token,
+                )?
+            }
+            TokenType::Symbol => {
+                trace!("Parsing Symbol token");
 
-                if check_for_list {
-                    trace!("List flag is set, creating list node before current node.");
-                    // use current id for list token
-                    let list_info = parse_token(id, Definition::List, last_left, Some(id + 1), &mut nodes, &priority_map)?;
-                    nodes.push(ParseNode::new(list_info.0, list_info.1, list_info.2, list_info.3, last_token.clone()));
-
-                    // update parent to point to list node just created
-                    parent = Some(id);
-
-                    // last left is the node we are about to create
-                    next_last_left = Some(nodes.len());
-
-                    check_for_list = false;
-                }
-
-                (Definition::Number, parent, None, None)
+                parse_value_like(
+                    id,
+                    Definition::Symbol,
+                    &mut check_for_list,
+                    next_parent,
+                    &mut next_last_left,
+                    &mut nodes,
+                    last_left,
+                    &priority_map,
+                    last_token,
+                )?
             }
             TokenType::Identifier => {
                 trace!("Parsing Identifier token");
-                (Definition::Identifier, next_parent, None, None)
+
+                parse_value_like(
+                    id,
+                    Definition::Identifier,
+                    &mut check_for_list,
+                    next_parent,
+                    &mut next_last_left,
+                    &mut nodes,
+                    last_left,
+                    &priority_map,
+                    last_token,
+                )?
+            }
+            TokenType::UnitLiteral => {
+                trace!("Parsing Symbol token");
+
+                parse_value_like(
+                    id,
+                    Definition::Unit,
+                    &mut check_for_list,
+                    next_parent,
+                    &mut next_last_left,
+                    &mut nodes,
+                    last_left,
+                    &priority_map,
+                    last_token,
+                )?
+            }
+            TokenType::Input => {
+                trace!("Parsing Symbol token");
+
+                parse_value_like(
+                    id,
+                    Definition::Input,
+                    &mut check_for_list,
+                    next_parent,
+                    &mut next_last_left,
+                    &mut nodes,
+                    last_left,
+                    &priority_map,
+                    last_token,
+                )?
+            }
+            TokenType::Result => {
+                trace!("Parsing Symbol token");
+
+                parse_value_like(
+                    id,
+                    Definition::Result,
+                    &mut check_for_list,
+                    next_parent,
+                    &mut next_last_left,
+                    &mut nodes,
+                    last_left,
+                    &priority_map,
+                    last_token,
+                )?
             }
             TokenType::EmptyApply => {
                 trace!("Parsing EmptyApply token");
@@ -433,6 +537,8 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                 }
                 None => Some(id),
             };
+
+            trace!("Last left set to {:?}", last_left);
         }
 
         last_token = token.clone();
@@ -500,6 +606,22 @@ mod tests {
     use crate::*;
 
     #[test]
+    fn value_like_definitions() {
+        let value_like = [
+            Definition::Number,
+            Definition::Identifier,
+            Definition::Symbol,
+            Definition::Unit,
+            Definition::Input,
+            Definition::Result,
+        ];
+
+        for def in value_like {
+            assert!(def.is_value_like());
+        }
+    }
+
+    #[test]
     fn single_number() {
         let tokens = vec![LexerToken::new("5".to_string(), TokenType::Number, 0, 0)];
 
@@ -525,6 +647,66 @@ mod tests {
         let root = result.get_node(0).unwrap();
 
         assert_eq!(root.get_definition(), Definition::Identifier);
+        assert!(root.get_left().is_none());
+        assert!(root.get_right().is_none());
+    }
+
+    #[test]
+    fn single_symbol() {
+        let tokens = vec![LexerToken::new(":symbol".to_string(), TokenType::Symbol, 0, 0)];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 0);
+
+        let root = result.get_node(0).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::Symbol);
+        assert!(root.get_left().is_none());
+        assert!(root.get_right().is_none());
+    }
+
+    #[test]
+    fn single_input() {
+        let tokens = vec![LexerToken::new("$".to_string(), TokenType::Input, 0, 0)];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 0);
+
+        let root = result.get_node(0).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::Input);
+        assert!(root.get_left().is_none());
+        assert!(root.get_right().is_none());
+    }
+
+    #[test]
+    fn single_result() {
+        let tokens = vec![LexerToken::new("$?".to_string(), TokenType::Result, 0, 0)];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 0);
+
+        let root = result.get_node(0).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::Result);
+        assert!(root.get_left().is_none());
+        assert!(root.get_right().is_none());
+    }
+
+    #[test]
+    fn single_unit() {
+        let tokens = vec![LexerToken::new("()".to_string(), TokenType::UnitLiteral, 0, 0)];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 0);
+
+        let root = result.get_node(0).unwrap();
+
+        assert_eq!(root.get_definition(), Definition::Unit);
         assert!(root.get_left().is_none());
         assert!(root.get_right().is_none());
     }
@@ -1401,6 +1583,7 @@ mod lists {
         assert!(second_five.get_left().is_none());
         assert!(second_five.get_right().is_none());
     }
+
     #[test]
     fn two_item_space_list() {
         let tokens = vec![
@@ -1410,8 +1593,6 @@ mod lists {
         ];
 
         let result = parse(tokens).unwrap();
-
-        println!("{:#?}", result);
 
         assert_eq!(result.get_root(), 1);
 
@@ -1433,5 +1614,99 @@ mod lists {
         assert_eq!(second_five.get_parent().unwrap(), 1);
         assert!(second_five.get_left().is_none());
         assert!(second_five.get_right().is_none());
+    }
+    #[test]
+    fn space_list_all_value_like() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(":symbol".to_string(), TokenType::Symbol, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("()".to_string(), TokenType::UnitLiteral, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("$".to_string(), TokenType::Input, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("$?".to_string(), TokenType::Result, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        println!("{:#?}", result);
+
+        assert_eq!(result.get_root(), 9);
+
+        let first_list = result.get_node(1).unwrap();
+        let second_list = result.get_node(3).unwrap();
+        let third_list = result.get_node(5).unwrap();
+        let fourth_list = result.get_node(7).unwrap();
+        let fifth_list = result.get_node(9).unwrap();
+
+        let five = result.get_node(0).unwrap();
+        let id = result.get_node(2).unwrap();
+        let sym = result.get_node(4).unwrap();
+        let unit = result.get_node(6).unwrap();
+        let input = result.get_node(8).unwrap();
+        let result = result.get_node(10).unwrap();
+
+        // List
+
+        assert_eq!(first_list.get_definition(), Definition::List);
+        assert_eq!(first_list.get_parent().unwrap(), 3);
+        assert_eq!(first_list.get_left().unwrap(), 0);
+        assert_eq!(first_list.get_right().unwrap(), 2);
+
+        assert_eq!(second_list.get_definition(), Definition::List);
+        assert_eq!(second_list.get_parent().unwrap(), 5);
+        assert_eq!(second_list.get_left().unwrap(), 1);
+        assert_eq!(second_list.get_right().unwrap(), 4);
+
+        assert_eq!(third_list.get_definition(), Definition::List);
+        assert_eq!(third_list.get_parent().unwrap(), 7);
+        assert_eq!(third_list.get_left().unwrap(), 3);
+        assert_eq!(third_list.get_right().unwrap(), 6);
+
+        assert_eq!(fourth_list.get_definition(), Definition::List);
+        assert_eq!(fourth_list.get_parent().unwrap(), 9);
+        assert_eq!(fourth_list.get_left().unwrap(), 5);
+        assert_eq!(fourth_list.get_right().unwrap(), 8);
+
+        assert_eq!(fifth_list.get_definition(), Definition::List);
+        assert!(fifth_list.get_parent().is_none());
+        assert_eq!(fifth_list.get_left().unwrap(), 7);
+        assert_eq!(fifth_list.get_right().unwrap(), 10);
+
+        // Values
+
+        assert_eq!(five.get_definition(), Definition::Number);
+        assert_eq!(five.get_parent().unwrap(), 1);
+        assert!(five.get_left().is_none());
+        assert!(five.get_right().is_none());
+
+        assert_eq!(id.get_definition(), Definition::Identifier);
+        assert_eq!(id.get_parent().unwrap(), 1);
+        assert!(id.get_left().is_none());
+        assert!(id.get_right().is_none());
+
+        assert_eq!(sym.get_definition(), Definition::Symbol);
+        assert_eq!(sym.get_parent().unwrap(), 3);
+        assert!(sym.get_left().is_none());
+        assert!(sym.get_right().is_none());
+
+        assert_eq!(unit.get_definition(), Definition::Unit);
+        assert_eq!(unit.get_parent().unwrap(), 5);
+        assert!(unit.get_left().is_none());
+        assert!(unit.get_right().is_none());
+
+        assert_eq!(input.get_definition(), Definition::Input);
+        assert_eq!(input.get_parent().unwrap(), 7);
+        assert!(input.get_left().is_none());
+        assert!(input.get_right().is_none());
+
+        assert_eq!(result.get_definition(), Definition::Result);
+        assert_eq!(result.get_parent().unwrap(), 9);
+        assert!(result.get_left().is_none());
+        assert!(result.get_right().is_none());
     }
 }
