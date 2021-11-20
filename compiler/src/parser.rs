@@ -111,6 +111,86 @@ fn make_priority_map() -> (HashMap<Definition, usize>, Vec<Vec<usize>>) {
     (map, priority_table)
 }
 
+fn parse_token(
+    i: usize,
+    definition: Definition,
+    left: Option<usize>,
+    right: Option<usize>,
+    nodes: &mut Vec<ParseNode>,
+    priority_map: &HashMap<Definition, usize>,
+) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), String> {
+    let mut true_left = left;
+    let mut parent = left;
+
+    let mut count = 0;
+
+    // // go up tree until no parent
+    trace!("Searching parent chain for true left");
+    while let Some(parent_index) = parent {
+        trace!("Walking: {:?}", parent_index);
+        match nodes.get(parent_index) {
+            None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
+            Some(node) => {
+                let n: &ParseNode = node;
+                true_left = Some(parent_index);
+                parent = n.parent
+            }
+        };
+
+        // safty net, max iterations to len of nodes
+        count += 1;
+        if count > nodes.len() {
+            return Err(format!("Max iterations reached when searching for last parent."));
+        }
+    }
+
+    let mut new_parent = None;
+    let mut new_left = true_left;
+
+    // update last_left parent
+    match true_left {
+        None => (), // allowed, likely the begining of input, group or sub-expression
+        Some(left) => match nodes.get_mut(left) {
+            None => Err(format!("Index assigned to last left has no value in nodes. {:?}", left))?,
+            Some(node) => {
+                let n: &mut ParseNode = node;
+                let my_priority = match priority_map.get(&definition) {
+                    None => Err(format!("Definition '{:?}' not registered in priority map.", definition))?,
+                    Some(priority) => *priority,
+                };
+
+                let their_priority = match priority_map.get(&n.definition) {
+                    None => Err(format!("Definition '{:?}' not registered in priority map.", n.definition))?,
+                    Some(priority) => *priority,
+                };
+
+                // lower priority means lower in tree
+                // lowest priority gets parent set
+                if my_priority < their_priority {
+                    new_parent = true_left;
+                    new_left = node.right;
+                    node.right = Some(i);
+
+                    // set true left's right's parent to us
+                    match new_left {
+                        None => (), // allowed, unary prefix
+                        Some(right_index) => match nodes.get_mut(right_index) {
+                            None => Err(format!("Index assigned to node has no value in node list. {:?}", right_index))?,
+                            Some(right_node) => {
+                                let rn: &mut ParseNode = right_node;
+                                rn.parent = Some(i);
+                            }
+                        },
+                    }
+                } else {
+                    node.parent = Some(i);
+                }
+            }
+        },
+    }
+    Ok((definition, new_parent, new_left, right))
+}
+
 pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
     trace!("Starting parse");
     let (priority_map, mut priority_table) = make_priority_map();
@@ -141,38 +221,111 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
             }
             TokenType::EmptyApply => {
                 trace!("Parsing EmptyApply token");
+                let definition = Definition::EmptyApply;
 
-                let mut parent = next_parent;
-                next_parent = Some(i);
+                let my_priority = match priority_map.get(&definition) {
+                    None => Err(format!("Definition '{:?}' not registered in priority map.", definition))?,
+                    Some(priority) => *priority,
+                };
 
-                match last_left {
-                    None => (), // allowed
-                    Some(left) => match nodes.get_mut(left) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
-                        Some(left_node) => {
-                            let n: &mut ParseNode = left_node;
-                            let new_parent = n.parent;
-                            n.parent = Some(i);
+                let mut true_left = last_left;
+                let mut current_left = last_left;
 
-                            match new_parent {
-                                None => (), // nothing additional
-                                Some(parent_index) => match nodes.get_mut(parent_index) {
-                                    None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
-                                    Some(parent_node) => {
-                                        let pn: &mut ParseNode = parent_node;
-                                        // make their parent, my parent
-                                        parent = Some(parent_index);
+                let mut count = 0;
 
-                                        // update their parent to point at us
-                                        pn.right = Some(i);
-                                    }
-                                },
+                // // go up tree until no parent
+                trace!("Searching parent chain for true left");
+                while let Some(left_index) = current_left {
+                    trace!("Walking: {:?}", left_index);
+                    match nodes.get(left_index) {
+                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left_index))?,
+                        Some(node) => {
+                            let n: &ParseNode = node;
+
+                            let their_priority = match priority_map.get(&n.definition) {
+                                None => Err(format!("Definition '{:?}' not registered in priority map.", n.definition))?,
+                                Some(priority) => *priority,
+                            };
+
+                            // need to find node with higher priority and stop before it
+                            if my_priority < their_priority {
+                                // stop
+                                break;
+                            } else {
+                                // continue
+
+                                true_left = Some(left_index);
+                                current_left = n.parent
                             }
                         }
-                    },
+                    };
+
+                    // safty net, max iterations to len of nodes
+                    count += 1;
+                    if count > nodes.len() {
+                        return Err(format!("Max iterations reached when searching for last parent."));
+                    }
                 }
 
-                (Definition::EmptyApply, parent, last_left, None)
+                let mut new_left = true_left;
+                let mut parent = None;
+                next_parent = Some(i);
+
+                match true_left {
+                    None => (), // allowed
+                    Some(left) => {
+                        let new_left_parent = match nodes.get_mut(left) {
+                            None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                            Some(left_node) => {
+                                trace!("Checking true left with index {:?}", left);
+                                let n: &mut ParseNode = left_node;
+                                let new_parent = n.parent;
+
+                                match new_parent {
+                                    None => Some(i), // nothing additional
+                                    Some(parent_index) => match nodes.get_mut(parent_index) {
+                                        None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
+                                        Some(parent_node) => {
+                                            trace!("Checking true left parent with index {:?}", parent_index);
+
+                                            let pn: &mut ParseNode = parent_node;
+                                            let their_priority = match priority_map.get(&pn.definition) {
+                                                None => Err(format!("Definition '{:?}' not registered in priority map.", pn.definition))?,
+                                                Some(priority) => *priority,
+                                            };
+
+                                            if my_priority < their_priority {
+                                                trace!("Priority is less than true left's parent");
+                                                // make their parent, my parent
+                                                parent = Some(parent_index);
+
+                                                // update their parent to point at us
+                                                pn.right = Some(i);
+
+                                                Some(i)
+                                            } else {
+                                                trace!("Priority is greater than or equal to true left's parent");
+                                                pn.parent = Some(i);
+                                                new_left = Some(parent_index);
+                                                parent = None;
+
+                                                Some(parent_index)
+                                            }
+                                        }
+                                    },
+                                }
+                            }
+                        };
+
+                        trace!("Setting true left parent to {:?}", new_left_parent);
+                        match nodes.get_mut(left) {
+                            None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                            Some(left_node) => left_node.parent = new_left_parent,
+                        }
+                    }
+                }
+
+                (Definition::EmptyApply, parent, new_left, None)
             }
             TokenType::AbsoluteValue => {
                 trace!("Parsing AbsoluteValue token");
@@ -185,309 +338,26 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
             TokenType::Pair => {
                 trace!("Parsing Pair token");
 
-                let my_definition = Definition::Pair;
                 next_parent = Some(i);
-
-                let mut true_left = last_left;
-                let mut parent = last_left;
-
-                let mut count = 0;
-
-                // // go up tree until no parent
-                trace!("Searching parent chain for true left");
-                while let Some(parent_index) = parent {
-                    trace!("Walking: {:?}", parent_index);
-                    match nodes.get(parent_index) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
-                        Some(node) => {
-                            let n: &ParseNode = node;
-                            true_left = Some(parent_index);
-                            parent = n.parent
-                        }
-                    };
-
-                    // safty net, max iterations to len of nodes
-                    count += 1;
-                    if count > nodes.len() {
-                        return Err(format!("Max iterations reached when searching for last parent."));
-                    }
-                }
-
-                let mut new_parent = None;
-                let mut new_left = true_left;
-
-                // update last_left parent
-                match true_left {
-                    None => (), // allowed, likely the begining of input, group or sub-expression
-                    Some(left) => match nodes.get_mut(left) {
-                        None => Err(format!("Index assigned to last left has no value in nodes. {:?}", left))?,
-                        Some(node) => {
-                            let n: &mut ParseNode = node;
-                            let my_priority = match priority_map.get(&my_definition) {
-                                None => Err(format!("Definition '{:?}' not registered in priority map.", my_definition))?,
-                                Some(priority) => *priority,
-                            };
-
-                            let their_priority = match priority_map.get(&n.definition) {
-                                None => Err(format!("Definition '{:?}' not registered in priority map.", n.definition))?,
-                                Some(priority) => *priority,
-                            };
-
-                            // lower priority means lower in tree
-                            // lowest priority gets parent set
-                            if my_priority < their_priority {
-                                new_parent = true_left;
-                                new_left = node.right;
-                                node.right = Some(i);
-
-                                // set true left's right's parent to us
-                                match new_left {
-                                    None => (), // allowed, unary prefix
-                                    Some(right_index) => match nodes.get_mut(right_index) {
-                                        None => Err(format!("Index assigned to node has no value in node list. {:?}", right_index))?,
-                                        Some(right_node) => {
-                                            let rn: &mut ParseNode = right_node;
-                                            rn.parent = Some(i);
-                                        }
-                                    },
-                                }
-                            } else {
-                                node.parent = Some(i);
-                            }
-                        }
-                    },
-                }
-                (my_definition, new_parent, new_left, assumed_right)
+                parse_token(i, Definition::Pair, last_left, assumed_right, &mut nodes, &priority_map)?
             }
             TokenType::Period => {
                 trace!("Parsing Period token");
 
-                let my_definition = Definition::Access;
                 next_parent = Some(i);
-
-                let mut true_left = last_left;
-                let mut parent = last_left;
-
-                let mut count = 0;
-
-                // // go up tree until no parent
-                trace!("Searching parent chain for true left");
-                while let Some(parent_index) = parent {
-                    trace!("Walking: {:?}", parent_index);
-                    match nodes.get(parent_index) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
-                        Some(node) => {
-                            let n: &ParseNode = node;
-                            true_left = Some(parent_index);
-                            parent = n.parent
-                        }
-                    };
-
-                    // safty net, max iterations to len of nodes
-                    count += 1;
-                    if count > nodes.len() {
-                        return Err(format!("Max iterations reached when searching for last parent."));
-                    }
-                }
-
-                let mut new_parent = None;
-                let mut new_left = true_left;
-
-                // update last_left parent
-                match true_left {
-                    None => (), // allowed, likely the begining of input, group or sub-expression
-                    Some(left) => match nodes.get_mut(left) {
-                        None => Err(format!("Index assigned to last left has no value in nodes. {:?}", left))?,
-                        Some(node) => {
-                            let n: &mut ParseNode = node;
-                            let my_priority = match priority_map.get(&my_definition) {
-                                None => Err(format!("Definition '{:?}' not registered in priority map.", my_definition))?,
-                                Some(priority) => *priority,
-                            };
-
-                            let their_priority = match priority_map.get(&n.definition) {
-                                None => Err(format!("Definition '{:?}' not registered in priority map.", n.definition))?,
-                                Some(priority) => *priority,
-                            };
-
-                            // lower priority means lower in tree
-                            // lowest priority gets parent set
-                            if my_priority < their_priority {
-                                new_parent = true_left;
-                                new_left = node.right;
-                                node.right = Some(i);
-
-                                // set true left's right's parent to us
-                                match new_left {
-                                    None => (), // allowed, unary prefix
-                                    Some(right_index) => match nodes.get_mut(right_index) {
-                                        None => Err(format!("Index assigned to node has no value in node list. {:?}", right_index))?,
-                                        Some(right_node) => {
-                                            let rn: &mut ParseNode = right_node;
-                                            rn.parent = Some(i);
-                                        }
-                                    },
-                                }
-                            } else {
-                                node.parent = Some(i);
-                            }
-                        }
-                    },
-                }
-                (my_definition, new_parent, new_left, assumed_right)
+                parse_token(i, Definition::Access, last_left, assumed_right, &mut nodes, &priority_map)?
             }
             TokenType::PlusSign => {
                 trace!("Parsing PlusSign token");
 
-                let my_definition = Definition::Addition;
                 next_parent = Some(i);
-
-                let mut true_left = last_left;
-                let mut parent = last_left;
-
-                let mut count = 0;
-
-                // // go up tree until no parent
-                trace!("Searching parent chain for true left");
-                while let Some(parent_index) = parent {
-                    trace!("Walking: {:?}", parent_index);
-                    match nodes.get(parent_index) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
-                        Some(node) => {
-                            let n: &ParseNode = node;
-                            true_left = Some(parent_index);
-                            parent = n.parent
-                        }
-                    };
-
-                    // safty net, max iterations to len of nodes
-                    count += 1;
-                    if count > nodes.len() {
-                        return Err(format!("Max iterations reached when searching for last parent."));
-                    }
-                }
-
-                let mut new_parent = None;
-                let mut new_left = true_left;
-
-                // update last_left parent
-                match true_left {
-                    None => (), // allowed, likely the begining of input, group or sub-expression
-                    Some(left) => match nodes.get_mut(left) {
-                        None => Err(format!("Index assigned to last left has no value in nodes. {:?}", left))?,
-                        Some(node) => {
-                            let n: &mut ParseNode = node;
-                            let my_priority = match priority_map.get(&my_definition) {
-                                None => Err(format!("Definition '{:?}' not registered in priority map.", my_definition))?,
-                                Some(priority) => *priority,
-                            };
-
-                            let their_priority = match priority_map.get(&n.definition) {
-                                None => Err(format!("Definition '{:?}' not registered in priority map.", n.definition))?,
-                                Some(priority) => *priority,
-                            };
-
-                            // lower priority means lower in tree
-                            // lowest priority gets parent set
-                            if my_priority < their_priority {
-                                new_parent = true_left;
-                                new_left = node.right;
-                                node.right = Some(i);
-
-                                // set true left's right's parent to us
-                                match new_left {
-                                    None => (), // allowed, unary prefix
-                                    Some(right_index) => match nodes.get_mut(right_index) {
-                                        None => Err(format!("Index assigned to node has no value in node list. {:?}", right_index))?,
-                                        Some(right_node) => {
-                                            let rn: &mut ParseNode = right_node;
-                                            rn.parent = Some(i);
-                                        }
-                                    },
-                                }
-                            } else {
-                                node.parent = Some(i);
-                            }
-                        }
-                    },
-                }
-                (my_definition, new_parent, new_left, assumed_right)
+                parse_token(i, Definition::Addition, last_left, assumed_right, &mut nodes, &priority_map)?
             }
             TokenType::Equality => {
                 trace!("Parsing Equality token");
 
-                let my_definition = Definition::Equality;
                 next_parent = Some(i);
-
-                let mut true_left = last_left;
-                let mut parent = last_left;
-
-                let mut count = 0;
-
-                // // go up tree until no parent
-                trace!("Searching parent chain for true left");
-                while let Some(parent_index) = parent {
-                    trace!("Walking: {:?}", parent_index);
-                    match nodes.get(parent_index) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
-                        Some(node) => {
-                            let n: &ParseNode = node;
-                            true_left = Some(parent_index);
-                            parent = n.parent
-                        }
-                    };
-
-                    // safty net, max iterations to len of nodes
-                    count += 1;
-                    if count > nodes.len() {
-                        return Err(format!("Max iterations reached when searching for last parent."));
-                    }
-                }
-
-                let mut new_parent = None;
-                let mut new_left = true_left;
-
-                // update last_left parent
-                match true_left {
-                    None => (), // allowed, likely the begining of input, group or sub-expression
-                    Some(left) => match nodes.get_mut(left) {
-                        None => Err(format!("Index assigned to last left has no value in nodes. {:?}", left))?,
-                        Some(node) => {
-                            let my_priority = match priority_map.get(&my_definition) {
-                                None => Err(format!("Definition '{:?}' not registered in priority map.", my_definition))?,
-                                Some(priority) => *priority,
-                            };
-
-                            let their_priority = match priority_map.get(&node.definition) {
-                                None => Err(format!("Definition '{:?}' not registered in priority map.", node.definition))?,
-                                Some(priority) => *priority,
-                            };
-
-                            // lower priority means lower in tree
-                            // lowest priority gets parent set
-                            if my_priority < their_priority {
-                                new_parent = true_left;
-                                new_left = node.right;
-                                node.right = Some(i);
-
-                                // set true left's right's parent to us
-                                match new_left {
-                                    None => (), // allowed, unary prefix
-                                    Some(right_index) => match nodes.get_mut(right_index) {
-                                        None => Err(format!("Index assigned to node has no value in node list. {:?}", right_index))?,
-                                        Some(right_node) => {
-                                            let rn: &mut ParseNode = right_node;
-                                            rn.parent = Some(i);
-                                        }
-                                    },
-                                }
-                            } else {
-                                node.parent = Some(i);
-                            }
-                        }
-                    },
-                }
-                (my_definition, new_parent, new_left, assumed_right)
+                parse_token(i, Definition::Equality, last_left, assumed_right, &mut nodes, &priority_map)?
             }
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
@@ -1254,5 +1124,85 @@ mod tests {
         assert!(fourth_equality.get_parent().is_none());
         assert_eq!(fourth_equality.get_left().unwrap(), 9);
         assert_eq!(fourth_equality.get_right().unwrap(), 14);
+    }
+
+    #[test]
+    fn prefix_unary_with_access() {
+        let tokens = vec![
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(".".to_string(), TokenType::Period, 0, 0),
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 0);
+
+        let abs_sign = result.get_node(0).unwrap();
+        let period = result.get_node(2).unwrap();
+
+        let value_id = result.get_node(1).unwrap();
+        let property_id = result.get_node(3).unwrap();
+
+        assert_eq!(abs_sign.get_definition(), Definition::AbsoluteValue);
+        assert!(abs_sign.get_parent().is_none());
+        assert!(abs_sign.get_left().is_none());
+        assert_eq!(abs_sign.get_right().unwrap(), 2);
+
+        assert_eq!(period.get_definition(), Definition::Access);
+        assert_eq!(period.get_parent().unwrap(), 0);
+        assert_eq!(period.get_left().unwrap(), 1);
+        assert_eq!(period.get_right().unwrap(), 3);
+
+        assert_eq!(value_id.get_definition(), Definition::Identifier);
+        assert_eq!(value_id.get_parent().unwrap(), 2);
+        assert!(value_id.get_left().is_none());
+        assert!(value_id.get_right().is_none());
+
+        assert_eq!(property_id.get_definition(), Definition::Identifier);
+        assert_eq!(property_id.get_parent().unwrap(), 2);
+        assert!(property_id.get_left().is_none());
+        assert!(property_id.get_right().is_none());
+    }
+
+    #[test]
+    fn suffix_unary_with_access() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(".".to_string(), TokenType::Period, 0, 0),
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 3);
+
+        let empty_apply = result.get_node(3).unwrap();
+        let period = result.get_node(1).unwrap();
+
+        let value_id = result.get_node(0).unwrap();
+        let property_id = result.get_node(2).unwrap();
+
+        assert_eq!(empty_apply.get_definition(), Definition::EmptyApply);
+        assert!(empty_apply.get_parent().is_none());
+        assert_eq!(empty_apply.get_left().unwrap(), 1);
+        assert!(empty_apply.get_right().is_none());
+
+        assert_eq!(period.get_definition(), Definition::Access);
+        assert_eq!(period.get_parent().unwrap(), 3);
+        assert_eq!(period.get_left().unwrap(), 0);
+        assert_eq!(period.get_right().unwrap(), 2);
+
+        assert_eq!(value_id.get_definition(), Definition::Identifier);
+        assert_eq!(value_id.get_parent().unwrap(), 1);
+        assert!(value_id.get_left().is_none());
+        assert!(value_id.get_right().is_none());
+
+        assert_eq!(property_id.get_definition(), Definition::Identifier);
+        assert_eq!(property_id.get_parent().unwrap(), 1);
+        assert!(property_id.get_left().is_none());
+        assert!(property_id.get_right().is_none());
     }
 }
