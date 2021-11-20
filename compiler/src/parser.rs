@@ -267,7 +267,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     }
                 }
 
-                let mut new_left = true_left;
+                let new_left = true_left;
                 let mut parent = None;
                 next_parent = Some(i);
 
@@ -304,12 +304,14 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
                                                 Some(i)
                                             } else {
-                                                trace!("Priority is greater than or equal to true left's parent");
-                                                pn.parent = Some(i);
-                                                new_left = Some(parent_index);
-                                                parent = None;
+                                                unreachable!() // waiting to be proven wrong
 
-                                                Some(parent_index)
+                                                // trace!("Priority is greater than or equal to true left's parent");
+                                                // pn.parent = Some(i);
+                                                // new_left = Some(parent_index);
+                                                // parent = None;
+
+                                                // Some(parent_index)
                                             }
                                         }
                                     },
@@ -1237,6 +1239,60 @@ mod tests {
 
         assert_eq!(value_id.get_definition(), Definition::Identifier);
         assert_eq!(value_id.get_parent().unwrap(), 1);
+        assert!(value_id.get_left().is_none());
+        assert!(value_id.get_right().is_none());
+
+        assert_eq!(property_id.get_definition(), Definition::Identifier);
+        assert_eq!(property_id.get_parent().unwrap(), 3);
+        assert!(property_id.get_left().is_none());
+        assert!(property_id.get_right().is_none());
+    }
+
+    #[test]
+    fn suffix_unary_with_binary_operation_and_access() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(".".to_string(), TokenType::Period, 0, 0),
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 1);
+
+        let empty_apply = result.get_node(5).unwrap();
+        let addition = result.get_node(1).unwrap();
+        let access = result.get_node(3).unwrap();
+
+        let five = result.get_node(0).unwrap();
+        let value_id = result.get_node(2).unwrap();
+        let property_id = result.get_node(4).unwrap();
+
+        assert_eq!(addition.get_definition(), Definition::Addition);
+        assert!(addition.get_parent().is_none());
+        assert_eq!(addition.get_left().unwrap(), 0);
+        assert_eq!(addition.get_right().unwrap(), 5);
+
+        assert_eq!(access.get_definition(), Definition::Access);
+        assert_eq!(access.get_parent().unwrap(), 5);
+        assert_eq!(access.get_left().unwrap(), 2);
+        assert_eq!(access.get_right().unwrap(), 4);
+
+        assert_eq!(empty_apply.get_definition(), Definition::EmptyApply);
+        assert_eq!(empty_apply.get_parent().unwrap(), 1);
+        assert_eq!(empty_apply.get_left().unwrap(), 3);
+        assert!(empty_apply.get_right().is_none());
+
+        assert_eq!(five.get_definition(), Definition::Number);
+        assert_eq!(five.get_parent().unwrap(), 1);
+        assert!(five.get_left().is_none());
+        assert!(five.get_right().is_none());
+
+        assert_eq!(value_id.get_definition(), Definition::Identifier);
+        assert_eq!(value_id.get_parent().unwrap(), 3);
         assert!(value_id.get_left().is_none());
         assert!(value_id.get_right().is_none());
 
