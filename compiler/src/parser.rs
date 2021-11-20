@@ -13,6 +13,7 @@ pub enum Definition {
     Equality,
     Pair,
     Access,
+    List,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
@@ -102,6 +103,7 @@ fn make_priority_map() -> (HashMap<Definition, usize>, Vec<Vec<usize>>) {
     map.insert(Definition::Addition, 10);
     map.insert(Definition::Equality, 14);
     map.insert(Definition::Pair, 21);
+    map.insert(Definition::List, 23);
 
     let mut priority_table = vec![];
     for _ in 0..=26 {
@@ -336,6 +338,12 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                 next_parent = Some(i);
 
                 (Definition::AbsoluteValue, parent, None, assumed_right)
+            }
+            TokenType::Comma => {
+                trace!("Parsing Comma token");
+
+                next_parent = Some(i);
+                parse_token(i, Definition::List, last_left, assumed_right, &mut nodes, &priority_map)?
             }
             TokenType::Pair => {
                 trace!("Parsing Pair token");
@@ -1300,5 +1308,43 @@ mod tests {
         assert_eq!(property_id.get_parent().unwrap(), 3);
         assert!(property_id.get_left().is_none());
         assert!(property_id.get_right().is_none());
+    }
+}
+
+#[cfg(test)]
+mod lists {
+    use crate::lexer::*;
+    use crate::*;
+
+    #[test]
+    fn two_item_comma_list() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_eq!(result.get_root(), 1);
+
+        let first_five = result.get_node(0).unwrap();
+        let list = result.get_node(1).unwrap();
+        let second_five = result.get_node(2).unwrap();
+
+        assert_eq!(list.get_definition(), Definition::List);
+        assert!(list.get_parent().is_none());
+        assert_eq!(list.get_left().unwrap(), 0);
+        assert_eq!(list.get_right().unwrap(), 2);
+
+        assert_eq!(first_five.get_definition(), Definition::Number);
+        assert_eq!(first_five.get_parent().unwrap(), 1);
+        assert!(first_five.get_left().is_none());
+        assert!(first_five.get_right().is_none());
+
+        assert_eq!(second_five.get_definition(), Definition::Number);
+        assert_eq!(second_five.get_parent().unwrap(), 1);
+        assert!(second_five.get_left().is_none());
+        assert!(second_five.get_right().is_none());
     }
 }
