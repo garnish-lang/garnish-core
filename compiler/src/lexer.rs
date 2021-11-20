@@ -147,6 +147,7 @@ enum LexingState {
     Number,
     Indentifier,
     Annotation,
+    Symbol,
 }
 
 fn start_token<'a>(
@@ -211,6 +212,10 @@ fn start_token<'a>(
         current_characters.push(c);
         *state = LexingState::Annotation;
         *current_token_type = Some(TokenType::Annotation);
+    } else if c == ':' {
+        current_characters.push(c);
+        *state = LexingState::Symbol;
+        *current_token_type = Some(TokenType::Symbol);
     }
 
     *token_start_row = text_row;
@@ -236,7 +241,6 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
         ("$?", TokenType::Result),
         ("$", TokenType::Input),
         (",", TokenType::Comma),
-        (":", TokenType::Symbol),
         ("~", TokenType::Apply),
         ("!>", TokenType::ApplyIfFalse),
         ("?>", TokenType::ApplyIfTrue),
@@ -281,6 +285,28 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                         }
                         None => {
                             trace!("Ending operator");
+                            true
+                        }
+                    }
+                }
+                LexingState::Symbol => {
+                    trace!("Continuing symbol");
+                    if current_characters.len() == 1 {
+                        // just the colon character
+                        // need to make sure the first character is only alpha or underscore
+                        if c.is_alphabetic() || c == '_' {
+                            current_characters.push(c);
+                            false
+                        } else {
+                            // end token
+                            true
+                        }
+                    } else {
+                        if c.is_alphanumeric() || c == '_' {
+                            current_characters.push(c);
+                            false
+                        } else {
+                            // end token
                             true
                         }
                     }
@@ -618,13 +644,13 @@ mod tests {
     }
 
     #[test]
-    fn symbol_symbol() {
-        let result = lex(&":".to_string()).unwrap();
+    fn symbol() {
+        let result = lex(&":my_symbol".to_string()).unwrap();
 
         assert_eq!(
             result,
             vec![LexerToken {
-                text: ":".to_string(),
+                text: ":my_symbol".to_string(),
                 token_type: TokenType::Symbol,
                 column: 0,
                 row: 0
