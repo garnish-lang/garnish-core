@@ -109,7 +109,7 @@ impl ParseResult {
     }
 }
 
-fn make_priority_map() -> (HashMap<Definition, usize>, Vec<Vec<usize>>) {
+fn make_priority_map() -> HashMap<Definition, usize> {
     let mut map = HashMap::new();
 
     map.insert(Definition::Number, 1);
@@ -130,12 +130,7 @@ fn make_priority_map() -> (HashMap<Definition, usize>, Vec<Vec<usize>>) {
     map.insert(Definition::List, 23);
     map.insert(Definition::Subexpression, 100);
 
-    let mut priority_table = vec![];
-    for _ in 0..=26 {
-        priority_table.push(vec![]);
-    }
-
-    (map, priority_table)
+    map
 }
 
 fn parse_token(
@@ -277,7 +272,7 @@ fn parse_value_like(
 
 pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
     trace!("Starting parse");
-    let (priority_map, _) = make_priority_map();
+    let priority_map = make_priority_map();
 
     let mut nodes = vec![];
 
@@ -624,29 +619,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
         trace!("Last left set to {:?}", last_left);
 
         last_token = token.clone();
-
-        // match priority_map.get(&definition) {
-        //     None => Err(format!("Definition '{:?}' not registered in priority map.", definition))?,
-        //     Some(priority) => match priority_table.get_mut(*priority) {
-        //         None => Err(format!("No priority table regisitered at level {:?}", priority))?,
-        //         Some(table) => table.push(id),
-        //     },
-        // }
     }
-
-    // for table in priority_table.iter() {
-    //     for addr in table {
-    //         match nodes.get_mut(*addr) {
-    //             None => Err(format!("Node with address {:?} regisitered in priority table does not exist", addr))?,
-    //             Some(node) => match (node.get_left(), node.get_right()) {
-    //                 (None, None) => (), //
-    //                 (Some(left), None) => (),
-    //                 (None, Some(right)) => (),
-    //                 (Some(left), Some(right)) => (),
-    //             },
-    //         }
-    //     }
-    // }
 
     // walk up tree to find root
     trace!("Finding root node");
