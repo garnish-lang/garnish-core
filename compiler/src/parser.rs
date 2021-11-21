@@ -21,6 +21,7 @@ pub enum Definition {
     Unit,
     Subexpression,
     Group,
+    NestedExpression,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
@@ -37,6 +38,10 @@ impl Definition {
             || self == Definition::Unit
             || self == Definition::Input
             || self == Definition::Result
+    }
+
+    pub fn is_group_like(self) -> bool {
+        self == Definition::Group || self == Definition::NestedExpression
     }
 
     pub fn associativity(self) -> Associativity {
@@ -115,6 +120,7 @@ fn make_priority_map() -> (HashMap<Definition, usize>, Vec<Vec<usize>>) {
     map.insert(Definition::Result, 1);
 
     map.insert(Definition::Group, 2);
+    map.insert(Definition::NestedExpression, 2);
     map.insert(Definition::Access, 3);
     map.insert(Definition::EmptyApply, 4);
     map.insert(Definition::AbsoluteValue, 5);
@@ -174,7 +180,7 @@ fn parse_token(
                     their_priority
                 );
 
-                let is_our_group = n.definition == Definition::Group
+                let is_our_group = n.definition.is_group_like()
                     && match under_group {
                         None => false,
                         Some(group_index) => group_index == left_index,
@@ -227,7 +233,7 @@ fn parse_token(
                                     Some(priority) => *priority,
                                 };
 
-                                if my_priority < their_priority || pn.definition == Definition::Group {
+                                if my_priority < their_priority || pn.definition.is_group_like() {
                                     trace!("Priority is less than true left's parent");
                                     // make their parent, my parent
                                     parent = Some(parent_index);
@@ -610,6 +616,23 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
                 (Definition::Drop, None, None, None)
             }
+            TokenType::StartExpression => {
+                current_group = Some(group_stack.len());
+                group_stack.push(id);
+
+                let parent = next_parent;
+                next_parent = Some(id);
+                (Definition::NestedExpression, parent, None, assumed_right)
+            }
+            TokenType::EndExpression => {
+                next_last_left = group_stack.pop();
+                current_group = match group_stack.len() == 0 {
+                    true => None,
+                    false => Some(group_stack.len() - 1),
+                };
+
+                (Definition::Drop, None, None, None)
+            }
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
 
@@ -758,6 +781,15 @@ mod tests {
 
         for def in value_like {
             assert!(def.is_value_like());
+        }
+    }
+
+    #[test]
+    fn group_like_definitions() {
+        let value_like = [Definition::Group, Definition::NestedExpression];
+
+        for def in value_like {
+            assert!(def.is_group_like());
         }
     }
 
@@ -1544,6 +1576,34 @@ mod groups {
     use crate::lexer::*;
     use crate::*;
 
+    fn assert_group_nested_results(
+        root: usize,
+        tokens: Vec<LexerToken>,
+        assertions: &[(usize, Definition, Option<usize>, Option<usize>, Option<usize>)],
+    ) {
+        // test groups
+        assert_result(&parse(tokens.clone()).unwrap(), root, assertions);
+
+        let exp_tokens: Vec<LexerToken> = tokens
+            .iter()
+            .map(|t| match t.get_token_type() {
+                TokenType::StartGroup => LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
+                TokenType::EndGroup => LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
+                _ => t.clone(),
+            })
+            .collect();
+
+        let exp_assertions: Vec<(usize, Definition, Option<usize>, Option<usize>, Option<usize>)> = assertions
+            .iter()
+            .map(|(i, def, p, l, r)| match def {
+                Definition::Group => (*i, Definition::NestedExpression, *p, *l, *r),
+                _ => (*i, *def, *p, *l, *r),
+            })
+            .collect();
+
+        assert_result(&parse(exp_tokens.clone()).unwrap(), root, &exp_assertions);
+    }
+
     #[test]
     fn single_value() {
         let tokens = vec![
@@ -1552,13 +1612,11 @@ mod groups {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
-
-        assert_result(
-            &result,
+        assert_group_nested_results(
             0,
+            tokens,
             &[(0, Definition::Group, None, None, Some(1)), (1, Definition::Number, Some(0), None, None)],
-        );
+        )
     }
 
     #[test]
@@ -1571,11 +1629,9 @@ mod groups {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
-
-        assert_result(
-            &result,
+        assert_group_nested_results(
             0,
+            tokens,
             &[
                 (0, Definition::Group, None, None, Some(2)),
                 (1, Definition::Number, Some(2), None, None),
@@ -1599,13 +1655,9 @@ mod groups {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
-
-        println!("{:#?}", result);
-
-        assert_result(
-            &result,
+        assert_group_nested_results(
             6,
+            tokens,
             &[
                 (0, Definition::Number, Some(1), None, None),
                 (1, Definition::Addition, Some(6), Some(0), Some(2)),
@@ -1630,13 +1682,9 @@ mod groups {
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
-
-        println!("{:#?}", result);
-
-        assert_result(
-            &result,
+        assert_group_nested_results(
             4,
+            tokens,
             &[
                 (0, Definition::Group, Some(4), None, Some(2)),
                 (1, Definition::Number, Some(2), None, None),
@@ -1658,13 +1706,9 @@ mod groups {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
-
-        println!("{:#?}", result);
-
-        assert_result(
-            &result,
+        assert_group_nested_results(
             0,
+            tokens,
             &[
                 (0, Definition::AbsoluteValue, None, None, Some(1)),
                 (1, Definition::Group, Some(0), None, Some(3)),
