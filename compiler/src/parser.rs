@@ -1667,11 +1667,9 @@ mod groups {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
-
-        assert_result(
-            &result,
+        assert_group_nested_results(
             0,
+            tokens,
             &[
                 (0, Definition::Group, None, None, Some(2)),
                 (1, Definition::Number, Some(2), None, None),
