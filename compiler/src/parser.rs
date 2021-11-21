@@ -1,5 +1,5 @@
 use log::trace;
-use std::{collections::HashMap, hash::Hash, vec};
+use std::{collections::HashMap, hash::Hash, str::ParseBoolError, vec};
 
 use crate::lexer::*;
 
@@ -270,6 +270,34 @@ fn parse_value_like(
     Ok((definition, new_parent, None, None))
 }
 
+fn setup_space_list_check(
+    last_left: Option<usize>,
+    nodes: &mut Vec<ParseNode>,
+    check_for_list: &mut bool,
+    next_last_left: &mut Option<usize>,
+) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), String> {
+    match last_left {
+        None => (), // ignore, spaces at begining of input can't create a list
+        Some(left) => match nodes.get(left) {
+            None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+            Some(left_node) => {
+                if left_node.definition.is_value_like() {
+                    trace!(
+                        "Value-like definition {:?} found. Will check next token for value-like to make list",
+                        left_node.definition
+                    );
+                    *check_for_list = true;
+                }
+            }
+        },
+    }
+
+    // retain last left instead of below code setting it to token that isn't being created
+    *next_last_left = last_left;
+
+    Ok((Definition::Drop, None, None, None))
+}
+
 pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
     trace!("Starting parse");
     let priority_map = make_priority_map();
@@ -536,29 +564,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
             }
             TokenType::Whitespace => {
                 trace!("Parsing HorizontalSpace token");
-
-                // need to check for list
-                // will be list if previous token and next token are value-like
-                match last_left {
-                    None => (), // ignore, spaces at begining of input can't create a list
-                    Some(left) => match nodes.get(left) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
-                        Some(left_node) => {
-                            if left_node.definition.is_value_like() {
-                                trace!(
-                                    "Value-like definition {:?} found. Will check next token for value-like to make list",
-                                    left_node.definition
-                                );
-                                check_for_list = true;
-                            }
-                        }
-                    },
-                }
-
-                // retain last left instead of below code setting it to token that isn't being created
-                next_last_left = last_left;
-
-                (Definition::Drop, None, None, None)
+                setup_space_list_check(last_left, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?
             }
             TokenType::Subexpression => {
                 trace!("Parsing Subexpression token");
@@ -573,25 +579,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
                 if in_group {
                     trace!("Inside of a group, treating as white space");
-                    // Subexpressions are treated like whitespace while inside of a group
-
-                    match last_left {
-                        None => (), // ignore, spaces at begining of input can't create a list
-                        Some(left) => match nodes.get(left) {
-                            None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
-                            Some(left_node) => {
-                                if left_node.definition.is_value_like() {
-                                    trace!(
-                                        "Value-like definition {:?} found. Will check next token for value-like to make list",
-                                        left_node.definition
-                                    );
-                                    check_for_list = true;
-                                }
-                            }
-                        },
-                    }
-                    next_last_left = last_left;
-                    (Definition::Drop, None, None, None)
+                    setup_space_list_check(last_left, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?
                 } else {
                     // only one in a row
                     // check if last parser node is a subexpression
