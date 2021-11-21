@@ -1,5 +1,5 @@
 use log::trace;
-use std::{collections::HashMap, hash::Hash, vec};
+use std::{collections::HashMap, hash::Hash, os, vec};
 
 use crate::lexer::*;
 
@@ -244,6 +244,7 @@ fn parse_token(
                     their_priority
                 );
 
+                trace!("Check group. Current group is {:?}. Current index is {:?}", under_group, left_index);
                 let is_our_group = n.definition.is_group_like()
                     && match under_group {
                         None => false,
@@ -379,7 +380,11 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
     let mut current_group = None;
 
     for (_, token) in lex_tokens.iter().enumerate() {
-        trace!("Token {:?}", token.get_token_type());
+        trace!(
+            "------ Start Token {:?} -------------------------------------------------------------------------",
+            token.get_token_type()
+        );
+        trace!("");
 
         let id = nodes.len();
 
@@ -399,8 +404,6 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
         };
 
         let (definition, secondary_definition) = get_definition(token.get_token_type());
-
-        trace!("Parsing {:?} token", token.get_token_type());
 
         let (definition, parent, left, right) = match secondary_definition {
             SecondaryDefinition::Value => parse_value_like(
@@ -615,6 +618,12 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
         trace!("Last left set to {:?}", last_left);
 
         last_token = token.clone();
+
+        trace!("");
+        trace!(
+            "------ End Token {:?} -------------------------------------------------------------------------",
+            token.get_token_type()
+        );
     }
 
     // walk up tree to find root
@@ -1658,6 +1667,55 @@ mod groups {
                 (2, Definition::Number, Some(3), None, None),
                 (3, Definition::Addition, Some(1), Some(2), Some(4)),
                 (4, Definition::Number, Some(3), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn multiple_nested_groups() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        assert_group_nested_results(
+            0,
+            tokens,
+            &[
+                // group 1
+                (0, Definition::Group, None, None, Some(12)),
+                (1, Definition::Number, Some(2), None, None),
+                (2, Definition::Addition, Some(12), Some(1), Some(3)),
+                // group 2
+                (3, Definition::Group, Some(2), None, Some(10)),
+                (4, Definition::Number, Some(5), None, None),
+                (5, Definition::Addition, Some(10), Some(4), Some(6)),
+                // group 3
+                (6, Definition::Group, Some(5), None, Some(8)),
+                (7, Definition::Number, Some(8), None, None),
+                (8, Definition::Addition, Some(6), Some(7), Some(9)),
+                (9, Definition::Number, Some(8), None, None),
+                // group 2
+                (10, Definition::Addition, Some(3), Some(5), Some(11)),
+                (11, Definition::Number, Some(10), None, None),
+                // group 1
+                (12, Definition::Addition, Some(0), Some(2), Some(13)),
+                (13, Definition::Number, Some(12), None, None),
             ],
         );
     }
