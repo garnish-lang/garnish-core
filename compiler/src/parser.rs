@@ -109,6 +109,12 @@ fn make_priority_map() -> (HashMap<Definition, usize>, Vec<Vec<usize>>) {
 
     map.insert(Definition::Number, 1);
     map.insert(Definition::Identifier, 1);
+    map.insert(Definition::Symbol, 1);
+    map.insert(Definition::Unit, 1);
+    map.insert(Definition::Input, 1);
+    map.insert(Definition::Result, 1);
+
+    map.insert(Definition::Group, 2);
     map.insert(Definition::Access, 3);
     map.insert(Definition::EmptyApply, 4);
     map.insert(Definition::AbsoluteValue, 5);
@@ -127,7 +133,7 @@ fn make_priority_map() -> (HashMap<Definition, usize>, Vec<Vec<usize>>) {
 }
 
 fn parse_token(
-    i: usize,
+    id: usize,
     definition: Definition,
     left: Option<usize>,
     right: Option<usize>,
@@ -135,21 +141,49 @@ fn parse_token(
     priority_map: &HashMap<Definition, usize>,
     check_for_list: &mut bool,
 ) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), String> {
+    let my_priority = match priority_map.get(&definition) {
+        None => Err(format!("Definition '{:?}' not registered in priority map.", definition))?,
+        Some(priority) => *priority,
+    };
+
     let mut true_left = left;
-    let mut parent = left;
+    let mut current_left = left;
 
     let mut count = 0;
 
     // // go up tree until no parent
     trace!("Searching parent chain for true left");
-    while let Some(parent_index) = parent {
-        trace!("Walking: {:?}", parent_index);
-        match nodes.get(parent_index) {
-            None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
+    while let Some(left_index) = current_left {
+        trace!("Walking: {:?}", left_index);
+        match nodes.get(left_index) {
+            None => Err(format!("Index assigned to node has no value in node list. {:?}", left_index))?,
             Some(node) => {
                 let n: &ParseNode = node;
-                true_left = Some(parent_index);
-                parent = n.parent
+
+                let their_priority = match priority_map.get(&n.definition) {
+                    None => Err(format!("Definition '{:?}' not registered in priority map.", n.definition))?,
+                    Some(priority) => *priority,
+                };
+
+                trace!(
+                    "Comparing priorities (current - {:?} {:?}) (left - {:?} {:?}",
+                    definition,
+                    my_priority,
+                    n.definition,
+                    their_priority
+                );
+
+                // need to find node with higher priority and stop before it
+                if my_priority < their_priority || n.definition == Definition::Group {
+                    trace!("Stopping walk with true left {:?}", true_left);
+                    // stop
+                    break;
+                } else {
+                    // continue
+
+                    true_left = Some(left_index);
+                    current_left = n.parent
+                }
             }
         };
 
@@ -160,54 +194,68 @@ fn parse_token(
         }
     }
 
-    let mut new_parent = None;
-    let mut new_left = true_left;
+    let new_left = true_left;
+    let mut parent = None;
 
-    // update last_left parent
     match true_left {
-        None => (), // allowed, likely the begining of input, group or sub-expression
-        Some(left) => match nodes.get_mut(left) {
-            None => Err(format!("Index assigned to last left has no value in nodes. {:?}", left))?,
-            Some(node) => {
-                let n: &mut ParseNode = node;
-                let my_priority = match priority_map.get(&definition) {
-                    None => Err(format!("Definition '{:?}' not registered in priority map.", definition))?,
-                    Some(priority) => *priority,
-                };
+        None => (), // allowed
+        Some(left) => {
+            let new_left_parent = match nodes.get_mut(left) {
+                None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                Some(left_node) => {
+                    trace!("Checking true left with index {:?}", left);
+                    let n: &mut ParseNode = left_node;
+                    let new_parent = n.parent;
 
-                let their_priority = match priority_map.get(&n.definition) {
-                    None => Err(format!("Definition '{:?}' not registered in priority map.", n.definition))?,
-                    Some(priority) => *priority,
-                };
+                    match new_parent {
+                        None => Some(id), // nothing additional
+                        Some(parent_index) => match nodes.get_mut(parent_index) {
+                            None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
+                            Some(parent_node) => {
+                                trace!("Checking true left parent with index {:?}", parent_index);
 
-                // lower priority means lower in tree
-                // lowest priority gets parent set
-                if my_priority < their_priority {
-                    new_parent = true_left;
-                    new_left = node.right;
-                    node.right = Some(i);
+                                let pn: &mut ParseNode = parent_node;
+                                let their_priority = match priority_map.get(&pn.definition) {
+                                    None => Err(format!("Definition '{:?}' not registered in priority map.", pn.definition))?,
+                                    Some(priority) => *priority,
+                                };
 
-                    // set true left's right's parent to us
-                    match new_left {
-                        None => (), // allowed, unary prefix
-                        Some(right_index) => match nodes.get_mut(right_index) {
-                            None => Err(format!("Index assigned to node has no value in node list. {:?}", right_index))?,
-                            Some(right_node) => {
-                                let rn: &mut ParseNode = right_node;
-                                rn.parent = Some(i);
+                                if my_priority < their_priority || pn.definition == Definition::Group {
+                                    trace!("Priority is less than true left's parent");
+                                    // make their parent, my parent
+                                    parent = Some(parent_index);
+
+                                    // update their parent to point at us
+                                    pn.right = Some(id);
+
+                                    Some(id)
+                                } else {
+                                    unreachable!() // waiting to be proven wrong
+
+                                    // trace!("Priority is greater than or equal to true left's parent");
+                                    // pn.parent = Some(i);
+                                    // new_left = Some(parent_index);
+                                    // parent = None;
+
+                                    // Some(parent_index)
+                                }
                             }
                         },
                     }
-                } else {
-                    node.parent = Some(i);
                 }
+            };
+
+            trace!("Setting true left parent to {:?}", new_left_parent);
+            match nodes.get_mut(left) {
+                None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                Some(left_node) => left_node.parent = new_left_parent,
             }
-        },
+        }
     }
 
     *check_for_list = false;
 
-    Ok((definition, new_parent, new_left, right))
+    Ok((definition, parent, new_left, right))
 }
 
 fn parse_value_like(
@@ -1535,7 +1583,7 @@ mod groups {
     use crate::*;
 
     #[test]
-    fn single_value_group() {
+    fn single_value() {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
@@ -1548,6 +1596,32 @@ mod groups {
             &result,
             0,
             &[(0, Definition::Group, None, None, Some(1)), (1, Definition::Number, Some(0), None, None)],
+        );
+    }
+
+    #[test]
+    fn single_operation() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        println!("{:#?}", result);
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Group, None, None, Some(2)),
+                (1, Definition::Number, Some(2), None, None),
+                (2, Definition::Addition, Some(0), Some(1), Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+            ],
         );
     }
 }
