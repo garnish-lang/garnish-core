@@ -298,6 +298,51 @@ fn setup_space_list_check(
     Ok((Definition::Drop, None, None, None))
 }
 
+enum SecondaryDefinition {
+    Value,
+    BinaryLeftToRight,
+    UnaryPrefix,
+    UnarySuffix,
+    StartGrouping,
+    EndGrouping,
+    Subexpression,
+    Whitespace,
+}
+
+fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
+    match token_type {
+        // TokenType::Annotation => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
+        TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
+        TokenType::Symbol => (Definition::Symbol, SecondaryDefinition::Value),
+        TokenType::Number => (Definition::Number, SecondaryDefinition::Value),
+        TokenType::Result => (Definition::Result, SecondaryDefinition::Value),
+        TokenType::Input => (Definition::Input, SecondaryDefinition::Value),
+        TokenType::StartExpression => (Definition::NestedExpression, SecondaryDefinition::StartGrouping),
+        TokenType::EndExpression => (Definition::Drop, SecondaryDefinition::EndGrouping),
+        TokenType::StartGroup => (Definition::Group, SecondaryDefinition::StartGrouping),
+        TokenType::EndGroup => (Definition::Drop, SecondaryDefinition::EndGrouping),
+        TokenType::Identifier => (Definition::Identifier, SecondaryDefinition::Value),
+        TokenType::Whitespace => (Definition::Drop, SecondaryDefinition::Whitespace),
+        TokenType::Subexpression => (Definition::Subexpression, SecondaryDefinition::Subexpression),
+        TokenType::EmptyApply => (Definition::EmptyApply, SecondaryDefinition::UnarySuffix),
+        TokenType::AbsoluteValue => (Definition::AbsoluteValue, SecondaryDefinition::UnaryPrefix),
+        TokenType::Comma => (Definition::List, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::PlusSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Equality => (Definition::Equality, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Period => (Definition::Access, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Pair => (Definition::Pair, SecondaryDefinition::BinaryLeftToRight),
+        // TokenType::MultiplicationSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        // TokenType::ExponentialSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        // TokenType::Apply => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        // TokenType::ApplyTo => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        // TokenType::Reapply => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        // TokenType::ApplyIfFalse => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        // TokenType::ApplyIfTrue => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        _ => todo!(),
+    }
+}
+
 pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
     trace!("Starting parse");
     let priority_map = make_priority_map();
@@ -332,126 +377,28 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
             false => Some(id + 1),
         };
 
-        let (definition, parent, left, right) = match token.get_token_type() {
-            TokenType::Number => {
-                trace!("Parsing Number token");
+        let (definition, secondary_definition) = get_definition(token.get_token_type());
 
-                parse_value_like(
-                    id,
-                    Definition::Number,
-                    &mut check_for_list,
-                    next_parent,
-                    &mut next_last_left,
-                    &mut nodes,
-                    last_left,
-                    &priority_map,
-                    last_token,
-                    under_group,
-                )?
-            }
-            TokenType::Symbol => {
-                trace!("Parsing Symbol token");
+        trace!("Parsing {:?} token", token.get_token_type());
 
-                parse_value_like(
-                    id,
-                    Definition::Symbol,
-                    &mut check_for_list,
-                    next_parent,
-                    &mut next_last_left,
-                    &mut nodes,
-                    last_left,
-                    &priority_map,
-                    last_token,
-                    under_group,
-                )?
-            }
-            TokenType::Identifier => {
-                trace!("Parsing Identifier token");
-
-                parse_value_like(
-                    id,
-                    Definition::Identifier,
-                    &mut check_for_list,
-                    next_parent,
-                    &mut next_last_left,
-                    &mut nodes,
-                    last_left,
-                    &priority_map,
-                    last_token,
-                    under_group,
-                )?
-            }
-            TokenType::UnitLiteral => {
-                trace!("Parsing Symbol token");
-
-                parse_value_like(
-                    id,
-                    Definition::Unit,
-                    &mut check_for_list,
-                    next_parent,
-                    &mut next_last_left,
-                    &mut nodes,
-                    last_left,
-                    &priority_map,
-                    last_token,
-                    under_group,
-                )?
-            }
-            TokenType::Input => {
-                trace!("Parsing Symbol token");
-
-                parse_value_like(
-                    id,
-                    Definition::Input,
-                    &mut check_for_list,
-                    next_parent,
-                    &mut next_last_left,
-                    &mut nodes,
-                    last_left,
-                    &priority_map,
-                    last_token,
-                    under_group,
-                )?
-            }
-            TokenType::Result => {
-                trace!("Parsing Symbol token");
-
-                parse_value_like(
-                    id,
-                    Definition::Result,
-                    &mut check_for_list,
-                    next_parent,
-                    &mut next_last_left,
-                    &mut nodes,
-                    last_left,
-                    &priority_map,
-                    last_token,
-                    under_group,
-                )?
-            }
-            TokenType::EmptyApply => {
-                trace!("Parsing EmptyApply token");
-
-                next_parent = Some(id);
-
-                parse_token(
-                    id,
-                    Definition::EmptyApply,
-                    last_left,
-                    None,
-                    &mut nodes,
-                    &priority_map,
-                    &mut check_for_list,
-                    under_group,
-                )?
-            }
-            TokenType::Comma => {
-                trace!("Parsing Comma token");
-
+        let (definition, parent, left, right) = match secondary_definition {
+            SecondaryDefinition::Value => parse_value_like(
+                id,
+                definition,
+                &mut check_for_list,
+                next_parent,
+                &mut next_last_left,
+                &mut nodes,
+                last_left,
+                &priority_map,
+                last_token,
+                under_group,
+            )?,
+            SecondaryDefinition::BinaryLeftToRight => {
                 next_parent = Some(id);
                 parse_token(
                     id,
-                    Definition::List,
+                    definition,
                     last_left,
                     assumed_right,
                     &mut nodes,
@@ -460,83 +407,34 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     under_group,
                 )?
             }
-            TokenType::Pair => {
-                trace!("Parsing Pair token");
-
-                next_parent = Some(id);
-                parse_token(
-                    id,
-                    Definition::Pair,
-                    last_left,
-                    assumed_right,
-                    &mut nodes,
-                    &priority_map,
-                    &mut check_for_list,
-                    under_group,
-                )?
-            }
-            TokenType::Period => {
-                trace!("Parsing Period token");
-
-                next_parent = Some(id);
-                parse_token(
-                    id,
-                    Definition::Access,
-                    last_left,
-                    assumed_right,
-                    &mut nodes,
-                    &priority_map,
-                    &mut check_for_list,
-                    under_group,
-                )?
-            }
-            TokenType::PlusSign => {
-                trace!("Parsing PlusSign token");
-
-                next_parent = Some(id);
-                parse_token(
-                    id,
-                    Definition::Addition,
-                    last_left,
-                    assumed_right,
-                    &mut nodes,
-                    &priority_map,
-                    &mut check_for_list,
-                    under_group,
-                )?
-            }
-            TokenType::Equality => {
-                trace!("Parsing Equality token");
-
-                next_parent = Some(id);
-                parse_token(
-                    id,
-                    Definition::Equality,
-                    last_left,
-                    assumed_right,
-                    &mut nodes,
-                    &priority_map,
-                    &mut check_for_list,
-                    under_group,
-                )?
-            }
-            TokenType::AbsoluteValue => {
-                trace!("Parsing AbsoluteValue token");
-
+            SecondaryDefinition::UnaryPrefix => {
                 let parent = next_parent;
                 next_parent = Some(id);
 
-                (Definition::AbsoluteValue, parent, None, assumed_right)
+                (definition, parent, None, assumed_right)
             }
-            TokenType::StartGroup => {
+            SecondaryDefinition::UnarySuffix => {
+                next_parent = Some(id);
+                parse_token(
+                    id,
+                    definition,
+                    last_left,
+                    None, // preventing sharing with BinaryLeftToRight
+                    &mut nodes,
+                    &priority_map,
+                    &mut check_for_list,
+                    under_group,
+                )?
+            }
+            SecondaryDefinition::StartGrouping => {
                 current_group = Some(group_stack.len());
                 group_stack.push(id);
 
                 let parent = next_parent;
                 next_parent = Some(id);
-                (Definition::Group, parent, None, assumed_right)
+                (definition, parent, None, assumed_right)
             }
-            TokenType::EndGroup => {
+            SecondaryDefinition::EndGrouping => {
                 next_last_left = group_stack.pop();
                 current_group = match group_stack.len() == 0 {
                     true => None,
@@ -545,30 +443,8 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
                 (Definition::Drop, None, None, None)
             }
-            TokenType::StartExpression => {
-                current_group = Some(group_stack.len());
-                group_stack.push(id);
-
-                let parent = next_parent;
-                next_parent = Some(id);
-                (Definition::NestedExpression, parent, None, assumed_right)
-            }
-            TokenType::EndExpression => {
-                next_last_left = group_stack.pop();
-                current_group = match group_stack.len() == 0 {
-                    true => None,
-                    false => Some(group_stack.len() - 1),
-                };
-
-                (Definition::Drop, None, None, None)
-            }
-            TokenType::Whitespace => {
-                trace!("Parsing HorizontalSpace token");
-                setup_space_list_check(last_left, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?
-            }
-            TokenType::Subexpression => {
-                trace!("Parsing Subexpression token");
-
+            SecondaryDefinition::Whitespace => setup_space_list_check(last_left, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?,
+            SecondaryDefinition::Subexpression => {
                 let in_group = match current_group {
                     None => false,
                     Some(group) => match nodes.get(group) {
@@ -612,7 +488,6 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     }
                 }
             }
-            t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
 
         trace!(
@@ -1727,7 +1602,7 @@ mod groups {
     }
 
     #[test]
-    fn subexpression_in_nested_express_is_subexpression() {
+    fn subexpression_in_nested_expression_is_subexpression() {
         let tokens = vec![
             LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
@@ -1751,7 +1626,7 @@ mod groups {
     }
 
     #[test]
-    fn multiple_subexpression_in_nested_express_is_subexpression() {
+    fn multiple_subexpression_in_nested_expression_is_subexpression() {
         let tokens = vec![
             LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
