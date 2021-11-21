@@ -605,6 +605,52 @@ mod tests {
     use crate::lexer::*;
     use crate::*;
 
+    type DefAssertionInfo = (usize, Definition, Option<usize>, Option<usize>, Option<usize>);
+
+    pub fn assert_result(result: &ParseResult, root: usize, assertions: &[DefAssertionInfo]) {
+        assert_eq!(result.root, root, "Expected root to be {:?} was {:?}", root, result.root);
+
+        for (index, definition, parent, left, right) in assertions {
+            let node = result.get_node(*index).unwrap();
+
+            assert_eq!(
+                node.get_definition(),
+                *definition,
+                "{:?}: Expected definition to be {:?} was {:?}",
+                index,
+                *definition,
+                node.get_definition()
+            );
+
+            assert_eq!(
+                node.get_parent(),
+                *parent,
+                "{:?}: Expected parent to be {:?} was {:?}",
+                index,
+                *parent,
+                node.get_parent()
+            );
+
+            assert_eq!(
+                node.get_left(),
+                *left,
+                "{:?}: Expected left to be {:?} was {:?}",
+                index,
+                *left,
+                node.get_left()
+            );
+
+            assert_eq!(
+                node.get_right(),
+                *right,
+                "{:?}: Expected right to be {:?} was {:?}",
+                index,
+                right,
+                node.get_right()
+            );
+        }
+    }
+
     #[test]
     fn value_like_definitions() {
         let value_like = [
@@ -627,13 +673,7 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 0);
-
-        let root = result.get_node(0).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Number);
-        assert!(root.get_left().is_none());
-        assert!(root.get_right().is_none());
+        assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
     }
 
     #[test]
@@ -642,13 +682,7 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 0);
-
-        let root = result.get_node(0).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Identifier);
-        assert!(root.get_left().is_none());
-        assert!(root.get_right().is_none());
+        assert_result(&result, 0, &[(0, Definition::Identifier, None, None, None)]);
     }
 
     #[test]
@@ -657,13 +691,7 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 0);
-
-        let root = result.get_node(0).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Symbol);
-        assert!(root.get_left().is_none());
-        assert!(root.get_right().is_none());
+        assert_result(&result, 0, &[(0, Definition::Symbol, None, None, None)]);
     }
 
     #[test]
@@ -672,13 +700,7 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 0);
-
-        let root = result.get_node(0).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Input);
-        assert!(root.get_left().is_none());
-        assert!(root.get_right().is_none());
+        assert_result(&result, 0, &[(0, Definition::Input, None, None, None)]);
     }
 
     #[test]
@@ -687,13 +709,7 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 0);
-
-        let root = result.get_node(0).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Result);
-        assert!(root.get_left().is_none());
-        assert!(root.get_right().is_none());
+        assert_result(&result, 0, &[(0, Definition::Result, None, None, None)]);
     }
 
     #[test]
@@ -702,13 +718,7 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 0);
-
-        let root = result.get_node(0).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Unit);
-        assert!(root.get_left().is_none());
-        assert!(root.get_right().is_none());
+        assert_result(&result, 0, &[(0, Definition::Unit, None, None, None)]);
     }
 
     #[test]
@@ -721,23 +731,15 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
-
-        let left = result.get_node(0).unwrap();
-        let root = result.get_node(1).unwrap();
-        let right = result.get_node(2).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Addition);
-        assert_eq!(root.get_left().unwrap(), 0);
-        assert_eq!(root.get_right().unwrap(), 2);
-
-        assert_eq!(left.get_definition(), Definition::Number);
-        assert!(left.get_left().is_none());
-        assert!(left.get_right().is_none());
-
-        assert_eq!(right.get_definition(), Definition::Number);
-        assert!(right.get_left().is_none());
-        assert!(right.get_right().is_none());
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Addition, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -750,23 +752,15 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
-
-        let left = result.get_node(0).unwrap();
-        let root = result.get_node(1).unwrap();
-        let right = result.get_node(2).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Equality);
-        assert_eq!(root.get_left().unwrap(), 0);
-        assert_eq!(root.get_right().unwrap(), 2);
-
-        assert_eq!(left.get_definition(), Definition::Number);
-        assert!(left.get_left().is_none());
-        assert!(left.get_right().is_none());
-
-        assert_eq!(right.get_definition(), Definition::Number);
-        assert!(right.get_left().is_none());
-        assert!(right.get_right().is_none());
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Equality, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -779,23 +773,15 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
-
-        let left = result.get_node(0).unwrap();
-        let root = result.get_node(1).unwrap();
-        let right = result.get_node(2).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Pair);
-        assert_eq!(root.get_left().unwrap(), 0);
-        assert_eq!(root.get_right().unwrap(), 2);
-
-        assert_eq!(left.get_definition(), Definition::Number);
-        assert!(left.get_left().is_none());
-        assert!(left.get_right().is_none());
-
-        assert_eq!(right.get_definition(), Definition::Number);
-        assert!(right.get_left().is_none());
-        assert!(right.get_right().is_none());
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Pair, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -808,23 +794,15 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
-
-        let left = result.get_node(0).unwrap();
-        let root = result.get_node(1).unwrap();
-        let right = result.get_node(2).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Access);
-        assert_eq!(root.get_left().unwrap(), 0);
-        assert_eq!(root.get_right().unwrap(), 2);
-
-        assert_eq!(left.get_definition(), Definition::Identifier);
-        assert!(left.get_left().is_none());
-        assert!(left.get_right().is_none());
-
-        assert_eq!(right.get_definition(), Definition::Identifier);
-        assert!(right.get_left().is_none());
-        assert!(right.get_right().is_none());
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::Access, None, Some(0), Some(2)),
+                (2, Definition::Identifier, Some(1), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -836,18 +814,14 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 0);
-
-        let root = result.get_node(0).unwrap();
-        let right = result.get_node(1).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Addition);
-        assert!(root.get_left().is_none());
-        assert_eq!(root.get_right().unwrap(), 1);
-
-        assert_eq!(right.get_definition(), Definition::Number);
-        assert!(right.get_left().is_none());
-        assert!(right.get_right().is_none());
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Addition, None, None, Some(1)),
+                (1, Definition::Number, Some(0), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -859,18 +833,14 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
-
-        let left = result.get_node(0).unwrap();
-        let root = result.get_node(1).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Addition);
-        assert_eq!(root.get_left().unwrap(), 0);
-        assert!(root.get_right().is_none());
-
-        assert_eq!(left.get_definition(), Definition::Number);
-        assert!(left.get_left().is_none());
-        assert!(left.get_right().is_none());
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Addition, None, Some(0), None),
+            ],
+        );
     }
 
     #[test]
@@ -882,19 +852,14 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 0);
-
-        let root = result.get_node(0).unwrap();
-        let right = result.get_node(1).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::AbsoluteValue);
-        assert_eq!(root.get_right().unwrap(), 1);
-        assert!(root.get_left().is_none());
-
-        assert_eq!(right.get_definition(), Definition::Number);
-        assert_eq!(right.get_parent().unwrap(), 0);
-        assert!(right.get_left().is_none());
-        assert!(right.get_right().is_none());
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::AbsoluteValue, None, None, Some(1)),
+                (1, Definition::Number, Some(0), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -906,19 +871,14 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
-
-        let left = result.get_node(0).unwrap();
-        let root = result.get_node(1).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::EmptyApply);
-        assert_eq!(root.get_left().unwrap(), 0);
-        assert!(root.get_right().is_none());
-
-        assert_eq!(left.get_definition(), Definition::Identifier);
-        assert_eq!(left.get_parent().unwrap(), 1);
-        assert!(left.get_left().is_none());
-        assert!(left.get_right().is_none());
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::EmptyApply, None, Some(0), None),
+            ],
+        );
     }
 
     #[test]
@@ -930,19 +890,14 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 0);
-
-        let left = result.get_node(0).unwrap();
-        let root = result.get_node(1).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::AbsoluteValue);
-        assert!(root.get_left().is_none());
-        assert!(root.get_right().is_none());
-
-        assert_eq!(left.get_definition(), Definition::Number);
-        assert!(left.get_parent().is_none());
-        assert!(left.get_left().is_none());
-        assert!(left.get_right().is_none());
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Number, None, None, None),
+                (1, Definition::AbsoluteValue, None, None, None),
+            ],
+        );
     }
 
     #[test]
@@ -956,33 +911,16 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 2);
-
-        let root = result.get_node(2).unwrap();
-
-        let abs_sign = result.get_node(0).unwrap();
-
-        let first_five = result.get_node(1).unwrap();
-        let second_five = result.get_node(3).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Addition);
-        assert_eq!(root.get_left().unwrap(), 0);
-        assert_eq!(root.get_right().unwrap(), 3);
-
-        assert_eq!(abs_sign.get_definition(), Definition::AbsoluteValue);
-        assert_eq!(abs_sign.get_parent().unwrap(), 2);
-        assert!(abs_sign.get_left().is_none());
-        assert_eq!(abs_sign.get_right().unwrap(), 1);
-
-        assert_eq!(first_five.get_definition(), Definition::Number);
-        assert_eq!(first_five.get_parent().unwrap(), 0);
-        assert!(first_five.get_left().is_none());
-        assert!(first_five.get_right().is_none());
-
-        assert_eq!(second_five.get_definition(), Definition::Number);
-        assert_eq!(second_five.get_parent().unwrap(), 2);
-        assert!(second_five.get_left().is_none());
-        assert!(second_five.get_right().is_none());
+        assert_result(
+            &result,
+            2,
+            &[
+                (0, Definition::AbsoluteValue, Some(2), None, Some(1)),
+                (1, Definition::Number, Some(0), None, None),
+                (2, Definition::Addition, None, Some(0), Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -996,33 +934,16 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
-
-        let root = result.get_node(1).unwrap();
-
-        let abs_sign = result.get_node(2).unwrap();
-
-        let first_five = result.get_node(0).unwrap();
-        let second_five = result.get_node(3).unwrap();
-
-        assert_eq!(root.get_definition(), Definition::Addition);
-        assert_eq!(root.get_left().unwrap(), 0);
-        assert_eq!(root.get_right().unwrap(), 2);
-
-        assert_eq!(abs_sign.get_definition(), Definition::AbsoluteValue);
-        assert_eq!(abs_sign.get_parent().unwrap(), 1);
-        assert!(abs_sign.get_left().is_none());
-        assert_eq!(abs_sign.get_right().unwrap(), 3);
-
-        assert_eq!(first_five.get_definition(), Definition::Number);
-        assert_eq!(first_five.get_parent().unwrap(), 1);
-        assert!(first_five.get_left().is_none());
-        assert!(first_five.get_right().is_none());
-
-        assert_eq!(second_five.get_definition(), Definition::Number);
-        assert_eq!(second_five.get_parent().unwrap(), 2);
-        assert!(second_five.get_left().is_none());
-        assert!(second_five.get_right().is_none());
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Addition, None, Some(0), Some(2)),
+                (2, Definition::AbsoluteValue, Some(1), None, Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -1036,33 +957,16 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 0);
-
-        let first_abs = result.get_node(0).unwrap();
-        let second_abs = result.get_node(1).unwrap();
-        let third_abs = result.get_node(2).unwrap();
-
-        let five = result.get_node(3).unwrap();
-
-        assert_eq!(first_abs.get_definition(), Definition::AbsoluteValue);
-        assert!(first_abs.get_parent().is_none());
-        assert!(first_abs.get_left().is_none());
-        assert_eq!(first_abs.get_right().unwrap(), 1);
-
-        assert_eq!(second_abs.get_definition(), Definition::AbsoluteValue);
-        assert_eq!(second_abs.get_parent().unwrap(), 0);
-        assert!(second_abs.get_left().is_none());
-        assert_eq!(second_abs.get_right().unwrap(), 2);
-
-        assert_eq!(third_abs.get_definition(), Definition::AbsoluteValue);
-        assert_eq!(third_abs.get_parent().unwrap(), 1);
-        assert!(third_abs.get_left().is_none());
-        assert_eq!(third_abs.get_right().unwrap(), 3);
-
-        assert_eq!(five.get_definition(), Definition::Number);
-        assert_eq!(five.get_parent().unwrap(), 2);
-        assert!(five.get_left().is_none());
-        assert!(five.get_right().is_none());
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::AbsoluteValue, None, None, Some(1)),
+                (1, Definition::AbsoluteValue, Some(0), None, Some(2)),
+                (2, Definition::AbsoluteValue, Some(1), None, Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -1079,52 +983,19 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 0);
-
-        let first_abs = result.get_node(0).unwrap();
-        let second_abs = result.get_node(1).unwrap();
-        let third_abs = result.get_node(2).unwrap();
-
-        let value = result.get_node(3).unwrap();
-
-        let first_apply = result.get_node(4).unwrap();
-        let second_apply = result.get_node(5).unwrap();
-        let third_apply = result.get_node(6).unwrap();
-
-        assert_eq!(first_abs.get_definition(), Definition::AbsoluteValue);
-        assert!(first_abs.get_parent().is_none());
-        assert!(first_abs.get_left().is_none());
-        assert_eq!(first_abs.get_right().unwrap(), 1);
-
-        assert_eq!(second_abs.get_definition(), Definition::AbsoluteValue);
-        assert_eq!(second_abs.get_parent().unwrap(), 0);
-        assert!(second_abs.get_left().is_none());
-        assert_eq!(second_abs.get_right().unwrap(), 2);
-
-        assert_eq!(third_abs.get_definition(), Definition::AbsoluteValue);
-        assert_eq!(third_abs.get_parent().unwrap(), 1);
-        assert!(third_abs.get_left().is_none());
-        assert_eq!(third_abs.get_right().unwrap(), 6);
-
-        assert_eq!(value.get_definition(), Definition::Number);
-        assert_eq!(value.get_parent().unwrap(), 4);
-        assert!(value.get_left().is_none());
-        assert!(value.get_right().is_none());
-
-        assert_eq!(first_apply.get_definition(), Definition::EmptyApply);
-        assert_eq!(first_apply.get_parent().unwrap(), 5);
-        assert_eq!(first_apply.get_left().unwrap(), 3);
-        assert!(first_apply.get_right().is_none());
-
-        assert_eq!(second_apply.get_definition(), Definition::EmptyApply);
-        assert_eq!(second_apply.get_parent().unwrap(), 6);
-        assert_eq!(second_apply.get_left().unwrap(), 4);
-        assert!(second_apply.get_right().is_none());
-
-        assert_eq!(third_apply.get_definition(), Definition::EmptyApply);
-        assert_eq!(third_apply.get_parent().unwrap(), 2);
-        assert_eq!(third_apply.get_left().unwrap(), 5);
-        assert!(third_apply.get_right().is_none());
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::AbsoluteValue, None, None, Some(1)),
+                (1, Definition::AbsoluteValue, Some(0), None, Some(2)),
+                (2, Definition::AbsoluteValue, Some(1), None, Some(6)),
+                (3, Definition::Number, Some(4), None, None),
+                (4, Definition::EmptyApply, Some(5), Some(3), None),
+                (5, Definition::EmptyApply, Some(6), Some(4), None),
+                (6, Definition::EmptyApply, Some(2), Some(5), None),
+            ],
+        );
     }
 
     #[test]
@@ -1141,52 +1012,21 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 5);
-
-        let first_plus = result.get_node(1).unwrap();
-        let second_plus = result.get_node(3).unwrap();
-        let third_plus = result.get_node(5).unwrap();
-
-        let first_five = result.get_node(0).unwrap();
-        let second_five = result.get_node(2).unwrap();
-        let third_five = result.get_node(4).unwrap();
-        let fourth_five = result.get_node(6).unwrap();
-
-        assert_eq!(first_five.get_definition(), Definition::Number);
-        assert_eq!(first_five.get_parent().unwrap(), 1);
-        assert!(first_five.get_left().is_none());
-        assert!(first_five.get_right().is_none());
-
-        assert_eq!(second_five.get_definition(), Definition::Number);
-        assert_eq!(second_five.get_parent().unwrap(), 1);
-        assert!(second_five.get_left().is_none());
-        assert!(second_five.get_right().is_none());
-
-        assert_eq!(third_five.get_definition(), Definition::Number);
-        assert_eq!(third_five.get_parent().unwrap(), 3);
-        assert!(third_five.get_left().is_none());
-        assert!(third_five.get_right().is_none());
-
-        assert_eq!(fourth_five.get_definition(), Definition::Number);
-        assert_eq!(fourth_five.get_parent().unwrap(), 5);
-        assert!(fourth_five.get_left().is_none());
-        assert!(fourth_five.get_right().is_none());
-
-        assert_eq!(first_plus.get_definition(), Definition::Addition);
-        assert_eq!(first_plus.get_parent().unwrap(), 3);
-        assert_eq!(first_plus.get_left().unwrap(), 0);
-        assert_eq!(first_plus.get_right().unwrap(), 2);
-
-        assert_eq!(second_plus.get_definition(), Definition::Addition);
-        assert_eq!(second_plus.get_parent().unwrap(), 5);
-        assert_eq!(second_plus.get_left().unwrap(), 1);
-        assert_eq!(second_plus.get_right().unwrap(), 4);
-
-        assert_eq!(third_plus.get_definition(), Definition::Addition);
-        assert!(third_plus.get_parent().is_none());
-        assert_eq!(third_plus.get_left().unwrap(), 3);
-        assert_eq!(third_plus.get_right().unwrap(), 6);
+        assert_result(
+            &result,
+            5,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Addition, Some(3), Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+                (3, Definition::Addition, Some(5), Some(1), Some(4)),
+                (4, Definition::Number, Some(3), None, None),
+                (5, Definition::Addition, None, Some(3), Some(6)),
+                (6, Definition::Number, Some(5), None, None),
+            ],
+        );
     }
+
     #[test]
     fn binary_operations_different_priority() {
         let tokens = vec![
@@ -1205,40 +1045,17 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
-
-        let first_plus = result.get_node(3).unwrap();
-
-        let first_equality = result.get_node(1).unwrap();
-
-        let first_five = result.get_node(0).unwrap();
-        let second_five = result.get_node(2).unwrap();
-        let third_five = result.get_node(4).unwrap();
-
-        assert_eq!(first_five.get_definition(), Definition::Number);
-        assert_eq!(first_five.get_parent().unwrap(), 1);
-        assert!(first_five.get_left().is_none());
-        assert!(first_five.get_right().is_none());
-
-        assert_eq!(second_five.get_definition(), Definition::Number);
-        assert_eq!(second_five.get_parent().unwrap(), 3);
-        assert!(second_five.get_left().is_none());
-        assert!(second_five.get_right().is_none());
-
-        assert_eq!(third_five.get_definition(), Definition::Number);
-        assert_eq!(third_five.get_parent().unwrap(), 3);
-        assert!(third_five.get_left().is_none());
-        assert!(third_five.get_right().is_none());
-
-        assert_eq!(first_plus.get_definition(), Definition::Addition);
-        assert_eq!(first_plus.get_parent().unwrap(), 1);
-        assert_eq!(first_plus.get_left().unwrap(), 2);
-        assert_eq!(first_plus.get_right().unwrap(), 4);
-
-        assert_eq!(first_equality.get_definition(), Definition::Equality);
-        assert!(first_equality.get_parent().is_none());
-        assert_eq!(first_equality.get_left().unwrap(), 0);
-        assert_eq!(first_equality.get_right().unwrap(), 3);
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Equality, None, Some(0), Some(3)),
+                (2, Definition::Number, Some(3), None, None),
+                (3, Definition::Addition, Some(1), Some(2), Some(4)),
+                (4, Definition::Number, Some(3), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -1272,104 +1089,27 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 13);
-
-        let first_plus = result.get_node(3).unwrap();
-        let second_plus = result.get_node(7).unwrap();
-        let third_plus = result.get_node(11).unwrap();
-
-        let first_equality = result.get_node(1).unwrap();
-        let second_equality = result.get_node(5).unwrap();
-        let third_equality = result.get_node(9).unwrap();
-        let fourth_equality = result.get_node(13).unwrap();
-
-        let first_five = result.get_node(0).unwrap();
-        let second_five = result.get_node(2).unwrap();
-        let third_five = result.get_node(4).unwrap();
-        let fourth_five = result.get_node(6).unwrap();
-        let fifth_five = result.get_node(8).unwrap();
-        let sixth_five = result.get_node(10).unwrap();
-        let seventh_five = result.get_node(12).unwrap();
-        let eigth_five = result.get_node(14).unwrap();
-
-        assert_eq!(first_five.get_definition(), Definition::Number);
-        assert_eq!(first_five.get_parent().unwrap(), 1);
-        assert!(first_five.get_left().is_none());
-        assert!(first_five.get_right().is_none());
-
-        assert_eq!(second_five.get_definition(), Definition::Number);
-        assert_eq!(second_five.get_parent().unwrap(), 3);
-        assert!(second_five.get_left().is_none());
-        assert!(second_five.get_right().is_none());
-
-        assert_eq!(third_five.get_definition(), Definition::Number);
-        assert_eq!(third_five.get_parent().unwrap(), 3);
-        assert!(third_five.get_left().is_none());
-        assert!(third_five.get_right().is_none());
-
-        assert_eq!(fourth_five.get_definition(), Definition::Number);
-        assert_eq!(fourth_five.get_parent().unwrap(), 7);
-        assert!(fourth_five.get_left().is_none());
-        assert!(fourth_five.get_right().is_none());
-
-        assert_eq!(fifth_five.get_definition(), Definition::Number);
-        assert_eq!(fifth_five.get_parent().unwrap(), 7);
-        assert!(fifth_five.get_left().is_none());
-        assert!(fifth_five.get_right().is_none());
-
-        assert_eq!(sixth_five.get_definition(), Definition::Number);
-        assert_eq!(sixth_five.get_parent().unwrap(), 11);
-        assert!(sixth_five.get_left().is_none());
-        assert!(sixth_five.get_right().is_none());
-
-        assert_eq!(seventh_five.get_definition(), Definition::Number);
-        assert_eq!(seventh_five.get_parent().unwrap(), 11);
-        assert!(seventh_five.get_left().is_none());
-        assert!(seventh_five.get_right().is_none());
-
-        assert_eq!(eigth_five.get_definition(), Definition::Number);
-        assert_eq!(eigth_five.get_parent().unwrap(), 13);
-        assert!(eigth_five.get_left().is_none());
-        assert!(eigth_five.get_right().is_none());
-
-        // Additions
-
-        assert_eq!(first_plus.get_definition(), Definition::Addition);
-        assert_eq!(first_plus.get_parent().unwrap(), 1);
-        assert_eq!(first_plus.get_left().unwrap(), 2);
-        assert_eq!(first_plus.get_right().unwrap(), 4);
-
-        assert_eq!(second_plus.get_definition(), Definition::Addition);
-        assert_eq!(second_plus.get_parent().unwrap(), 5);
-        assert_eq!(second_plus.get_left().unwrap(), 6);
-        assert_eq!(second_plus.get_right().unwrap(), 8);
-
-        assert_eq!(third_plus.get_definition(), Definition::Addition);
-        assert_eq!(third_plus.get_parent().unwrap(), 9);
-        assert_eq!(third_plus.get_left().unwrap(), 10);
-        assert_eq!(third_plus.get_right().unwrap(), 12);
-
-        // Equalities
-
-        assert_eq!(first_equality.get_definition(), Definition::Equality);
-        assert_eq!(first_equality.get_parent().unwrap(), 5);
-        assert_eq!(first_equality.get_left().unwrap(), 0);
-        assert_eq!(first_equality.get_right().unwrap(), 3);
-
-        assert_eq!(second_equality.get_definition(), Definition::Equality);
-        assert_eq!(second_equality.get_parent().unwrap(), 9);
-        assert_eq!(second_equality.get_left().unwrap(), 1);
-        assert_eq!(second_equality.get_right().unwrap(), 7);
-
-        assert_eq!(third_equality.get_definition(), Definition::Equality);
-        assert_eq!(third_equality.get_parent().unwrap(), 13);
-        assert_eq!(third_equality.get_left().unwrap(), 5);
-        assert_eq!(third_equality.get_right().unwrap(), 11);
-
-        assert_eq!(fourth_equality.get_definition(), Definition::Equality);
-        assert!(fourth_equality.get_parent().is_none());
-        assert_eq!(fourth_equality.get_left().unwrap(), 9);
-        assert_eq!(fourth_equality.get_right().unwrap(), 14);
+        assert_result(
+            &result,
+            13,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Equality, Some(5), Some(0), Some(3)),
+                (2, Definition::Number, Some(3), None, None),
+                (3, Definition::Addition, Some(1), Some(2), Some(4)),
+                (4, Definition::Number, Some(3), None, None),
+                (5, Definition::Equality, Some(9), Some(1), Some(7)),
+                (6, Definition::Number, Some(7), None, None),
+                (7, Definition::Addition, Some(5), Some(6), Some(8)),
+                (8, Definition::Number, Some(7), None, None),
+                (9, Definition::Equality, Some(13), Some(5), Some(11)),
+                (10, Definition::Number, Some(11), None, None),
+                (11, Definition::Addition, Some(9), Some(10), Some(12)),
+                (12, Definition::Number, Some(11), None, None),
+                (13, Definition::Equality, None, Some(9), Some(14)),
+                (14, Definition::Number, Some(13), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -1383,33 +1123,16 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 0);
-
-        let abs_sign = result.get_node(0).unwrap();
-        let period = result.get_node(2).unwrap();
-
-        let value_id = result.get_node(1).unwrap();
-        let property_id = result.get_node(3).unwrap();
-
-        assert_eq!(abs_sign.get_definition(), Definition::AbsoluteValue);
-        assert!(abs_sign.get_parent().is_none());
-        assert!(abs_sign.get_left().is_none());
-        assert_eq!(abs_sign.get_right().unwrap(), 2);
-
-        assert_eq!(period.get_definition(), Definition::Access);
-        assert_eq!(period.get_parent().unwrap(), 0);
-        assert_eq!(period.get_left().unwrap(), 1);
-        assert_eq!(period.get_right().unwrap(), 3);
-
-        assert_eq!(value_id.get_definition(), Definition::Identifier);
-        assert_eq!(value_id.get_parent().unwrap(), 2);
-        assert!(value_id.get_left().is_none());
-        assert!(value_id.get_right().is_none());
-
-        assert_eq!(property_id.get_definition(), Definition::Identifier);
-        assert_eq!(property_id.get_parent().unwrap(), 2);
-        assert!(property_id.get_left().is_none());
-        assert!(property_id.get_right().is_none());
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::AbsoluteValue, None, None, Some(2)),
+                (1, Definition::Identifier, Some(2), None, None),
+                (2, Definition::Access, Some(0), Some(1), Some(3)),
+                (3, Definition::Identifier, Some(2), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -1423,33 +1146,16 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 3);
-
-        let empty_apply = result.get_node(3).unwrap();
-        let period = result.get_node(1).unwrap();
-
-        let value_id = result.get_node(0).unwrap();
-        let property_id = result.get_node(2).unwrap();
-
-        assert_eq!(empty_apply.get_definition(), Definition::EmptyApply);
-        assert!(empty_apply.get_parent().is_none());
-        assert_eq!(empty_apply.get_left().unwrap(), 1);
-        assert!(empty_apply.get_right().is_none());
-
-        assert_eq!(period.get_definition(), Definition::Access);
-        assert_eq!(period.get_parent().unwrap(), 3);
-        assert_eq!(period.get_left().unwrap(), 0);
-        assert_eq!(period.get_right().unwrap(), 2);
-
-        assert_eq!(value_id.get_definition(), Definition::Identifier);
-        assert_eq!(value_id.get_parent().unwrap(), 1);
-        assert!(value_id.get_left().is_none());
-        assert!(value_id.get_right().is_none());
-
-        assert_eq!(property_id.get_definition(), Definition::Identifier);
-        assert_eq!(property_id.get_parent().unwrap(), 1);
-        assert!(property_id.get_left().is_none());
-        assert!(property_id.get_right().is_none());
+        assert_result(
+            &result,
+            3,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::Access, Some(3), Some(0), Some(2)),
+                (2, Definition::Identifier, Some(1), None, None),
+                (3, Definition::EmptyApply, None, Some(1), None),
+            ],
+        );
     }
 
     #[test]
@@ -1463,33 +1169,16 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
-
-        let empty_apply = result.get_node(3).unwrap();
-        let addition = result.get_node(1).unwrap();
-
-        let value_id = result.get_node(0).unwrap();
-        let property_id = result.get_node(2).unwrap();
-
-        assert_eq!(empty_apply.get_definition(), Definition::EmptyApply);
-        assert_eq!(empty_apply.get_parent().unwrap(), 1);
-        assert_eq!(empty_apply.get_left().unwrap(), 2);
-        assert!(empty_apply.get_right().is_none());
-
-        assert_eq!(addition.get_definition(), Definition::Addition);
-        assert!(addition.get_parent().is_none());
-        assert_eq!(addition.get_left().unwrap(), 0);
-        assert_eq!(addition.get_right().unwrap(), 3);
-
-        assert_eq!(value_id.get_definition(), Definition::Identifier);
-        assert_eq!(value_id.get_parent().unwrap(), 1);
-        assert!(value_id.get_left().is_none());
-        assert!(value_id.get_right().is_none());
-
-        assert_eq!(property_id.get_definition(), Definition::Identifier);
-        assert_eq!(property_id.get_parent().unwrap(), 3);
-        assert!(property_id.get_left().is_none());
-        assert!(property_id.get_right().is_none());
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::Addition, None, Some(0), Some(3)),
+                (2, Definition::Identifier, Some(3), None, None),
+                (3, Definition::EmptyApply, Some(1), Some(2), None),
+            ],
+        );
     }
 
     #[test]
@@ -1505,50 +1194,24 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
-
-        let empty_apply = result.get_node(5).unwrap();
-        let addition = result.get_node(1).unwrap();
-        let access = result.get_node(3).unwrap();
-
-        let five = result.get_node(0).unwrap();
-        let value_id = result.get_node(2).unwrap();
-        let property_id = result.get_node(4).unwrap();
-
-        assert_eq!(addition.get_definition(), Definition::Addition);
-        assert!(addition.get_parent().is_none());
-        assert_eq!(addition.get_left().unwrap(), 0);
-        assert_eq!(addition.get_right().unwrap(), 5);
-
-        assert_eq!(access.get_definition(), Definition::Access);
-        assert_eq!(access.get_parent().unwrap(), 5);
-        assert_eq!(access.get_left().unwrap(), 2);
-        assert_eq!(access.get_right().unwrap(), 4);
-
-        assert_eq!(empty_apply.get_definition(), Definition::EmptyApply);
-        assert_eq!(empty_apply.get_parent().unwrap(), 1);
-        assert_eq!(empty_apply.get_left().unwrap(), 3);
-        assert!(empty_apply.get_right().is_none());
-
-        assert_eq!(five.get_definition(), Definition::Number);
-        assert_eq!(five.get_parent().unwrap(), 1);
-        assert!(five.get_left().is_none());
-        assert!(five.get_right().is_none());
-
-        assert_eq!(value_id.get_definition(), Definition::Identifier);
-        assert_eq!(value_id.get_parent().unwrap(), 3);
-        assert!(value_id.get_left().is_none());
-        assert!(value_id.get_right().is_none());
-
-        assert_eq!(property_id.get_definition(), Definition::Identifier);
-        assert_eq!(property_id.get_parent().unwrap(), 3);
-        assert!(property_id.get_left().is_none());
-        assert!(property_id.get_right().is_none());
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Addition, None, Some(0), Some(5)),
+                (2, Definition::Identifier, Some(3), None, None),
+                (3, Definition::Access, Some(5), Some(2), Some(4)),
+                (4, Definition::Identifier, Some(3), None, None),
+                (5, Definition::EmptyApply, Some(1), Some(3), None),
+            ],
+        );
     }
 }
 
 #[cfg(test)]
 mod lists {
+    use super::tests::*;
     use crate::lexer::*;
     use crate::*;
 
@@ -1562,26 +1225,15 @@ mod lists {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
-
-        let first_five = result.get_node(0).unwrap();
-        let list = result.get_node(1).unwrap();
-        let second_five = result.get_node(2).unwrap();
-
-        assert_eq!(list.get_definition(), Definition::List);
-        assert!(list.get_parent().is_none());
-        assert_eq!(list.get_left().unwrap(), 0);
-        assert_eq!(list.get_right().unwrap(), 2);
-
-        assert_eq!(first_five.get_definition(), Definition::Number);
-        assert_eq!(first_five.get_parent().unwrap(), 1);
-        assert!(first_five.get_left().is_none());
-        assert!(first_five.get_right().is_none());
-
-        assert_eq!(second_five.get_definition(), Definition::Number);
-        assert_eq!(second_five.get_parent().unwrap(), 1);
-        assert!(second_five.get_left().is_none());
-        assert!(second_five.get_right().is_none());
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::List, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+            ],
+        );
     }
 
     #[test]
@@ -1594,26 +1246,15 @@ mod lists {
 
         let result = parse(tokens).unwrap();
 
-        assert_eq!(result.get_root(), 1);
-
-        let first_five = result.get_node(0).unwrap();
-        let list = result.get_node(1).unwrap();
-        let second_five = result.get_node(2).unwrap();
-
-        assert_eq!(list.get_definition(), Definition::List);
-        assert!(list.get_parent().is_none());
-        assert_eq!(list.get_left().unwrap(), 0);
-        assert_eq!(list.get_right().unwrap(), 2);
-
-        assert_eq!(first_five.get_definition(), Definition::Number);
-        assert_eq!(first_five.get_parent().unwrap(), 1);
-        assert!(first_five.get_left().is_none());
-        assert!(first_five.get_right().is_none());
-
-        assert_eq!(second_five.get_definition(), Definition::Number);
-        assert_eq!(second_five.get_parent().unwrap(), 1);
-        assert!(second_five.get_left().is_none());
-        assert!(second_five.get_right().is_none());
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::List, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+            ],
+        );
     }
     #[test]
     fn space_list_all_value_like() {
@@ -1633,80 +1274,22 @@ mod lists {
 
         let result = parse(tokens).unwrap();
 
-        println!("{:#?}", result);
-
-        assert_eq!(result.get_root(), 9);
-
-        let first_list = result.get_node(1).unwrap();
-        let second_list = result.get_node(3).unwrap();
-        let third_list = result.get_node(5).unwrap();
-        let fourth_list = result.get_node(7).unwrap();
-        let fifth_list = result.get_node(9).unwrap();
-
-        let five = result.get_node(0).unwrap();
-        let id = result.get_node(2).unwrap();
-        let sym = result.get_node(4).unwrap();
-        let unit = result.get_node(6).unwrap();
-        let input = result.get_node(8).unwrap();
-        let result = result.get_node(10).unwrap();
-
-        // List
-
-        assert_eq!(first_list.get_definition(), Definition::List);
-        assert_eq!(first_list.get_parent().unwrap(), 3);
-        assert_eq!(first_list.get_left().unwrap(), 0);
-        assert_eq!(first_list.get_right().unwrap(), 2);
-
-        assert_eq!(second_list.get_definition(), Definition::List);
-        assert_eq!(second_list.get_parent().unwrap(), 5);
-        assert_eq!(second_list.get_left().unwrap(), 1);
-        assert_eq!(second_list.get_right().unwrap(), 4);
-
-        assert_eq!(third_list.get_definition(), Definition::List);
-        assert_eq!(third_list.get_parent().unwrap(), 7);
-        assert_eq!(third_list.get_left().unwrap(), 3);
-        assert_eq!(third_list.get_right().unwrap(), 6);
-
-        assert_eq!(fourth_list.get_definition(), Definition::List);
-        assert_eq!(fourth_list.get_parent().unwrap(), 9);
-        assert_eq!(fourth_list.get_left().unwrap(), 5);
-        assert_eq!(fourth_list.get_right().unwrap(), 8);
-
-        assert_eq!(fifth_list.get_definition(), Definition::List);
-        assert!(fifth_list.get_parent().is_none());
-        assert_eq!(fifth_list.get_left().unwrap(), 7);
-        assert_eq!(fifth_list.get_right().unwrap(), 10);
-
-        // Values
-
-        assert_eq!(five.get_definition(), Definition::Number);
-        assert_eq!(five.get_parent().unwrap(), 1);
-        assert!(five.get_left().is_none());
-        assert!(five.get_right().is_none());
-
-        assert_eq!(id.get_definition(), Definition::Identifier);
-        assert_eq!(id.get_parent().unwrap(), 1);
-        assert!(id.get_left().is_none());
-        assert!(id.get_right().is_none());
-
-        assert_eq!(sym.get_definition(), Definition::Symbol);
-        assert_eq!(sym.get_parent().unwrap(), 3);
-        assert!(sym.get_left().is_none());
-        assert!(sym.get_right().is_none());
-
-        assert_eq!(unit.get_definition(), Definition::Unit);
-        assert_eq!(unit.get_parent().unwrap(), 5);
-        assert!(unit.get_left().is_none());
-        assert!(unit.get_right().is_none());
-
-        assert_eq!(input.get_definition(), Definition::Input);
-        assert_eq!(input.get_parent().unwrap(), 7);
-        assert!(input.get_left().is_none());
-        assert!(input.get_right().is_none());
-
-        assert_eq!(result.get_definition(), Definition::Result);
-        assert_eq!(result.get_parent().unwrap(), 9);
-        assert!(result.get_left().is_none());
-        assert!(result.get_right().is_none());
+        assert_result(
+            &result,
+            9,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::List, Some(3), Some(0), Some(2)),
+                (2, Definition::Identifier, Some(1), None, None),
+                (3, Definition::List, Some(5), Some(1), Some(4)),
+                (4, Definition::Symbol, Some(3), None, None),
+                (5, Definition::List, Some(7), Some(3), Some(6)),
+                (6, Definition::Unit, Some(5), None, None),
+                (7, Definition::List, Some(9), Some(5), Some(8)),
+                (8, Definition::Input, Some(7), None, None),
+                (9, Definition::List, None, Some(7), Some(10)),
+                (10, Definition::Result, Some(9), None, None),
+            ],
+        );
     }
 }
