@@ -130,6 +130,7 @@ fn parse_token(
     right: Option<usize>,
     nodes: &mut Vec<ParseNode>,
     priority_map: &HashMap<Definition, usize>,
+    check_for_list: &mut bool,
 ) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), String> {
     let mut true_left = left;
     let mut parent = left;
@@ -200,6 +201,9 @@ fn parse_token(
             }
         },
     }
+
+    *check_for_list = false;
+
     Ok((definition, new_parent, new_left, right))
 }
 
@@ -219,7 +223,7 @@ fn parse_value_like(
     if *check_for_list {
         trace!("List flag is set, creating list node before current node.");
         // use current id for list token
-        let list_info = parse_token(id, Definition::List, last_left, Some(id + 1), nodes, &priority_map)?;
+        let list_info = parse_token(id, Definition::List, last_left, Some(id + 1), nodes, &priority_map, check_for_list)?;
         nodes.push(ParseNode::new(list_info.0, list_info.1, list_info.2, list_info.3, last_token.clone()));
 
         // update parent to point to list node just created
@@ -227,8 +231,6 @@ fn parse_value_like(
 
         // last left is the node we are about to create
         *next_last_left = Some(nodes.len());
-
-        *check_for_list = false;
     }
 
     Ok((definition, new_parent, None, None))
@@ -478,7 +480,10 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                         None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
                         Some(left_node) => {
                             if left_node.definition.is_value_like() {
-                                trace!("Will check next token for value-like to make list");
+                                trace!(
+                                    "Value-like definition {:?} found. Will check next token for value-like to make list",
+                                    left_node.definition
+                                );
                                 check_for_list = true;
                             }
                         }
@@ -491,31 +496,71 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                 trace!("Parsing Comma token");
 
                 next_parent = Some(id);
-                parse_token(id, Definition::List, last_left, assumed_right, &mut nodes, &priority_map)?
+                parse_token(
+                    id,
+                    Definition::List,
+                    last_left,
+                    assumed_right,
+                    &mut nodes,
+                    &priority_map,
+                    &mut check_for_list,
+                )?
             }
             TokenType::Pair => {
                 trace!("Parsing Pair token");
 
                 next_parent = Some(id);
-                parse_token(id, Definition::Pair, last_left, assumed_right, &mut nodes, &priority_map)?
+                parse_token(
+                    id,
+                    Definition::Pair,
+                    last_left,
+                    assumed_right,
+                    &mut nodes,
+                    &priority_map,
+                    &mut check_for_list,
+                )?
             }
             TokenType::Period => {
                 trace!("Parsing Period token");
 
                 next_parent = Some(id);
-                parse_token(id, Definition::Access, last_left, assumed_right, &mut nodes, &priority_map)?
+                parse_token(
+                    id,
+                    Definition::Access,
+                    last_left,
+                    assumed_right,
+                    &mut nodes,
+                    &priority_map,
+                    &mut check_for_list,
+                )?
             }
             TokenType::PlusSign => {
                 trace!("Parsing PlusSign token");
 
                 next_parent = Some(id);
-                parse_token(id, Definition::Addition, last_left, assumed_right, &mut nodes, &priority_map)?
+                parse_token(
+                    id,
+                    Definition::Addition,
+                    last_left,
+                    assumed_right,
+                    &mut nodes,
+                    &priority_map,
+                    &mut check_for_list,
+                )?
             }
             TokenType::Equality => {
                 trace!("Parsing Equality token");
 
                 next_parent = Some(id);
-                parse_token(id, Definition::Equality, last_left, assumed_right, &mut nodes, &priority_map)?
+                parse_token(
+                    id,
+                    Definition::Equality,
+                    last_left,
+                    assumed_right,
+                    &mut nodes,
+                    &priority_map,
+                    &mut check_for_list,
+                )?
             }
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
@@ -1088,6 +1133,78 @@ mod tests {
         //          5   5
 
         let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            13,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Equality, Some(5), Some(0), Some(3)),
+                (2, Definition::Number, Some(3), None, None),
+                (3, Definition::Addition, Some(1), Some(2), Some(4)),
+                (4, Definition::Number, Some(3), None, None),
+                (5, Definition::Equality, Some(9), Some(1), Some(7)),
+                (6, Definition::Number, Some(7), None, None),
+                (7, Definition::Addition, Some(5), Some(6), Some(8)),
+                (8, Definition::Number, Some(7), None, None),
+                (9, Definition::Equality, Some(13), Some(5), Some(11)),
+                (10, Definition::Number, Some(11), None, None),
+                (11, Definition::Addition, Some(9), Some(10), Some(12)),
+                (12, Definition::Number, Some(11), None, None),
+                (13, Definition::Equality, None, Some(9), Some(14)),
+                (14, Definition::Number, Some(13), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn multiple_binary_operations_with_spaces() {
+        let tokens = vec![
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 4
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 8
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 12
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+        ];
+
+        // 5 == 5 + 5 == 5 + 5 == 5 + 5 == 5
+
+        //                              ==
+        //                       ==         5
+        //               ==          +
+        //         ==         +     5  5
+        //     5      +     5   5
+        //          5   5
+
+        let result = parse(tokens).unwrap();
+
+        println!("{:#?}", result);
 
         assert_result(
             &result,
