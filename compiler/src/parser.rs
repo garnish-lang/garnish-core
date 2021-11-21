@@ -1410,4 +1410,37 @@ mod lists {
             ],
         );
     }
+
+    #[test]
+    fn space_list_with_operations() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new("20".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            3,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Addition, Some(3), Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+                (3, Definition::List, None, Some(1), Some(5)),
+                (4, Definition::Number, Some(5), None, None),
+                (5, Definition::Addition, Some(3), Some(4), Some(6)),
+                (6, Definition::Number, Some(5), None, None),
+            ],
+        );
+    }
 }
