@@ -417,73 +417,6 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     under_group,
                 )?
             }
-            TokenType::AbsoluteValue => {
-                trace!("Parsing AbsoluteValue token");
-
-                let parent = next_parent;
-                next_parent = Some(id);
-
-                (Definition::AbsoluteValue, parent, None, assumed_right)
-            }
-            TokenType::Whitespace => {
-                trace!("Parsing HorizontalSpace token");
-
-                // need to check for list
-                // will be list if previous token and next token are value-like
-                match last_left {
-                    None => (), // ignore, spaces at begining of input can't create a list
-                    Some(left) => match nodes.get(left) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
-                        Some(left_node) => {
-                            if left_node.definition.is_value_like() {
-                                trace!(
-                                    "Value-like definition {:?} found. Will check next token for value-like to make list",
-                                    left_node.definition
-                                );
-                                check_for_list = true;
-                            }
-                        }
-                    },
-                }
-
-                // retain last left instead of below code setting it to token that isn't being created
-                next_last_left = last_left;
-
-                (Definition::Drop, None, None, None)
-            }
-            TokenType::Subexpression => {
-                trace!("Parsing Subexpression token");
-
-                // only one in a row
-                // check if last parser node is a subexpression
-                // drop this token if so
-                let drop = match last_left {
-                    None => false, // not a subexpression node
-                    Some(left) => match nodes.get(left) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
-                        Some(left_node) => left_node.definition == Definition::Subexpression,
-                    },
-                };
-
-                if drop {
-                    trace!("Previous parser node was a subexpression, dropping this one.");
-                    // retain last left instead of below code setting it to token that isn't being created
-                    next_last_left = last_left;
-                    (Definition::Drop, None, None, None)
-                } else {
-                    next_parent = Some(id);
-                    parse_token(
-                        id,
-                        Definition::Subexpression,
-                        last_left,
-                        assumed_right,
-                        &mut nodes,
-                        &priority_map,
-                        &mut check_for_list,
-                        under_group,
-                    )?
-                }
-            }
             TokenType::Comma => {
                 trace!("Parsing Comma token");
 
@@ -559,6 +492,14 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     under_group,
                 )?
             }
+            TokenType::AbsoluteValue => {
+                trace!("Parsing AbsoluteValue token");
+
+                let parent = next_parent;
+                next_parent = Some(id);
+
+                (Definition::AbsoluteValue, parent, None, assumed_right)
+            }
             TokenType::StartGroup => {
                 current_group = Some(group_stack.len());
                 group_stack.push(id);
@@ -592,6 +533,65 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                 };
 
                 (Definition::Drop, None, None, None)
+            }
+            TokenType::Whitespace => {
+                trace!("Parsing HorizontalSpace token");
+
+                // need to check for list
+                // will be list if previous token and next token are value-like
+                match last_left {
+                    None => (), // ignore, spaces at begining of input can't create a list
+                    Some(left) => match nodes.get(left) {
+                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                        Some(left_node) => {
+                            if left_node.definition.is_value_like() {
+                                trace!(
+                                    "Value-like definition {:?} found. Will check next token for value-like to make list",
+                                    left_node.definition
+                                );
+                                check_for_list = true;
+                            }
+                        }
+                    },
+                }
+
+                // retain last left instead of below code setting it to token that isn't being created
+                next_last_left = last_left;
+
+                (Definition::Drop, None, None, None)
+            }
+            TokenType::Subexpression => {
+                trace!("Parsing Subexpression token");
+
+                // only one in a row
+                // check if last parser node is a subexpression
+                // drop this token if so
+                let drop = match last_left {
+                    None => false, // not a subexpression node
+                    Some(left) => match nodes.get(left) {
+                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                        Some(left_node) => left_node.definition == Definition::Subexpression,
+                    },
+                };
+
+                if drop {
+                    trace!("Previous parser node was a subexpression, dropping this one.");
+                    // retain last left instead of below code setting it to token that isn't being created
+                    next_last_left = last_left;
+                    (Definition::Drop, None, None, None)
+                } else {
+                    next_parent = Some(id);
+                    parse_token(
+                        id,
+                        Definition::Subexpression,
+                        last_left,
+                        assumed_right,
+                        &mut nodes,
+                        &priority_map,
+                        &mut check_for_list,
+                        under_group,
+                    )?
+                }
             }
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
