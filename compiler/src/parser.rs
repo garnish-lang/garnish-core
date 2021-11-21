@@ -173,7 +173,7 @@ fn parse_token(
                 };
 
                 trace!(
-                    "Comparing priorities (current - {:?} {:?}) (left - {:?} {:?}",
+                    "Comparing priorities (current - {:?} {:?}) (left - {:?} {:?})",
                     definition,
                     my_priority,
                     n.definition,
