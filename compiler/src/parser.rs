@@ -406,6 +406,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
         let (definition, secondary_definition) = get_definition(token.get_token_type());
 
         let (definition, parent, left, right) = match secondary_definition {
+            SecondaryDefinition::Whitespace => setup_space_list_check(last_left, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?,
             SecondaryDefinition::Value => parse_value_like(
                 id,
                 definition,
@@ -548,13 +549,18 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     )?
                 }
             }
-            SecondaryDefinition::Whitespace => setup_space_list_check(last_left, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?,
             SecondaryDefinition::Subexpression => {
                 let in_group = match current_group {
                     None => false,
-                    Some(group) => match nodes.get(group) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", group))?,
-                        Some(group_node) => group_node.definition == Definition::Group,
+                    Some(group) => match group_stack.get(group) {
+                        None => Err(format!("Current group set to non-existant group in stack."))?,
+                        Some(group_index) => match nodes.get(*group_index) {
+                            None => Err(format!("Index assigned to node has no value in node list. {:?}", group))?,
+                            Some(group_node) => {
+                                trace!("Current group node definition is {:?}", group_node.definition);
+                                group_node.definition == Definition::Group
+                            }
+                        },
                     },
                 };
 
@@ -1747,6 +1753,8 @@ mod groups {
     #[test]
     fn multiple_subexpression_in_group_makes_list() {
         let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
@@ -1760,12 +1768,14 @@ mod groups {
 
         assert_result(
             &result,
-            0,
+            1,
             &[
-                (0, Definition::Group, None, None, Some(2)),
-                (1, Definition::Number, Some(2), None, None),
-                (2, Definition::List, Some(0), Some(1), Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Addition, None, Some(0), Some(2)),
+                (2, Definition::Group, Some(1), None, Some(4)),
+                (3, Definition::Number, Some(4), None, None),
+                (4, Definition::List, Some(2), Some(3), Some(5)),
+                (5, Definition::Number, Some(4), None, None),
             ],
         );
     }
@@ -1797,6 +1807,8 @@ mod groups {
     #[test]
     fn multiple_subexpression_in_nested_expression_is_subexpression() {
         let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
@@ -1810,12 +1822,14 @@ mod groups {
 
         assert_result(
             &result,
-            0,
+            1,
             &[
-                (0, Definition::NestedExpression, None, None, Some(2)),
-                (1, Definition::Number, Some(2), None, None),
-                (2, Definition::Subexpression, Some(0), Some(1), Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Addition, None, Some(0), Some(2)),
+                (2, Definition::NestedExpression, Some(1), None, Some(4)),
+                (3, Definition::Number, Some(4), None, None),
+                (4, Definition::Subexpression, Some(2), Some(3), Some(5)),
+                (5, Definition::Number, Some(4), None, None),
             ],
         );
     }
