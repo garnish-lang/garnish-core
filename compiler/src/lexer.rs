@@ -20,7 +20,7 @@ pub enum TokenType {
     Number,
     Identifier,
     HorizontalSpace,
-    NewLine,
+    Subexpression,
     Annotation,
     Apply,
     ApplyIfFalse,
@@ -143,7 +143,7 @@ enum LexingState {
     NoToken,
     Operator,
     Spaces,
-    NewLine,
+    Subexpression,
     Number,
     Indentifier,
     Annotation,
@@ -159,13 +159,16 @@ fn start_token<'a>(
     current_token_type: &mut Option<TokenType>,
     token_start_column: &mut usize,
     token_start_row: &mut usize,
-    text_column: usize,
-    text_row: usize,
+    text_column: &mut usize,
+    text_row: &mut usize,
 ) {
     trace!("Beginning new token");
     *current_characters = String::new();
     *current_operator = operator_tree;
     *current_token_type = None;
+
+    *token_start_row = *text_row;
+    *token_start_column = *text_column;
 
     // start new token
     if current_operator.get_child(&c).is_some() {
@@ -185,11 +188,15 @@ fn start_token<'a>(
         *current_token_type = Some(TokenType::HorizontalSpace);
         trace!("Horizontal spaces started");
     } else if c.is_ascii_whitespace() {
-        // any other white space
+        // any other white space, all some form of new line
         current_characters.push(c);
-        *state = LexingState::NewLine;
-        *current_token_type = Some(TokenType::NewLine);
-        trace!("New line started");
+        *state = LexingState::Subexpression;
+        *current_token_type = Some(TokenType::Subexpression);
+
+        *text_column = 0;
+        *text_row += 1;
+
+        trace!("Subexpression started");
     } else if c.is_numeric() {
         current_characters.push(c);
         *state = LexingState::Number;
@@ -217,13 +224,10 @@ fn start_token<'a>(
         *state = LexingState::Symbol;
         *current_token_type = Some(TokenType::Symbol);
     }
-
-    *token_start_row = text_row;
-    *token_start_column = text_column;
 }
 
 pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
-    trace!("Begining lexing");
+    trace!("Beginning lexing");
 
     let mut tokens = vec![];
     let mut current_characters = String::new();
@@ -250,6 +254,7 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
         ("==", TokenType::Equality),
         ("=", TokenType::Pair),
         (".", TokenType::Period),
+        // ("\n\n", TokenType::Subexpression),
     ]);
     let mut current_operator = &operator_tree;
     let mut current_token_type = None;
@@ -259,109 +264,121 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
     let mut token_start_column = 0;
     let mut token_start_row = 0;
 
+    let mut should_create = true;
     let mut state = LexingState::NoToken;
 
     for c in input.chars().chain(iter::once('\0')) {
         trace!("Character {:?} at ({:?}, {:?})", c, text_column, text_row);
+        trace!("Current state: {:?}", state);
 
-        let start_new = if state == LexingState::NoToken {
-            true
-        } else {
-            trace!("Continuing token");
-
-            // continue/end tokens
-            match state {
-                LexingState::NoToken => false,
-                LexingState::Operator => {
-                    trace!("Continuing operator");
-                    match current_operator.get_child(&c) {
-                        Some(node) => {
-                            // set 'current' values
-                            current_characters.push(c);
-                            current_token_type = node.token_type;
-                            current_operator = node;
-
-                            false
-                        }
-                        None => {
-                            trace!("Ending operator");
-                            true
-                        }
-                    }
-                }
-                LexingState::Symbol => {
-                    trace!("Continuing symbol");
-                    if current_characters.len() == 1 {
-                        // just the colon character
-                        // need to make sure the first character is only alpha or underscore
-                        if c.is_alphabetic() || c == '_' {
-                            current_characters.push(c);
-                            false
-                        } else {
-                            // end token
-                            true
-                        }
-                    } else {
-                        if c.is_alphanumeric() || c == '_' {
-                            current_characters.push(c);
-                            false
-                        } else {
-                            // end token
-                            true
-                        }
-                    }
-                }
-                LexingState::Number => {
-                    if c.is_numeric() {
+        let start_new = match state {
+            LexingState::NoToken => true,
+            LexingState::Operator => {
+                trace!("Continuing operator");
+                match current_operator.get_child(&c) {
+                    Some(node) => {
+                        // set 'current' values
                         current_characters.push(c);
+                        current_token_type = node.token_type;
+                        current_operator = node;
+
                         false
-                    } else {
-                        trace!("Ending number");
+                    }
+                    None => {
+                        trace!("Ending operator");
                         true
                     }
                 }
-                LexingState::Indentifier => {
+            }
+            LexingState::Symbol => {
+                trace!("Continuing symbol");
+                if current_characters.len() == 1 {
+                    // just the colon character
+                    // need to make sure the first character is only alpha or underscore
+                    if c.is_alphabetic() || c == '_' {
+                        current_characters.push(c);
+                        false
+                    } else {
+                        // end token
+                        true
+                    }
+                } else {
                     if c.is_alphanumeric() || c == '_' {
                         current_characters.push(c);
                         false
                     } else {
-                        trace!("Ending identifier");
+                        // end token
                         true
                     }
                 }
-                LexingState::Spaces => {
-                    if c != ' ' && c != '\t' {
-                        trace!("Ending horizontal space");
-                        true
-                    } else {
-                        current_characters.push(c);
-                        false
-                    }
+            }
+            LexingState::Number => {
+                if c.is_numeric() {
+                    current_characters.push(c);
+                    false
+                } else {
+                    trace!("Ending number");
+                    true
                 }
-                LexingState::NewLine => {
+            }
+            LexingState::Indentifier => {
+                if c.is_alphanumeric() || c == '_' {
+                    current_characters.push(c);
+                    false
+                } else {
+                    trace!("Ending identifier");
+                    true
+                }
+            }
+            LexingState::Spaces => {
+                if c != ' ' && c != '\t' {
+                    trace!("Ending horizontal space");
+                    true
+                } else {
+                    current_characters.push(c);
+                    false
+                }
+            }
+            LexingState::Subexpression => {
+                if c.is_ascii_whitespace() && !(c == '\t' || c == ' ') {
+                    trace!("Found second new line character. Creating subexpression token");
+                    // first time through will be the second new line type character
+                    // add character and create token
+                    current_characters.push(c);
+
                     // wrap coordinates to new line
                     text_column = 0;
                     text_row += 1;
 
-                    // one new line charcter per token
-                    // end immediately
+                    // skip start new token for this character since it is a part of this token
+                    should_create = false;
+
+                    true
+                } else {
+                    trace!("Non-newline character found, switching to white space token");
+                    // change to white space token and start new
+                    current_token_type = Some(TokenType::HorizontalSpace);
+
                     true
                 }
-                LexingState::Annotation => {
-                    // annotations continue until end of line
-                    // for simplicity we include entire line as the token
-                    if c == '\n' || c == '\0' {
-                        true
-                    } else {
-                        current_characters.push(c);
-                        false
-                    }
+            }
+            LexingState::Annotation => {
+                // annotations continue until end of line
+                // for simplicity we include entire line as the token
+                if c == '\n' || c == '\0' {
+                    true
+                } else {
+                    current_characters.push(c);
+                    false
                 }
             }
         };
 
+        trace!("Will start new: {:?}", start_new);
+
         if start_new {
             if state != LexingState::NoToken {
+                trace!("Pusing new token: {:?}", current_token_type);
                 tokens.push(LexerToken::new(
                     current_characters,
                     match current_token_type {
@@ -380,21 +397,27 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
             current_operator = &operator_tree;
             current_token_type = None;
 
-            start_token(
-                c,
-                &mut current_operator,
-                &operator_tree,
-                &mut state,
-                &mut current_characters,
-                &mut current_token_type,
-                &mut token_start_column,
-                &mut &mut token_start_row,
-                text_column,
-                text_row,
-            );
+            if should_create {
+                trace!("Starting new token");
+                start_token(
+                    c,
+                    &mut current_operator,
+                    &operator_tree,
+                    &mut state,
+                    &mut current_characters,
+                    &mut current_token_type,
+                    &mut token_start_column,
+                    &mut &mut token_start_row,
+                    &mut text_column,
+                    &mut text_row,
+                );
+
+                should_create = true;
+            }
         }
 
-        if c != '\0' {
+        // need to relook at column count when deep diving into line feed, form feed, carriage return parsing
+        if c != '\0' && c != '\n' {
             text_column += 1;
         }
     }
@@ -860,6 +883,21 @@ mod tests {
     }
 
     #[test]
+    fn subexpression() {
+        let result = lex(&"\n\n".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "\n\n".to_string(),
+                token_type: TokenType::Subexpression,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
     fn lex_new_lines() {
         let result = lex(&"+\n+\n+\n".to_string()).unwrap();
 
@@ -874,7 +912,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "\n".to_string(),
-                    token_type: TokenType::NewLine,
+                    token_type: TokenType::HorizontalSpace,
                     column: 1,
                     row: 0
                 },
@@ -886,7 +924,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "\n".to_string(),
-                    token_type: TokenType::NewLine,
+                    token_type: TokenType::HorizontalSpace,
                     column: 1,
                     row: 1
                 },
@@ -898,7 +936,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "\n".to_string(),
-                    token_type: TokenType::NewLine,
+                    token_type: TokenType::HorizontalSpace,
                     column: 1,
                     row: 2
                 },
@@ -1067,7 +1105,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "\n".to_string(),
-                    token_type: TokenType::NewLine,
+                    token_type: TokenType::HorizontalSpace,
                     column: 18,
                     row: 0
                 },

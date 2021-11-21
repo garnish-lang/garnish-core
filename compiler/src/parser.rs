@@ -1324,6 +1324,34 @@ mod tests {
             ],
         );
     }
+
+    // #[test]
+    // fn single_newline_gets_dropped() {
+    //     let tokens = vec![
+    //         LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+    //         LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+    //         LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+    //         LexerToken::new("\n".to_string(), TokenType::NewLine, 0, 0),
+    //         LexerToken::new(".".to_string(), TokenType::Period, 0, 0),
+    //         LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+    //         LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+    //     ];
+
+    //     let result = parse(tokens).unwrap();
+
+    //     assert_result(
+    //         &result,
+    //         1,
+    //         &[
+    //             (0, Definition::Number, Some(1), None, None),
+    //             (1, Definition::Addition, None, Some(0), Some(5)),
+    //             (2, Definition::Identifier, Some(3), None, None),
+    //             (3, Definition::Access, Some(5), Some(2), Some(4)),
+    //             (4, Definition::Identifier, Some(3), None, None),
+    //             (5, Definition::EmptyApply, Some(1), Some(3), None),
+    //         ],
+    //     );
+    // }
 }
 
 #[cfg(test)]
