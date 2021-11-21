@@ -312,19 +312,23 @@ enum SecondaryDefinition {
 fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
     match token_type {
         // TokenType::Annotation => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        // Values
         TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
         TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
         TokenType::Symbol => (Definition::Symbol, SecondaryDefinition::Value),
         TokenType::Number => (Definition::Number, SecondaryDefinition::Value),
         TokenType::Result => (Definition::Result, SecondaryDefinition::Value),
         TokenType::Input => (Definition::Input, SecondaryDefinition::Value),
+        TokenType::Identifier => (Definition::Identifier, SecondaryDefinition::Value),
+        // Groupings
         TokenType::StartExpression => (Definition::NestedExpression, SecondaryDefinition::StartGrouping),
         TokenType::EndExpression => (Definition::Drop, SecondaryDefinition::EndGrouping),
         TokenType::StartGroup => (Definition::Group, SecondaryDefinition::StartGrouping),
         TokenType::EndGroup => (Definition::Drop, SecondaryDefinition::EndGrouping),
-        TokenType::Identifier => (Definition::Identifier, SecondaryDefinition::Value),
+        // Spacing
         TokenType::Whitespace => (Definition::Drop, SecondaryDefinition::Whitespace),
         TokenType::Subexpression => (Definition::Subexpression, SecondaryDefinition::Subexpression),
+        // Operations
         TokenType::EmptyApply => (Definition::EmptyApply, SecondaryDefinition::UnarySuffix),
         TokenType::AbsoluteValue => (Definition::AbsoluteValue, SecondaryDefinition::UnaryPrefix),
         TokenType::Comma => (Definition::List, SecondaryDefinition::BinaryLeftToRight),
