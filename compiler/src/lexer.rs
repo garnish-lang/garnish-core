@@ -331,7 +331,17 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                 }
             }
             LexingState::Spaces => {
-                if c != ' ' && c != '\t' {
+                if c == '\n' {
+                    trace!("Found newline character, switching state");
+                    current_characters.push(c);
+
+                    state = LexingState::Subexpression;
+                    // wrap coordinates to new line
+                    text_column = 0;
+                    text_row += 1;
+
+                    false
+                } else if c != ' ' && c != '\t' {
                     trace!("Ending horizontal space");
                     true
                 } else {
@@ -343,8 +353,26 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                 if c.is_ascii_whitespace() && !(c == '\t' || c == ' ') {
                     trace!("Found second new line character. Creating subexpression token");
                     // first time through will be the second new line type character
+
                     // add character and create token
                     current_characters.push(c);
+
+                    // could've arrived here by passing through whitespace state
+                    // check len of characters so see if 2 tokens need to be created
+                    if current_characters.len() > 2 {
+                        trace!("Creating whitespace token from extra characters");
+                        // have extra characters, split them into a whitespace token
+                        let spaces_characters = &current_characters[..current_characters.len() - 2];
+                        tokens.push(LexerToken::new(
+                            spaces_characters.to_string(),
+                            TokenType::HorizontalSpace,
+                            token_start_row,
+                            // actual token is determined after current, minus 1 to make accurate
+                            token_start_column,
+                        ));
+
+                        current_characters = current_characters[(current_characters.len() - 2)..].to_string();
+                    }
 
                     // wrap coordinates to new line
                     text_column = 0;
@@ -355,11 +383,21 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
 
                     true
                 } else {
-                    trace!("Non-newline character found, switching to white space token");
+                    trace!("Non-newline character found");
                     // change to white space token and start new
                     current_token_type = Some(TokenType::HorizontalSpace);
 
-                    true
+                    // if other white space, switch state and continue
+                    if c == '\t' || c == ' ' {
+                        trace!("Is whitespace character, switching state");
+                        current_characters.push(c);
+                        state = LexingState::Spaces;
+                        false
+                    } else {
+                        trace!("Is non-whitespace character, ending token");
+                        // else end this token and start new
+                        true
+                    }
                 }
             }
             LexingState::Annotation => {
@@ -378,7 +416,7 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
 
         if start_new {
             if state != LexingState::NoToken {
-                trace!("Pusing new token: {:?}", current_token_type);
+                trace!("Pushing new token: {:?}", current_token_type);
                 tokens.push(LexerToken::new(
                     current_characters,
                     match current_token_type {
@@ -411,7 +449,9 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                     &mut text_column,
                     &mut text_row,
                 );
-
+            } else {
+                // Used only for single skips, flip back for next iteration
+                trace!("Did not start new token");
                 should_create = true;
             }
         }
@@ -883,6 +923,21 @@ mod tests {
     }
 
     #[test]
+    fn newline_whitespace() {
+        let result = lex(&"\n  \n  \t\n \t \n".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "\n  \n  \t\n \t \n".to_string(),
+                token_type: TokenType::HorizontalSpace,
+                column: 0,
+                row: 0
+            },]
+        )
+    }
+
+    #[test]
     fn subexpression() {
         let result = lex(&"\n\n".to_string()).unwrap();
 
@@ -894,6 +949,29 @@ mod tests {
                 column: 0,
                 row: 0
             }]
+        )
+    }
+
+    #[test]
+    fn double_subexpression() {
+        let result = lex(&"\n\n\n\n".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "\n\n".to_string(),
+                    token_type: TokenType::Subexpression,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "\n\n".to_string(),
+                    token_type: TokenType::Subexpression,
+                    column: 0,
+                    row: 2
+                }
+            ]
         )
     }
 
