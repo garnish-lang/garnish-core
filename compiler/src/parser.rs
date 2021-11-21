@@ -1656,4 +1656,28 @@ mod groups {
             ],
         );
     }
+
+    #[test]
+    fn subexpression_in_group_makes_list() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Group, None, None, Some(2)),
+                (1, Definition::Number, Some(2), None, None),
+                (2, Definition::Subexpression, Some(0), Some(1), Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+            ],
+        );
+    }
 }
