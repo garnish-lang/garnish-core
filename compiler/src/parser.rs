@@ -158,6 +158,9 @@ fn parse_token(
 
     let mut count = 0;
 
+    let mut parent = None;
+    let mut update_parent = None;
+
     // // go up tree until no parent
     trace!("Searching parent chain for true left");
     while let Some(left_index) = current_left {
@@ -189,6 +192,11 @@ fn parse_token(
                 // need to find node with higher priority and stop before it
                 if my_priority < their_priority || is_our_group {
                     trace!("Stopping walk with true left {:?}", true_left);
+
+                    parent = Some(left_index);
+
+                    update_parent = Some(left_index);
+
                     // stop
                     break;
                 } else {
@@ -207,68 +215,25 @@ fn parse_token(
         }
     }
 
-    let new_left = true_left;
-    let mut parent = None;
-
     match true_left {
-        None => (), // allowed
-        Some(left) => {
-            let new_left_parent = match nodes.get_mut(left) {
-                None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
-                Some(left_node) => {
-                    trace!("Checking true left with index {:?}", left);
-                    let n: &mut ParseNode = left_node;
-                    let new_parent = n.parent;
+        None => (),
+        Some(index) => match nodes.get_mut(index) {
+            None => Err(format!("Index assigned to node has no value in node list. {:?}", index))?,
+            Some(node) => node.parent = Some(id),
+        },
+    }
 
-                    match new_parent {
-                        None => Some(id), // nothing additional
-                        Some(parent_index) => match nodes.get_mut(parent_index) {
-                            None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
-                            Some(parent_node) => {
-                                trace!("Checking true left parent with index {:?}", parent_index);
-
-                                let pn: &mut ParseNode = parent_node;
-                                let their_priority = match priority_map.get(&pn.definition) {
-                                    None => Err(format!("Definition '{:?}' not registered in priority map.", pn.definition))?,
-                                    Some(priority) => *priority,
-                                };
-
-                                if my_priority < their_priority || pn.definition.is_group_like() {
-                                    trace!("Priority is less than true left's parent");
-                                    // make their parent, my parent
-                                    parent = Some(parent_index);
-
-                                    // update their parent to point at us
-                                    pn.right = Some(id);
-
-                                    Some(id)
-                                } else {
-                                    unreachable!() // waiting to be proven wrong
-
-                                    // trace!("Priority is greater than or equal to true left's parent");
-                                    // pn.parent = Some(i);
-                                    // new_left = Some(parent_index);
-                                    // parent = None;
-
-                                    // Some(parent_index)
-                                }
-                            }
-                        },
-                    }
-                }
-            };
-
-            trace!("Setting true left parent to {:?}", new_left_parent);
-            match nodes.get_mut(left) {
-                None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
-                Some(left_node) => left_node.parent = new_left_parent,
-            }
-        }
+    match update_parent {
+        None => (),
+        Some(index) => match nodes.get_mut(index) {
+            None => Err(format!("Index assigned to node has no value in node list. {:?}", index))?,
+            Some(node) => node.right = Some(id),
+        },
     }
 
     *check_for_list = false;
 
-    Ok((definition, parent, new_left, right))
+    Ok((definition, parent, true_left, right))
 }
 
 fn parse_value_like(
