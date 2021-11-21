@@ -19,6 +19,7 @@ pub enum Definition {
     Input,
     Result,
     Unit,
+    Subexpression,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
@@ -114,6 +115,7 @@ fn make_priority_map() -> (HashMap<Definition, usize>, Vec<Vec<usize>>) {
     map.insert(Definition::Equality, 14);
     map.insert(Definition::Pair, 21);
     map.insert(Definition::List, 23);
+    map.insert(Definition::Subexpression, 100);
 
     let mut priority_table = vec![];
     for _ in 0..=26 {
@@ -492,6 +494,35 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
                 (Definition::Drop, None, None, None)
             }
+            TokenType::Subexpression => {
+                trace!("Parsing Subexpression token");
+
+                // only one in a row
+                // check if last parser node is a subexpression
+                // drop this token if so
+                let drop = match last_left {
+                    None => false, // not a subexpression node
+                    Some(left) => match nodes.get(left) {
+                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                        Some(left_node) => left_node.definition == Definition::Subexpression,
+                    },
+                };
+
+                if drop {
+                    (Definition::Drop, None, None, None)
+                } else {
+                    next_parent = Some(id);
+                    parse_token(
+                        id,
+                        Definition::Subexpression,
+                        last_left,
+                        assumed_right,
+                        &mut nodes,
+                        &priority_map,
+                        &mut check_for_list,
+                    )?
+                }
+            }
             TokenType::Comma => {
                 trace!("Parsing Comma token");
 
@@ -845,6 +876,50 @@ mod tests {
             &[
                 (0, Definition::Identifier, Some(1), None, None),
                 (1, Definition::Access, None, Some(0), Some(2)),
+                (2, Definition::Identifier, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn subexpression() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::Subexpression, None, Some(0), Some(2)),
+                (2, Definition::Identifier, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn subexpression_drop_multiple_in_a_row() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::Subexpression, None, Some(0), Some(2)),
                 (2, Definition::Identifier, Some(1), None, None),
             ],
         );
@@ -1324,34 +1399,6 @@ mod tests {
             ],
         );
     }
-
-    // #[test]
-    // fn single_newline_gets_dropped() {
-    //     let tokens = vec![
-    //         LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-    //         LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-    //         LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
-    //         LexerToken::new("\n".to_string(), TokenType::NewLine, 0, 0),
-    //         LexerToken::new(".".to_string(), TokenType::Period, 0, 0),
-    //         LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
-    //         LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
-    //     ];
-
-    //     let result = parse(tokens).unwrap();
-
-    //     assert_result(
-    //         &result,
-    //         1,
-    //         &[
-    //             (0, Definition::Number, Some(1), None, None),
-    //             (1, Definition::Addition, None, Some(0), Some(5)),
-    //             (2, Definition::Identifier, Some(3), None, None),
-    //             (3, Definition::Access, Some(5), Some(2), Some(4)),
-    //             (4, Definition::Identifier, Some(3), None, None),
-    //             (5, Definition::EmptyApply, Some(1), Some(3), None),
-    //         ],
-    //     );
-    // }
 }
 
 #[cfg(test)]
