@@ -20,6 +20,7 @@ pub enum Definition {
     Result,
     Unit,
     Subexpression,
+    Group,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
@@ -594,6 +595,12 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     &mut check_for_list,
                 )?
             }
+            TokenType::StartGroup => {
+                let parent = next_parent;
+                next_parent = Some(id);
+                (Definition::Group, parent, None, assumed_right)
+            }
+            TokenType::EndGroup => (Definition::Drop, None, None, None),
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
 
@@ -1517,6 +1524,30 @@ mod lists {
                 (5, Definition::Addition, Some(3), Some(4), Some(6)),
                 (6, Definition::Number, Some(5), None, None),
             ],
+        );
+    }
+}
+
+#[cfg(test)]
+mod groups {
+    use super::tests::*;
+    use crate::lexer::*;
+    use crate::*;
+
+    #[test]
+    fn single_value_group() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[(0, Definition::Group, None, None, Some(1)), (1, Definition::Number, Some(0), None, None)],
         );
     }
 }
