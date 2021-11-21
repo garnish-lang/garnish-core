@@ -1,5 +1,5 @@
 use log::trace;
-use std::{collections::HashMap, hash::Hash, str::ParseBoolError, vec};
+use std::{collections::HashMap, hash::Hash, vec};
 
 use crate::lexer::*;
 
@@ -22,6 +22,8 @@ pub enum Definition {
     Subexpression,
     Group,
     NestedExpression,
+    ApplyIfTrue,
+    ApplyIfFalse,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
@@ -49,6 +51,62 @@ impl Definition {
             Definition::AbsoluteValue => Associativity::RightToLeft,
             _ => Associativity::LeftToRight,
         }
+    }
+}
+
+enum SecondaryDefinition {
+    Value,
+    BinaryLeftToRight,
+    UnaryPrefix,
+    UnarySuffix,
+    StartGrouping,
+    EndGrouping,
+    Subexpression,
+    Whitespace,
+    Conditional,
+}
+
+fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
+    match token_type {
+        // TokenType::Annotation => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+
+        // Values
+        TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
+        TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
+        TokenType::Symbol => (Definition::Symbol, SecondaryDefinition::Value),
+        TokenType::Number => (Definition::Number, SecondaryDefinition::Value),
+        TokenType::Result => (Definition::Result, SecondaryDefinition::Value),
+        TokenType::Input => (Definition::Input, SecondaryDefinition::Value),
+        TokenType::Identifier => (Definition::Identifier, SecondaryDefinition::Value),
+
+        // Groupings
+        TokenType::StartExpression => (Definition::NestedExpression, SecondaryDefinition::StartGrouping),
+        TokenType::EndExpression => (Definition::Drop, SecondaryDefinition::EndGrouping),
+        TokenType::StartGroup => (Definition::Group, SecondaryDefinition::StartGrouping),
+        TokenType::EndGroup => (Definition::Drop, SecondaryDefinition::EndGrouping),
+
+        // Spacing
+        TokenType::Whitespace => (Definition::Drop, SecondaryDefinition::Whitespace),
+        TokenType::Subexpression => (Definition::Subexpression, SecondaryDefinition::Subexpression),
+
+        // Operations
+        TokenType::EmptyApply => (Definition::EmptyApply, SecondaryDefinition::UnarySuffix),
+        TokenType::AbsoluteValue => (Definition::AbsoluteValue, SecondaryDefinition::UnaryPrefix),
+        TokenType::Comma => (Definition::List, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::PlusSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Equality => (Definition::Equality, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Period => (Definition::Access, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Pair => (Definition::Pair, SecondaryDefinition::BinaryLeftToRight),
+        // TokenType::MultiplicationSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        // TokenType::ExponentialSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        // TokenType::Apply => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        // TokenType::ApplyTo => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        // TokenType::Reapply => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+
+        // Conditionals
+        TokenType::ApplyIfFalse => (Definition::ApplyIfFalse, SecondaryDefinition::Conditional),
+        TokenType::ApplyIfTrue => (Definition::ApplyIfTrue, SecondaryDefinition::Conditional),
+        _ => todo!(),
     }
 }
 
@@ -128,6 +186,8 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::Equality, 14);
     map.insert(Definition::Pair, 21);
     map.insert(Definition::List, 23);
+    map.insert(Definition::ApplyIfTrue, 27);
+    map.insert(Definition::ApplyIfFalse, 27);
     map.insert(Definition::Subexpression, 100);
 
     map
@@ -298,55 +358,6 @@ fn setup_space_list_check(
     Ok((Definition::Drop, None, None, None))
 }
 
-enum SecondaryDefinition {
-    Value,
-    BinaryLeftToRight,
-    UnaryPrefix,
-    UnarySuffix,
-    StartGrouping,
-    EndGrouping,
-    Subexpression,
-    Whitespace,
-}
-
-fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
-    match token_type {
-        // TokenType::Annotation => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        // Values
-        TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
-        TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
-        TokenType::Symbol => (Definition::Symbol, SecondaryDefinition::Value),
-        TokenType::Number => (Definition::Number, SecondaryDefinition::Value),
-        TokenType::Result => (Definition::Result, SecondaryDefinition::Value),
-        TokenType::Input => (Definition::Input, SecondaryDefinition::Value),
-        TokenType::Identifier => (Definition::Identifier, SecondaryDefinition::Value),
-        // Groupings
-        TokenType::StartExpression => (Definition::NestedExpression, SecondaryDefinition::StartGrouping),
-        TokenType::EndExpression => (Definition::Drop, SecondaryDefinition::EndGrouping),
-        TokenType::StartGroup => (Definition::Group, SecondaryDefinition::StartGrouping),
-        TokenType::EndGroup => (Definition::Drop, SecondaryDefinition::EndGrouping),
-        // Spacing
-        TokenType::Whitespace => (Definition::Drop, SecondaryDefinition::Whitespace),
-        TokenType::Subexpression => (Definition::Subexpression, SecondaryDefinition::Subexpression),
-        // Operations
-        TokenType::EmptyApply => (Definition::EmptyApply, SecondaryDefinition::UnarySuffix),
-        TokenType::AbsoluteValue => (Definition::AbsoluteValue, SecondaryDefinition::UnaryPrefix),
-        TokenType::Comma => (Definition::List, SecondaryDefinition::BinaryLeftToRight),
-        TokenType::PlusSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        TokenType::Equality => (Definition::Equality, SecondaryDefinition::BinaryLeftToRight),
-        TokenType::Period => (Definition::Access, SecondaryDefinition::BinaryLeftToRight),
-        TokenType::Pair => (Definition::Pair, SecondaryDefinition::BinaryLeftToRight),
-        // TokenType::MultiplicationSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        // TokenType::ExponentialSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        // TokenType::Apply => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        // TokenType::ApplyTo => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        // TokenType::Reapply => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        // TokenType::ApplyIfFalse => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        // TokenType::ApplyIfTrue => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        _ => todo!(),
-    }
-}
-
 pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
     trace!("Starting parse");
     let priority_map = make_priority_map();
@@ -446,6 +457,19 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                 };
 
                 (Definition::Drop, None, None, None)
+            }
+            SecondaryDefinition::Conditional => {
+                next_parent = Some(id);
+                parse_token(
+                    id,
+                    definition,
+                    last_left,
+                    assumed_right,
+                    &mut nodes,
+                    &priority_map,
+                    &mut check_for_list,
+                    under_group,
+                )?
             }
             SecondaryDefinition::Whitespace => setup_space_list_check(last_left, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?,
             SecondaryDefinition::Subexpression => {
@@ -1651,6 +1675,55 @@ mod groups {
                 (1, Definition::Number, Some(2), None, None),
                 (2, Definition::Subexpression, Some(0), Some(1), Some(3)),
                 (3, Definition::Number, Some(2), None, None),
+            ],
+        );
+    }
+}
+
+#[cfg(test)]
+mod conditionals {
+    use super::tests::*;
+    use crate::lexer::*;
+    use crate::*;
+
+    #[test]
+    fn conditional_if() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::ApplyIfTrue, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn conditional_else() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("!>".to_string(), TokenType::ApplyIfFalse, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::ApplyIfFalse, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
             ],
         );
     }
