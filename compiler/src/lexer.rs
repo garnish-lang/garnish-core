@@ -19,7 +19,7 @@ pub enum TokenType {
     Symbol,
     Number,
     Identifier,
-    HorizontalSpace,
+    Whitespace,
     Subexpression,
     Annotation,
     Apply,
@@ -185,7 +185,7 @@ fn start_token<'a>(
     } else if c == ' ' || c == '\t' {
         current_characters.push(c);
         *state = LexingState::Spaces;
-        *current_token_type = Some(TokenType::HorizontalSpace);
+        *current_token_type = Some(TokenType::Whitespace);
         trace!("Horizontal spaces started");
     } else if c.is_ascii_whitespace() {
         // any other white space, all some form of new line
@@ -365,7 +365,7 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                         let spaces_characters = &current_characters[..current_characters.len() - 2];
                         tokens.push(LexerToken::new(
                             spaces_characters.to_string(),
-                            TokenType::HorizontalSpace,
+                            TokenType::Whitespace,
                             token_start_row,
                             // actual token is determined after current, minus 1 to make accurate
                             token_start_column,
@@ -385,7 +385,7 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                 } else {
                     trace!("Non-newline character found");
                     // change to white space token and start new
-                    current_token_type = Some(TokenType::HorizontalSpace);
+                    current_token_type = Some(TokenType::Whitespace);
 
                     // if other white space, switch state and continue
                     if c == '\t' || c == ' ' {
@@ -878,7 +878,7 @@ mod tests {
             vec![
                 LexerToken {
                     text: "    ".to_string(),
-                    token_type: TokenType::HorizontalSpace,
+                    token_type: TokenType::Whitespace,
                     column: 0,
                     row: 0
                 },
@@ -890,7 +890,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "  \t  ".to_string(),
-                    token_type: TokenType::HorizontalSpace,
+                    token_type: TokenType::Whitespace,
                     column: 5,
                     row: 0
                 },
@@ -902,7 +902,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "\t\t\t\t\t\t".to_string(),
-                    token_type: TokenType::HorizontalSpace,
+                    token_type: TokenType::Whitespace,
                     column: 11,
                     row: 0
                 },
@@ -914,7 +914,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "      ".to_string(),
-                    token_type: TokenType::HorizontalSpace,
+                    token_type: TokenType::Whitespace,
                     column: 18,
                     row: 0
                 },
@@ -930,7 +930,7 @@ mod tests {
             result,
             vec![LexerToken {
                 text: "\n  \n  \t\n \t \n".to_string(),
-                token_type: TokenType::HorizontalSpace,
+                token_type: TokenType::Whitespace,
                 column: 0,
                 row: 0
             },]
@@ -990,7 +990,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "\n".to_string(),
-                    token_type: TokenType::HorizontalSpace,
+                    token_type: TokenType::Whitespace,
                     column: 1,
                     row: 0
                 },
@@ -1002,7 +1002,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "\n".to_string(),
-                    token_type: TokenType::HorizontalSpace,
+                    token_type: TokenType::Whitespace,
                     column: 1,
                     row: 1
                 },
@@ -1014,7 +1014,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "\n".to_string(),
-                    token_type: TokenType::HorizontalSpace,
+                    token_type: TokenType::Whitespace,
                     column: 1,
                     row: 2
                 },
@@ -1037,7 +1037,7 @@ mod tests {
                 },
                 LexerToken {
                     text: " ".to_string(),
-                    token_type: TokenType::HorizontalSpace,
+                    token_type: TokenType::Whitespace,
                     column: 5,
                     row: 0
                 },
@@ -1095,7 +1095,7 @@ mod tests {
                 },
                 LexerToken {
                     text: " ".to_string(),
-                    token_type: TokenType::HorizontalSpace,
+                    token_type: TokenType::Whitespace,
                     column: 7,
                     row: 0
                 },
@@ -1183,7 +1183,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "\n".to_string(),
-                    token_type: TokenType::HorizontalSpace,
+                    token_type: TokenType::Whitespace,
                     column: 18,
                     row: 0
                 },

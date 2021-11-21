@@ -469,7 +469,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
                 (Definition::AbsoluteValue, parent, None, assumed_right)
             }
-            TokenType::HorizontalSpace => {
+            TokenType::Whitespace => {
                 trace!("Parsing HorizontalSpace token");
 
                 // need to check for list
@@ -1160,37 +1160,37 @@ mod tests {
     #[test]
     fn multiple_binary_operations_with_spaces() {
         let tokens = vec![
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 4
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 8
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 12
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
         ];
 
         // 5 == 5 + 5 == 5 + 5 == 5 + 5 == 5
@@ -1385,7 +1385,7 @@ mod lists {
     fn two_item_space_list() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
@@ -1406,15 +1406,15 @@ mod lists {
     fn space_list_all_value_like() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new(":symbol".to_string(), TokenType::Symbol, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("()".to_string(), TokenType::UnitLiteral, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("$".to_string(), TokenType::Input, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("$?".to_string(), TokenType::Result, 0, 0),
         ];
 
@@ -1443,15 +1443,15 @@ mod lists {
     fn space_list_with_operations() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new(" ".to_string(), TokenType::HorizontalSpace, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("20".to_string(), TokenType::Number, 0, 0),
         ];
 
