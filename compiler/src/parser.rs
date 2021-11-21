@@ -1,5 +1,5 @@
 use log::trace;
-use std::{collections::HashMap, hash::Hash};
+use std::{collections::HashMap, hash::Hash, vec};
 
 use crate::lexer::*;
 
@@ -140,6 +140,7 @@ fn parse_token(
     nodes: &mut Vec<ParseNode>,
     priority_map: &HashMap<Definition, usize>,
     check_for_list: &mut bool,
+    under_group: Option<usize>,
 ) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), String> {
     let my_priority = match priority_map.get(&definition) {
         None => Err(format!("Definition '{:?}' not registered in priority map.", definition))?,
@@ -173,8 +174,14 @@ fn parse_token(
                     their_priority
                 );
 
+                let is_our_group = n.definition == Definition::Group
+                    && match under_group {
+                        None => false,
+                        Some(group_index) => group_index == left_index,
+                    };
+
                 // need to find node with higher priority and stop before it
-                if my_priority < their_priority || n.definition == Definition::Group {
+                if my_priority < their_priority || is_our_group {
                     trace!("Stopping walk with true left {:?}", true_left);
                     // stop
                     break;
@@ -268,13 +275,23 @@ fn parse_value_like(
     last_left: Option<usize>,
     priority_map: &HashMap<Definition, usize>,
     last_token: LexerToken,
+    under_group: Option<usize>,
 ) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), String> {
     let mut new_parent = parent;
 
     if *check_for_list {
         trace!("List flag is set, creating list node before current node.");
         // use current id for list token
-        let list_info = parse_token(id, Definition::List, last_left, Some(id + 1), nodes, &priority_map, check_for_list)?;
+        let list_info = parse_token(
+            id,
+            Definition::List,
+            last_left,
+            Some(id + 1),
+            nodes,
+            &priority_map,
+            check_for_list,
+            under_group,
+        )?;
         nodes.push(ParseNode::new(list_info.0, list_info.1, list_info.2, list_info.3, last_token.clone()));
 
         // update parent to point to list node just created
@@ -298,11 +315,21 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
     let mut check_for_list = false;
     let mut last_token = LexerToken::empty();
     let mut next_last_left = None;
+    let mut group_stack = vec![];
+    let mut current_group = None;
 
     for (_, token) in lex_tokens.iter().enumerate() {
         trace!("Token {:?}", token.get_token_type());
 
         let id = nodes.len();
+
+        let under_group = match current_group {
+            None => None,
+            Some(current) => match group_stack.get(current) {
+                None => Err(format!("Current group set to non-existant group in stack."))?,
+                Some(group) => Some(*group),
+            },
+        };
 
         // most operations will have their right be the next element
         // corrects are made after the fact
@@ -325,6 +352,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     last_left,
                     &priority_map,
                     last_token,
+                    under_group,
                 )?
             }
             TokenType::Symbol => {
@@ -340,6 +368,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     last_left,
                     &priority_map,
                     last_token,
+                    under_group,
                 )?
             }
             TokenType::Identifier => {
@@ -355,6 +384,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     last_left,
                     &priority_map,
                     last_token,
+                    under_group,
                 )?
             }
             TokenType::UnitLiteral => {
@@ -370,6 +400,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     last_left,
                     &priority_map,
                     last_token,
+                    under_group,
                 )?
             }
             TokenType::Input => {
@@ -385,6 +416,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     last_left,
                     &priority_map,
                     last_token,
+                    under_group,
                 )?
             }
             TokenType::Result => {
@@ -400,6 +432,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     last_left,
                     &priority_map,
                     last_token,
+                    under_group,
                 )?
             }
             TokenType::EmptyApply => {
@@ -570,6 +603,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                         &mut nodes,
                         &priority_map,
                         &mut check_for_list,
+                        under_group,
                     )?
                 }
             }
@@ -585,6 +619,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     &mut nodes,
                     &priority_map,
                     &mut check_for_list,
+                    under_group,
                 )?
             }
             TokenType::Pair => {
@@ -599,6 +634,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     &mut nodes,
                     &priority_map,
                     &mut check_for_list,
+                    under_group,
                 )?
             }
             TokenType::Period => {
@@ -613,6 +649,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     &mut nodes,
                     &priority_map,
                     &mut check_for_list,
+                    under_group,
                 )?
             }
             TokenType::PlusSign => {
@@ -627,6 +664,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     &mut nodes,
                     &priority_map,
                     &mut check_for_list,
+                    under_group,
                 )?
             }
             TokenType::Equality => {
@@ -641,14 +679,26 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     &mut nodes,
                     &priority_map,
                     &mut check_for_list,
+                    under_group,
                 )?
             }
             TokenType::StartGroup => {
+                current_group = Some(group_stack.len());
+                group_stack.push(id);
+
                 let parent = next_parent;
                 next_parent = Some(id);
                 (Definition::Group, parent, None, assumed_right)
             }
-            TokenType::EndGroup => (Definition::Drop, None, None, None),
+            TokenType::EndGroup => {
+                group_stack.pop();
+                current_group = match group_stack.len() == 0 {
+                    true => None,
+                    false => Some(group_stack.len() - 1),
+                };
+
+                (Definition::Drop, None, None, None)
+            }
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
         };
 
@@ -1611,8 +1661,6 @@ mod groups {
 
         let result = parse(tokens).unwrap();
 
-        println!("{:#?}", result);
-
         assert_result(
             &result,
             0,
@@ -1621,6 +1669,40 @@ mod groups {
                 (1, Definition::Number, Some(2), None, None),
                 (2, Definition::Addition, Some(0), Some(1), Some(3)),
                 (3, Definition::Number, Some(2), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn single_operation_with_operations_outside() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        println!("{:#?}", result);
+
+        assert_result(
+            &result,
+            6,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Addition, Some(6), Some(0), Some(2)),
+                (2, Definition::Group, Some(1), None, Some(4)),
+                (3, Definition::Number, Some(4), None, None),
+                (4, Definition::Addition, Some(2), Some(3), Some(5)),
+                (5, Definition::Number, Some(4), None, None),
+                (6, Definition::Addition, None, Some(1), Some(7)),
+                (7, Definition::Number, Some(6), None, None),
             ],
         );
     }
