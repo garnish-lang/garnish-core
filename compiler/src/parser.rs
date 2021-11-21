@@ -437,113 +437,19 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
             }
             TokenType::EmptyApply => {
                 trace!("Parsing EmptyApply token");
-                let definition = Definition::EmptyApply;
 
-                let my_priority = match priority_map.get(&definition) {
-                    None => Err(format!("Definition '{:?}' not registered in priority map.", definition))?,
-                    Some(priority) => *priority,
-                };
-
-                let mut true_left = last_left;
-                let mut current_left = last_left;
-
-                let mut count = 0;
-
-                // // go up tree until no parent
-                trace!("Searching parent chain for true left");
-                while let Some(left_index) = current_left {
-                    trace!("Walking: {:?}", left_index);
-                    match nodes.get(left_index) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left_index))?,
-                        Some(node) => {
-                            let n: &ParseNode = node;
-
-                            let their_priority = match priority_map.get(&n.definition) {
-                                None => Err(format!("Definition '{:?}' not registered in priority map.", n.definition))?,
-                                Some(priority) => *priority,
-                            };
-
-                            // need to find node with higher priority and stop before it
-                            if my_priority < their_priority {
-                                // stop
-                                break;
-                            } else {
-                                // continue
-
-                                true_left = Some(left_index);
-                                current_left = n.parent
-                            }
-                        }
-                    };
-
-                    // safty net, max iterations to len of nodes
-                    count += 1;
-                    if count > nodes.len() {
-                        return Err(format!("Max iterations reached when searching for last parent."));
-                    }
-                }
-
-                let new_left = true_left;
-                let mut parent = None;
                 next_parent = Some(id);
 
-                match true_left {
-                    None => (), // allowed
-                    Some(left) => {
-                        let new_left_parent = match nodes.get_mut(left) {
-                            None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
-                            Some(left_node) => {
-                                trace!("Checking true left with index {:?}", left);
-                                let n: &mut ParseNode = left_node;
-                                let new_parent = n.parent;
-
-                                match new_parent {
-                                    None => Some(id), // nothing additional
-                                    Some(parent_index) => match nodes.get_mut(parent_index) {
-                                        None => Err(format!("Index assigned to node has no value in node list. {:?}", parent_index))?,
-                                        Some(parent_node) => {
-                                            trace!("Checking true left parent with index {:?}", parent_index);
-
-                                            let pn: &mut ParseNode = parent_node;
-                                            let their_priority = match priority_map.get(&pn.definition) {
-                                                None => Err(format!("Definition '{:?}' not registered in priority map.", pn.definition))?,
-                                                Some(priority) => *priority,
-                                            };
-
-                                            if my_priority < their_priority {
-                                                trace!("Priority is less than true left's parent");
-                                                // make their parent, my parent
-                                                parent = Some(parent_index);
-
-                                                // update their parent to point at us
-                                                pn.right = Some(id);
-
-                                                Some(id)
-                                            } else {
-                                                unreachable!() // waiting to be proven wrong
-
-                                                // trace!("Priority is greater than or equal to true left's parent");
-                                                // pn.parent = Some(i);
-                                                // new_left = Some(parent_index);
-                                                // parent = None;
-
-                                                // Some(parent_index)
-                                            }
-                                        }
-                                    },
-                                }
-                            }
-                        };
-
-                        trace!("Setting true left parent to {:?}", new_left_parent);
-                        match nodes.get_mut(left) {
-                            None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
-                            Some(left_node) => left_node.parent = new_left_parent,
-                        }
-                    }
-                }
-
-                (Definition::EmptyApply, parent, new_left, None)
+                parse_token(
+                    id,
+                    Definition::EmptyApply,
+                    last_left,
+                    None,
+                    &mut nodes,
+                    &priority_map,
+                    &mut check_for_list,
+                    under_group,
+                )?
             }
             TokenType::AbsoluteValue => {
                 trace!("Parsing AbsoluteValue token");
@@ -574,6 +480,9 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     },
                 }
 
+                // retain last left instead of below code setting it to token that isn't being created
+                next_last_left = last_left;
+
                 (Definition::Drop, None, None, None)
             }
             TokenType::Subexpression => {
@@ -592,6 +501,8 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
                 if drop {
                     trace!("Previous parser node was a subexpression, dropping this one.");
+                    // retain last left instead of below code setting it to token that isn't being created
+                    next_last_left = last_left;
                     (Definition::Drop, None, None, None)
                 } else {
                     next_parent = Some(id);
@@ -691,7 +602,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                 (Definition::Group, parent, None, assumed_right)
             }
             TokenType::EndGroup => {
-                group_stack.pop();
+                next_last_left = group_stack.pop();
                 current_group = match group_stack.len() == 0 {
                     true => None,
                     false => Some(group_stack.len() - 1),
@@ -712,16 +623,17 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
         if definition != Definition::Drop {
             nodes.push(ParseNode::new(definition, parent, left, right, token.clone()));
-            last_left = match next_last_left {
-                Some(i) => {
-                    next_last_left = None;
-                    Some(i)
-                }
-                None => Some(id),
-            };
-
-            trace!("Last left set to {:?}", last_left);
         }
+
+        last_left = match next_last_left {
+            Some(i) => {
+                next_last_left = None;
+                Some(i)
+            }
+            None => Some(id),
+        };
+
+        trace!("Last left set to {:?}", last_left);
 
         last_token = token.clone();
 
@@ -1703,6 +1615,62 @@ mod groups {
                 (5, Definition::Number, Some(4), None, None),
                 (6, Definition::Addition, None, Some(1), Some(7)),
                 (7, Definition::Number, Some(6), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn single_operation_with_unary_suffix_operations_outside() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        println!("{:#?}", result);
+
+        assert_result(
+            &result,
+            4,
+            &[
+                (0, Definition::Group, Some(4), None, Some(2)),
+                (1, Definition::Number, Some(2), None, None),
+                (2, Definition::Addition, Some(0), Some(1), Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+                (4, Definition::EmptyApply, None, Some(0), None),
+            ],
+        );
+    }
+
+    #[test]
+    fn single_operation_with_unary_prefix_operations_outside() {
+        let tokens = vec![
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        println!("{:#?}", result);
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::AbsoluteValue, None, None, Some(1)),
+                (1, Definition::Group, Some(0), None, Some(3)),
+                (2, Definition::Number, Some(3), None, None),
+                (3, Definition::Addition, Some(1), Some(2), Some(4)),
+                (4, Definition::Number, Some(3), None, None),
             ],
         );
     }
