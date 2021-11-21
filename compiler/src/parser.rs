@@ -509,6 +509,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                 };
 
                 if drop {
+                    trace!("Previous parser node was a subexpression, dropping this one.");
                     (Definition::Drop, None, None, None)
                 } else {
                     next_parent = Some(id);
