@@ -24,6 +24,7 @@ pub enum Definition {
     NestedExpression,
     ApplyIfTrue,
     ApplyIfFalse,
+    ConditionalBranch,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
@@ -46,6 +47,10 @@ impl Definition {
         self == Definition::Group || self == Definition::NestedExpression
     }
 
+    pub fn is_conditional(self) -> bool {
+        self == Definition::ApplyIfFalse || self == Definition::ApplyIfTrue
+    }
+
     pub fn associativity(self) -> Associativity {
         match self {
             Definition::AbsoluteValue => Associativity::RightToLeft,
@@ -64,12 +69,11 @@ enum SecondaryDefinition {
     Subexpression,
     Whitespace,
     Conditional,
+    Comma,
 }
 
 fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
     match token_type {
-        // TokenType::Annotation => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-
         // Values
         TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
         TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
@@ -85,14 +89,15 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::StartGroup => (Definition::Group, SecondaryDefinition::StartGrouping),
         TokenType::EndGroup => (Definition::Drop, SecondaryDefinition::EndGrouping),
 
-        // Spacing
+        // Specialty
+        // TokenType::Annotation => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Whitespace => (Definition::Drop, SecondaryDefinition::Whitespace),
         TokenType::Subexpression => (Definition::Subexpression, SecondaryDefinition::Subexpression),
+        TokenType::Comma => (Definition::List, SecondaryDefinition::Comma),
 
         // Operations
         TokenType::EmptyApply => (Definition::EmptyApply, SecondaryDefinition::UnarySuffix),
         TokenType::AbsoluteValue => (Definition::AbsoluteValue, SecondaryDefinition::UnaryPrefix),
-        TokenType::Comma => (Definition::List, SecondaryDefinition::BinaryLeftToRight),
         TokenType::PlusSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Equality => (Definition::Equality, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Period => (Definition::Access, SecondaryDefinition::BinaryLeftToRight),
@@ -188,6 +193,7 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::List, 23);
     map.insert(Definition::ApplyIfTrue, 27);
     map.insert(Definition::ApplyIfFalse, 27);
+    map.insert(Definition::ConditionalBranch, 28);
     map.insert(Definition::Subexpression, 100);
 
     map
@@ -460,6 +466,12 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
             }
             SecondaryDefinition::Conditional => {
                 next_parent = Some(id);
+
+                trace!("Adding grouping with definition {:?}", definition);
+
+                current_group = Some(group_stack.len());
+                group_stack.push(id);
+
                 parse_token(
                     id,
                     definition,
@@ -470,6 +482,68 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     &mut check_for_list,
                     under_group,
                 )?
+            }
+            SecondaryDefinition::Comma => {
+                // standard binary operation with List definition, unless in a conditional grouping
+
+                trace!("Checking current group {:?}", current_group);
+                let in_conditional = match current_group {
+                    None => false,
+                    Some(group) => match group_stack.get(group) {
+                        None => Err(format!("Current group set to non-existant group in stack."))?,
+                        Some(group_index) => match nodes.get(*group_index) {
+                            None => Err(format!("Index assigned to node has no value in node list. {:?}", group))?,
+                            Some(group_node) => {
+                                trace!("Current group node definition is {:?}", group_node.definition);
+                                group_node.definition.is_conditional()
+                            }
+                        },
+                    },
+                };
+
+                next_parent = Some(id);
+
+                if in_conditional {
+                    trace!("In conditional grouping, will create conditional branch node.");
+                    // end grouping and create new node with group as left
+                    let left = group_stack.pop();
+                    current_group = match group_stack.len() == 0 {
+                        true => None,
+                        false => Some(group_stack.len() - 1),
+                    };
+
+                    // redo under group, since we just moddified it
+                    let under_group = match current_group {
+                        None => None,
+                        Some(current) => match group_stack.get(current) {
+                            None => Err(format!("Current group set to non-existant group in stack."))?,
+                            Some(group) => Some(*group),
+                        },
+                    };
+
+                    parse_token(
+                        id,
+                        Definition::ConditionalBranch,
+                        left,
+                        assumed_right,
+                        &mut nodes,
+                        &priority_map,
+                        &mut check_for_list,
+                        under_group,
+                    )?
+                } else {
+                    trace!("Not in conditional grouping, will create list node.");
+                    parse_token(
+                        id,
+                        Definition::List,
+                        last_left,
+                        assumed_right,
+                        &mut nodes,
+                        &priority_map,
+                        &mut check_for_list,
+                        under_group,
+                    )?
+                }
             }
             SecondaryDefinition::Whitespace => setup_space_list_check(last_left, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?,
             SecondaryDefinition::Subexpression => {
@@ -650,6 +724,15 @@ mod tests {
 
         for def in value_like {
             assert!(def.is_group_like());
+        }
+    }
+
+    #[test]
+    fn conditional_definitions() {
+        let value_like = [Definition::ApplyIfTrue, Definition::ApplyIfFalse];
+
+        for def in value_like {
+            assert!(def.is_conditional());
         }
     }
 
@@ -1724,6 +1807,37 @@ mod conditionals {
                 (0, Definition::Number, Some(1), None, None),
                 (1, Definition::ApplyIfFalse, None, Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn conditional_chain_of_two() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        println!("{:#?}", result);
+
+        assert_result(
+            &result,
+            3,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::ApplyIfTrue, Some(3), Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+                (3, Definition::ConditionalBranch, None, Some(1), Some(5)),
+                (4, Definition::Number, Some(5), None, None),
+                (5, Definition::ApplyIfTrue, Some(3), Some(4), Some(6)),
+                (6, Definition::Number, Some(5), None, None),
             ],
         );
     }
