@@ -563,34 +563,65 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
             TokenType::Subexpression => {
                 trace!("Parsing Subexpression token");
 
-                // only one in a row
-                // check if last parser node is a subexpression
-                // drop this token if so
-                let drop = match last_left {
-                    None => false, // not a subexpression node
-                    Some(left) => match nodes.get(left) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
-                        Some(left_node) => left_node.definition == Definition::Subexpression,
+                let in_group = match current_group {
+                    None => false,
+                    Some(group) => match nodes.get(group) {
+                        None => Err(format!("Index assigned to node has no value in node list. {:?}", group))?,
+                        Some(group_node) => group_node.definition == Definition::Group,
                     },
                 };
 
-                if drop {
-                    trace!("Previous parser node was a subexpression, dropping this one.");
-                    // retain last left instead of below code setting it to token that isn't being created
+                if in_group {
+                    trace!("Inside of a group, treating as white space");
+                    // Subexpressions are treated like whitespace while inside of a group
+
+                    match last_left {
+                        None => (), // ignore, spaces at begining of input can't create a list
+                        Some(left) => match nodes.get(left) {
+                            None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                            Some(left_node) => {
+                                if left_node.definition.is_value_like() {
+                                    trace!(
+                                        "Value-like definition {:?} found. Will check next token for value-like to make list",
+                                        left_node.definition
+                                    );
+                                    check_for_list = true;
+                                }
+                            }
+                        },
+                    }
                     next_last_left = last_left;
                     (Definition::Drop, None, None, None)
                 } else {
-                    next_parent = Some(id);
-                    parse_token(
-                        id,
-                        Definition::Subexpression,
-                        last_left,
-                        assumed_right,
-                        &mut nodes,
-                        &priority_map,
-                        &mut check_for_list,
-                        under_group,
-                    )?
+                    // only one in a row
+                    // check if last parser node is a subexpression
+                    // drop this token if so
+                    let drop = match last_left {
+                        None => false, // not a subexpression node
+                        Some(left) => match nodes.get(left) {
+                            None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                            Some(left_node) => left_node.definition == Definition::Subexpression,
+                        },
+                    };
+
+                    if drop {
+                        trace!("Previous parser node was a subexpression, dropping this one.");
+                        // retain last left instead of below code setting it to token that isn't being created
+                        next_last_left = last_left;
+                        (Definition::Drop, None, None, None)
+                    } else {
+                        next_parent = Some(id);
+                        parse_token(
+                            id,
+                            Definition::Subexpression,
+                            last_left,
+                            assumed_right,
+                            &mut nodes,
+                            &priority_map,
+                            &mut check_for_list,
+                            under_group,
+                        )?
+                    }
                 }
             }
             t => Err(format!("Definition from token type {:?} not defined.", t))?,
@@ -1667,11 +1698,89 @@ mod groups {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        assert_group_nested_results(
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
             0,
-            tokens,
             &[
                 (0, Definition::Group, None, None, Some(2)),
+                (1, Definition::Number, Some(2), None, None),
+                (2, Definition::List, Some(0), Some(1), Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn multiple_subexpression_in_group_makes_list() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Group, None, None, Some(2)),
+                (1, Definition::Number, Some(2), None, None),
+                (2, Definition::List, Some(0), Some(1), Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn subexpression_in_nested_express_is_subexpression() {
+        let tokens = vec![
+            LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::NestedExpression, None, None, Some(2)),
+                (1, Definition::Number, Some(2), None, None),
+                (2, Definition::Subexpression, Some(0), Some(1), Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn multiple_subexpression_in_nested_express_is_subexpression() {
+        let tokens = vec![
+            LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::NestedExpression, None, None, Some(2)),
                 (1, Definition::Number, Some(2), None, None),
                 (2, Definition::Subexpression, Some(0), Some(1), Some(3)),
                 (3, Definition::Number, Some(2), None, None),
