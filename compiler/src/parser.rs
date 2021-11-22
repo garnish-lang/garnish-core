@@ -919,7 +919,7 @@ mod tests {
     fn apply_to() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("->".to_string(), TokenType::ApplyTo, 0, 0),
+            LexerToken::new("~>".to_string(), TokenType::ApplyTo, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
