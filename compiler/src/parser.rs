@@ -22,6 +22,9 @@ pub enum Definition {
     Subexpression,
     Group,
     NestedExpression,
+    Apply,
+    ApplyTo,
+    Reapply,
     ApplyIfTrue,
     ApplyIfFalse,
     ConditionalBranch,
@@ -93,9 +96,9 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::Pair => (Definition::Pair, SecondaryDefinition::BinaryLeftToRight),
         // TokenType::MultiplicationSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
         // TokenType::ExponentialSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        // TokenType::Apply => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        // TokenType::ApplyTo => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        // TokenType::Reapply => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Apply => (Definition::Apply, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::ApplyTo => (Definition::ApplyTo, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Reapply => (Definition::Reapply, SecondaryDefinition::UnaryPrefix),
 
         // Conditionals
         TokenType::ApplyIfFalse => (Definition::ApplyIfFalse, SecondaryDefinition::Conditional),
@@ -180,6 +183,9 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::Equality, 14);
     map.insert(Definition::Pair, 21);
     map.insert(Definition::List, 23);
+    map.insert(Definition::Apply, 25);
+    map.insert(Definition::ApplyTo, 25);
+    map.insert(Definition::Reapply, 26);
     map.insert(Definition::ApplyIfTrue, 27);
     map.insert(Definition::ApplyIfFalse, 27);
     map.insert(Definition::ConditionalBranch, 28);
@@ -884,6 +890,67 @@ mod tests {
                 (0, Definition::Number, Some(1), None, None),
                 (1, Definition::Equality, None, Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn apply() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("~".to_string(), TokenType::Apply, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Apply, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn apply_to() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("->".to_string(), TokenType::ApplyTo, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::ApplyTo, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn reapply() {
+        let tokens = vec![
+            LexerToken::new("^~".to_string(), TokenType::Reapply, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Reapply, None, None, Some(1)),
+                (1, Definition::Number, Some(0), None, None),
             ],
         );
     }
