@@ -27,12 +27,6 @@ pub enum Definition {
     ConditionalBranch,
 }
 
-#[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
-pub enum Associativity {
-    LeftToRight,
-    RightToLeft,
-}
-
 impl Definition {
     pub fn is_value_like(self) -> bool {
         self == Definition::Number
@@ -49,13 +43,6 @@ impl Definition {
 
     pub fn is_conditional(self) -> bool {
         self == Definition::ApplyIfFalse || self == Definition::ApplyIfTrue
-    }
-
-    pub fn associativity(self) -> Associativity {
-        match self {
-            Definition::AbsoluteValue => Associativity::RightToLeft,
-            _ => Associativity::LeftToRight,
-        }
     }
 }
 
