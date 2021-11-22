@@ -473,19 +473,33 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
                 trace!("Adding grouping with definition {:?}", definition);
 
-                current_group = Some(group_stack.len());
-                group_stack.push(id);
+                // if previous node was a conditional branch
+                // we can create this conditional without a left
+                let last_was_branch = match last_left {
+                    None => false,
+                    Some(left) => match nodes.get(left) {
+                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                        Some(left_node) => left_node.definition == Definition::ConditionalBranch,
+                    },
+                };
 
-                parse_token(
-                    id,
-                    definition,
-                    last_left,
-                    assumed_right,
-                    &mut nodes,
-                    &priority_map,
-                    &mut check_for_list,
-                    under_group,
-                )?
+                if last_was_branch {
+                    (definition, last_left, None, assumed_right)
+                } else {
+                    current_group = Some(group_stack.len());
+                    group_stack.push(id);
+
+                    parse_token(
+                        id,
+                        definition,
+                        last_left,
+                        assumed_right,
+                        &mut nodes,
+                        &priority_map,
+                        &mut check_for_list,
+                        under_group,
+                    )?
+                }
             }
             SecondaryDefinition::Comma => {
                 // standard binary operation with List definition, unless in a conditional grouping
@@ -1897,8 +1911,6 @@ mod conditionals {
 
         let result = parse(tokens).unwrap();
 
-        println!("{:#?}", result);
-
         assert_result(
             &result,
             3,
@@ -1932,8 +1944,6 @@ mod conditionals {
 
         let result = parse(tokens).unwrap();
 
-        println!("{:#?}", result);
-
         assert_result(
             &result,
             7,
@@ -1951,6 +1961,72 @@ mod conditionals {
                 (8, Definition::Number, Some(9), None, None),
                 (9, Definition::ApplyIfTrue, Some(7), Some(8), Some(10)),
                 (10, Definition::Number, Some(9), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn conditional_chain_with_both_conditional_definitions() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("!>".to_string(), TokenType::ApplyIfFalse, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("!>".to_string(), TokenType::ApplyIfFalse, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            7,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::ApplyIfFalse, Some(3), Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+                // second
+                (3, Definition::ConditionalBranch, Some(7), Some(1), Some(5)),
+                (4, Definition::Number, Some(5), None, None),
+                (5, Definition::ApplyIfTrue, Some(3), Some(4), Some(6)),
+                (6, Definition::Number, Some(5), None, None),
+                // third
+                (7, Definition::ConditionalBranch, None, Some(3), Some(9)),
+                (8, Definition::Number, Some(9), None, None),
+                (9, Definition::ApplyIfFalse, Some(7), Some(8), Some(10)),
+                (10, Definition::Number, Some(9), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn conditional_chain_last_conditional_having_no_condition() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("!>".to_string(), TokenType::ApplyIfFalse, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            3,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::ApplyIfTrue, Some(3), Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+                (3, Definition::ConditionalBranch, None, Some(1), Some(4)),
+                (4, Definition::ApplyIfFalse, Some(3), None, Some(5)),
+                (5, Definition::Number, Some(4), None, None),
             ],
         );
     }
