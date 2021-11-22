@@ -7,3 +7,4 @@ edition = "2018"
 
 [dependencies]
 log = "0.4"
+garnish_lang_runtime = { path = "../runtime"}

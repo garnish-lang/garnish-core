@@ -82,6 +82,10 @@ impl LexerToken {
         }
     }
 
+    pub fn get_text(&self) -> &String {
+        &self.text
+    }
+
     pub fn get_token_type(&self) -> TokenType {
         self.token_type
     }
