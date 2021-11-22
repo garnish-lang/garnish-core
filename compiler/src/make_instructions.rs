@@ -110,190 +110,112 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
 }
 
 #[cfg(test)]
+mod test_utils {
+    use crate::*;
+    use garnish_lang_runtime::*;
+    use std::iter;
+
+    pub fn assert_instruction_data(
+        root: usize,
+        nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
+        instructions: Vec<(Instruction, Option<usize>)>,
+        data: Vec<ExpressionData>,
+    ) {
+        let nodes: Vec<ParseNode> = nodes
+            .iter()
+            .map(|v| ParseNode::new(v.0, v.1, v.2, v.3, LexerToken::new(v.4.to_string(), v.5, 0, 0)))
+            .collect();
+
+        let expected_instructions: Vec<InstructionData> = instructions.iter().map(|i| InstructionData::new(i.0, i.1)).collect();
+
+        let expected_data: Vec<ExpressionData> = iter::once(ExpressionData::unit()).chain(data.into_iter()).collect();
+
+        let result = instructions_from_ast(root, nodes).unwrap();
+
+        assert_eq!(result.get_instructions().clone(), expected_instructions);
+        assert_eq!(result.get_data(), &expected_data)
+    }
+}
+
+#[cfg(test)]
 mod values {
+    use std::vec;
+
+    use super::test_utils::*;
     use crate::*;
     use garnish_lang_runtime::*;
 
     #[test]
     fn put_number() {
-        let nodes = vec![ParseNode::new(
-            Definition::Number,
-            None,
-            None,
-            None,
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-        )];
-
-        let result = instructions_from_ast(0, nodes).unwrap();
-
-        let instructions = result.get_instructions();
-        let data = result.get_data();
-
-        assert_eq!(
-            instructions.clone(),
-            vec![
-                InstructionData::new(Instruction::Put, Some(1)),
-                InstructionData::new(Instruction::EndExpression, None)
-            ]
+        assert_instruction_data(
+            0,
+            vec![(Definition::Number, None, None, None, "5", TokenType::Number)],
+            vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
+            vec![ExpressionData::integer(5)],
         );
-
-        assert_eq!(data, &[ExpressionData::unit(), ExpressionData::integer(5)])
     }
 
     #[test]
     fn resolve_identifier() {
-        let nodes = vec![ParseNode::new(
-            Definition::Identifier,
-            None,
-            None,
-            None,
-            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
-        )];
-
-        let result = instructions_from_ast(0, nodes).unwrap();
-
-        let instructions = result.get_instructions();
-        let data = result.get_data();
-
-        assert_eq!(
-            instructions.clone(),
+        assert_instruction_data(
+            0,
+            vec![(Definition::Identifier, None, None, None, "value", TokenType::Identifier)],
             vec![
-                InstructionData::new(Instruction::Put, Some(1)),
-                InstructionData::new(Instruction::Resolve, None),
-                InstructionData::new(Instruction::EndExpression, None)
-            ]
+                (Instruction::Put, Some(1)),
+                (Instruction::Resolve, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::symbol_from_string(&"value".to_string())],
         );
-
-        assert_eq!(data, &[ExpressionData::unit(), ExpressionData::symbol_from_string(&"value".to_string())])
     }
 
     #[test]
     fn put_unit() {
-        let nodes = vec![ParseNode::new(
-            Definition::Unit,
-            None,
-            None,
-            None,
-            LexerToken::new("()".to_string(), TokenType::UnitLiteral, 0, 0),
-        )];
-
-        let result = instructions_from_ast(0, nodes).unwrap();
-
-        let instructions = result.get_instructions();
-        let data = result.get_data();
-
-        assert_eq!(
-            instructions.clone(),
-            vec![
-                InstructionData::new(Instruction::Put, Some(0)),
-                InstructionData::new(Instruction::EndExpression, None)
-            ]
+        assert_instruction_data(
+            0,
+            vec![(Definition::Unit, None, None, None, "()", TokenType::UnitLiteral)],
+            vec![(Instruction::Put, Some(0)), (Instruction::EndExpression, None)],
+            vec![],
         );
-
-        assert_eq!(data, &[ExpressionData::unit()])
     }
 
     #[test]
     fn put_symbol() {
-        let nodes = vec![ParseNode::new(
-            Definition::Symbol,
-            None,
-            None,
-            None,
-            LexerToken::new(":symbol".to_string(), TokenType::Symbol, 0, 0),
-        )];
-
-        let result = instructions_from_ast(0, nodes).unwrap();
-
-        let instructions = result.get_instructions();
-        let data = result.get_data();
-
-        assert_eq!(
-            instructions.clone(),
-            vec![
-                InstructionData::new(Instruction::Put, Some(1)),
-                InstructionData::new(Instruction::EndExpression, None)
-            ]
+        assert_instruction_data(
+            0,
+            vec![(Definition::Symbol, None, None, None, ":symbol", TokenType::Symbol)],
+            vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
+            vec![ExpressionData::symbol_from_string(&"symbol".to_string())],
         );
-
-        assert_eq!(data, &[ExpressionData::unit(), ExpressionData::symbol_from_string(&"symbol".to_string())])
     }
 
     #[test]
     fn put_empty_symbol() {
-        let nodes = vec![ParseNode::new(
-            Definition::Symbol,
-            None,
-            None,
-            None,
-            LexerToken::new(":".to_string(), TokenType::Symbol, 0, 0),
-        )];
-
-        let result = instructions_from_ast(0, nodes).unwrap();
-
-        let instructions = result.get_instructions();
-        let data = result.get_data();
-
-        assert_eq!(
-            instructions.clone(),
-            vec![
-                InstructionData::new(Instruction::Put, Some(1)),
-                InstructionData::new(Instruction::EndExpression, None)
-            ]
+        assert_instruction_data(
+            0,
+            vec![(Definition::Symbol, None, None, None, ":", TokenType::Symbol)],
+            vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
+            vec![ExpressionData::symbol_from_string(&"".to_string())],
         );
-
-        assert_eq!(data, &[ExpressionData::unit(), ExpressionData::symbol_from_string(&"".to_string())])
     }
 
     #[test]
     fn put_input() {
-        let nodes = vec![ParseNode::new(
-            Definition::Input,
-            None,
-            None,
-            None,
-            LexerToken::new("$".to_string(), TokenType::Input, 0, 0),
-        )];
-
-        let result = instructions_from_ast(0, nodes).unwrap();
-
-        let instructions = result.get_instructions();
-        let data = result.get_data();
-
-        assert_eq!(
-            instructions.clone(),
-            vec![
-                InstructionData::new(Instruction::PutInput, None),
-                InstructionData::new(Instruction::EndExpression, None)
-            ]
+        assert_instruction_data(
+            0,
+            vec![(Definition::Input, None, None, None, "$", TokenType::Input)],
+            vec![(Instruction::PutInput, None), (Instruction::EndExpression, None)],
+            vec![],
         );
-
-        assert_eq!(data, &[ExpressionData::unit()])
     }
 
     #[test]
     fn put_result() {
-        let nodes = vec![ParseNode::new(
-            Definition::Result,
-            None,
-            None,
-            None,
-            LexerToken::new("$?".to_string(), TokenType::Result, 0, 0),
-        )];
-
-        let result = instructions_from_ast(0, nodes).unwrap();
-
-        let instructions = result.get_instructions();
-        let data = result.get_data();
-
-        assert_eq!(
-            instructions.clone(),
-            vec![
-                InstructionData::new(Instruction::PutResult, None),
-                InstructionData::new(Instruction::EndExpression, None)
-            ]
+        assert_instruction_data(
+            0,
+            vec![(Definition::Result, None, None, None, "$?", TokenType::Result)],
+            vec![(Instruction::PutResult, None), (Instruction::EndExpression, None)],
+            vec![],
         );
-
-        assert_eq!(data, &[ExpressionData::unit()])
     }
 }
