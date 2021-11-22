@@ -1,5 +1,5 @@
 use log::trace;
-use std::{collections::HashMap, hash::Hash, os, vec};
+use std::{collections::HashMap, hash::Hash, vec};
 
 use crate::lexer::*;
 
@@ -460,6 +460,28 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                 (definition, parent, None, assumed_right)
             }
             SecondaryDefinition::EndGrouping => {
+                // if current grouping is a conditional group
+                // end that group and our normal grouping
+                let in_conditional = match current_group {
+                    None => false,
+                    Some(group) => match group_stack.get(group) {
+                        None => Err(format!("Current group set to non-existant group in stack."))?,
+                        Some(group_index) => match nodes.get(*group_index) {
+                            None => Err(format!("Index assigned to node has no value in node list. {:?}", group))?,
+                            Some(group_node) => {
+                                trace!("Current group node definition is {:?}", group_node.definition);
+                                group_node.definition.is_conditional()
+                            }
+                        },
+                    },
+                };
+
+                if in_conditional {
+                    // conditional node should have already been parented to contianing group
+                    // current group will be corrected below
+                    group_stack.pop();
+                }
+
                 next_last_left = group_stack.pop();
                 current_group = match group_stack.len() == 0 {
                     true => None,
@@ -564,15 +586,15 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                 }
             }
             SecondaryDefinition::Subexpression => {
-                let in_group = match current_group {
-                    None => false,
+                let (in_group, in_conditional) = match current_group {
+                    None => (false, false),
                     Some(group) => match group_stack.get(group) {
                         None => Err(format!("Current group set to non-existant group in stack."))?,
                         Some(group_index) => match nodes.get(*group_index) {
                             None => Err(format!("Index assigned to node has no value in node list. {:?}", group))?,
                             Some(group_node) => {
                                 trace!("Current group node definition is {:?}", group_node.definition);
-                                group_node.definition == Definition::Group
+                                (group_node.definition == Definition::Group, group_node.definition.is_conditional())
                             }
                         },
                     },
@@ -592,6 +614,15 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                             Some(left_node) => left_node.definition == Definition::Subexpression,
                         },
                     };
+
+                    // if in a conditional group, drop it now so it doesn't continue to next subexpression
+                    if in_conditional {
+                        // NEEDS A TEST
+
+                        // conditional node should have already been parented to contianing group
+                        // current group will be corrected below
+                        group_stack.pop();
+                    }
 
                     if drop {
                         trace!("Previous parser node was a subexpression, dropping this one.");
@@ -2027,6 +2058,38 @@ mod conditionals {
                 (3, Definition::ConditionalBranch, None, Some(1), Some(4)),
                 (4, Definition::ApplyIfFalse, Some(3), None, Some(5)),
                 (5, Definition::Number, Some(4), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn conditional_ends_with_group() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            6,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Addition, Some(6), Some(0), Some(2)),
+                (2, Definition::Group, Some(1), None, Some(4)),
+                (3, Definition::Number, Some(4), None, None),
+                (4, Definition::ApplyIfTrue, Some(2), Some(3), Some(5)),
+                (5, Definition::Number, Some(4), None, None),
+                (6, Definition::Addition, None, Some(1), Some(7)),
+                (7, Definition::Number, Some(6), None, None),
             ],
         );
     }
