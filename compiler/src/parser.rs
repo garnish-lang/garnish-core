@@ -1913,4 +1913,45 @@ mod conditionals {
             ],
         );
     }
+
+    #[test]
+    fn conditional_chain_of_three() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        println!("{:#?}", result);
+
+        assert_result(
+            &result,
+            7,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::ApplyIfTrue, Some(3), Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+                // second
+                (3, Definition::ConditionalBranch, Some(7), Some(1), Some(5)),
+                (4, Definition::Number, Some(5), None, None),
+                (5, Definition::ApplyIfTrue, Some(3), Some(4), Some(6)),
+                (6, Definition::Number, Some(5), None, None),
+                // third
+                (7, Definition::ConditionalBranch, None, Some(3), Some(9)),
+                (8, Definition::Number, Some(9), None, None),
+                (9, Definition::ApplyIfTrue, Some(7), Some(8), Some(10)),
+                (10, Definition::Number, Some(9), None, None),
+            ],
+        );
+    }
 }
