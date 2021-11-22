@@ -47,6 +47,7 @@ impl Definition {
 }
 
 enum SecondaryDefinition {
+    Annotation,
     Value,
     BinaryLeftToRight,
     UnaryPrefix,
@@ -77,7 +78,8 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::EndGroup => (Definition::Drop, SecondaryDefinition::EndGrouping),
 
         // Specialty
-        // TokenType::Annotation => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Annotation => (Definition::Drop, SecondaryDefinition::Annotation),
+        TokenType::LineAnnotation => (Definition::Drop, SecondaryDefinition::Annotation),
         TokenType::Whitespace => (Definition::Drop, SecondaryDefinition::Whitespace),
         TokenType::Subexpression => (Definition::Subexpression, SecondaryDefinition::Subexpression),
         TokenType::Comma => (Definition::List, SecondaryDefinition::Comma),
@@ -394,6 +396,10 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
 
         let (definition, parent, left, right) = match secondary_definition {
             SecondaryDefinition::Whitespace => setup_space_list_check(last_left, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?,
+            SecondaryDefinition::Annotation => {
+                next_last_left = last_left;
+                (definition, None, None, None)
+            }
             SecondaryDefinition::Value => parse_value_like(
                 id,
                 definition,
@@ -650,7 +656,10 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                 next_last_left = None;
                 Some(i)
             }
-            None => Some(id),
+            None => match nodes.len() == 0 {
+                true => None,
+                false => Some(id),
+            },
         };
 
         trace!("Last left set to {:?}", last_left);
@@ -2079,5 +2088,38 @@ mod conditionals {
                 (7, Definition::Number, Some(6), None, None),
             ],
         );
+    }
+}
+
+#[cfg(test)]
+mod annotations {
+    use super::tests::*;
+    use crate::lexer::*;
+    use crate::*;
+
+    #[test]
+    fn annotations_are_dropped() {
+        let tokens = vec![
+            LexerToken::new("@value".to_string(), TokenType::Annotation, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
+    }
+
+    #[test]
+    fn line_annotations_are_dropped() {
+        let tokens = vec![
+            LexerToken::new("@@ Some line annotation".to_string(), TokenType::Annotation, 0, 0),
+            LexerToken::new("\n".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
     }
 }
