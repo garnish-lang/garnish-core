@@ -675,6 +675,7 @@ impl GarnishLangRuntime {
                 Instruction::PushInput => self.push_input()?,
                 Instruction::PushResult => self.push_result()?,
                 Instruction::EndExpression => self.end_expression()?,
+                Instruction::Return => todo!(),
                 Instruction::EqualityComparison => self.equality_comparison()?,
                 Instruction::ExecuteExpression => match instruction_data.data {
                     None => Err(error(format!("No address given with execute expression instruction.")))?,

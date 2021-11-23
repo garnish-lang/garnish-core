@@ -76,8 +76,8 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         Definition::List => ((true, node.get_left()), (true, node.get_right())),
         Definition::Group => ((true, node.get_right()), (false, None)),
         Definition::NestedExpression => ((false, None), (false, None)),
-        Definition::ApplyIfTrue => todo!(),
-        Definition::ApplyIfFalse => todo!(),
+        Definition::ApplyIfTrue => ((true, node.get_left()), (false, None)),
+        Definition::ApplyIfFalse => ((true, node.get_left()), (false, None)),
         Definition::ConditionalBranch => todo!(),
         Definition::Drop => todo!(),
     }
@@ -162,8 +162,12 @@ fn resolve_node(node: &ParseNode, instructions: &mut Vec<InstructionData>, data:
         Definition::Reapply => {
             instructions.push(InstructionData::new(Instruction::Reapply, None));
         }
-        Definition::ApplyIfTrue => todo!(),
-        Definition::ApplyIfFalse => todo!(),
+        Definition::ApplyIfTrue => {
+            instructions.push(InstructionData::new(Instruction::JumpIfTrue, Some(current_jump_index)));
+        },
+        Definition::ApplyIfFalse => {
+            instructions.push(InstructionData::new(Instruction::JumpIfFalse, Some(current_jump_index)));
+        },
         Definition::ConditionalBranch => todo!(),
         // no runtime meaning, parser only utility
         Definition::Drop => (),
@@ -178,7 +182,7 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
     let mut list_counts: Vec<usize> = vec![];
     // let mut making_list =
 
-    let mut root_stack = vec![root];
+    let mut root_stack = vec![(root, Instruction::EndExpression)];
 
     // since we will be popping and pushing values from root_stack
     // need to keep separate count of total so expression values put in data are accurate
@@ -188,7 +192,7 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
     let max_roots = 100;
     let mut root_iter_count = 0;
 
-    while let Some(root_index) = root_stack.pop() {
+    while let Some((root_index, return_instruction)) = root_stack.pop() {
         trace!("Makeing instructions for tree starting at index {:?}", root_index);
 
         let mut stack = vec![ResolveNodeInfo::new(Some(root_index), Definition::Drop)];
@@ -271,12 +275,18 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
     
                                 // after resolving, if a nested expression
                                 // and add nested expressions child to deferred list
-                                if node.get_definition() == Definition::NestedExpression {
+                                let mut return_instruction = Instruction::EndExpression;
+                                let we_are_conditional = node.get_definition() == Definition::ApplyIfFalse || node.get_definition() == Definition::ApplyIfTrue;
+                                if we_are_conditional {
+                                    return_instruction = Instruction::Return;
+                                }
+
+                                if node.get_definition() == Definition::NestedExpression || we_are_conditional {
                                     match node.get_right() {
                                         None => Err(format!("No child value on {:?} node at {:?}", node.get_definition(), node_index))?,
                                         Some(node_index) => {
                                             trace!("Adding index {:?} to root stack", node_index);
-                                            root_stack.push(node_index)
+                                            root_stack.push((node_index, return_instruction))
                                         }
                                     }
 
@@ -321,7 +331,7 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
             }
         }
     
-        instruction_set.instructions.push(InstructionData::new(Instruction::EndExpression, None));
+        instruction_set.instructions.push(InstructionData::new(return_instruction, None));
 
         trace!("Finished instructions for tree starting at index {:?}", root_index);
 
@@ -893,6 +903,61 @@ mod nested_expressions {
                 ExpressionData::integer(15),
             ],
             vec![0, 2, 6, 10]
+        );
+    }
+}
+
+#[cfg(test)]
+mod conditionals {
+    use super::test_utils::*;
+    use crate::*;
+    use garnish_lang_runtime::*;
+
+    #[test]
+    fn apply_if_true() {
+        assert_instruction_data_jumps(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::ApplyIfTrue, None, Some(0), Some(2), "?>", TokenType::ApplyIfTrue),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number)
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::JumpIfTrue, Some(1)),
+                (Instruction::EndExpression, None), 
+                (Instruction::Put, Some(2)),
+                (Instruction::Return, None), 
+            ],
+            vec![
+                ExpressionData::integer(5),
+                ExpressionData::integer(10),
+            ],
+            vec![0, 3]
+        );
+    }
+
+    #[test]
+    fn apply_if_false() {
+        assert_instruction_data_jumps(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::ApplyIfFalse, None, Some(0), Some(2), "!>", TokenType::ApplyIfFalse),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number)
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::JumpIfFalse, Some(1)),
+                (Instruction::EndExpression, None), 
+                (Instruction::Put, Some(2)),
+                (Instruction::Return, None), 
+            ],
+            vec![
+                ExpressionData::integer(5),
+                ExpressionData::integer(10),
+            ],
+            vec![0, 3]
         );
     }
 }

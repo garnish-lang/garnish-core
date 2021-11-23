@@ -20,6 +20,7 @@ pub enum Instruction {
     Reapply,
     Access,
     Resolve,
+    Return,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
