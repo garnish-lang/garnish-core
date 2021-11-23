@@ -81,17 +81,62 @@ fn add_instructions_for_node(
                     instructions.push(InstructionData::new(Instruction::Put, Some(0)));
                     instructions.push(InstructionData::new(Instruction::Apply, None));
                 }
-                Definition::Addition => todo!(),
-                Definition::Equality => todo!(),
-                Definition::Pair => todo!(),
-                Definition::Access => todo!(),
-                Definition::List => todo!(),
-                Definition::Subexpression => todo!(),
+                Definition::Addition => {
+                    add_instructions_for_node(node.get_left(), nodes, instructions, data)?;
+                    add_instructions_for_node(node.get_right(), nodes, instructions, data)?;
+
+                    instructions.push(InstructionData::new(Instruction::PerformAddition, None));
+                }
+                Definition::Equality => {
+                    add_instructions_for_node(node.get_left(), nodes, instructions, data)?;
+                    add_instructions_for_node(node.get_right(), nodes, instructions, data)?;
+
+                    instructions.push(InstructionData::new(Instruction::EqualityComparison, None));
+                }
+                Definition::Pair => {
+                    add_instructions_for_node(node.get_left(), nodes, instructions, data)?;
+                    add_instructions_for_node(node.get_right(), nodes, instructions, data)?;
+
+                    instructions.push(InstructionData::new(Instruction::MakePair, None));
+                }
+                Definition::Access => {
+                    add_instructions_for_node(node.get_left(), nodes, instructions, data)?;
+                    add_instructions_for_node(node.get_right(), nodes, instructions, data)?;
+
+                    instructions.push(InstructionData::new(Instruction::Access, None));
+                }
+                Definition::List => {
+                    add_instructions_for_node(node.get_left(), nodes, instructions, data)?;
+                    add_instructions_for_node(node.get_right(), nodes, instructions, data)?;
+
+                    instructions.push(InstructionData::new(Instruction::MakeList, None));
+                }
+                Definition::Subexpression => {
+                    add_instructions_for_node(node.get_left(), nodes, instructions, data)?;
+
+                    instructions.push(InstructionData::new(Instruction::PushResult, None));
+
+                    add_instructions_for_node(node.get_right(), nodes, instructions, data)?;
+                }
                 Definition::Group => todo!(),
                 Definition::NestedExpression => todo!(),
-                Definition::Apply => todo!(),
-                Definition::ApplyTo => todo!(),
-                Definition::Reapply => todo!(),
+                Definition::Apply => {
+                    add_instructions_for_node(node.get_left(), nodes, instructions, data)?;
+                    add_instructions_for_node(node.get_right(), nodes, instructions, data)?;
+
+                    instructions.push(InstructionData::new(Instruction::Apply, None));
+                }
+                Definition::ApplyTo => {
+                    add_instructions_for_node(node.get_right(), nodes, instructions, data)?;
+                    add_instructions_for_node(node.get_left(), nodes, instructions, data)?;
+
+                    instructions.push(InstructionData::new(Instruction::Apply, None));
+                }
+                Definition::Reapply => {
+                    add_instructions_for_node(node.get_right(), nodes, instructions, data)?;
+
+                    instructions.push(InstructionData::new(Instruction::Reapply, None));
+                }
                 Definition::ApplyIfTrue => todo!(),
                 Definition::ApplyIfFalse => todo!(),
                 Definition::ConditionalBranch => todo!(),
@@ -275,5 +320,183 @@ mod operations {
         );
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn addition() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Addition, None, Some(0), Some(2), "+", TokenType::EmptyApply),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
+                (Instruction::PerformAddition, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+        );
+    }
+
+    #[test]
+    fn equality() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Equality, None, Some(0), Some(2), "==", TokenType::Equality),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
+                (Instruction::EqualityComparison, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+        );
+    }
+
+    #[test]
+    fn pair() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Pair, None, Some(0), Some(2), "=", TokenType::Pair),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
+                (Instruction::MakePair, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+        );
+    }
+
+    #[test]
+    fn access() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Access, None, Some(0), Some(2), ".", TokenType::Period),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
+                (Instruction::Access, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+        );
+    }
+
+    #[test]
+    fn subexpression() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Subexpression, None, Some(0), Some(2), "\n\n", TokenType::Subexpression),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::PushResult, None),
+                (Instruction::Put, Some(2)),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+        );
+    }
+
+    #[test]
+    fn apply() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Apply, None, Some(0), Some(2), "~", TokenType::Apply),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
+                (Instruction::Apply, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+        );
+    }
+
+    #[test]
+    fn apply_to() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::ApplyTo, None, Some(0), Some(2), "~>", TokenType::ApplyTo),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
+                (Instruction::Apply, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::integer(10), ExpressionData::integer(5)],
+        );
+    }
+
+    #[test]
+    fn reapply() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::Reapply, None, None, Some(1), "^~", TokenType::Reapply),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Reapply, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::integer(10)],
+        );
+    }
+}
+
+#[cfg(test)]
+mod lists {
+    use std::vec;
+
+    use super::test_utils::*;
+    use crate::*;
+    use garnish_lang_runtime::*;
+
+    #[test]
+    fn list() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::List, None, Some(0), Some(2), ",", TokenType::Comma),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
+                (Instruction::MakeList, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+        );
     }
 }
