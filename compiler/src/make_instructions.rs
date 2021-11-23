@@ -69,7 +69,7 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         }
         Definition::ApplyTo => ((true, node.get_right()), (true, node.get_left())),
         Definition::List => ((true, node.get_left()), (true, node.get_right())),
-        Definition::Group => todo!(),
+        Definition::Group => ((true, node.get_right()), (false, None)),
         Definition::NestedExpression => todo!(),
         Definition::ApplyIfTrue => todo!(),
         Definition::ApplyIfFalse => todo!(),
@@ -142,7 +142,7 @@ fn resolve_node(node: &ParseNode, instructions: &mut Vec<InstructionData>, data:
         Definition::Subexpression => {
             instructions.push(InstructionData::new(Instruction::PushResult, None));
         }
-        Definition::Group => todo!(),
+        Definition::Group => (), // no additional instructions for groups
         Definition::NestedExpression => todo!(),
         Definition::Apply => {
             instructions.push(InstructionData::new(Instruction::Apply, None));
@@ -676,6 +676,38 @@ mod lists {
                 ExpressionData::integer(10),
                 ExpressionData::integer(15),
                 ExpressionData::integer(20),
+            ],
+        );
+    }
+}
+
+#[cfg(test)]
+mod groups {
+    use std::vec;
+
+    use super::test_utils::*;
+    use crate::*;
+    use garnish_lang_runtime::*;
+
+    #[test]
+    fn single_operation() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::Group, None, None, Some(2), "(", TokenType::StartGroup),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Addition, Some(0), Some(1), Some(3), "+", TokenType::PlusSign),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
+                (Instruction::PerformAddition, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![
+                ExpressionData::integer(5),
+                ExpressionData::integer(10),
             ],
         );
     }
