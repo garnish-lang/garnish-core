@@ -10,6 +10,7 @@ use crate::{parser::*};
 pub struct InstructionSet {
     instructions: Vec<InstructionData>,
     data: Vec<ExpressionData>,
+    jump_table: Vec<usize>
 }
 
 impl InstructionSet {
@@ -17,7 +18,7 @@ impl InstructionSet {
         let mut data = vec![];
         data.push(ExpressionData::unit());
 
-        InstructionSet { instructions: vec![], data }
+        InstructionSet { instructions: vec![], data, jump_table: vec![] }
     }
 
     pub fn get_instructions(&self) -> &Vec<InstructionData> {
@@ -26,6 +27,10 @@ impl InstructionSet {
 
     pub fn get_data(&self) -> &Vec<ExpressionData> {
         &self.data
+    }
+
+    pub fn get_jump_table(&self) -> &Vec<usize> {
+        &self.jump_table
     }
 }
 
@@ -70,7 +75,7 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         Definition::ApplyTo => ((true, node.get_right()), (true, node.get_left())),
         Definition::List => ((true, node.get_left()), (true, node.get_right())),
         Definition::Group => ((true, node.get_right()), (false, None)),
-        Definition::NestedExpression => todo!(),
+        Definition::NestedExpression => ((false, None), (false, None)),
         Definition::ApplyIfTrue => todo!(),
         Definition::ApplyIfFalse => todo!(),
         Definition::ConditionalBranch => todo!(),
@@ -78,7 +83,7 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
     }
 }
 
-fn resolve_node(node: &ParseNode, instructions: &mut Vec<InstructionData>, data: &mut Vec<ExpressionData>, list_count: Option<&usize>) -> Result<(), String> {
+fn resolve_node(node: &ParseNode, instructions: &mut Vec<InstructionData>, data: &mut Vec<ExpressionData>, list_count: Option<&usize>, current_jump_index: usize) -> Result<(), String> {
     match node.get_definition() {
         Definition::Number => {
             instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
@@ -143,7 +148,11 @@ fn resolve_node(node: &ParseNode, instructions: &mut Vec<InstructionData>, data:
             instructions.push(InstructionData::new(Instruction::PushResult, None));
         }
         Definition::Group => (), // no additional instructions for groups
-        Definition::NestedExpression => todo!(),
+        Definition::NestedExpression => {
+            instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
+
+            data.push(ExpressionData::expression(current_jump_index));
+        },
         Definition::Apply => {
             instructions.push(InstructionData::new(Instruction::Apply, None));
         }
@@ -169,108 +178,136 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
     let mut list_counts: Vec<usize> = vec![];
     // let mut making_list =
 
-    let mut stack = vec![ResolveNodeInfo::new(Some(root), Definition::Drop)];
+    let mut root_stack = vec![root];
 
-    loop {
-        let pop = match stack.last_mut() {
-            None => break, // no more nodes
-            Some(resolve_node_info) => match resolve_node_info.node_index {
-                None => Err(format!(
-                    "None value for input index. All nodes should resolve properly if starting from root node."
-                ))?,
-                Some(node_index) => match nodes.get(node_index) {
-                    // all nodes should exist if starting from root
+    // since we will be popping and pushing values from root_stack
+    // need to keep separate count of total so expression values put in data are accurate
+    let mut root_count = 1;
+
+    while let Some(root_index) = root_stack.pop() {
+        let mut stack = vec![ResolveNodeInfo::new(Some(root_index), Definition::Drop)];
+        
+        // push start of this expression to jump table
+        instruction_set.jump_table.push(instruction_set.instructions.len());
+
+        loop {
+            let pop = match stack.last_mut() {
+                None => break, // no more nodes
+                Some(resolve_node_info) => match resolve_node_info.node_index {
                     None => Err(format!(
-                        "Node at index {:?} does not exist. All nodes should resolve properly if starting from root node.",
-                        node_index
+                        "None value for input index. All nodes should resolve properly if starting from root node."
                     ))?,
-                    Some(node) => {
-                        trace!("---------------------------------------------------------");
-                        trace!("Visiting node with definition {:?} at {:?}", node.get_definition(), node_index);
+                    Some(node_index) => match nodes.get(node_index) {
+                        // all nodes should exist if starting from root
+                        None => Err(format!(
+                            "Node at index {:?} does not exist. All nodes should resolve properly if starting from root node.",
+                            node_index
+                        ))?,
+                        Some(node) => {
+                            trace!("---------------------------------------------------------");
+                            trace!("Visiting node with definition {:?} at {:?}", node.get_definition(), node_index);
+    
+                            let ((first_expected, first_index), (second_expected, second_index)) = get_resolve_info(node);
+                            // check first child
+                            // if child not resolved, return it to be added
+                            let pop = if first_expected && !resolve_node_info.first_resolved {
+                                // on first visit to a list node
+                                // if parent isn't a list, we start a new list count
+                                if node.get_definition() == Definition::List && resolve_node_info.parent_definition != Definition::List {
+                                    trace!("Starting new list count");
+                                    list_counts.push(0);
+                                }
+    
+                                trace!("Pushing first child {:?}", first_index);
+    
+                                resolve_node_info.first_resolved = true;
+                                stack.push(ResolveNodeInfo::new(first_index, node.get_definition()));
+    
+                                false
+                            } else if second_expected && !resolve_node_info.second_resolved {
+                                // special check for subexpression, so far is only operations that isn't fully depth first
+                                // gets resolved before second child
+                                if node.get_definition() == Definition::Subexpression {
+                                    trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
+    
+                                    resolve_node(node, &mut instruction_set.instructions, &mut instruction_set.data, None, 0)?;
+                                    resolve_node_info.resolved = true;
+                                }
+    
+                                // check next child
+                                trace!("Pushing second child {:?}", second_index);
+    
+                                resolve_node_info.second_resolved = true;
+                                stack.push(ResolveNodeInfo::new(second_index, node.get_definition()));
+    
+                                false
+                            } else {
+                                // all children resolved, now resolve this node
+                                let we_are_subexpression = node.get_definition() == Definition::Subexpression;
+                                let we_are_list = node.get_definition() == Definition::List;
+                                let parent_is_list = resolve_node_info.parent_definition == Definition::List;
+                                let we_are_sublist = parent_is_list && we_are_list;
+    
+                                let resolve = !we_are_subexpression && !we_are_sublist;
+    
+    
+                                // subexpression already resolved before second child
+                                if resolve {
+                                    trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
+    
+                                    resolve_node(node, &mut instruction_set.instructions, &mut instruction_set.data, list_counts.last(), root_count)?;
+                                }
+    
+                                // after resolving, if a nested expression
+                                // and add nested expressions child to deferred list
+                                if node.get_definition() == Definition::NestedExpression {
+                                    match node.get_right() {
+                                        None => Err(format!("No child value on {:?} node at {:?}", node.get_definition(), node_index))?,
+                                        Some(node_index) => {
+                                            trace!("Adding index {:?} to root stack", node_index);
+                                            root_stack.push(node_index)
+                                        }
+                                    }
 
-                        let ((first_expected, first_index), (second_expected, second_index)) = get_resolve_info(node);
-                        // check first child
-                        // if child not resolved, return it to be added
-                        let pop = if first_expected && !resolve_node_info.first_resolved {
-                            // on first visit to a list node
-                            // if parent isn't a list, we start a new list count
-                            if node.get_definition() == Definition::List && resolve_node_info.parent_definition != Definition::List {
-                                trace!("Starting new list count");
-                                list_counts.push(0);
-                            }
-
-                            trace!("Pushing first child {:?}", first_index);
-
-                            resolve_node_info.first_resolved = true;
-                            stack.push(ResolveNodeInfo::new(first_index, node.get_definition()));
-
-                            false
-                        } else if second_expected && !resolve_node_info.second_resolved {
-                            // special check for subexpression, so far is only operations that isn't fully depth first
-                            // gets resolved before second child
-                            if node.get_definition() == Definition::Subexpression {
-                                trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
-
-                                resolve_node(node, &mut instruction_set.instructions, &mut instruction_set.data, None)?;
-                                resolve_node_info.resolved = true;
-                            }
-
-                            // check next child
-                            trace!("Pushing second child {:?}", second_index);
-
-                            resolve_node_info.second_resolved = true;
-                            stack.push(ResolveNodeInfo::new(second_index, node.get_definition()));
-
-                            false
-                        } else {
-                            // all children resolved, now resolve this node
-                            let we_are_subexpression = node.get_definition() == Definition::Subexpression;
-                            let we_are_list = node.get_definition() == Definition::List;
-                            let parent_is_list = resolve_node_info.parent_definition == Definition::List;
-                            let we_are_sublist = parent_is_list && we_are_list;
-
-                            let resolve = !we_are_subexpression && !we_are_sublist;
-
-                            // subexpression already resolved before second child
-                            if resolve {
-                                trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
-
-                                resolve_node(node, &mut instruction_set.instructions, &mut instruction_set.data, list_counts.last())?;
-                            }
-
-                            // If this node's parent is a list
-                            // add to its count, unless we are a list
-                            if parent_is_list && !we_are_list {
-                                match list_counts.last_mut() {
-                                    None => Err(format!("Child of list node has no count add to."))?,
-                                    Some(count) => {
-                                        *count += 1;
-                                        trace!("Added to current list count. Current count is at {:?}", count);
+                                    // up root count as well
+                                    root_count += 1;
+                                }
+    
+                                // If this node's parent is a list
+                                // add to its count, unless we are a list
+                                if parent_is_list && !we_are_list {
+                                    match list_counts.last_mut() {
+                                        None => Err(format!("Child of list node has no count add to."))?,
+                                        Some(count) => {
+                                            *count += 1;
+                                            trace!("Added to current list count. Current count is at {:?}", count);
+                                        }
                                     }
                                 }
-                            }
-
-                            trace!("Node with definition {:?} at {:?} fully resolved", node.get_definition(), node_index);
-
-                            resolve_node_info.resolved = true;
-
-                            true
-                        };
-
-                        trace!("---------------------------------------------------------");
-
-                        pop
-                    }
+    
+                                trace!("Node with definition {:?} at {:?} fully resolved", node.get_definition(), node_index);
+    
+                                resolve_node_info.resolved = true;
+    
+                                true
+                            };
+    
+                            trace!("---------------------------------------------------------");
+    
+                            pop
+                        }
+                    },
                 },
-            },
-        };
-
-        if pop {
-            stack.pop();
+            };
+    
+            if pop {
+                stack.pop();
+            }
         }
+    
+        instruction_set.instructions.push(InstructionData::new(Instruction::EndExpression, None));
     }
-
-    instruction_set.instructions.push(InstructionData::new(Instruction::EndExpression, None));
+    
 
     Ok(instruction_set)
 }
@@ -723,8 +760,6 @@ mod lists {
 
 #[cfg(test)]
 mod groups {
-    use std::vec;
-
     use super::test_utils::*;
     use crate::*;
     use garnish_lang_runtime::*;
@@ -750,5 +785,47 @@ mod groups {
                 ExpressionData::integer(10),
             ],
         );
+    }
+}
+
+#[cfg(test)]
+mod nested_expressions {
+    use super::test_utils::*;
+    use crate::*;
+    use garnish_lang_runtime::*;
+
+    #[test]
+    fn single_nested() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::NestedExpression, None, None, Some(2), "{", TokenType::StartExpression),
+                (Definition::Number, Some(2), None, None, "5", TokenType::Number),
+                (Definition::Addition, Some(0), Some(1), Some(3), "+", TokenType::PlusSign),
+                (Definition::Number, Some(2), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::EndExpression, None),
+                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::PerformAddition, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![
+                ExpressionData::expression(1),
+                ExpressionData::integer(5),
+                ExpressionData::integer(10),
+            ],
+        );
+
+        let result = get_instruction_data(0, vec![
+            (Definition::NestedExpression, None, None, Some(2), "{", TokenType::StartExpression),
+            (Definition::Number, Some(2), None, None, "5", TokenType::Number),
+            (Definition::Addition, Some(0), Some(1), Some(3), "+", TokenType::PlusSign),
+            (Definition::Number, Some(2), None, None, "10", TokenType::Number),
+        ]).unwrap();
+
+        assert_eq!(*result.get_jump_table(), vec![0, 2]);
     }
 }
