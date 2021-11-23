@@ -679,6 +679,46 @@ mod lists {
             ],
         );
     }
+
+    #[test]
+    fn list_in_list() {
+        assert_instruction_data(
+            10,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::List, Some(3), Some(0), Some(2), ",", TokenType::Comma), // 1
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::List, Some(8), Some(1), Some(4), ",", TokenType::Comma), // 3
+                (Definition::Group, None, None, Some(6), "(", TokenType::StartGroup),
+                (Definition::Number, Some(6), None, None, "15", TokenType::Number), 
+                (Definition::List, Some(4), Some(5), Some(7), ",", TokenType::Comma), // 6
+                (Definition::Number, Some(6), None, None, "20", TokenType::Number), 
+                (Definition::List, Some(10), Some(3), Some(9), ",", TokenType::Comma), // 8
+                (Definition::Number, Some(8), None, None, "25", TokenType::Number),
+                (Definition::List, None, Some(8), Some(11), ",", TokenType::Comma), // 10
+                (Definition::Number, Some(10), None, None, "30", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::MakeList, Some(2)),
+                (Instruction::Put, Some(5)),
+                (Instruction::Put, Some(6)),
+                (Instruction::MakeList, Some(5)),
+                (Instruction::EndExpression, None),
+            ],
+            vec![
+                ExpressionData::integer(5),
+                ExpressionData::integer(10),
+                ExpressionData::integer(15),
+                ExpressionData::integer(20),
+                ExpressionData::integer(25),
+                ExpressionData::integer(30),
+            ],
+        );
+    }
 }
 
 #[cfg(test)]
