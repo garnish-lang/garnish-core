@@ -185,6 +185,8 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
     let mut root_count = 1;
 
     while let Some(root_index) = root_stack.pop() {
+        trace!("Makeing instructions for tree starting at index {:?}", root_index);
+
         let mut stack = vec![ResolveNodeInfo::new(Some(root_index), Definition::Drop)];
         
         // push start of this expression to jump table
@@ -306,6 +308,8 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
         }
     
         instruction_set.instructions.push(InstructionData::new(Instruction::EndExpression, None));
+
+        trace!("Finished instructions for tree starting at index {:?}", root_index);
     }
     
 
