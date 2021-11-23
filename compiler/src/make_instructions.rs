@@ -324,6 +324,25 @@ mod test_utils {
         instructions: Vec<(Instruction, Option<usize>)>,
         data: Vec<ExpressionData>,
     ) {
+        // let expected_instructions: Vec<InstructionData> = instructions.iter().map(|i| InstructionData::new(i.0, i.1)).collect();
+
+        // let expected_data: Vec<ExpressionData> = iter::once(ExpressionData::unit()).chain(data.into_iter()).collect();
+
+        // let result = get_instruction_data(root, nodes).unwrap();
+
+        // assert_eq!(result.get_instructions().clone(), expected_instructions);
+        // assert_eq!(result.get_data(), &expected_data)
+
+        assert_instruction_data_jumps(root, nodes, instructions, data, vec![0]);
+    }
+
+    pub fn assert_instruction_data_jumps(
+        root: usize,
+        nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
+        instructions: Vec<(Instruction, Option<usize>)>,
+        data: Vec<ExpressionData>,
+        expected_jumps: Vec<usize>
+    ) {
         let expected_instructions: Vec<InstructionData> = instructions.iter().map(|i| InstructionData::new(i.0, i.1)).collect();
 
         let expected_data: Vec<ExpressionData> = iter::once(ExpressionData::unit()).chain(data.into_iter()).collect();
@@ -331,7 +350,8 @@ mod test_utils {
         let result = get_instruction_data(root, nodes).unwrap();
 
         assert_eq!(result.get_instructions().clone(), expected_instructions);
-        assert_eq!(result.get_data(), &expected_data)
+        assert_eq!(result.get_data(), &expected_data);
+        assert_eq!(result.get_jump_table(), &expected_jumps);
     }
 
     pub fn get_instruction_data(
