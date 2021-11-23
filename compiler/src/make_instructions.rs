@@ -184,6 +184,10 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
     // need to keep separate count of total so expression values put in data are accurate
     let mut root_count = 1;
 
+    // arbitrary max iterations for roots
+    let max_roots = 100;
+    let mut root_iter_count = 0;
+
     while let Some(root_index) = root_stack.pop() {
         trace!("Makeing instructions for tree starting at index {:?}", root_index);
 
@@ -191,6 +195,11 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
         
         // push start of this expression to jump table
         instruction_set.jump_table.push(instruction_set.instructions.len());
+
+        // limit, maximum times a node is visited is 3
+        // so limit to 3 times node count should allow for more than enough
+        let max_iterations = nodes.len() * 3;
+        let mut iter_count = 0;
 
         loop {
             let pop = match stack.last_mut() {
@@ -305,11 +314,22 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
             if pop {
                 stack.pop();
             }
+
+            iter_count += 1;
+            if iter_count > max_iterations {
+                return Err(format!("Max iterations reached in resolving tree at root {:?}", root_index));
+            }
         }
     
         instruction_set.instructions.push(InstructionData::new(Instruction::EndExpression, None));
 
         trace!("Finished instructions for tree starting at index {:?}", root_index);
+
+        root_iter_count += 1;
+
+        if root_iter_count > max_roots {
+            return Err(format!("Max iterations for roots reached."));
+        }
     }
     
 
@@ -833,6 +853,46 @@ mod nested_expressions {
                 ExpressionData::integer(10),
             ],
             vec![0, 2]
+        );
+    }
+
+    #[test]
+    fn multiple_nested() {
+        assert_instruction_data_jumps(
+            0,
+            vec![
+                (Definition::NestedExpression, None, None, Some(2), "{", TokenType::StartExpression),
+                (Definition::Number, Some(2), None, None, "5", TokenType::Number),
+                (Definition::Apply, Some(0), Some(1), Some(3), "~", TokenType::Apply), // 2
+                (Definition::NestedExpression, Some(2), None, Some(5), "{", TokenType::StartExpression),
+                (Definition::Number, Some(5), None, None, "10", TokenType::Number),
+                (Definition::Apply, Some(3), Some(4), Some(6), "~", TokenType::Apply), // 5
+                (Definition::NestedExpression, Some(5), None, Some(7), "{", TokenType::StartExpression),
+                (Definition::Number, Some(6), None, None, "15", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::EndExpression, None), // 1
+                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Apply, None),
+                (Instruction::EndExpression, None), // 5
+                (Instruction::Put, Some(4)),
+                (Instruction::Put, Some(5)),
+                (Instruction::Apply, None),
+                (Instruction::EndExpression, None), // 9
+                (Instruction::Put, Some(6)),
+                (Instruction::EndExpression, None),
+            ],
+            vec![
+                ExpressionData::expression(1),
+                ExpressionData::integer(5),
+                ExpressionData::expression(2),
+                ExpressionData::integer(10),
+                ExpressionData::expression(3),
+                ExpressionData::integer(15),
+            ],
+            vec![0, 2, 6, 10]
         );
     }
 }
