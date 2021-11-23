@@ -109,7 +109,7 @@ fn add_instructions_for_node(
                     add_instructions_for_node(node.get_left(), nodes, instructions, data)?;
                     add_instructions_for_node(node.get_right(), nodes, instructions, data)?;
 
-                    instructions.push(InstructionData::new(Instruction::MakeList, None));
+                    instructions.push(InstructionData::new(Instruction::MakeList, Some(2)));
                 }
                 Definition::Subexpression => {
                     add_instructions_for_node(node.get_left(), nodes, instructions, data)?;
@@ -493,7 +493,7 @@ mod lists {
             vec![
                 (Instruction::Put, Some(1)),
                 (Instruction::Put, Some(2)),
-                (Instruction::MakeList, None),
+                (Instruction::MakeList, Some(2)),
                 (Instruction::EndExpression, None),
             ],
             vec![ExpressionData::integer(5), ExpressionData::integer(10)],
