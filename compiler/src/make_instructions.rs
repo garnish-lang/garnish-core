@@ -321,31 +321,22 @@ mod test_utils {
     pub fn assert_instruction_data(
         root: usize,
         nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
-        instructions: Vec<(Instruction, Option<usize>)>,
-        data: Vec<ExpressionData>,
+        expected_instructions: Vec<(Instruction, Option<usize>)>,
+        expected_data: Vec<ExpressionData>,
     ) {
-        // let expected_instructions: Vec<InstructionData> = instructions.iter().map(|i| InstructionData::new(i.0, i.1)).collect();
-
-        // let expected_data: Vec<ExpressionData> = iter::once(ExpressionData::unit()).chain(data.into_iter()).collect();
-
-        // let result = get_instruction_data(root, nodes).unwrap();
-
-        // assert_eq!(result.get_instructions().clone(), expected_instructions);
-        // assert_eq!(result.get_data(), &expected_data)
-
-        assert_instruction_data_jumps(root, nodes, instructions, data, vec![0]);
+        assert_instruction_data_jumps(root, nodes, expected_instructions, expected_data, vec![0]);
     }
 
     pub fn assert_instruction_data_jumps(
         root: usize,
         nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
-        instructions: Vec<(Instruction, Option<usize>)>,
-        data: Vec<ExpressionData>,
+        expected_instructions: Vec<(Instruction, Option<usize>)>,
+        expected_data: Vec<ExpressionData>,
         expected_jumps: Vec<usize>
     ) {
-        let expected_instructions: Vec<InstructionData> = instructions.iter().map(|i| InstructionData::new(i.0, i.1)).collect();
+        let expected_instructions: Vec<InstructionData> = expected_instructions.iter().map(|i| InstructionData::new(i.0, i.1)).collect();
 
-        let expected_data: Vec<ExpressionData> = iter::once(ExpressionData::unit()).chain(data.into_iter()).collect();
+        let expected_data: Vec<ExpressionData> = iter::once(ExpressionData::unit()).chain(expected_data.into_iter()).collect();
 
         let result = get_instruction_data(root, nodes).unwrap();
 
@@ -816,7 +807,7 @@ mod nested_expressions {
 
     #[test]
     fn single_nested() {
-        assert_instruction_data(
+        assert_instruction_data_jumps(
             0,
             vec![
                 (Definition::NestedExpression, None, None, Some(2), "{", TokenType::StartExpression),
@@ -837,15 +828,7 @@ mod nested_expressions {
                 ExpressionData::integer(5),
                 ExpressionData::integer(10),
             ],
+            vec![0, 2]
         );
-
-        let result = get_instruction_data(0, vec![
-            (Definition::NestedExpression, None, None, Some(2), "{", TokenType::StartExpression),
-            (Definition::Number, Some(2), None, None, "5", TokenType::Number),
-            (Definition::Addition, Some(0), Some(1), Some(3), "+", TokenType::PlusSign),
-            (Definition::Number, Some(2), None, None, "10", TokenType::Number),
-        ]).unwrap();
-
-        assert_eq!(*result.get_jump_table(), vec![0, 2]);
     }
 }
