@@ -187,6 +187,31 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
     let mut list_counts = vec![];
     // let mut making_list =
 
+    // let mut stack = vec![Some(root)];
+    // let mut resolve_stack = vec![Some(root)];
+
+    // while let Some(node_index) = stack.pop() {
+    //     match node_index {
+    //         None => Err(format!(
+    //             "None value for input index. All nodes should resolve properly if starting from root node."
+    //         ))?,
+    //         Some(node_index) => match nodes.get(node_index) {
+    //             // all nodes should exist if starting from root
+    //             None => Err(format!(
+    //                 "Node at index {:?} does not exist. All nodes should resolve properly if starting from root node.",
+    //                 node_index
+    //             ))?,
+    //             Some(node) => {
+    //                 stack.push(node.get_right());
+    //                 stack.push(node.get_left());
+
+    //                 resolve_stack.push(node.get_right());
+    //                 resolve_stack.push(node.get_left());
+    //             }
+    //         },
+    //     }
+    // }
+
     add_instructions_for_node(
         Some(root),
         &nodes,
@@ -382,6 +407,38 @@ mod operations {
                 (Instruction::EndExpression, None),
             ],
             vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+        );
+    }
+
+    #[test]
+    fn multiple_addition() {
+        assert_instruction_data(
+            5,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Addition, Some(3), Some(0), Some(2), "+", TokenType::EmptyApply),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Addition, Some(5), Some(1), Some(4), "+", TokenType::EmptyApply),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+                (Definition::Addition, None, Some(3), Some(6), "+", TokenType::EmptyApply),
+                (Definition::Number, Some(5), None, None, "20", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
+                (Instruction::PerformAddition, None),
+                (Instruction::Put, Some(3)),
+                (Instruction::PerformAddition, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::PerformAddition, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![
+                ExpressionData::integer(5),
+                ExpressionData::integer(10),
+                ExpressionData::integer(15),
+                ExpressionData::integer(20),
+            ],
         );
     }
 
