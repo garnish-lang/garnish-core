@@ -1,8 +1,10 @@
+use std::usize;
+
 use garnish_lang_runtime::InstructionData;
 use garnish_lang_runtime::*;
 use log::trace;
 
-use crate::parser::*;
+use crate::{parser::*};
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct InstructionSet {
@@ -27,199 +29,246 @@ impl InstructionSet {
     }
 }
 
-fn add_instructions_for_node(
+struct ResolveNodeInfo {
     node_index: Option<usize>,
-    nodes: &Vec<ParseNode>,
-    instructions: &mut Vec<InstructionData>,
-    data: &mut Vec<ExpressionData>,
-    // making_list: &mut bool,
-    list_counts: &mut Vec<usize>,
-    parent_definition: Definition,
-) -> Result<(), String> {
-    Ok(match node_index {
-        None => Err(format!(
-            "None value for input index. All nodes should resolve properly if starting from root node."
-        ))?,
-        Some(node_index) => match nodes.get(node_index) {
-            // all nodes should exist if starting from root
-            None => Err(format!(
-                "Node at index {:?} does not exist. All nodes should resolve properly if starting from root node.",
-                node_index
-            ))?,
-            Some(node) => {
-                trace!(
-                    "Visiting node with definition {:?} at {:?} and parent {:?}",
-                    node.get_definition(),
-                    node_index,
-                    parent_definition
-                );
+    first_resolved: bool,
+    second_resolved: bool,
+    resolved: bool,
+    parent_definition: Definition
+}
 
-                match list_counts.last_mut() {
-                    None => (),
-                    Some(count) => {
-                        if node.get_definition() != Definition::List {
-                            *count += 1;
-                            trace!("Adding to list, current count {:?}", count);
-                        }
-                    }
+impl ResolveNodeInfo {
+    fn new(node_index: Option<usize>, parent_definition: Definition) -> ResolveNodeInfo {
+        ResolveNodeInfo {
+            node_index,
+            first_resolved: false,
+            second_resolved: false,
+            resolved: false,
+            parent_definition
+        }
+    }
+}
+
+type DefinitionResolveInfo = (bool, Option<usize>);
+
+fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
+    match node.get_definition() {
+        Definition::Number | Definition::Identifier | Definition::Symbol | Definition::Input | Definition::Result | Definition::Unit => {
+            ((false, None), (false, None))
+        }
+        Definition::Reapply => ((true, node.get_right()), (false, None)),
+        Definition::AbsoluteValue => todo!(),
+        Definition::EmptyApply => ((true, node.get_left()), (false, None)),
+        Definition::Addition 
+        | Definition::Equality 
+        | Definition::Pair 
+        | Definition::Access 
+        | Definition::Subexpression // Same order for child resolution but has special check, might need to move out of here eventually
+        | Definition::Apply => {
+            ((true, node.get_left()), (true, node.get_right()))
+        }
+        Definition::ApplyTo => ((true, node.get_right()), (true, node.get_left())),
+        Definition::List => ((true, node.get_left()), (true, node.get_right())),
+        Definition::Group => todo!(),
+        Definition::NestedExpression => todo!(),
+        Definition::ApplyIfTrue => todo!(),
+        Definition::ApplyIfFalse => todo!(),
+        Definition::ConditionalBranch => todo!(),
+        Definition::Drop => todo!(),
+    }
+}
+
+fn resolve_node(node: &ParseNode, instructions: &mut Vec<InstructionData>, data: &mut Vec<ExpressionData>, list_count: Option<&usize>) -> Result<(), String> {
+    match node.get_definition() {
+        Definition::Number => {
+            instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
+
+            data.push(ExpressionData::integer(match node.get_lex_token().get_text().parse::<i64>() {
+                Err(e) => Err(e.to_string())?,
+                Ok(i) => i,
+            }));
+        }
+        Definition::Identifier => {
+            instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
+            instructions.push(InstructionData::new(Instruction::Resolve, None));
+
+            data.push(ExpressionData::symbol_from_string(node.get_lex_token().get_text()));
+        }
+        Definition::Unit => {
+            // all unit literals will use unit used in the zero element slot of data
+            instructions.push(InstructionData::new(Instruction::Put, Some(0)));
+        }
+        Definition::Symbol => {
+            instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
+
+            data.push(ExpressionData::symbol_from_string(&node.get_lex_token().get_text()[1..].to_string()));
+        }
+        Definition::Input => {
+            // all unit literals will use unit used in the zero element slot of data
+            instructions.push(InstructionData::new(Instruction::PutInput, None));
+        }
+        Definition::Result => {
+            // all unit literals will use unit used in the zero element slot of data
+            instructions.push(InstructionData::new(Instruction::PutResult, None));
+        }
+        Definition::AbsoluteValue => todo!(), // not currently in runtime
+        Definition::EmptyApply => {
+            instructions.push(InstructionData::new(Instruction::Put, Some(0)));
+            instructions.push(InstructionData::new(Instruction::Apply, None));
+        }
+        Definition::Addition => {
+            instructions.push(InstructionData::new(Instruction::PerformAddition, None));
+        }
+        Definition::Equality => {
+            instructions.push(InstructionData::new(Instruction::EqualityComparison, None));
+        }
+        Definition::Pair => {
+            instructions.push(InstructionData::new(Instruction::MakePair, None));
+        }
+        Definition::Access => {
+            instructions.push(InstructionData::new(Instruction::Access, None));
+        }
+        Definition::List => {
+            match list_count {
+                None => Err(format!("No list count passed to list node resolve."))?,
+                Some(count) => {
+                    instructions.push(InstructionData::new(
+                        Instruction::MakeList,
+                        Some(*count),
+                    ));
                 }
-
-                match node.get_definition() {
-                    Definition::Number => {
-                        instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
-
-                        data.push(ExpressionData::integer(match node.get_lex_token().get_text().parse::<i64>() {
-                            Err(e) => Err(e.to_string())?,
-                            Ok(i) => i,
-                        }));
-                    }
-                    Definition::Identifier => {
-                        instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
-                        instructions.push(InstructionData::new(Instruction::Resolve, None));
-
-                        data.push(ExpressionData::symbol_from_string(node.get_lex_token().get_text()));
-                    }
-                    Definition::Unit => {
-                        // all unit literals will use unit used in the zero element slot of data
-                        instructions.push(InstructionData::new(Instruction::Put, Some(0)));
-                    }
-                    Definition::Symbol => {
-                        instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
-
-                        data.push(ExpressionData::symbol_from_string(&node.get_lex_token().get_text()[1..].to_string()));
-                    }
-                    Definition::Input => {
-                        // all unit literals will use unit used in the zero element slot of data
-                        instructions.push(InstructionData::new(Instruction::PutInput, None));
-                    }
-                    Definition::Result => {
-                        // all unit literals will use unit used in the zero element slot of data
-                        instructions.push(InstructionData::new(Instruction::PutResult, None));
-                    }
-                    Definition::AbsoluteValue => todo!(), // not currently in runtime
-                    Definition::EmptyApply => {
-                        add_instructions_for_node(node.get_left(), nodes, instructions, data, list_counts, node.get_definition())?;
-
-                        instructions.push(InstructionData::new(Instruction::Put, Some(0)));
-                        instructions.push(InstructionData::new(Instruction::Apply, None));
-                    }
-                    Definition::Addition => {
-                        add_instructions_for_node(node.get_left(), nodes, instructions, data, list_counts, node.get_definition())?;
-                        add_instructions_for_node(node.get_right(), nodes, instructions, data, list_counts, node.get_definition())?;
-
-                        instructions.push(InstructionData::new(Instruction::PerformAddition, None));
-                    }
-                    Definition::Equality => {
-                        add_instructions_for_node(node.get_left(), nodes, instructions, data, list_counts, node.get_definition())?;
-                        add_instructions_for_node(node.get_right(), nodes, instructions, data, list_counts, node.get_definition())?;
-
-                        instructions.push(InstructionData::new(Instruction::EqualityComparison, None));
-                    }
-                    Definition::Pair => {
-                        add_instructions_for_node(node.get_left(), nodes, instructions, data, list_counts, node.get_definition())?;
-                        add_instructions_for_node(node.get_right(), nodes, instructions, data, list_counts, node.get_definition())?;
-
-                        instructions.push(InstructionData::new(Instruction::MakePair, None));
-                    }
-                    Definition::Access => {
-                        add_instructions_for_node(node.get_left(), nodes, instructions, data, list_counts, node.get_definition())?;
-                        add_instructions_for_node(node.get_right(), nodes, instructions, data, list_counts, node.get_definition())?;
-
-                        instructions.push(InstructionData::new(Instruction::Access, None));
-                    }
-                    Definition::List => {
-                        list_counts.push(0);
-
-                        add_instructions_for_node(node.get_left(), nodes, instructions, data, list_counts, node.get_definition())?;
-                        add_instructions_for_node(node.get_right(), nodes, instructions, data, list_counts, node.get_definition())?;
-
-                        if parent_definition != Definition::List {
-                            instructions.push(InstructionData::new(
-                                Instruction::MakeList,
-                                Some(match list_counts.pop() {
-                                    None => Err(format!("Count not get list count out of array."))?,
-                                    Some(i) => i,
-                                }),
-                            ));
-                        }
-                    }
-                    Definition::Subexpression => {
-                        add_instructions_for_node(node.get_left(), nodes, instructions, data, list_counts, node.get_definition())?;
-
-                        instructions.push(InstructionData::new(Instruction::PushResult, None));
-
-                        add_instructions_for_node(node.get_right(), nodes, instructions, data, list_counts, node.get_definition())?;
-                    }
-                    Definition::Group => todo!(),
-                    Definition::NestedExpression => todo!(),
-                    Definition::Apply => {
-                        add_instructions_for_node(node.get_left(), nodes, instructions, data, list_counts, node.get_definition())?;
-                        add_instructions_for_node(node.get_right(), nodes, instructions, data, list_counts, node.get_definition())?;
-
-                        instructions.push(InstructionData::new(Instruction::Apply, None));
-                    }
-                    Definition::ApplyTo => {
-                        add_instructions_for_node(node.get_right(), nodes, instructions, data, list_counts, node.get_definition())?;
-                        add_instructions_for_node(node.get_left(), nodes, instructions, data, list_counts, node.get_definition())?;
-
-                        instructions.push(InstructionData::new(Instruction::Apply, None));
-                    }
-                    Definition::Reapply => {
-                        add_instructions_for_node(node.get_right(), nodes, instructions, data, list_counts, node.get_definition())?;
-
-                        instructions.push(InstructionData::new(Instruction::Reapply, None));
-                    }
-                    Definition::ApplyIfTrue => todo!(),
-                    Definition::ApplyIfFalse => todo!(),
-                    Definition::ConditionalBranch => todo!(),
-                    // no runtime meaning, parser only utility
-                    Definition::Drop => (),
-                }
-
-                trace!("{:?} at {:?} resolved", node.get_definition(), node_index);
             }
-        },
-    })
+        }
+        Definition::Subexpression => {
+            instructions.push(InstructionData::new(Instruction::PushResult, None));
+        }
+        Definition::Group => todo!(),
+        Definition::NestedExpression => todo!(),
+        Definition::Apply => {
+            instructions.push(InstructionData::new(Instruction::Apply, None));
+        }
+        Definition::ApplyTo => {
+            instructions.push(InstructionData::new(Instruction::Apply, None));
+        }
+        Definition::Reapply => {
+            instructions.push(InstructionData::new(Instruction::Reapply, None));
+        }
+        Definition::ApplyIfTrue => todo!(),
+        Definition::ApplyIfFalse => todo!(),
+        Definition::ConditionalBranch => todo!(),
+        // no runtime meaning, parser only utility
+        Definition::Drop => (),
+    }
+
+    Ok(())
 }
 
 pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<InstructionSet, String> {
     let mut instruction_set = InstructionSet::new();
-    let mut list_counts = vec![];
+
+    let mut list_counts: Vec<usize> = vec![];
     // let mut making_list =
 
-    // let mut stack = vec![Some(root)];
-    // let mut resolve_stack = vec![Some(root)];
+    let mut stack = vec![ResolveNodeInfo::new(Some(root), Definition::Drop)];
 
-    // while let Some(node_index) = stack.pop() {
-    //     match node_index {
-    //         None => Err(format!(
-    //             "None value for input index. All nodes should resolve properly if starting from root node."
-    //         ))?,
-    //         Some(node_index) => match nodes.get(node_index) {
-    //             // all nodes should exist if starting from root
-    //             None => Err(format!(
-    //                 "Node at index {:?} does not exist. All nodes should resolve properly if starting from root node.",
-    //                 node_index
-    //             ))?,
-    //             Some(node) => {
-    //                 stack.push(node.get_right());
-    //                 stack.push(node.get_left());
+    loop {
+        let pop = match stack.last_mut() {
+            None => break, // no more nodes
+            Some(resolve_node_info) => match resolve_node_info.node_index {
+                None => Err(format!(
+                    "None value for input index. All nodes should resolve properly if starting from root node."
+                ))?,
+                Some(node_index) => match nodes.get(node_index) {
+                    // all nodes should exist if starting from root
+                    None => Err(format!(
+                        "Node at index {:?} does not exist. All nodes should resolve properly if starting from root node.",
+                        node_index
+                    ))?,
+                    Some(node) => {
+                        trace!("---------------------------------------------------------");
+                        trace!("Visiting node with definition {:?} at {:?}", node.get_definition(), node_index);
 
-    //                 resolve_stack.push(node.get_right());
-    //                 resolve_stack.push(node.get_left());
-    //             }
-    //         },
-    //     }
-    // }
+                        let ((first_expected, first_index), (second_expected, second_index)) = get_resolve_info(node);
+                        // check first child
+                        // if child not resolved, return it to be added
+                        let pop = if first_expected && !resolve_node_info.first_resolved {
+                            // on first visit to a list node
+                            // if parent isn't a list, we start a new list count
+                            if node.get_definition() == Definition::List && resolve_node_info.parent_definition != Definition::List {
+                                trace!("Starting new list count");
+                                list_counts.push(0);
+                            }
 
-    add_instructions_for_node(
-        Some(root),
-        &nodes,
-        &mut instruction_set.instructions,
-        &mut instruction_set.data,
-        &mut list_counts,
-        Definition::Drop, // Initial value shouln't matter
-    )?;
+                            trace!("Pushing first child {:?}", first_index);
+
+                            resolve_node_info.first_resolved = true;
+                            stack.push(ResolveNodeInfo::new(first_index, node.get_definition()));
+
+                            false
+                        } else if second_expected && !resolve_node_info.second_resolved {
+                            // special check for subexpression, so far is only operations that isn't fully depth first
+                            // gets resolved before second child
+                            if node.get_definition() == Definition::Subexpression {
+                                trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
+
+                                resolve_node(node, &mut instruction_set.instructions, &mut instruction_set.data, None)?;
+                                resolve_node_info.resolved = true;
+                            }
+
+                            // check next child
+                            trace!("Pushing second child {:?}", second_index);
+
+                            resolve_node_info.second_resolved = true;
+                            stack.push(ResolveNodeInfo::new(second_index, node.get_definition()));
+
+                            false
+                        } else {
+                            // all children resolved, now resolve this node
+                            let we_are_subexpression = node.get_definition() == Definition::Subexpression;
+                            let we_are_list = node.get_definition() == Definition::List;
+                            let parent_is_list = resolve_node_info.parent_definition == Definition::List;
+                            let we_are_sublist = parent_is_list && we_are_list;
+
+                            let resolve = !we_are_subexpression && !we_are_sublist;
+
+                            // subexpression already resolved before second child
+                            if resolve {
+                                trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
+
+                                resolve_node(node, &mut instruction_set.instructions, &mut instruction_set.data, list_counts.last())?;
+                            }
+
+                            // If this node's parent is a list
+                            // add to its count, unless we are a list
+                            if parent_is_list && !we_are_list {
+                                match list_counts.last_mut() {
+                                    None => Err(format!("Child of list node has no count add to."))?,
+                                    Some(count) => {
+                                        *count += 1;
+                                        trace!("Added to current list count. Current count is at {:?}", count);
+                                    }
+                                }
+                            }
+
+                            trace!("Node with definition {:?} at {:?} fully resolved", node.get_definition(), node_index);
+
+                            resolve_node_info.resolved = true;
+
+                            true
+                        };
+
+                        trace!("---------------------------------------------------------");
+
+                        pop
+                    }
+                },
+            },
+        };
+
+        if pop {
+            stack.pop();
+        }
+    }
 
     instruction_set.instructions.push(InstructionData::new(Instruction::EndExpression, None));
 
