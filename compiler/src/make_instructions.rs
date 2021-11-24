@@ -4,13 +4,13 @@ use garnish_lang_runtime::InstructionData;
 use garnish_lang_runtime::*;
 use log::trace;
 
-use crate::{parser::*};
+use crate::parser::*;
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct InstructionSet {
     instructions: Vec<InstructionData>,
     data: Vec<ExpressionData>,
-    jump_table: Vec<usize>
+    jump_table: Vec<usize>,
 }
 
 impl InstructionSet {
@@ -18,7 +18,11 @@ impl InstructionSet {
         let mut data = vec![];
         data.push(ExpressionData::unit());
 
-        InstructionSet { instructions: vec![], data, jump_table: vec![] }
+        InstructionSet {
+            instructions: vec![],
+            data,
+            jump_table: vec![],
+        }
     }
 
     pub fn get_instructions(&self) -> &Vec<InstructionData> {
@@ -40,7 +44,7 @@ struct ResolveNodeInfo {
     can_ignore_first: bool,
     second_resolved: bool,
     resolved: bool,
-    parent_definition: Definition
+    parent_definition: Definition,
 }
 
 impl ResolveNodeInfo {
@@ -51,7 +55,7 @@ impl ResolveNodeInfo {
             can_ignore_first: false,
             second_resolved: false,
             resolved: false,
-            parent_definition
+            parent_definition,
         }
     }
 }
@@ -66,10 +70,10 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         Definition::Reapply => ((true, node.get_right()), (false, None)),
         Definition::AbsoluteValue => todo!(),
         Definition::EmptyApply => ((true, node.get_left()), (false, None)),
-        Definition::Addition 
-        | Definition::Equality 
-        | Definition::Pair 
-        | Definition::Access 
+        Definition::Addition
+        | Definition::Equality
+        | Definition::Pair
+        | Definition::Access
         | Definition::Subexpression // Same order for child resolution but has special check, might need to move out of here eventually
         | Definition::Apply => {
             ((true, node.get_left()), (true, node.get_right()))
@@ -86,11 +90,11 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
 }
 
 fn resolve_node(
-    node: &ParseNode, 
-    instructions: &mut Vec<InstructionData>, 
-    data: &mut Vec<ExpressionData>, 
-    list_count: Option<&usize>, 
-    current_jump_index: usize
+    node: &ParseNode,
+    instructions: &mut Vec<InstructionData>,
+    data: &mut Vec<ExpressionData>,
+    list_count: Option<&usize>,
+    current_jump_index: usize,
 ) -> Result<(), String> {
     match node.get_definition() {
         Definition::Number => {
@@ -141,17 +145,12 @@ fn resolve_node(
         Definition::Access => {
             instructions.push(InstructionData::new(Instruction::Access, None));
         }
-        Definition::List => {
-            match list_count {
-                None => Err(format!("No list count passed to list node resolve."))?,
-                Some(count) => {
-                    instructions.push(InstructionData::new(
-                        Instruction::MakeList,
-                        Some(*count),
-                    ));
-                }
+        Definition::List => match list_count {
+            None => Err(format!("No list count passed to list node resolve."))?,
+            Some(count) => {
+                instructions.push(InstructionData::new(Instruction::MakeList, Some(*count)));
             }
-        }
+        },
         Definition::Subexpression => {
             instructions.push(InstructionData::new(Instruction::PushResult, None));
         }
@@ -160,7 +159,7 @@ fn resolve_node(
             instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
 
             data.push(ExpressionData::expression(current_jump_index));
-        },
+        }
         Definition::Apply => {
             instructions.push(InstructionData::new(Instruction::Apply, None));
         }
@@ -172,10 +171,10 @@ fn resolve_node(
         }
         Definition::ApplyIfTrue => {
             instructions.push(InstructionData::new(Instruction::JumpIfTrue, Some(current_jump_index)));
-        },
+        }
         Definition::ApplyIfFalse => {
             instructions.push(InstructionData::new(Instruction::JumpIfFalse, Some(current_jump_index)));
-        },
+        }
         Definition::ConditionalBranch => (), // no additional instructions
         // no runtime meaning, parser only utility
         Definition::Drop => (),
@@ -205,7 +204,7 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
         let mut conditional_stack = vec![];
         let mut list_counts: Vec<usize> = vec![];
         let mut stack = vec![ResolveNodeInfo::new(Some(root_index), Definition::Drop)];
-        
+
         // push start of this expression to jump table
         instruction_set.jump_table.push(instruction_set.instructions.len());
 
@@ -230,9 +229,9 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                         Some(node) => {
                             trace!("---------------------------------------------------------");
                             trace!("Visiting node with definition {:?} at {:?}", node.get_definition(), node_index);
-    
+
                             let ((first_expected, first_index), (second_expected, second_index)) = get_resolve_info(node);
-                            
+
                             let pop = if first_expected && !resolve_node_info.first_resolved {
                                 // on first visit to a list node
                                 // if parent isn't a list, we start a new list count
@@ -243,13 +242,18 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
 
                                 // on first visit to a conditional branch node
                                 // add to jump table and store the position in conditional stack
-                                if node.get_definition() == Definition::ConditionalBranch && resolve_node_info.parent_definition != Definition::ConditionalBranch {
-                                    trace!("Starting new conditional branch. Return slot in jump table {:?}", instruction_set.jump_table.len());
+                                if node.get_definition() == Definition::ConditionalBranch
+                                    && resolve_node_info.parent_definition != Definition::ConditionalBranch
+                                {
+                                    trace!(
+                                        "Starting new conditional branch. Return slot in jump table {:?}",
+                                        instruction_set.jump_table.len()
+                                    );
                                     conditional_stack.push(instruction_set.jump_table.len());
                                     instruction_set.jump_table.push(0); // this will be updated when conditional branch nod resolves
                                     jump_count += 1;
                                 }
-    
+
                                 trace!("Pushing first child {:?}", first_index);
 
                                 resolve_node_info.first_resolved = true;
@@ -265,28 +269,29 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                 // gets resolved before second child
                                 if node.get_definition() == Definition::Subexpression {
                                     trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
-    
+
                                     resolve_node(node, &mut instruction_set.instructions, &mut instruction_set.data, None, 0)?;
                                     resolve_node_info.resolved = true;
                                 }
-    
+
                                 // check next child
                                 trace!("Pushing second child {:?}", second_index);
-
 
                                 let mut new = ResolveNodeInfo::new(second_index, node.get_definition());
 
                                 // if we are the root of a conditional branch (parent isn't also a conditional branch)
                                 // our second child (right) is allowed to ignore their first child
                                 // need to pass this information
-                                if node.get_definition() == Definition::ConditionalBranch && resolve_node_info.parent_definition != Definition::ConditionalBranch {
+                                if node.get_definition() == Definition::ConditionalBranch
+                                    && resolve_node_info.parent_definition != Definition::ConditionalBranch
+                                {
                                     trace!("Allowing second child of root conditional branch to ignore its first child.");
                                     new.can_ignore_first = true;
                                 }
-    
+
                                 resolve_node_info.second_resolved = true;
                                 stack.push(new);
-    
+
                                 false
                             } else {
                                 // all children resolved, now resolve this node
@@ -294,43 +299,62 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                 let we_are_list = node.get_definition() == Definition::List;
                                 let parent_is_list = resolve_node_info.parent_definition == Definition::List;
                                 let we_are_sublist = parent_is_list && we_are_list;
-    
+
                                 let resolve = !we_are_subexpression && !we_are_sublist;
-    
-    
+
                                 // subexpression already resolved before second child
                                 if resolve {
                                     trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
-    
-                                    resolve_node(node, &mut instruction_set.instructions, &mut instruction_set.data, list_counts.last(), jump_count)?;
+
+                                    resolve_node(
+                                        node,
+                                        &mut instruction_set.instructions,
+                                        &mut instruction_set.data,
+                                        list_counts.last(),
+                                        jump_count,
+                                    )?;
                                 }
 
                                 // if conditional branch, need to update jump table and pop from conditional stack
-                                if node.get_definition() == Definition::ConditionalBranch && resolve_node_info.parent_definition != Definition::ConditionalBranch {
+                                if node.get_definition() == Definition::ConditionalBranch
+                                    && resolve_node_info.parent_definition != Definition::ConditionalBranch
+                                {
                                     match conditional_stack.pop() {
                                         None => Err(format!("End of conditional branch and conditional stack is empty."))?,
                                         Some(jump_index) => match instruction_set.jump_table.get_mut(jump_index) {
-                                            None => Err(format!("No value in jump table at index {:?} to update for conditional branch.", jump_index))?,
+                                            None => Err(format!(
+                                                "No value in jump table at index {:?} to update for conditional branch.",
+                                                jump_index
+                                            ))?,
                                             Some(jump_value) => {
-                                                trace!("Updating jump table at index {:?} to {:?} for conditional branch.", jump_index, *jump_value);
+                                                trace!(
+                                                    "Updating jump table at index {:?} to {:?} for conditional branch.",
+                                                    jump_index,
+                                                    *jump_value
+                                                );
                                                 *jump_value = instruction_set.instructions.len();
                                             }
-                                        }
+                                        },
                                     }
                                 }
-    
+
                                 // after resolving, if a nested expression
                                 // and add nested expressions child to deferred list
                                 let mut return_instruction = (Instruction::EndExpression, None);
-                                let we_are_conditional = node.get_definition() == Definition::ApplyIfFalse || node.get_definition() == Definition::ApplyIfTrue;
+                                let we_are_conditional =
+                                    node.get_definition() == Definition::ApplyIfFalse || node.get_definition() == Definition::ApplyIfTrue;
                                 if we_are_conditional {
                                     return_instruction = match conditional_stack.last() {
                                         None => (Instruction::Return, None),
                                         // apply if true/false resolve fully before the parent conditional branch
                                         // second look up to get accurate value instruction data will happen when this instruction is placed
-                                        Some(return_index) => (Instruction::ReturnTo, Some(*return_index))
+                                        Some(return_index) => (Instruction::ReturnTo, Some(*return_index)),
                                     };
-                                    trace!("Return instruction for conditional is {:?} with data {:?}", return_instruction.0, return_instruction.1);
+                                    trace!(
+                                        "Return instruction for conditional is {:?} with data {:?}",
+                                        return_instruction.0,
+                                        return_instruction.1
+                                    );
                                 }
 
                                 if node.get_definition() == Definition::NestedExpression || we_are_conditional {
@@ -345,7 +369,7 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                     // up root count as well
                                     jump_count += 1;
                                 }
-    
+
                                 // If this node's parent is a list
                                 // add to its count, unless we are a list
                                 if parent_is_list && !we_are_list {
@@ -357,22 +381,22 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                         }
                                     }
                                 }
-    
+
                                 trace!("Node with definition {:?} at {:?} fully resolved", node.get_definition(), node_index);
-    
+
                                 resolve_node_info.resolved = true;
-    
+
                                 true
                             };
-    
+
                             trace!("---------------------------------------------------------");
-    
+
                             pop
                         }
                     },
                 },
             };
-    
+
             if pop {
                 stack.pop();
             }
@@ -385,7 +409,9 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
 
         trace!("Adding return instruction {:?} with data {:?}", return_instruction, instruction_data);
 
-        instruction_set.instructions.push(InstructionData::new(return_instruction, instruction_data));
+        instruction_set
+            .instructions
+            .push(InstructionData::new(return_instruction, instruction_data));
 
         trace!("Finished instructions for tree starting at index {:?}", root_index);
 
@@ -395,7 +421,6 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
             return Err(format!("Max iterations for roots reached."));
         }
     }
-    
 
     Ok(instruction_set)
 }
@@ -420,7 +445,7 @@ mod test_utils {
         nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
         expected_instructions: Vec<(Instruction, Option<usize>)>,
         expected_data: Vec<ExpressionData>,
-        expected_jumps: Vec<usize>
+        expected_jumps: Vec<usize>,
     ) {
         let expected_instructions: Vec<InstructionData> = expected_instructions.iter().map(|i| InstructionData::new(i.0, i.1)).collect();
 
@@ -826,9 +851,9 @@ mod lists {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
                 (Definition::List, Some(8), Some(1), Some(4), ",", TokenType::Comma), // 3
                 (Definition::Group, None, None, Some(6), "(", TokenType::StartGroup),
-                (Definition::Number, Some(6), None, None, "15", TokenType::Number), 
+                (Definition::Number, Some(6), None, None, "15", TokenType::Number),
                 (Definition::List, Some(4), Some(5), Some(7), ",", TokenType::Comma), // 6
-                (Definition::Number, Some(6), None, None, "20", TokenType::Number), 
+                (Definition::Number, Some(6), None, None, "20", TokenType::Number),
                 (Definition::List, Some(10), Some(3), Some(9), ",", TokenType::Comma), // 8
                 (Definition::Number, Some(8), None, None, "25", TokenType::Number),
                 (Definition::List, None, Some(8), Some(11), ",", TokenType::Comma), // 10
@@ -879,10 +904,7 @@ mod groups {
                 (Instruction::PerformAddition, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![
-                ExpressionData::integer(5),
-                ExpressionData::integer(10),
-            ],
+            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
         );
     }
 }
@@ -911,12 +933,8 @@ mod nested_expressions {
                 (Instruction::PerformAddition, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![
-                ExpressionData::expression(1),
-                ExpressionData::integer(5),
-                ExpressionData::integer(10),
-            ],
-            vec![0, 2]
+            vec![ExpressionData::expression(1), ExpressionData::integer(5), ExpressionData::integer(10)],
+            vec![0, 2],
         );
     }
 
@@ -939,7 +957,7 @@ mod nested_expressions {
                 (Instruction::Put, Some(3)),
                 (Instruction::EndExpression, None), //5
                 (Instruction::Put, Some(4)),
-                (Instruction::EndExpression, None), 
+                (Instruction::EndExpression, None),
             ],
             vec![
                 ExpressionData::expression(1),
@@ -947,7 +965,7 @@ mod nested_expressions {
                 ExpressionData::integer(5),
                 ExpressionData::integer(10),
             ],
-            vec![0, 4, 6]
+            vec![0, 4, 6],
         );
     }
 
@@ -987,7 +1005,7 @@ mod nested_expressions {
                 ExpressionData::expression(3),
                 ExpressionData::integer(15),
             ],
-            vec![0, 2, 6, 10]
+            vec![0, 2, 6, 10],
         );
     }
 }
@@ -1005,20 +1023,17 @@ mod conditionals {
             vec![
                 (Definition::Number, Some(1), None, None, "5", TokenType::Number),
                 (Definition::ApplyIfTrue, None, Some(0), Some(2), "?>", TokenType::ApplyIfTrue),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number)
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
                 (Instruction::Put, Some(1)),
                 (Instruction::JumpIfTrue, Some(1)),
-                (Instruction::EndExpression, None), 
+                (Instruction::EndExpression, None),
                 (Instruction::Put, Some(2)),
-                (Instruction::Return, None), 
+                (Instruction::Return, None),
             ],
-            vec![
-                ExpressionData::integer(5),
-                ExpressionData::integer(10),
-            ],
-            vec![0, 3]
+            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            vec![0, 3],
         );
     }
 
@@ -1029,20 +1044,17 @@ mod conditionals {
             vec![
                 (Definition::Number, Some(1), None, None, "5", TokenType::Number),
                 (Definition::ApplyIfFalse, None, Some(0), Some(2), "!>", TokenType::ApplyIfFalse),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number)
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
                 (Instruction::Put, Some(1)),
                 (Instruction::JumpIfFalse, Some(1)),
-                (Instruction::EndExpression, None), 
+                (Instruction::EndExpression, None),
                 (Instruction::Put, Some(2)),
-                (Instruction::Return, None), 
+                (Instruction::Return, None),
             ],
-            vec![
-                ExpressionData::integer(5),
-                ExpressionData::integer(10),
-            ],
-            vec![0, 3]
+            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            vec![0, 3],
         );
     }
 
@@ -1057,7 +1069,7 @@ mod conditionals {
                 (Definition::ConditionalBranch, None, Some(1), Some(5), ",", TokenType::Comma),
                 (Definition::Number, Some(5), None, None, "15", TokenType::Number),
                 (Definition::ApplyIfTrue, Some(3), Some(4), Some(6), "?>", TokenType::ApplyIfTrue),
-                (Definition::Number, Some(5), None, None, "20", TokenType::Number)
+                (Definition::Number, Some(5), None, None, "20", TokenType::Number),
             ],
             vec![
                 (Instruction::Put, Some(1)),
@@ -1068,7 +1080,7 @@ mod conditionals {
                 (Instruction::Put, Some(3)), // 5
                 (Instruction::ReturnTo, Some(1)),
                 (Instruction::Put, Some(4)), // 7
-                (Instruction::ReturnTo, Some(1)), 
+                (Instruction::ReturnTo, Some(1)),
             ],
             vec![
                 ExpressionData::integer(5),
@@ -1076,7 +1088,7 @@ mod conditionals {
                 ExpressionData::integer(10),
                 ExpressionData::integer(20),
             ],
-            vec![0, 4, 5, 7]
+            vec![0, 4, 5, 7],
         );
     }
 
@@ -1090,7 +1102,7 @@ mod conditionals {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
                 (Definition::ConditionalBranch, None, Some(1), Some(4), ",", TokenType::Comma),
                 (Definition::ApplyIfFalse, Some(3), None, Some(5), "!>", TokenType::ApplyIfFalse),
-                (Definition::Number, Some(4), None, None, "15", TokenType::Number)
+                (Definition::Number, Some(4), None, None, "15", TokenType::Number),
             ],
             vec![
                 (Instruction::Put, Some(1)),
@@ -1099,15 +1111,11 @@ mod conditionals {
                 (Instruction::EndExpression, None), // 3
                 (Instruction::Put, Some(2)),
                 (Instruction::ReturnTo, Some(1)),
-                (Instruction::Put, Some(3)), 
-                (Instruction::ReturnTo, Some(1)), 
+                (Instruction::Put, Some(3)),
+                (Instruction::ReturnTo, Some(1)),
             ],
-            vec![
-                ExpressionData::integer(5),
-                ExpressionData::integer(10),
-                ExpressionData::integer(15),
-            ],
-            vec![0, 3, 4, 6]
+            vec![ExpressionData::integer(5), ExpressionData::integer(10), ExpressionData::integer(15)],
+            vec![0, 3, 4, 6],
         );
     }
 
@@ -1130,7 +1138,7 @@ mod conditionals {
                 // 2
                 (Definition::Number, Some(9), None, None, "25", TokenType::Number),
                 (Definition::ApplyIfTrue, Some(7), Some(8), Some(10), "?>", TokenType::ApplyIfTrue), // 9
-                (Definition::Number, Some(9), None, None, "30", TokenType::Number)
+                (Definition::Number, Some(9), None, None, "30", TokenType::Number),
             ],
             vec![
                 (Instruction::Put, Some(1)),
@@ -1139,7 +1147,7 @@ mod conditionals {
                 (Instruction::JumpIfTrue, Some(3)), // 3
                 (Instruction::Put, Some(3)),
                 (Instruction::JumpIfTrue, Some(4)), // 5
-                (Instruction::EndExpression, None), 
+                (Instruction::EndExpression, None),
                 (Instruction::Put, Some(4)), // 7
                 (Instruction::ReturnTo, Some(1)),
                 (Instruction::Put, Some(5)), // 9
@@ -1155,7 +1163,7 @@ mod conditionals {
                 ExpressionData::integer(20),
                 ExpressionData::integer(30),
             ],
-            vec![0, 6, 7, 9, 11]
+            vec![0, 6, 7, 9, 11],
         );
     }
 }
