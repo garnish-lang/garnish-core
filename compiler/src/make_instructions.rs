@@ -1,5 +1,3 @@
-use std::usize;
-
 use garnish_lang_runtime::InstructionData;
 use garnish_lang_runtime::*;
 use log::trace;
