@@ -1,6 +1,6 @@
 | Precedence | Operator                                                           | Group Name       | Associativity |
 | :--------: | :----------------------------------------------------------------- | :-----------:    | :-----------: |
-| 1          | $? $ : ()                                                          | Value            | left-right    |
+| 1          | $? $ : () $!                                                       | Value            | left-right    |
 | 2          | () {}                                                              | Groupings        | left-right    |
 | 3          | .                                                                  | Access           | left-right    |
 | 4          | ~~                                                                 | Empty Apply      | left-right    |

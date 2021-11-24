@@ -37,6 +37,7 @@ impl InstructionSet {
 struct ResolveNodeInfo {
     node_index: Option<usize>,
     first_resolved: bool,
+    can_ignore_first: bool,
     second_resolved: bool,
     resolved: bool,
     parent_definition: Definition
@@ -47,6 +48,7 @@ impl ResolveNodeInfo {
         ResolveNodeInfo {
             node_index,
             first_resolved: false,
+            can_ignore_first: false,
             second_resolved: false,
             resolved: false,
             parent_definition
@@ -249,10 +251,14 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                 }
     
                                 trace!("Pushing first child {:?}", first_index);
-    
+
                                 resolve_node_info.first_resolved = true;
-                                stack.push(ResolveNodeInfo::new(first_index, node.get_definition()));
-    
+
+                                // ignore only if first doesn't exist
+                                if !(resolve_node_info.can_ignore_first && first_index.is_none()) {
+                                    stack.push(ResolveNodeInfo::new(first_index, node.get_definition()));
+                                }
+
                                 false
                             } else if second_expected && !resolve_node_info.second_resolved {
                                 // special check for subexpression, so far is only operations that isn't fully depth first
@@ -266,9 +272,20 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
     
                                 // check next child
                                 trace!("Pushing second child {:?}", second_index);
+
+
+                                let mut new = ResolveNodeInfo::new(second_index, node.get_definition());
+
+                                // if we are the root of a conditional branch (parent isn't also a conditional branch)
+                                // our second child (right) is allowed to ignore their first child
+                                // need to pass this information
+                                if node.get_definition() == Definition::ConditionalBranch && resolve_node_info.parent_definition != Definition::ConditionalBranch {
+                                    trace!("Allowing second child of root conditional branch to ignore its first child.");
+                                    new.can_ignore_first = true;
+                                }
     
                                 resolve_node_info.second_resolved = true;
-                                stack.push(ResolveNodeInfo::new(second_index, node.get_definition()));
+                                stack.push(new);
     
                                 false
                             } else {
@@ -1060,6 +1077,37 @@ mod conditionals {
                 ExpressionData::integer(20),
             ],
             vec![0, 4, 5, 7]
+        );
+    }
+
+    #[test]
+    fn conditional_chain_with_default_clause() {
+        assert_instruction_data_jumps(
+            3,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::ApplyIfTrue, Some(3), Some(0), Some(2), "?>", TokenType::ApplyIfTrue),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::ConditionalBranch, None, Some(1), Some(4), ",", TokenType::Comma),
+                (Definition::ApplyIfFalse, Some(3), None, Some(5), "!>", TokenType::ApplyIfFalse),
+                (Definition::Number, Some(4), None, None, "15", TokenType::Number)
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::JumpIfTrue, Some(2)),
+                (Instruction::JumpIfFalse, Some(3)),
+                (Instruction::EndExpression, None), // 3
+                (Instruction::Put, Some(2)),
+                (Instruction::ReturnTo, Some(1)),
+                (Instruction::Put, Some(3)), 
+                (Instruction::ReturnTo, Some(1)), 
+            ],
+            vec![
+                ExpressionData::integer(5),
+                ExpressionData::integer(10),
+                ExpressionData::integer(15),
+            ],
+            vec![0, 3, 4, 6]
         );
     }
 
