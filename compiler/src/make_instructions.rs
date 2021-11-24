@@ -241,7 +241,7 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
 
                                 // on first visit to a conditional branch node
                                 // add to jump table and store the position in conditional stack
-                                if node.get_definition() == Definition::ConditionalBranch {
+                                if node.get_definition() == Definition::ConditionalBranch && resolve_node_info.parent_definition != Definition::ConditionalBranch {
                                     trace!("Starting new conditional branch. Return slot in jump table {:?}", instruction_set.jump_table.len());
                                     conditional_stack.push(instruction_set.jump_table.len());
                                     instruction_set.jump_table.push(0); // this will be updated when conditional branch nod resolves
@@ -289,12 +289,15 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                 }
 
                                 // if conditional branch, need to update jump table and pop from conditional stack
-                                if node.get_definition() == Definition::ConditionalBranch {
+                                if node.get_definition() == Definition::ConditionalBranch && resolve_node_info.parent_definition != Definition::ConditionalBranch {
                                     match conditional_stack.pop() {
                                         None => Err(format!("End of conditional branch and conditional stack is empty."))?,
                                         Some(jump_index) => match instruction_set.jump_table.get_mut(jump_index) {
                                             None => Err(format!("No value in jump table at index {:?} to update for conditional branch.", jump_index))?,
-                                            Some(jump_value) => *jump_value = instruction_set.instructions.len()
+                                            Some(jump_value) => {
+                                                trace!("Updating jump table at index {:?} to {:?} for conditional branch.", jump_index, *jump_value);
+                                                *jump_value = instruction_set.instructions.len();
+                                            }
                                         }
                                     }
                                 }
@@ -310,6 +313,7 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                         // second look up to get accurate value instruction data will happen when this instruction is placed
                                         Some(return_index) => (Instruction::ReturnTo, Some(*return_index))
                                     };
+                                    trace!("Return instruction for conditional is {:?} with data {:?}", return_instruction.0, return_instruction.1);
                                 }
 
                                 if node.get_definition() == Definition::NestedExpression || we_are_conditional {
@@ -361,19 +365,6 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                 return Err(format!("Max iterations reached in resolving tree at root {:?}", root_index));
             }
         }
-    
-        // if return_instruction == Instruction::ReturnTo {
-        //     trace!("Final resolution for return instruction {:?}", return_instruction);
-        //     // conditional branch haden't fully resolved when the data was set
-        //     // fully resolving now
-        //     match instruction_data {
-        //         None => Err(format!("No data provided for return to instruction."))?,
-        //         Some(index) => match instruction_set.jump_table.get(index) {
-        //             None => Err(format!("No value in jump table at index {:?} to update for conditional branch.", index))?,
-        //             Some(value) => instruction_data = Some(*value)
-        //         }
-        //     }
-        // };
 
         trace!("Adding return instruction {:?} with data {:?}", return_instruction, instruction_data);
 
@@ -1069,6 +1060,54 @@ mod conditionals {
                 ExpressionData::integer(20),
             ],
             vec![0, 4, 5, 7]
+        );
+    }
+
+    #[test]
+    fn multiple_conditional_branches() {
+        assert_instruction_data_jumps(
+            7,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::ApplyIfTrue, Some(3), Some(0), Some(2), "?>", TokenType::ApplyIfTrue), // 1
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                // 1
+                (Definition::ConditionalBranch, Some(7), Some(1), Some(5), ",", TokenType::Comma), // 3
+                // 1
+                (Definition::Number, Some(5), None, None, "15", TokenType::Number),
+                (Definition::ApplyIfTrue, Some(3), Some(4), Some(6), "?>", TokenType::ApplyIfTrue), // 5
+                (Definition::Number, Some(5), None, None, "20", TokenType::Number),
+                // 2
+                (Definition::ConditionalBranch, None, Some(3), Some(9), ",", TokenType::Comma), // 7
+                // 2
+                (Definition::Number, Some(9), None, None, "25", TokenType::Number),
+                (Definition::ApplyIfTrue, Some(7), Some(8), Some(10), "?>", TokenType::ApplyIfTrue), // 9
+                (Definition::Number, Some(9), None, None, "30", TokenType::Number)
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::JumpIfTrue, Some(2)), // 1
+                (Instruction::Put, Some(2)),
+                (Instruction::JumpIfTrue, Some(3)), // 3
+                (Instruction::Put, Some(3)),
+                (Instruction::JumpIfTrue, Some(4)), // 5
+                (Instruction::EndExpression, None), 
+                (Instruction::Put, Some(4)), // 7
+                (Instruction::ReturnTo, Some(1)),
+                (Instruction::Put, Some(5)), // 9
+                (Instruction::ReturnTo, Some(1)),
+                (Instruction::Put, Some(6)), // 11
+                (Instruction::ReturnTo, Some(1)),
+            ],
+            vec![
+                ExpressionData::integer(5),
+                ExpressionData::integer(15),
+                ExpressionData::integer(25),
+                ExpressionData::integer(10),
+                ExpressionData::integer(20),
+                ExpressionData::integer(30),
+            ],
+            vec![0, 6, 7, 9, 11]
         );
     }
 }
