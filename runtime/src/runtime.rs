@@ -208,12 +208,14 @@ impl GarnishLangRuntime {
 
     pub fn perform_addition(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Addition");
-        match self.data.len() {
+        match self.reference_stack.len() {
             0 | 1 => Err(error(format!("Not enough data to perform addition operation."))),
             // 2 and greater
             _ => {
-                let right_addr = self.addr_of_raw_data(self.data.len() - 1)?;
-                let left_addr = self.addr_of_raw_data(self.data.len() - 2)?;
+                let right_ref = self.reference_stack.pop().unwrap();
+                let left_ref = self.reference_stack.pop().unwrap();
+                let right_addr = self.addr_of_raw_data(right_ref)?;
+                let left_addr = self.addr_of_raw_data(left_ref)?;
                 let right_data = self.get_data_internal(right_addr)?;
                 let left_data = self.get_data_internal(left_addr)?;
 
@@ -233,11 +235,17 @@ impl GarnishLangRuntime {
                         self.data.pop();
                         self.data.pop();
 
+                        self.reference_stack.push(self.data.len());
                         self.add_data(ExpressionData::integer(left + right))?;
 
                         Ok(())
                     }
-                    (l, r) => Err(error(format!("Cannot perform addition with types {:?} and {:?}", l, r))),
+                    _ => {
+                        self.reference_stack.push(self.data.len());
+                        self.add_data(ExpressionData::unit())?;
+
+                        Ok(())
+                    }
                 }
             }
         }
@@ -389,12 +397,14 @@ impl GarnishLangRuntime {
 
     pub fn equality_comparison(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Equality Comparison");
-        match self.data.len() {
+        match self.reference_stack.len() {
             0 | 1 => Err(error(format!("Not enough data to perform addition operation."))),
             // 2 and greater
             _ => {
-                let right_addr = self.addr_of_raw_data(self.data.len() - 1)?;
-                let left_addr = self.addr_of_raw_data(self.data.len() - 2)?;
+                let right_ref = self.reference_stack.pop().unwrap();
+                let left_ref = self.reference_stack.pop().unwrap();
+                let right_addr = self.addr_of_raw_data(right_ref)?;
+                let left_addr = self.addr_of_raw_data(left_ref)?;
                 let right_data = self.get_data_internal(right_addr)?;
                 let left_data = self.get_data_internal(left_addr)?;
 
@@ -825,6 +835,8 @@ impl GarnishLangRuntime {
 
 #[cfg(test)]
 mod tests {
+    use std::vec;
+
     use crate::result::error;
 
     use crate::{
@@ -1009,9 +1021,10 @@ mod tests {
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.data.get(0).unwrap().bytes, 30i64.to_le_bytes());
+        let result = runtime.perform_addition();
+
+        assert!(result.is_err());
     }
 
     #[test]
@@ -1020,10 +1033,15 @@ mod tests {
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::reference(0)).unwrap();
-        runtime.add_data(ExpressionData::reference(1)).unwrap();
+        runtime.add_reference_data(0).unwrap();
+        runtime.add_reference_data(1).unwrap();
+
+        runtime.reference_stack.push(0);
+        runtime.reference_stack.push(1);
+
         runtime.perform_addition().unwrap();
 
+        assert_eq!(runtime.reference_stack, vec![2]);
         assert_eq!(runtime.data.get(2).unwrap().bytes, 30i64.to_le_bytes());
     }
 
@@ -1033,9 +1051,14 @@ mod tests {
 
         runtime.add_data(ExpressionData::symbol(&"sym1".to_string(), 1)).unwrap();
         runtime.add_data(ExpressionData::symbol(&"sym2".to_string(), 2)).unwrap();
-        let result = runtime.perform_addition();
 
-        assert!(result.is_err());
+        runtime.reference_stack.push(0);
+        runtime.reference_stack.push(1);
+
+        runtime.perform_addition().unwrap();
+
+        assert_eq!(runtime.reference_stack, vec![2]);
+        assert_eq!(runtime.data.get(2).unwrap().get_type(), ExpressionDataType::Unit);
     }
 
     #[test]
@@ -1169,6 +1192,9 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.reference_stack.push(0);
+        runtime.reference_stack.push(1);
 
         runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 
@@ -1387,6 +1413,9 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
 
+        runtime.reference_stack.push(0);
+        runtime.reference_stack.push(1);
+
         runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
 
         runtime.equality_comparison().unwrap();
@@ -1400,6 +1429,9 @@ mod tests {
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.reference_stack.push(0);
+        runtime.reference_stack.push(1);
 
         runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
 
