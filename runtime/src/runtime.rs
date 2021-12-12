@@ -407,12 +407,15 @@ impl GarnishLangRuntime {
 
     pub fn jump(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Jump | Data - {:?}", index);
-        match index > 0 && index <= self.instructions.len() {
-            false => Err(error(format!("Given index is out of bounds."))),
-            true => {
-                self.instruction_cursor = index - 1;
-                Ok(())
-            }
+        self.instruction_cursor = self.get_jump_point(index)? - 1;
+
+        Ok(())
+    }
+
+    fn get_jump_point(&self, index: usize) -> GarnishLangRuntimeResult<usize> {
+        match self.expression_table.get(index) {
+            None => Err(error(format!("No jump point at position {:?}.", index))),
+            Some(point) => Ok(*point),
         }
     }
 
@@ -1406,7 +1409,9 @@ mod tests {
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.jump(4).unwrap();
+        runtime.add_expression(4).unwrap();
+
+        runtime.jump(0).unwrap();
 
         assert!(runtime.jump_path.is_empty());
         assert_eq!(runtime.instruction_cursor, 3);
