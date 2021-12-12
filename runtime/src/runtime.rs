@@ -559,10 +559,7 @@ impl GarnishLangRuntime {
                             Ok(v) => v,
                         };
 
-                        let next_instruction = match self.expression_table.get(expression_index) {
-                            Some(v) => *v,
-                            None => Err(error(format!("No expression registered at index {:?}.", expression_index)))?,
-                        };
+                        let next_instruction = self.get_jump_point(expression_index)?;
 
                         // Expression stores index of expression table, look up actual instruction index
 
