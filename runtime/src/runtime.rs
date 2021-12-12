@@ -609,7 +609,9 @@ impl GarnishLangRuntime {
 
                 let right_addr = self.addr_of_raw_data(right_ref)?;
 
-                self.set_instruction_cursor(index - 1)?;
+                let point = self.get_jump_point(index)?;
+
+                self.set_instruction_cursor(point - 1)?;
                 self.inputs.pop();
                 self.inputs.push(right_addr);
 
@@ -1605,19 +1607,19 @@ mod tests {
         runtime.add_data(ExpressionData::integer(40)).unwrap();
 
         // 1
-        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
-        runtime.add_instruction(Instruction::PutInput, None).unwrap();
-        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.add_instruction(Instruction::PutResult, None).unwrap();
-        runtime.add_instruction(Instruction::Reapply, None).unwrap();
-        runtime.add_instruction(Instruction::EndExpression, None).unwrap();
-
-        // 7
         runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
         runtime.add_instruction(Instruction::Apply, None).unwrap();
 
-        runtime.expression_table.push(1);
+        // 4
+        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::PutInput, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.add_instruction(Instruction::PutResult, None).unwrap();
+        runtime.add_instruction(Instruction::Reapply, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+        runtime.expression_table.push(4);
 
         runtime.reference_stack.push(4);
 
@@ -1625,13 +1627,13 @@ mod tests {
         runtime.current_result = Some(4);
         runtime.jump_path.push(9);
 
-        runtime.set_instruction_cursor(5).unwrap();
+        runtime.set_instruction_cursor(8).unwrap();
 
-        runtime.reapply(1).unwrap();
+        runtime.reapply(0).unwrap();
 
         assert_eq!(runtime.inputs.len(), 1);
         assert_eq!(*runtime.inputs.get(0).unwrap(), 4);
-        assert_eq!(runtime.instruction_cursor, 0);
+        assert_eq!(runtime.instruction_cursor, 3);
         assert_eq!(*runtime.jump_path.get(0).unwrap(), 9);
     }
 

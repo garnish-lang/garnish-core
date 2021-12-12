@@ -254,7 +254,7 @@ fn add_5_loop() {
 
     // 11
     runtime.add_instruction(Instruction::PutResult, None).unwrap();
-    runtime.add_instruction(Instruction::Reapply, Some(1)).unwrap();
+    runtime.add_instruction(Instruction::Reapply, Some(0)).unwrap();
 
     // 13
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
