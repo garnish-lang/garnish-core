@@ -69,14 +69,16 @@ fn conditionals_and_inputs() {
 
     // 13
     runtime.add_instruction(Instruction::PutInput, None).unwrap();
-    runtime.add_instruction(Instruction::JumpIfTrue, Some(9)).unwrap();
-    runtime.add_instruction(Instruction::JumpIfFalse, Some(1)).unwrap();
+    runtime.add_instruction(Instruction::JumpIfTrue, Some(1)).unwrap();
+    runtime.add_instruction(Instruction::JumpIfFalse, Some(2)).unwrap();
 
     runtime.add_instruction(Instruction::ExecuteExpression, Some(5)).unwrap();
     runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
     runtime.add_expression(16).unwrap();
+    runtime.add_expression(9).unwrap();
+    runtime.add_expression(1).unwrap();
 
     runtime.set_instruction_cursor(13).unwrap();
 
@@ -124,14 +126,14 @@ fn multiple_conditions() {
     runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
     runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
 
-    runtime.add_instruction(Instruction::JumpIfTrue, Some(1)).unwrap();
+    runtime.add_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
 
     runtime.add_instruction(Instruction::PutInput, None).unwrap();
     runtime.add_instruction(Instruction::Put, Some(4)).unwrap();
     runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
 
-    runtime.add_instruction(Instruction::JumpIfFalse, Some(5)).unwrap();
-    runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
+    runtime.add_instruction(Instruction::JumpIfFalse, Some(2)).unwrap();
+    runtime.add_instruction(Instruction::JumpIfTrue, Some(1)).unwrap();
 
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
@@ -185,6 +187,7 @@ fn value_before_jump() {
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
     runtime.add_expression(8).unwrap();
+    runtime.add_expression(1).unwrap();
 
     runtime.set_instruction_cursor(3).unwrap();
 
@@ -245,7 +248,7 @@ fn add_5_loop() {
     runtime.add_instruction(Instruction::PutResult, None).unwrap();
     runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
     runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
-    runtime.add_instruction(Instruction::JumpIfFalse, Some(11)).unwrap();
+    runtime.add_instruction(Instruction::JumpIfFalse, Some(2)).unwrap();
     runtime.add_instruction(Instruction::PutResult, None).unwrap();
     runtime.add_instruction(Instruction::Jump, Some(1)).unwrap();
 
@@ -264,6 +267,7 @@ fn add_5_loop() {
 
     runtime.add_expression(1).unwrap();
     runtime.add_expression(13).unwrap();
+    runtime.add_expression(11).unwrap();
 
     runtime.set_instruction_cursor(14).unwrap();
 

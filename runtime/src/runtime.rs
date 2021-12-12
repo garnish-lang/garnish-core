@@ -285,97 +285,89 @@ impl GarnishLangRuntime {
 
     pub fn jump_if_true(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Execute Expression If True | Data - {:?}", index);
-        match index > 0 && index <= self.instructions.len() {
-            false => Err(error(format!("Given index is out of bounds."))),
-            true => {
-                let i = self.addr_of_raw_data(self.data.len() - 1)?;
-                let d = self.get_data_internal(i)?;
-                let remove_data = match self.get_instruction(self.instruction_cursor + 1) {
-                    None => true,
-                    Some(instruction) => match instruction.instruction {
-                        Instruction::JumpIfFalse => false,
-                        _ => true,
-                    },
-                };
+        let point = self.get_jump_point(index)? - 1;
+        let i = self.addr_of_raw_data(self.data.len() - 1)?;
+        let d = self.get_data_internal(i)?;
+        let remove_data = match self.get_instruction(self.instruction_cursor + 1) {
+            None => true,
+            Some(instruction) => match instruction.instruction {
+                Instruction::JumpIfFalse => false,
+                _ => true,
+            },
+        };
 
-                match d.get_type() {
-                    ExpressionDataType::Symbol => match d.as_symbol_value() {
-                        Err(e) => Err(error(e))?,
-                        Ok(v) => match v {
-                            0 => (),
-                            _ => {
-                                trace!(
-                                    "Jumping from symbol {:?} with value {:?}",
-                                    d.as_symbol_name().unwrap_or("[NO_SYMBOL_NAME]".to_string()),
-                                    v
-                                );
-                                self.instruction_cursor = index - 1;
-                            }
-                        },
-                    },
-                    ExpressionDataType::Unit => (),
+        match d.get_type() {
+            ExpressionDataType::Symbol => match d.as_symbol_value() {
+                Err(e) => Err(error(e))?,
+                Ok(v) => match v {
+                    0 => (),
                     _ => {
                         trace!(
-                            "Jumping from non Unit value of type {:?} with addr {:?}",
-                            d.get_type(),
-                            self.data.len() - 1
+                            "Jumping from symbol {:?} with value {:?}",
+                            d.as_symbol_name().unwrap_or("[NO_SYMBOL_NAME]".to_string()),
+                            v
                         );
-                        self.instruction_cursor = index - 1;
+                        self.instruction_cursor = point;
                     }
-                };
-
-                if remove_data {
-                    self.data.pop();
-                }
-
-                Ok(())
+                },
+            },
+            ExpressionDataType::Unit => (),
+            _ => {
+                trace!(
+                    "Jumping from non Unit value of type {:?} with addr {:?}",
+                    d.get_type(),
+                    self.data.len() - 1
+                );
+                self.instruction_cursor = point;
             }
+        };
+
+        if remove_data {
+            self.data.pop();
         }
+
+        Ok(())
     }
 
     pub fn jump_if_false(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Execute Expression If False | Data - {:?}", index);
-        match index > 0 && index <= self.instructions.len() {
-            false => Err(error(format!("Given index is out of bounds."))),
-            true => {
-                let i = self.addr_of_raw_data(self.data.len() - 1)?;
-                let d = self.get_data_internal(i)?;
-                let remove_data = match self.get_instruction(self.instruction_cursor + 1) {
-                    None => true,
-                    Some(instruction) => match instruction.instruction {
-                        Instruction::JumpIfTrue => false,
-                        _ => true,
-                    },
-                };
+        let point = self.get_jump_point(index)? - 1;
+        let i = self.addr_of_raw_data(self.data.len() - 1)?;
+        let d = self.get_data_internal(i)?;
+        let remove_data = match self.get_instruction(self.instruction_cursor + 1) {
+            None => true,
+            Some(instruction) => match instruction.instruction {
+                Instruction::JumpIfTrue => false,
+                _ => true,
+            },
+        };
 
-                match d.get_type() {
-                    ExpressionDataType::Symbol => match d.as_symbol_value() {
-                        Err(e) => Err(error(e))?,
-                        Ok(v) => match v {
-                            0 => {
-                                trace!(
-                                    "Jumping from Zero symbol with name {:?}",
-                                    d.as_symbol_name().unwrap_or("[NO_SYMBOL_NAME]".to_string())
-                                );
-                                self.instruction_cursor = index - 1;
-                            }
-                            _ => (),
-                        },
-                    },
-                    ExpressionDataType::Unit => {
-                        trace!("Jumping from Unit value with addr {:?}", self.data.len() - 1);
-                        self.instruction_cursor = index - 1;
+        match d.get_type() {
+            ExpressionDataType::Symbol => match d.as_symbol_value() {
+                Err(e) => Err(error(e))?,
+                Ok(v) => match v {
+                    0 => {
+                        trace!(
+                            "Jumping from Zero symbol with name {:?}",
+                            d.as_symbol_name().unwrap_or("[NO_SYMBOL_NAME]".to_string())
+                        );
+                        self.instruction_cursor = point;
                     }
                     _ => (),
-                };
-
-                if remove_data {
-                    self.data.pop();
-                }
-
-                Ok(())
+                },
+            },
+            ExpressionDataType::Unit => {
+                trace!("Jumping from Unit value with addr {:?}", self.data.len() - 1);
+                self.instruction_cursor = point;
             }
+            _ => (),
+        };
+
+        if remove_data {
+            self.data.pop();
         }
+
+        Ok(())
     }
 
     pub fn end_expression(&mut self) -> GarnishLangRuntimeResult {
@@ -1270,7 +1262,9 @@ mod tests {
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.jump_if_true(3).unwrap();
+        runtime.add_expression(3).unwrap();
+
+        runtime.jump_if_true(0).unwrap();
 
         assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 2);
@@ -1286,7 +1280,9 @@ mod tests {
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.jump_if_true(3).unwrap();
+        runtime.add_expression(3).unwrap();
+
+        runtime.jump_if_true(0).unwrap();
 
         assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 1);
@@ -1302,7 +1298,9 @@ mod tests {
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.jump_if_true(3).unwrap();
+        runtime.add_expression(3).unwrap();
+
+        runtime.jump_if_true(0).unwrap();
 
         assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 1);
@@ -1318,7 +1316,9 @@ mod tests {
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.jump_if_false(3).unwrap();
+        runtime.add_expression(3).unwrap();
+
+        runtime.jump_if_false(0).unwrap();
 
         assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 1);
@@ -1334,7 +1334,9 @@ mod tests {
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.jump_if_false(3).unwrap();
+        runtime.add_expression(3).unwrap();
+
+        runtime.jump_if_false(0).unwrap();
 
         assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 2);
@@ -1350,7 +1352,9 @@ mod tests {
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.jump_if_false(3).unwrap();
+        runtime.add_expression(3).unwrap();
+
+        runtime.jump_if_false(0).unwrap();
 
         assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 2);
@@ -1367,11 +1371,13 @@ mod tests {
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.jump_if_true(4).unwrap();
+        runtime.add_expression(4).unwrap();
+
+        runtime.jump_if_true(0).unwrap();
 
         assert_eq!(runtime.data.len(), 1);
 
-        runtime.jump_if_false(4).unwrap();
+        runtime.jump_if_false(0).unwrap();
 
         assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 3);
@@ -1388,11 +1394,13 @@ mod tests {
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.jump_if_false(4).unwrap();
+        runtime.add_expression(4).unwrap();
+
+        runtime.jump_if_false(0).unwrap();
 
         assert_eq!(runtime.data.len(), 1);
 
-        runtime.jump_if_true(4).unwrap();
+        runtime.jump_if_true(0).unwrap();
 
         assert!(runtime.data.is_empty());
         assert_eq!(runtime.instruction_cursor, 3);
