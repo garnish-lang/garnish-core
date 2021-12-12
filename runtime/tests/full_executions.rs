@@ -22,6 +22,7 @@ fn adding_numbers_with_sub_expression() {
     runtime.add_data(ExpressionData::integer(100)).unwrap();
     runtime.add_data(ExpressionData::integer(200)).unwrap();
     runtime.add_data(ExpressionData::integer(300)).unwrap();
+    runtime.end_constant_data().unwrap();
 
     runtime.add_input_reference(2).unwrap();
 
@@ -49,6 +50,7 @@ fn conditionals_and_inputs() {
     runtime.add_data(ExpressionData::integer(100)).unwrap();
     runtime.add_data(ExpressionData::integer(200)).unwrap();
     runtime.add_data(ExpressionData::integer(300)).unwrap();
+    runtime.end_constant_data().unwrap();
 
     runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
     runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
@@ -104,6 +106,7 @@ fn multiple_conditions() {
     runtime.add_data(ExpressionData::integer(300)).unwrap();
     runtime.add_data(ExpressionData::integer(1)).unwrap();
     runtime.add_data(ExpressionData::integer(2)).unwrap();
+    runtime.end_constant_data().unwrap();
 
     runtime.add_instruction(Instruction::Put, Some(0)).unwrap(); // 1
     runtime.add_instruction(Instruction::Jump, Some(16)).unwrap();
@@ -158,6 +161,7 @@ fn value_before_jump() {
     runtime.add_data(ExpressionData::integer(100)).unwrap();
     runtime.add_data(ExpressionData::integer(200)).unwrap();
     runtime.add_data(ExpressionData::integer(300)).unwrap();
+    runtime.end_constant_data().unwrap();
 
     runtime.add_instruction(Instruction::Put, Some(0)).unwrap(); // 1
     runtime.add_instruction(Instruction::Jump, Some(8)).unwrap();
@@ -187,6 +191,7 @@ fn pair_with_pair() {
     runtime.add_data(ExpressionData::integer(100)).unwrap();
     runtime.add_data(ExpressionData::integer(200)).unwrap();
     runtime.add_data(ExpressionData::integer(300)).unwrap();
+    runtime.end_constant_data().unwrap();
 
     // 1
     runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
@@ -219,6 +224,7 @@ fn add_5_loop() {
     runtime.add_data(ExpressionData::integer(5)).unwrap();
     runtime.add_data(ExpressionData::integer(25)).unwrap();
     runtime.add_data(ExpressionData::expression(0)).unwrap();
+    runtime.end_constant_data().unwrap();
 
     // 1 - subexpression
     runtime.add_instruction(Instruction::PutInput, None).unwrap();

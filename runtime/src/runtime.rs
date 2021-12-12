@@ -178,8 +178,16 @@ impl GarnishLangRuntime {
 
     pub fn put(&mut self, i: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put | Data - {:?}", i);
-        self.reference_stack.push(self.data.len());
-        self.add_reference_data(i)
+        match i >= self.end_of_constant_data {
+            true => Err(error(format!(
+                "Attempting to put reference to {:?} which is out of bounds of constant data that ends at {:?}.",
+                i, self.end_of_constant_data
+            ))),
+            false => {
+                self.reference_stack.push(self.data.len());
+                self.add_reference_data(i)
+            }
+        }
     }
 
     pub fn put_input(&mut self) -> GarnishLangRuntimeResult {
@@ -1159,11 +1167,22 @@ mod tests {
     fn put() {
         let mut runtime = GarnishLangRuntime::new();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.end_constant_data().unwrap();
 
         runtime.put(0).unwrap();
 
         assert_eq!(runtime.data.get(1).unwrap().as_reference().unwrap(), 0);
         assert_eq!(*runtime.reference_stack.get(0).unwrap(), 1);
+    }
+
+    #[test]
+    fn put_outside_of_constant_data() {
+        let mut runtime = GarnishLangRuntime::new();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+
+        let result = runtime.put(0);
+
+        assert!(result.is_err());
     }
 
     #[test]
@@ -1729,7 +1748,9 @@ mod tests {
                         ExpressionDataType::Symbol => {
                             let addr = runtime.get_data_len();
                             runtime.add_data(ExpressionData::integer(100))?;
-                            runtime.put(addr)?;
+                            let raddr = runtime.get_data_len();
+                            runtime.add_reference_data(addr)?;
+                            runtime.reference_stack.push(raddr);
                             Ok(true)
                         }
                         t => Err(error(format!("Address given to resolve is of type {:?}. Expected symbol type.", t)))?,
@@ -1786,7 +1807,9 @@ mod tests {
 
                 let addr = runtime.get_data_len();
                 runtime.add_data(ExpressionData::integer(value))?;
-                runtime.put(addr)?;
+                let raddr = runtime.get_data_len();
+                runtime.add_reference_data(addr)?;
+                runtime.reference_stack.push(raddr);
                 Ok(true)
             }
         }
