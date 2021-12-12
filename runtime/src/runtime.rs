@@ -5,6 +5,7 @@ use crate::expression_data::*;
 use crate::instruction::*;
 use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
 use crate::GarnishLangRuntimeData;
+use crate::GarnishLangRuntimeError;
 use log::trace;
 
 pub trait GarnishLangRuntimeContext {
@@ -27,6 +28,7 @@ impl GarnishLangRuntimeContext for EmptyContext {
 #[derive(Debug)]
 pub struct GarnishLangRuntime {
     data: Vec<ExpressionData>,
+    end_of_constant_data: usize,
     reference_stack: Vec<usize>,
     instructions: Vec<InstructionData>,
     instruction_cursor: usize,
@@ -41,6 +43,7 @@ impl GarnishLangRuntime {
     pub fn new() -> Self {
         GarnishLangRuntime {
             data: vec![],
+            end_of_constant_data: 0,
             reference_stack: vec![],
             instructions: vec![InstructionData {
                 instruction: Instruction::EndExecution,
@@ -76,6 +79,16 @@ impl GarnishLangRuntime {
         let addr = self.data.len();
         self.data.push(data);
         Ok(addr)
+    }
+
+    pub fn end_constant_data(&mut self) -> GarnishLangRuntimeResult {
+        self.end_of_constant_data = self.data.len();
+
+        Ok(())
+    }
+
+    pub fn get_end_of_constant_data(&self) -> usize {
+        self.end_of_constant_data
     }
 
     pub fn get_data(&self, index: usize) -> Option<&ExpressionData> {
@@ -872,6 +885,17 @@ mod tests {
         runtime.add_data(ExpressionData::integer(200)).unwrap();
 
         assert_eq!(runtime.get_data(1).unwrap().as_integer().unwrap(), 200);
+    }
+
+    #[test]
+    fn end_constant_data() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(100)).unwrap();
+        runtime.add_data(ExpressionData::integer(200)).unwrap();
+        runtime.end_constant_data().unwrap();
+
+        assert_eq!(runtime.get_end_of_constant_data(), 2);
     }
 
     #[test]

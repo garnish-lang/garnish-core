@@ -35,7 +35,7 @@ fn adding_numbers_with_sub_expression() {
     runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
-    runtime.set_instruction_cursor(4).unwrap();
+    runtime.set_instruction_cursor(5).unwrap();
 
     execute_all_instructions(&mut runtime);
 
