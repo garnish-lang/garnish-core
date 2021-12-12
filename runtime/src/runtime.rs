@@ -5,7 +5,6 @@ use crate::expression_data::*;
 use crate::instruction::*;
 use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
 use crate::GarnishLangRuntimeData;
-use crate::GarnishLangRuntimeError;
 use log::trace;
 
 pub trait GarnishLangRuntimeContext {

@@ -184,7 +184,7 @@ fn value_before_jump() {
     runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
-    runtime.add_expression(8);
+    runtime.add_expression(8).unwrap();
 
     runtime.set_instruction_cursor(3).unwrap();
 
