@@ -43,8 +43,7 @@ impl GarnishLangRuntime {
         }
 
         // default to unit
-        self.reference_stack.push(self.data.len());
-        self.add_data(ExpressionData::unit())?;
+        self.add_data_ref(ExpressionData::unit())?;
         Ok(())
     }
 }

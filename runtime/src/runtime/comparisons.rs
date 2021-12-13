@@ -23,8 +23,7 @@ impl GarnishLangRuntime {
         self.data.pop();
         self.data.pop();
 
-        self.reference_stack.push(self.data.len());
-        self.add_data(match result {
+        self.add_data_ref(match result {
             true => ExpressionData::boolean_true(),
             false => ExpressionData::boolean_false(),
         })?;

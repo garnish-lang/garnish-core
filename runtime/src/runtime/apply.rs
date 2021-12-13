@@ -62,15 +62,13 @@ impl GarnishLangRuntime {
 
                 match context {
                     None => {
-                        self.reference_stack.push(self.data.len());
-                        self.add_data(ExpressionData::unit())?;
+                        self.add_data_ref(ExpressionData::unit())?;
                         Ok(())
                     }
                     Some(c) => match c.apply(external_value, right_addr, self)? {
                         true => Ok(()),
                         false => {
-                            self.reference_stack.push(self.data.len());
-                            self.add_data(ExpressionData::unit())?;
+                            self.add_data_ref(ExpressionData::unit())?;
                             Ok(())
                         }
                     },

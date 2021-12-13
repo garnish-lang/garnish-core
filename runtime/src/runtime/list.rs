@@ -52,8 +52,7 @@ impl GarnishLangRuntime {
             ordered[i] = item;
         }
 
-        self.reference_stack.push(self.data.len());
-        self.add_data(ExpressionData::list(list, ordered))?;
+        self.add_data_ref(ExpressionData::list(list, ordered))?;
 
         Ok(())
     }
@@ -66,8 +65,7 @@ impl GarnishLangRuntime {
 
         match self.get_access_addr(right_ref, left_ref)? {
             None => {
-                self.reference_stack.push(self.data.len());
-                self.add_data(ExpressionData::unit())?;
+                self.add_data_ref(ExpressionData::unit())?;
             }
             Some(i) => {
                 self.add_reference_data(i)?;

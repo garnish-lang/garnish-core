@@ -17,14 +17,12 @@ impl GarnishLangRuntime {
                 self.data.pop();
                 self.data.pop();
 
-                self.reference_stack.push(self.data.len());
-                self.add_data(ExpressionData::integer(left + right))?;
+                self.add_data_ref(ExpressionData::integer(left + right))?;
 
                 Ok(())
             }
             _ => {
-                self.reference_stack.push(self.data.len());
-                self.add_data(ExpressionData::unit())?;
+                self.add_data_ref(ExpressionData::unit())?;
 
                 Ok(())
             }

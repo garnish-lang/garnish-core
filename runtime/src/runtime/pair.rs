@@ -8,8 +8,7 @@ impl GarnishLangRuntime {
         let right_addr = self.next_raw_ref()?;
         let left_addr = self.next_raw_ref()?;
 
-        self.reference_stack.push(self.data.len());
-        self.add_data(ExpressionData::pair(left_addr, right_addr))?;
+        self.add_data_ref(ExpressionData::pair(left_addr, right_addr))?;
 
         Ok(())
     }
