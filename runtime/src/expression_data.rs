@@ -12,6 +12,8 @@ pub enum ExpressionDataType {
     List,
     Expression,
     External,
+    True,
+    False,
 }
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -32,6 +34,14 @@ impl ExpressionData {
 
     pub fn unit() -> ExpressionData {
         ExpressionData::new(ExpressionDataType::Unit, vec![])
+    }
+
+    pub fn boolean_true() -> ExpressionData {
+        ExpressionData::new(ExpressionDataType::True, vec![])
+    }
+
+    pub fn boolean_false() -> ExpressionData {
+        ExpressionData::new(ExpressionDataType::False, vec![])
     }
 
     pub fn integer(i: i64) -> ExpressionData {
@@ -89,6 +99,14 @@ impl ExpressionData {
 
     pub fn get_type(&self) -> ExpressionDataType {
         self.data_type
+    }
+
+    pub fn as_boolean(&self) -> Result<bool, String> {
+        match self.get_type() {
+            ExpressionDataType::True => Ok(true),
+            ExpressionDataType::False => Ok(false),
+            _ => Err(format!("Not of boolean type.")),
+        }
     }
 
     pub fn as_integer(&self) -> Result<i64, String> {
@@ -219,6 +237,29 @@ mod tests {
 
         assert_eq!(d.data_type, ExpressionDataType::Integer);
         assert_eq!(d.bytes, 1234567890i64.to_le_bytes());
+    }
+
+    #[test]
+    fn boolean_true() {
+        let d = ExpressionData::boolean_true();
+
+        assert_eq!(d.data_type, ExpressionDataType::True);
+    }
+
+    #[test]
+    fn boolean_false() {
+        let d = ExpressionData::boolean_false();
+
+        assert_eq!(d.data_type, ExpressionDataType::False);
+    }
+
+    #[test]
+    fn as_boolean() {
+        let d = ExpressionData::boolean_true();
+        assert!(d.as_boolean().unwrap());
+
+        let d = ExpressionData::boolean_false();
+        assert!(!d.as_boolean().unwrap());
     }
 
     #[test]
