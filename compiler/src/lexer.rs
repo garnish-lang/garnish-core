@@ -32,6 +32,8 @@ pub enum TokenType {
     Equality,
     Period,
     Pair,
+    False,
+    True,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -249,6 +251,8 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
         ("(", TokenType::StartGroup),
         (")", TokenType::EndGroup),
         ("$", TokenType::Input),
+        ("$?", TokenType::True),
+        ("$!", TokenType::False),
         ("$$", TokenType::Result),
         (",", TokenType::Comma),
         ("~", TokenType::Apply),
@@ -648,6 +652,36 @@ mod tests {
             vec![LexerToken {
                 text: "$".to_string(),
                 token_type: TokenType::Input,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn true_symbol() {
+        let result = lex(&"$?".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "$?".to_string(),
+                token_type: TokenType::True,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn false_symbol() {
+        let result = lex(&"$!".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "$!".to_string(),
+                token_type: TokenType::False,
                 column: 0,
                 row: 0
             }]
