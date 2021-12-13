@@ -1,12 +1,15 @@
 mod apply;
 mod arithmetic;
 mod comparisons;
+mod context;
 mod data;
 mod jumps;
 mod list;
 mod pair;
 mod put;
 mod resolve;
+
+pub use context::*;
 
 use std::collections::HashMap;
 use std::vec;
@@ -17,22 +20,7 @@ use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
 use crate::GarnishLangRuntimeData;
 use log::trace;
 
-pub trait GarnishLangRuntimeContext {
-    fn resolve(&mut self, symbol_addr: usize, runtime: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool>;
-    fn apply(&mut self, external_value: usize, input_addr: usize, runtime: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool>;
-}
-
-pub struct EmptyContext {}
-
-impl GarnishLangRuntimeContext for EmptyContext {
-    fn resolve(&mut self, _: usize, _: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
-        Ok(false)
-    }
-
-    fn apply(&mut self, _: usize, _: usize, _: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
-        Ok(false)
-    }
-}
+use self::context::GarnishLangRuntimeContext;
 
 #[derive(Debug)]
 pub struct GarnishLangRuntime {
@@ -192,7 +180,7 @@ impl GarnishLangRuntime {
 
 #[cfg(test)]
 mod tests {
-    use crate::{EmptyContext, ExpressionData, GarnishLangRuntime, Instruction};
+    use crate::{runtime::context::EmptyContext, ExpressionData, GarnishLangRuntime, Instruction};
 
     #[test]
     fn create_runtime() {

@@ -1,6 +1,8 @@
 use log::trace;
 
-use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeContext, GarnishLangRuntimeResult};
+use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
+
+use super::context::GarnishLangRuntimeContext;
 
 impl GarnishLangRuntime {
     pub fn apply<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
@@ -99,7 +101,9 @@ impl GarnishLangRuntime {
 #[cfg(test)]
 mod tests {
     use crate::{
-        error, EmptyContext, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeContext, GarnishLangRuntimeResult, Instruction,
+        error,
+        runtime::context::{EmptyContext, GarnishLangRuntimeContext},
+        ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction,
     };
 
     #[test]
