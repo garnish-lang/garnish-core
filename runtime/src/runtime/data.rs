@@ -7,7 +7,7 @@ impl GarnishLangRuntime {
         // Check if give a reference of reference
         // flatten reference to point to non-Reference data
         let data = match data.get_type() {
-            ExpressionDataType::Reference => match self.data.get(data.as_reference().unwrap()) {
+            ExpressionDataType::Reference => match self.data.get(data.as_reference().as_runtime_result()?) {
                 None => Err(error(format!("Reference given doesn't not exist in data.")))?,
                 Some(d) => match d.get_type() {
                     ExpressionDataType::Reference => d.clone(),
