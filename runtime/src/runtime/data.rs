@@ -78,6 +78,33 @@ impl GarnishLangRuntime {
             },
         })
     }
+
+    pub(crate) fn get_raw_data_internal(&self, addr: usize) -> GarnishLangRuntimeResult<&ExpressionData> {
+        let addr = self.addr_of_raw_data(addr)?;
+        self.get_data_internal(addr)
+    }
+
+    pub(crate) fn next_ref_data(&mut self) -> GarnishLangRuntimeResult<&ExpressionData> {
+        let r = self.next_ref()?;
+        let addr = self.addr_of_raw_data(r)?;
+        self.get_data_internal(addr)
+    }
+
+    pub(crate) fn next_two_ref_data<'a>(&'a mut self) -> GarnishLangRuntimeResult<(&'a ExpressionData, &'a ExpressionData)> {
+        let first_ref = self.next_ref()?;
+        let second_ref = self.next_ref()?;
+        let first = self.get_raw_data_internal(first_ref)?;
+        let second = self.get_raw_data_internal(second_ref)?;
+
+        Ok((first, second))
+    }
+
+    fn next_ref(&mut self) -> GarnishLangRuntimeResult<usize> {
+        match self.reference_stack.pop() {
+            None => Err(error(format!("No references left.")))?,
+            Some(r) => Ok(r),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -192,6 +219,76 @@ mod tests {
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
         let result = runtime.remove_data(10);
+
+        assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod internal {
+    use crate::{ExpressionData, GarnishLangRuntime};
+
+    #[test]
+    fn next_ref_data() {
+        let mut runtime = GarnishLangRuntime::new();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.reference_stack.push(2);
+
+        let result = runtime.next_ref_data();
+
+        assert_eq!(result.unwrap().as_integer().unwrap(), 20);
+    }
+
+    #[test]
+    fn next_ref_data_no_ref_is_error() {
+        let mut runtime = GarnishLangRuntime::new();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        let result = runtime.next_ref_data();
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn next_two_ref_data() {
+        let mut runtime = GarnishLangRuntime::new();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
+
+        let result = runtime.next_two_ref_data();
+
+        let (first, second) = result.unwrap();
+
+        assert_eq!(first.as_integer().unwrap(), 20);
+        assert_eq!(second.as_integer().unwrap(), 10);
+    }
+
+    #[test]
+    fn next_two_ref_data_one_ref_is_error() {
+        let mut runtime = GarnishLangRuntime::new();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.reference_stack.push(1);
+
+        let result = runtime.next_two_ref_data();
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn next_two_ref_data_zero_refs_is_error() {
+        let mut runtime = GarnishLangRuntime::new();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        let result = runtime.next_two_ref_data();
 
         assert!(result.is_err());
     }
