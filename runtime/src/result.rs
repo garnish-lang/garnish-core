@@ -1,3 +1,5 @@
+use std::result::Result;
+
 pub type GarnishLangRuntimeResult<T = ()> = Result<T, GarnishLangRuntimeError>;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -38,4 +40,20 @@ impl GarnishLangRuntimeError {
 
 pub fn error(message: String) -> GarnishLangRuntimeError {
     GarnishLangRuntimeError::new(message)
+}
+
+pub trait RuntimeResult<T> {
+    fn as_runtime_result(self) -> GarnishLangRuntimeResult<T>;
+}
+
+impl<T, F> RuntimeResult<T> for Result<T, F>
+where
+    F: ToString,
+{
+    fn as_runtime_result(self) -> GarnishLangRuntimeResult<T> {
+        match self {
+            Err(e) => Err(error(e.to_string())),
+            Ok(v) => Ok(v),
+        }
+    }
 }

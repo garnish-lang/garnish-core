@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
+use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
 
 use super::context::GarnishLangRuntimeContext;
 
@@ -45,10 +45,7 @@ impl GarnishLangRuntime {
 
         match left_data.get_type() {
             ExpressionDataType::Expression => {
-                let expression_index = match left_data.as_expression() {
-                    Err(err) => Err(error(err))?,
-                    Ok(v) => v,
-                };
+                let expression_index = left_data.as_expression().as_runtime_result()?;
 
                 let next_instruction = self.get_jump_point(expression_index)?;
 
@@ -61,10 +58,7 @@ impl GarnishLangRuntime {
                 Ok(())
             }
             ExpressionDataType::External => {
-                let external_value = match left_data.as_external() {
-                    Err(err) => Err(error(err))?,
-                    Ok(v) => v,
-                };
+                let external_value = left_data.as_external().as_runtime_result()?;
 
                 match context {
                     None => {

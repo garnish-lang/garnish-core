@@ -1,6 +1,6 @@
 // use log::trace;
 
-use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
+use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
 
 impl GarnishLangRuntime {
     pub fn add_data(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<usize> {
@@ -70,10 +70,7 @@ impl GarnishLangRuntime {
         Ok(match self.data.get(addr) {
             None => Err(error(format!("No data at addr {:?}", addr)))?,
             Some(d) => match d.get_type() {
-                ExpressionDataType::Reference => match d.as_reference() {
-                    Err(e) => Err(error(e))?,
-                    Ok(i) => i,
-                },
+                ExpressionDataType::Reference => d.as_reference().as_runtime_result()?,
                 _ => addr,
             },
         })

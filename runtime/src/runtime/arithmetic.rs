@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
+use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
 
 impl GarnishLangRuntime {
     pub fn perform_addition(&mut self) -> GarnishLangRuntimeResult {
@@ -9,14 +9,8 @@ impl GarnishLangRuntime {
 
         match (left_data.get_type(), right_data.get_type()) {
             (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                let left = match left_data.as_integer() {
-                    Ok(v) => v,
-                    Err(e) => Err(error(e))?,
-                };
-                let right = match right_data.as_integer() {
-                    Ok(v) => v,
-                    Err(e) => Err(error(e))?,
-                };
+                let left = left_data.as_integer().as_runtime_result()?;
+                let right = right_data.as_integer().as_runtime_result()?;
 
                 trace!("Performing {:?} + {:?}", left, right);
 

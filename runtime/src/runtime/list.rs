@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
+use crate::{error, result::RuntimeResult, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
 
 impl GarnishLangRuntime {
     pub fn make_list(&mut self, len: usize) -> GarnishLangRuntimeResult {
@@ -15,10 +15,7 @@ impl GarnishLangRuntime {
             match data.get_type() {
                 ExpressionDataType::Pair => {
                     let pair = self.get_data_internal(r)?;
-                    let left = self.addr_of_raw_data(match pair.as_pair() {
-                        Err(e) => Err(error(e))?,
-                        Ok((left, _)) => left,
-                    })?;
+                    let left = self.addr_of_raw_data(pair.as_pair().as_runtime_result()?.0)?;
 
                     let left_data = self.get_data_internal(left)?;
                     match left_data.get_type() {
@@ -85,15 +82,9 @@ impl GarnishLangRuntime {
 
         match (list_data.get_type(), sym_data.get_type()) {
             (ExpressionDataType::List, ExpressionDataType::Symbol) => {
-                let sym_val = match sym_data.as_symbol_value() {
-                    Err(e) => Err(error(e))?,
-                    Ok(v) => v,
-                };
+                let sym_val = sym_data.as_symbol_value().as_runtime_result()?;
 
-                let (_, assocations) = match list_data.as_list() {
-                    Err(e) => Err(error(e))?,
-                    Ok(v) => v,
-                };
+                let (_, assocations) = list_data.as_list().as_runtime_result()?;
 
                 let mut i = sym_val as usize % assocations.len();
                 let mut count = 0;
@@ -112,10 +103,7 @@ impl GarnishLangRuntime {
 
                                     match left_data.get_type() {
                                         ExpressionDataType::Symbol => {
-                                            let v = match left_data.as_symbol_value() {
-                                                Err(e) => Err(error(e))?,
-                                                Ok(v) => v,
-                                            };
+                                            let v = left_data.as_symbol_value().as_runtime_result()?;
 
                                             if v == sym_val {
                                                 // found match
