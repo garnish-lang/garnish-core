@@ -82,10 +82,7 @@ fn conditionals_and_inputs() {
 
     runtime.set_instruction_cursor(13).unwrap();
 
-    let inputs_expected_result = [
-        (ExpressionData::symbol(&"false".to_string(), 0), 800),
-        (ExpressionData::symbol(&"true".to_string(), 1), 900),
-    ];
+    let inputs_expected_result = [(ExpressionData::boolean_false(), 800), (ExpressionData::boolean_true(), 900)];
 
     for (input, expected) in inputs_expected_result {
         let addr = runtime.add_data(input.clone()).unwrap();

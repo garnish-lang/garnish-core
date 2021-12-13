@@ -297,27 +297,12 @@ impl GarnishLangRuntime {
         };
 
         match d.get_type() {
-            ExpressionDataType::Symbol => match d.as_symbol_value() {
-                Err(e) => Err(error(e))?,
-                Ok(v) => match v {
-                    0 => (),
-                    _ => {
-                        trace!(
-                            "Jumping from symbol {:?} with value {:?}",
-                            d.as_symbol_name().unwrap_or("[NO_SYMBOL_NAME]".to_string()),
-                            v
-                        );
-                        self.instruction_cursor = point;
-                    }
-                },
-            },
-            ExpressionDataType::Unit => (),
+            ExpressionDataType::False | ExpressionDataType::Unit => {
+                trace!("Not jumping from value of type {:?} with addr {:?}", d.get_type(), self.data.len() - 1);
+            }
+            // all other values are considered true
             _ => {
-                trace!(
-                    "Jumping from non Unit value of type {:?} with addr {:?}",
-                    d.get_type(),
-                    self.data.len() - 1
-                );
+                trace!("Jumping from value of type {:?} with addr {:?}", d.get_type(), self.data.len() - 1);
                 self.instruction_cursor = point;
             }
         };
@@ -343,24 +328,13 @@ impl GarnishLangRuntime {
         };
 
         match d.get_type() {
-            ExpressionDataType::Symbol => match d.as_symbol_value() {
-                Err(e) => Err(error(e))?,
-                Ok(v) => match v {
-                    0 => {
-                        trace!(
-                            "Jumping from Zero symbol with name {:?}",
-                            d.as_symbol_name().unwrap_or("[NO_SYMBOL_NAME]".to_string())
-                        );
-                        self.instruction_cursor = point;
-                    }
-                    _ => (),
-                },
-            },
-            ExpressionDataType::Unit => {
-                trace!("Jumping from Unit value with addr {:?}", self.data.len() - 1);
+            ExpressionDataType::False | ExpressionDataType::Unit => {
+                trace!("Jumping from value of type {:?} with addr {:?}", d.get_type(), self.data.len() - 1);
                 self.instruction_cursor = point;
             }
-            _ => (),
+            _ => {
+                trace!("Not jumping from value of type {:?} with addr {:?}", d.get_type(), self.data.len() - 1);
+            }
         };
 
         if remove_data {
@@ -445,8 +419,8 @@ impl GarnishLangRuntime {
                 self.data.pop();
 
                 self.add_data(match result {
-                    true => ExpressionData::symbol(&"true".to_string(), 1),
-                    false => ExpressionData::symbol(&"false".to_string(), 0),
+                    true => ExpressionData::boolean_true(),
+                    false => ExpressionData::boolean_false(),
                 })?;
 
                 Ok(())
@@ -1253,7 +1227,7 @@ mod tests {
     fn jump_if_true_when_true() {
         let mut runtime = GarnishLangRuntime::new();
 
-        runtime.add_data(ExpressionData::symbol(&"true".to_string(), 1)).unwrap();
+        runtime.add_data(ExpressionData::boolean_true()).unwrap();
         runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
@@ -1289,7 +1263,7 @@ mod tests {
     fn jump_if_true_when_false() {
         let mut runtime = GarnishLangRuntime::new();
 
-        runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
+        runtime.add_data(ExpressionData::boolean_false()).unwrap();
         runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
@@ -1307,7 +1281,7 @@ mod tests {
     fn jump_if_false_when_true() {
         let mut runtime = GarnishLangRuntime::new();
 
-        runtime.add_data(ExpressionData::symbol(&"true".to_string(), 1)).unwrap();
+        runtime.add_data(ExpressionData::boolean_true()).unwrap();
         runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
@@ -1343,7 +1317,7 @@ mod tests {
     fn jump_if_false_when_false() {
         let mut runtime = GarnishLangRuntime::new();
 
-        runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
+        runtime.add_data(ExpressionData::boolean_false()).unwrap();
         runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
@@ -1361,7 +1335,7 @@ mod tests {
     fn conditional_execute_double_check_removes_data_after_last_true_false() {
         let mut runtime = GarnishLangRuntime::new();
 
-        runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
+        runtime.add_data(ExpressionData::boolean_false()).unwrap();
         runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
         runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
@@ -1384,7 +1358,7 @@ mod tests {
     fn conditional_execute_double_check_removes_data_after_last_false_true() {
         let mut runtime = GarnishLangRuntime::new();
 
-        runtime.add_data(ExpressionData::symbol(&"true".to_string(), 0)).unwrap();
+        runtime.add_data(ExpressionData::boolean_true()).unwrap();
         runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
         runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
@@ -1472,7 +1446,7 @@ mod tests {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.data.get(0).unwrap().as_symbol_value().unwrap(), 1);
+        assert!(runtime.data.get(0).unwrap().as_boolean().unwrap());
     }
 
     #[test]
@@ -1489,7 +1463,7 @@ mod tests {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.data.get(0).unwrap().as_symbol_value().unwrap(), 0);
+        assert!(!runtime.data.get(0).unwrap().as_boolean().unwrap());
     }
 
     #[test]
