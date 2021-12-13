@@ -9,12 +9,7 @@ impl GarnishLangRuntime {
             0 | 1 => Err(error(format!("Not enough data to perform addition operation."))),
             // 2 and greater
             _ => {
-                let right_ref = self.reference_stack.pop().unwrap();
-                let left_ref = self.reference_stack.pop().unwrap();
-                let right_addr = self.addr_of_raw_data(right_ref)?;
-                let left_addr = self.addr_of_raw_data(left_ref)?;
-                let right_data = self.get_data_internal(right_addr)?;
-                let left_data = self.get_data_internal(left_addr)?;
+                let (right_data, left_data) = self.next_two_ref_data()?;
 
                 match (left_data.get_type(), right_data.get_type()) {
                     (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
