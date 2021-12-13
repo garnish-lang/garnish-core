@@ -230,6 +230,13 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
 
                             let ((first_expected, first_index), (second_expected, second_index)) = get_resolve_info(node);
 
+                            let we_are_conditional =
+                                node.get_definition() == Definition::ApplyIfFalse || node.get_definition() == Definition::ApplyIfTrue;
+                            let we_are_parent_conditional_branch = node.get_definition() == Definition::ConditionalBranch
+                                && resolve_node_info.parent_definition != Definition::ConditionalBranch;
+                            let we_are_non_chained_conditional =
+                                we_are_conditional && resolve_node_info.parent_definition != Definition::ConditionalBranch;
+
                             let pop = if first_expected && !resolve_node_info.first_resolved {
                                 // on first visit to a list node
                                 // if parent isn't a list, we start a new list count
@@ -240,9 +247,7 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
 
                                 // on first visit to a conditional branch node
                                 // add to jump table and store the position in conditional stack
-                                if node.get_definition() == Definition::ConditionalBranch
-                                    && resolve_node_info.parent_definition != Definition::ConditionalBranch
-                                {
+                                if we_are_parent_conditional_branch || we_are_non_chained_conditional {
                                     trace!(
                                         "Starting new conditional branch. Return slot in jump table {:?}",
                                         instruction_set.jump_table.len()
@@ -313,10 +318,25 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                     )?;
                                 }
 
+                                // after resolving, if a nested expression
+                                // and add nested expressions child to deferred list
+                                let mut return_instruction = (Instruction::EndExpression, None);
+                                if we_are_conditional {
+                                    return_instruction = match conditional_stack.last() {
+                                        None => Err(format!("Conditional stack empty when attempting to resolve conditional."))?,
+                                        // apply if true/false resolve fully before the parent conditional branch
+                                        // second look up to get accurate value instruction data will happen when this instruction is placed
+                                        Some(return_index) => (Instruction::JumpTo, Some(*return_index)),
+                                    };
+                                    trace!(
+                                        "Return instruction for conditional is {:?} with data {:?}",
+                                        return_instruction.0,
+                                        return_instruction.1
+                                    );
+                                }
+
                                 // if conditional branch, need to update jump table and pop from conditional stack
-                                if node.get_definition() == Definition::ConditionalBranch
-                                    && resolve_node_info.parent_definition != Definition::ConditionalBranch
-                                {
+                                if we_are_parent_conditional_branch || we_are_non_chained_conditional {
                                     match conditional_stack.pop() {
                                         None => Err(format!("End of conditional branch and conditional stack is empty."))?,
                                         Some(jump_index) => match instruction_set.jump_table.get_mut(jump_index) {
@@ -334,25 +354,6 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                             }
                                         },
                                     }
-                                }
-
-                                // after resolving, if a nested expression
-                                // and add nested expressions child to deferred list
-                                let mut return_instruction = (Instruction::EndExpression, None);
-                                let we_are_conditional =
-                                    node.get_definition() == Definition::ApplyIfFalse || node.get_definition() == Definition::ApplyIfTrue;
-                                if we_are_conditional {
-                                    return_instruction = match conditional_stack.last() {
-                                        None => (Instruction::Return, None),
-                                        // apply if true/false resolve fully before the parent conditional branch
-                                        // second look up to get accurate value instruction data will happen when this instruction is placed
-                                        Some(return_index) => (Instruction::JumpTo, Some(*return_index)),
-                                    };
-                                    trace!(
-                                        "Return instruction for conditional is {:?} with data {:?}",
-                                        return_instruction.0,
-                                        return_instruction.1
-                                    );
                                 }
 
                                 if node.get_definition() == Definition::NestedExpression || we_are_conditional {
@@ -1025,13 +1026,13 @@ mod conditionals {
             ],
             vec![
                 (Instruction::Put, Some(1)),
-                (Instruction::JumpIfTrue, Some(1)),
+                (Instruction::JumpIfTrue, Some(2)),
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(2)),
-                (Instruction::Return, None),
+                (Instruction::JumpTo, Some(1)),
             ],
             vec![ExpressionData::integer(5), ExpressionData::integer(10)],
-            vec![0, 3],
+            vec![0, 2, 3],
         );
     }
 
@@ -1046,13 +1047,13 @@ mod conditionals {
             ],
             vec![
                 (Instruction::Put, Some(1)),
-                (Instruction::JumpIfFalse, Some(1)),
+                (Instruction::JumpIfFalse, Some(2)),
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(2)),
-                (Instruction::Return, None),
+                (Instruction::JumpTo, Some(1)),
             ],
             vec![ExpressionData::integer(5), ExpressionData::integer(10)],
-            vec![0, 3],
+            vec![0, 2, 3],
         );
     }
 
