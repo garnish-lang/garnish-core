@@ -143,10 +143,6 @@ impl GarnishLangRuntime {
                 Instruction::PushResult => self.push_result()?,
                 Instruction::EndExpression => self.end_expression()?,
                 Instruction::EqualityComparison => self.equality_comparison()?,
-                Instruction::ExecuteExpression => match instruction_data.data {
-                    None => Err(error(format!("No address given with execute expression instruction.")))?,
-                    Some(i) => self.execute_expression(i)?,
-                },
                 Instruction::JumpIfTrue => match instruction_data.data {
                     None => Err(error(format!("No address given with jump if true instruction.")))?,
                     Some(i) => self.jump_if_true(i)?,

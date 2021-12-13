@@ -22,6 +22,7 @@ fn adding_numbers_with_sub_expression() {
     runtime.add_data(ExpressionData::integer(100)).unwrap();
     runtime.add_data(ExpressionData::integer(200)).unwrap();
     runtime.add_data(ExpressionData::integer(300)).unwrap();
+    runtime.add_data(ExpressionData::expression(0)).unwrap();
     runtime.end_constant_data().unwrap();
 
     runtime.add_input_reference(2).unwrap();
@@ -32,9 +33,12 @@ fn adding_numbers_with_sub_expression() {
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
     runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
-    runtime.add_instruction(Instruction::ExecuteExpression, Some(1)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
+    runtime.add_instruction(Instruction::EmptyApply, None).unwrap();
     runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+    runtime.add_expression(1).unwrap();
 
     runtime.set_instruction_cursor(5).unwrap();
 
@@ -50,6 +54,7 @@ fn conditionals_and_inputs() {
     runtime.add_data(ExpressionData::integer(100)).unwrap();
     runtime.add_data(ExpressionData::integer(200)).unwrap();
     runtime.add_data(ExpressionData::integer(300)).unwrap();
+    runtime.add_data(ExpressionData::expression(3)).unwrap();
     runtime.end_constant_data().unwrap();
 
     runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
@@ -72,13 +77,15 @@ fn conditionals_and_inputs() {
     runtime.add_instruction(Instruction::JumpIfTrue, Some(1)).unwrap();
     runtime.add_instruction(Instruction::JumpIfFalse, Some(2)).unwrap();
 
-    runtime.add_instruction(Instruction::ExecuteExpression, Some(5)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
+    runtime.add_instruction(Instruction::EmptyApply, None).unwrap();
     runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
     runtime.add_expression(16).unwrap();
     runtime.add_expression(9).unwrap();
     runtime.add_expression(1).unwrap();
+    runtime.add_expression(5).unwrap();
 
     runtime.set_instruction_cursor(13).unwrap();
 

@@ -8,7 +8,6 @@ pub enum Instruction {
     PushResult,
     JumpTo,
     EndExpression,
-    ExecuteExpression,
     PerformAddition,
     EndExecution,
     JumpIfTrue,
