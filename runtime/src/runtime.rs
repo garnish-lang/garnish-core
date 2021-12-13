@@ -700,7 +700,6 @@ impl GarnishLangRuntime {
                 Instruction::PushResult => self.push_result()?,
                 Instruction::EndExpression => self.end_expression()?,
                 Instruction::Return => todo!(),
-                Instruction::ReturnTo => todo!(),
                 Instruction::EqualityComparison => self.equality_comparison()?,
                 Instruction::ExecuteExpression => match instruction_data.data {
                     None => Err(error(format!("No address given with execute expression instruction.")))?,
@@ -719,7 +718,7 @@ impl GarnishLangRuntime {
                     Some(i) => self.put(i)?,
                 },
                 Instruction::EndExecution => self.end_execution()?,
-                Instruction::Jump => match instruction_data.data {
+                Instruction::JumpTo => match instruction_data.data {
                     None => Err(error(format!("No address given with jump instruction.")))?,
                     Some(i) => self.jump(i)?,
                 },
@@ -1411,7 +1410,7 @@ mod tests {
 
         runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
         runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
-        runtime.add_instruction(Instruction::Jump, None).unwrap();
+        runtime.add_instruction(Instruction::JumpTo, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 

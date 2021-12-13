@@ -6,7 +6,7 @@ pub enum Instruction {
     PutResult,
     PushInput,
     PushResult,
-    Jump,
+    JumpTo,
     EndExpression,
     ExecuteExpression,
     PerformAddition,
@@ -21,7 +21,6 @@ pub enum Instruction {
     Access,
     Resolve,
     Return,
-    ReturnTo,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]

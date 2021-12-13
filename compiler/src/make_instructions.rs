@@ -346,7 +346,7 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                         None => (Instruction::Return, None),
                                         // apply if true/false resolve fully before the parent conditional branch
                                         // second look up to get accurate value instruction data will happen when this instruction is placed
-                                        Some(return_index) => (Instruction::ReturnTo, Some(*return_index)),
+                                        Some(return_index) => (Instruction::JumpTo, Some(*return_index)),
                                     };
                                     trace!(
                                         "Return instruction for conditional is {:?} with data {:?}",
@@ -1076,9 +1076,9 @@ mod conditionals {
                 (Instruction::JumpIfTrue, Some(3)),
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(3)), // 5
-                (Instruction::ReturnTo, Some(1)),
+                (Instruction::JumpTo, Some(1)),
                 (Instruction::Put, Some(4)), // 7
-                (Instruction::ReturnTo, Some(1)),
+                (Instruction::JumpTo, Some(1)),
             ],
             vec![
                 ExpressionData::integer(5),
@@ -1108,9 +1108,9 @@ mod conditionals {
                 (Instruction::JumpIfFalse, Some(3)),
                 (Instruction::EndExpression, None), // 3
                 (Instruction::Put, Some(2)),
-                (Instruction::ReturnTo, Some(1)),
+                (Instruction::JumpTo, Some(1)),
                 (Instruction::Put, Some(3)),
-                (Instruction::ReturnTo, Some(1)),
+                (Instruction::JumpTo, Some(1)),
             ],
             vec![ExpressionData::integer(5), ExpressionData::integer(10), ExpressionData::integer(15)],
             vec![0, 3, 4, 6],
@@ -1147,11 +1147,11 @@ mod conditionals {
                 (Instruction::JumpIfTrue, Some(4)), // 5
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(4)), // 7
-                (Instruction::ReturnTo, Some(1)),
+                (Instruction::JumpTo, Some(1)),
                 (Instruction::Put, Some(5)), // 9
-                (Instruction::ReturnTo, Some(1)),
+                (Instruction::JumpTo, Some(1)),
                 (Instruction::Put, Some(6)), // 11
-                (Instruction::ReturnTo, Some(1)),
+                (Instruction::JumpTo, Some(1)),
             ],
             vec![
                 ExpressionData::integer(5),
