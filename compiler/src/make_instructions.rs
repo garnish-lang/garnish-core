@@ -128,8 +128,7 @@ fn resolve_node(
         }
         Definition::AbsoluteValue => todo!(), // not currently in runtime
         Definition::EmptyApply => {
-            instructions.push(InstructionData::new(Instruction::Put, Some(0)));
-            instructions.push(InstructionData::new(Instruction::Apply, None));
+            instructions.push(InstructionData::new(Instruction::EmptyApply, None));
         }
         Definition::Addition => {
             instructions.push(InstructionData::new(Instruction::PerformAddition, None));
@@ -572,8 +571,7 @@ mod operations {
             vec![
                 (Instruction::Put, Some(1)),
                 (Instruction::Resolve, None),
-                (Instruction::Put, Some(0)),
-                (Instruction::Apply, None),
+                (Instruction::EmptyApply, None),
                 (Instruction::EndExpression, None),
             ],
             vec![ExpressionData::symbol_from_string(&"value".to_string())],

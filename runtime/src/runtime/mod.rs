@@ -170,6 +170,7 @@ impl GarnishLangRuntime {
                     Some(i) => self.make_list(i)?,
                 },
                 Instruction::Apply => self.apply(context)?,
+                Instruction::EmptyApply => self.empty_apply(context)?,
                 Instruction::Reapply => match instruction_data.data {
                     None => Err(error(format!("No address given with reapply instruction.")))?,
                     Some(i) => self.reapply(i)?,

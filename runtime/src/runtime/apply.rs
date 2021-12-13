@@ -5,6 +5,38 @@ use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, Garni
 impl GarnishLangRuntime {
     pub fn apply<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
         trace!("Instruction - Apply");
+        self.apply_internal(context)
+    }
+
+    pub fn reapply(&mut self, index: usize) -> GarnishLangRuntimeResult {
+        trace!("Instruction - Reapply | Data - {:?}", index);
+        match self.reference_stack.len() {
+            0 => Err(error(format!("Not enough references to perform reapply."))),
+            _ => {
+                let right_ref = self.reference_stack.pop().unwrap();
+
+                let right_addr = self.addr_of_raw_data(right_ref)?;
+
+                let point = self.get_jump_point(index)?;
+
+                self.set_instruction_cursor(point - 1)?;
+                self.inputs.pop();
+                self.inputs.push(right_addr);
+
+                Ok(())
+            }
+        }
+    }
+
+    pub fn empty_apply<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
+        trace!("Instruction - Apply");
+        let addr = self.add_data(ExpressionData::unit())?;
+        self.reference_stack.push(addr);
+
+        self.apply_internal(context)
+    }
+
+    fn apply_internal<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
         match self.reference_stack.len() {
             0 | 1 => Err(error(format!("Not enough references to perform apply."))),
             _ => {
@@ -62,26 +94,6 @@ impl GarnishLangRuntime {
             }
         }
     }
-
-    pub fn reapply(&mut self, index: usize) -> GarnishLangRuntimeResult {
-        trace!("Instruction - Reapply | Data - {:?}", index);
-        match self.reference_stack.len() {
-            0 => Err(error(format!("Not enough references to perform reapply."))),
-            _ => {
-                let right_ref = self.reference_stack.pop().unwrap();
-
-                let right_addr = self.addr_of_raw_data(right_ref)?;
-
-                let point = self.get_jump_point(index)?;
-
-                self.set_instruction_cursor(point - 1)?;
-                self.inputs.pop();
-                self.inputs.push(right_addr);
-
-                Ok(())
-            }
-        }
-    }
 }
 
 #[cfg(test)]
@@ -121,6 +133,36 @@ mod tests {
         assert_eq!(*runtime.inputs.get(0).unwrap(), 2);
         assert_eq!(runtime.instruction_cursor, 0);
         assert_eq!(*runtime.jump_path.get(0).unwrap(), 7);
+    }
+
+    #[test]
+    fn empty_apply() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::expression(0)).unwrap();
+
+        // 1
+        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::PutInput, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+        // 5
+        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.add_instruction(Instruction::EmptyApply, None).unwrap();
+
+        runtime.expression_table.push(1);
+
+        runtime.reference_stack.push(1);
+
+        runtime.set_instruction_cursor(6).unwrap();
+
+        runtime.empty_apply::<EmptyContext>(None).unwrap();
+
+        assert_eq!(*runtime.inputs.get(0).unwrap(), 2);
+        assert_eq!(runtime.instruction_cursor, 0);
+        assert_eq!(*runtime.jump_path.get(0).unwrap(), 6);
     }
 
     #[test]

@@ -17,6 +17,7 @@ pub enum Instruction {
     MakePair,
     MakeList,
     Apply,
+    EmptyApply,
     Reapply,
     Access,
     Resolve,
