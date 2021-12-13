@@ -1,8 +1,15 @@
 use log::trace;
 
-use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction};
+use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction};
 
 impl GarnishLangRuntime {
+    pub fn jump(&mut self, index: usize) -> GarnishLangRuntimeResult {
+        trace!("Instruction - Jump | Data - {:?}", index);
+        self.instruction_cursor = self.get_jump_point(index)? - 1;
+
+        Ok(())
+    }
+
     pub fn jump_if_true(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Execute Expression If True | Data - {:?}", index);
         let point = self.get_jump_point(index)? - 1;
@@ -63,11 +70,82 @@ impl GarnishLangRuntime {
 
         Ok(())
     }
+
+    pub fn end_expression(&mut self) -> GarnishLangRuntimeResult {
+        trace!("Instruction - End Expression");
+        match self.jump_path.pop() {
+            None => {
+                self.instruction_cursor += 1;
+                self.current_result = Some(self.addr_of_raw_data(self.data.len() - 1)?);
+            }
+            Some(jump_point) => {
+                self.instruction_cursor = jump_point;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub(crate) fn get_jump_point(&self, index: usize) -> GarnishLangRuntimeResult<usize> {
+        match self.expression_table.get(index) {
+            None => Err(error(format!("No jump point at position {:?}.", index))),
+            Some(point) => Ok(*point),
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{ExpressionData, GarnishLangRuntime, Instruction};
+
+    #[test]
+    fn end_expression() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+
+        runtime.end_expression().unwrap();
+
+        assert_eq!(runtime.instruction_cursor, 2);
+        assert_eq!(runtime.get_result().unwrap().bytes, 10i64.to_le_bytes());
+    }
+
+    #[test]
+    fn end_expression_with_path() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::EndExpression, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::ExecuteExpression, Some(0)).unwrap();
+
+        runtime.jump_path.push(4);
+        runtime.set_instruction_cursor(2).unwrap();
+        runtime.end_expression().unwrap();
+
+        assert_eq!(runtime.instruction_cursor, 4);
+    }
+
+    #[test]
+    fn jump() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
+        runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::JumpTo, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.add_expression(4).unwrap();
+
+        runtime.jump(0).unwrap();
+
+        assert!(runtime.jump_path.is_empty());
+        assert_eq!(runtime.instruction_cursor, 3);
+    }
 
     #[test]
     fn jump_if_true_when_true() {
