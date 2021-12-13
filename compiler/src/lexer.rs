@@ -248,8 +248,8 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
         ("}", TokenType::EndExpression),
         ("(", TokenType::StartGroup),
         (")", TokenType::EndGroup),
-        ("$?", TokenType::Result),
         ("$", TokenType::Input),
+        ("$$", TokenType::Result),
         (",", TokenType::Comma),
         ("~", TokenType::Apply),
         ("!>", TokenType::ApplyIfFalse),
@@ -656,12 +656,12 @@ mod tests {
 
     #[test]
     fn result_symbol() {
-        let result = lex(&"$?".to_string()).unwrap();
+        let result = lex(&"$$".to_string()).unwrap();
 
         assert_eq!(
             result,
             vec![LexerToken {
-                text: "$?".to_string(),
+                text: "$$".to_string(),
                 token_type: TokenType::Result,
                 column: 0,
                 row: 0
@@ -836,26 +836,26 @@ mod tests {
 
     #[test]
     fn lex_three_one_character_symbol() {
-        let result = lex(&"$$$".to_string()).unwrap();
+        let result = lex(&"{{{".to_string()).unwrap();
 
         assert_eq!(
             result,
             vec![
                 LexerToken {
-                    text: "$".to_string(),
-                    token_type: TokenType::Input,
+                    text: "{".to_string(),
+                    token_type: TokenType::StartExpression,
                     column: 0,
                     row: 0
                 },
                 LexerToken {
-                    text: "$".to_string(),
-                    token_type: TokenType::Input,
+                    text: "{".to_string(),
+                    token_type: TokenType::StartExpression,
                     column: 1,
                     row: 0
                 },
                 LexerToken {
-                    text: "$".to_string(),
-                    token_type: TokenType::Input,
+                    text: "{".to_string(),
+                    token_type: TokenType::StartExpression,
                     column: 2,
                     row: 0
                 }
