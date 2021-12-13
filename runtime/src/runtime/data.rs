@@ -81,7 +81,6 @@ impl GarnishLangRuntime {
         self.get_data_internal(addr)
     }
 
-    #[allow(dead_code)]
     pub(crate) fn next_ref_data(&mut self) -> GarnishLangRuntimeResult<&ExpressionData> {
         let r = self.next_ref()?;
         let addr = self.addr_of_raw_data(r)?;
