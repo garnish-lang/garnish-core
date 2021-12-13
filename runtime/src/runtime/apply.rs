@@ -31,7 +31,7 @@ impl GarnishLangRuntime {
     }
 
     pub fn empty_apply<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
-        trace!("Instruction - Apply");
+        trace!("Instruction - Empty Apply");
         let addr = self.add_data(ExpressionData::unit())?;
         self.reference_stack.push(addr);
 
@@ -39,61 +39,53 @@ impl GarnishLangRuntime {
     }
 
     fn apply_internal<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
-        match self.reference_stack.len() {
-            0 | 1 => Err(error(format!("Not enough references to perform apply."))),
-            _ => {
-                let right_ref = self.reference_stack.pop().unwrap();
-                let left_ref = self.reference_stack.pop().unwrap();
+        let right_ref = self.next_ref()?;
+        let right_addr = self.addr_of_raw_data(right_ref)?;
+        let left_data = self.next_ref_data()?;
 
-                let right_addr = self.addr_of_raw_data(right_ref)?;
-                let left_addr = self.addr_of_raw_data(left_ref)?;
+        match left_data.get_type() {
+            ExpressionDataType::Expression => {
+                let expression_index = match left_data.as_expression() {
+                    Err(err) => Err(error(err))?,
+                    Ok(v) => v,
+                };
 
-                let left_data = self.get_data_internal(left_addr)?;
-                match left_data.get_type() {
-                    ExpressionDataType::Expression => {
-                        let expression_index = match left_data.as_expression() {
-                            Err(err) => Err(error(err))?,
-                            Ok(v) => v,
-                        };
+                let next_instruction = self.get_jump_point(expression_index)?;
 
-                        let next_instruction = self.get_jump_point(expression_index)?;
+                // Expression stores index of expression table, look up actual instruction index
 
-                        // Expression stores index of expression table, look up actual instruction index
+                self.jump_path.push(self.instruction_cursor);
+                self.set_instruction_cursor(next_instruction - 1)?;
+                self.inputs.push(right_addr);
 
-                        self.jump_path.push(self.instruction_cursor);
-                        self.set_instruction_cursor(next_instruction - 1)?;
-                        self.inputs.push(right_addr);
+                Ok(())
+            }
+            ExpressionDataType::External => {
+                let external_value = match left_data.as_external() {
+                    Err(err) => Err(error(err))?,
+                    Ok(v) => v,
+                };
 
+                match context {
+                    None => {
+                        self.reference_stack.push(self.data.len());
+                        self.add_data(ExpressionData::unit())?;
                         Ok(())
                     }
-                    ExpressionDataType::External => {
-                        let external_value = match left_data.as_external() {
-                            Err(err) => Err(error(err))?,
-                            Ok(v) => v,
-                        };
-
-                        match context {
-                            None => {
-                                self.reference_stack.push(self.data.len());
-                                self.add_data(ExpressionData::unit())?;
-                                Ok(())
-                            }
-                            Some(c) => match c.apply(external_value, right_addr, self)? {
-                                true => Ok(()),
-                                false => {
-                                    self.reference_stack.push(self.data.len());
-                                    self.add_data(ExpressionData::unit())?;
-                                    Ok(())
-                                }
-                            },
+                    Some(c) => match c.apply(external_value, right_addr, self)? {
+                        true => Ok(()),
+                        false => {
+                            self.reference_stack.push(self.data.len());
+                            self.add_data(ExpressionData::unit())?;
+                            Ok(())
                         }
-                    }
-                    _ => Err(error(format!(
-                        "Data type {:?} not supported on left side of apply operation.",
-                        left_data.get_type()
-                    ))),
+                    },
                 }
             }
+            _ => Err(error(format!(
+                "Data type {:?} not supported on left side of apply operation.",
+                left_data.get_type()
+            ))),
         }
     }
 }
@@ -140,6 +132,34 @@ mod tests {
     }
 
     #[test]
+    fn apply_no_references_is_err() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::expression(0)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        // 1
+        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.add_instruction(Instruction::PutInput, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+        // 5
+        runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
+        runtime.add_instruction(Instruction::Apply, None).unwrap();
+
+        runtime.expression_table.push(1);
+
+        runtime.set_instruction_cursor(7).unwrap();
+
+        let result = runtime.apply::<EmptyContext>(None);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn empty_apply() {
         let mut runtime = GarnishLangRuntime::new();
 
@@ -167,6 +187,32 @@ mod tests {
         assert_eq!(*runtime.inputs.get(0).unwrap(), 3);
         assert_eq!(runtime.instruction_cursor, 0);
         assert_eq!(*runtime.jump_path.get(0).unwrap(), 6);
+    }
+
+    #[test]
+    fn empty_apply_no_references_is_err() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::expression(0)).unwrap();
+
+        // 1
+        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.add_instruction(Instruction::PutInput, None).unwrap();
+        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+        // 5
+        runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
+        runtime.add_instruction(Instruction::EmptyApply, None).unwrap();
+
+        runtime.expression_table.push(1);
+
+        runtime.set_instruction_cursor(6).unwrap();
+
+        let result = runtime.empty_apply::<EmptyContext>(None);
+
+        assert!(result.is_err());
     }
 
     #[test]

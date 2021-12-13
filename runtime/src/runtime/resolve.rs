@@ -7,8 +7,7 @@ use super::context::GarnishLangRuntimeContext;
 impl GarnishLangRuntime {
     pub fn resolve<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
         trace!("Instruction - Resolve");
-        let r = self.reference_stack.pop().unwrap();
-        let addr = self.addr_of_raw_data(r)?;
+        let addr = self.next_raw_ref()?;
 
         // check result
         match self.current_result {
@@ -37,7 +36,7 @@ impl GarnishLangRuntime {
         // check context
         match context {
             None => (),
-            Some(c) => match c.resolve(r, self)? {
+            Some(c) => match c.resolve(addr, self)? {
                 true => return Ok(()), // context resovled end look up
                 false => (),           // not resolved fall through
             },
@@ -57,6 +56,25 @@ mod tests {
         runtime::context::{EmptyContext, GarnishLangRuntimeContext},
         ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction,
     };
+
+    #[test]
+    fn resolve_no_ref_is_err() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+
+        runtime.add_instruction(Instruction::Resolve, None).unwrap();
+
+        runtime.current_result = Some(4);
+
+        let result = runtime.resolve::<EmptyContext>(None);
+
+        assert!(result.is_err());
+    }
 
     #[test]
     fn resolve_from_result() {

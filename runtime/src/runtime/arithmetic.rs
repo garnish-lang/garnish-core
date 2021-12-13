@@ -5,40 +5,34 @@ use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, Garni
 impl GarnishLangRuntime {
     pub fn perform_addition(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Addition");
-        match self.reference_stack.len() {
-            0 | 1 => Err(error(format!("Not enough data to perform addition operation."))),
-            // 2 and greater
+        let (right_data, left_data) = self.next_two_ref_data()?;
+
+        match (left_data.get_type(), right_data.get_type()) {
+            (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+                let left = match left_data.as_integer() {
+                    Ok(v) => v,
+                    Err(e) => Err(error(e))?,
+                };
+                let right = match right_data.as_integer() {
+                    Ok(v) => v,
+                    Err(e) => Err(error(e))?,
+                };
+
+                trace!("Performing {:?} + {:?}", left, right);
+
+                self.data.pop();
+                self.data.pop();
+
+                self.reference_stack.push(self.data.len());
+                self.add_data(ExpressionData::integer(left + right))?;
+
+                Ok(())
+            }
             _ => {
-                let (right_data, left_data) = self.next_two_ref_data()?;
+                self.reference_stack.push(self.data.len());
+                self.add_data(ExpressionData::unit())?;
 
-                match (left_data.get_type(), right_data.get_type()) {
-                    (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                        let left = match left_data.as_integer() {
-                            Ok(v) => v,
-                            Err(e) => Err(error(e))?,
-                        };
-                        let right = match right_data.as_integer() {
-                            Ok(v) => v,
-                            Err(e) => Err(error(e))?,
-                        };
-
-                        trace!("Performing {:?} + {:?}", left, right);
-
-                        self.data.pop();
-                        self.data.pop();
-
-                        self.reference_stack.push(self.data.len());
-                        self.add_data(ExpressionData::integer(left + right))?;
-
-                        Ok(())
-                    }
-                    _ => {
-                        self.reference_stack.push(self.data.len());
-                        self.add_data(ExpressionData::unit())?;
-
-                        Ok(())
-                    }
-                }
+                Ok(())
             }
         }
     }

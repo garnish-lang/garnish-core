@@ -100,11 +100,16 @@ impl GarnishLangRuntime {
         Ok((first, second))
     }
 
-    fn next_ref(&mut self) -> GarnishLangRuntimeResult<usize> {
+    pub(crate) fn next_ref(&mut self) -> GarnishLangRuntimeResult<usize> {
         match self.reference_stack.pop() {
             None => Err(error(format!("No references left.")))?,
             Some(r) => Ok(r),
         }
+    }
+
+    pub(crate) fn next_raw_ref(&mut self) -> GarnishLangRuntimeResult<usize> {
+        let r = self.next_ref()?;
+        self.addr_of_raw_data(r)
     }
 }
 

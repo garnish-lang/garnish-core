@@ -5,46 +5,36 @@ use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, Garni
 impl GarnishLangRuntime {
     pub fn equality_comparison(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Equality Comparison");
-        match self.reference_stack.len() {
-            0 | 1 => Err(error(format!("Not enough data to perform addition operation."))),
-            // 2 and greater
-            _ => {
-                let right_ref = self.reference_stack.pop().unwrap();
-                let left_ref = self.reference_stack.pop().unwrap();
-                let right_addr = self.addr_of_raw_data(right_ref)?;
-                let left_addr = self.addr_of_raw_data(left_ref)?;
-                let right_data = self.get_data_internal(right_addr)?;
-                let left_data = self.get_data_internal(left_addr)?;
 
-                let result = match (left_data.get_type(), right_data.get_type()) {
-                    (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                        let left = match left_data.as_integer() {
-                            Ok(v) => v,
-                            Err(e) => Err(error(e))?,
-                        };
-                        let right = match right_data.as_integer() {
-                            Ok(v) => v,
-                            Err(e) => Err(error(e))?,
-                        };
+        let (right_data, left_data) = self.next_two_ref_data()?;
 
-                        trace!("Comparing {:?} == {:?}", left, right);
-
-                        left == right
-                    }
-                    (l, r) => Err(error(format!("Comparison between types not implemented {:?} and {:?}", l, r)))?,
+        let result = match (left_data.get_type(), right_data.get_type()) {
+            (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+                let left = match left_data.as_integer() {
+                    Ok(v) => v,
+                    Err(e) => Err(error(e))?,
+                };
+                let right = match right_data.as_integer() {
+                    Ok(v) => v,
+                    Err(e) => Err(error(e))?,
                 };
 
-                self.data.pop();
-                self.data.pop();
+                trace!("Comparing {:?} == {:?}", left, right);
 
-                self.add_data(match result {
-                    true => ExpressionData::boolean_true(),
-                    false => ExpressionData::boolean_false(),
-                })?;
-
-                Ok(())
+                left == right
             }
-        }
+            (l, r) => Err(error(format!("Comparison between types not implemented {:?} and {:?}", l, r)))?,
+        };
+
+        self.data.pop();
+        self.data.pop();
+
+        self.add_data(match result {
+            true => ExpressionData::boolean_true(),
+            false => ExpressionData::boolean_false(),
+        })?;
+
+        Ok(())
     }
 }
 
@@ -84,5 +74,18 @@ mod tests {
         runtime.equality_comparison().unwrap();
 
         assert!(!runtime.data.get(1).unwrap().as_boolean().unwrap());
+    }
+    #[test]
+    fn equality_no_references_is_err() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+
+        runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
+
+        let result = runtime.equality_comparison();
+
+        assert!(result.is_err());
     }
 }
