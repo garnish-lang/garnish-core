@@ -62,7 +62,7 @@ type DefinitionResolveInfo = (bool, Option<usize>);
 
 fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
-        Definition::Number | Definition::Identifier | Definition::Symbol | Definition::Input | Definition::Result | Definition::Unit => {
+        Definition::Number | Definition::Identifier | Definition::Symbol | Definition::Input | Definition::Result | Definition::Unit | Definition::False | Definition::True => {
             ((false, None), (false, None))
         }
         Definition::Reapply => ((true, node.get_right()), (false, None)),
@@ -121,6 +121,14 @@ fn resolve_node(
         Definition::Input => {
             // all unit literals will use unit used in the zero element slot of data
             instructions.push(InstructionData::new(Instruction::PutInput, None));
+        }
+        Definition::True => {
+            instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
+            data.push(ExpressionData::boolean_true());
+        }
+        Definition::False => {
+            instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
+            data.push(ExpressionData::boolean_false());
         }
         Definition::Result => {
             // all unit literals will use unit used in the zero element slot of data
@@ -484,6 +492,26 @@ mod values {
             vec![(Definition::Number, None, None, None, "5", TokenType::Number)],
             vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
             vec![ExpressionData::integer(5)],
+        );
+    }
+
+    #[test]
+    fn boolean_true() {
+        assert_instruction_data(
+            0,
+            vec![(Definition::True, None, None, None, "$?", TokenType::True)],
+            vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
+            vec![ExpressionData::boolean_true()],
+        );
+    }
+
+    #[test]
+    fn boolean_false() {
+        assert_instruction_data(
+            0,
+            vec![(Definition::False, None, None, None, "$!", TokenType::False)],
+            vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
+            vec![ExpressionData::boolean_false()],
         );
     }
 

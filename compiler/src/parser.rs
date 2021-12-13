@@ -28,6 +28,8 @@ pub enum Definition {
     ApplyIfTrue,
     ApplyIfFalse,
     ConditionalBranch,
+    True,
+    False,
 }
 
 impl Definition {
@@ -72,6 +74,8 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::Number => (Definition::Number, SecondaryDefinition::Value),
         TokenType::Result => (Definition::Result, SecondaryDefinition::Value),
         TokenType::Input => (Definition::Input, SecondaryDefinition::Value),
+        TokenType::True => (Definition::True, SecondaryDefinition::Value),
+        TokenType::False => (Definition::False, SecondaryDefinition::Value),
         TokenType::Identifier => (Definition::Identifier, SecondaryDefinition::Value),
 
         // Groupings
@@ -172,6 +176,8 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::Symbol, 1);
     map.insert(Definition::Unit, 1);
     map.insert(Definition::Input, 1);
+    map.insert(Definition::True, 1);
+    map.insert(Definition::False, 1);
     map.insert(Definition::Result, 1);
 
     map.insert(Definition::Group, 2);
@@ -832,6 +838,24 @@ mod tests {
         let result = parse(tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::Input, None, None, None)]);
+    }
+
+    #[test]
+    fn single_true() {
+        let tokens = vec![LexerToken::new("$?".to_string(), TokenType::True, 0, 0)];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::True, None, None, None)]);
+    }
+
+    #[test]
+    fn single_false() {
+        let tokens = vec![LexerToken::new("$!".to_string(), TokenType::False, 0, 0)];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::False, None, None, None)]);
     }
 
     #[test]
