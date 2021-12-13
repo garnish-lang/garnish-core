@@ -27,13 +27,13 @@ fn adding_numbers_with_sub_expression() {
 
     runtime.add_input_reference(2).unwrap();
 
-    runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
     runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
     runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
-    runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
     runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(4)).unwrap();
     runtime.add_instruction(Instruction::EmptyApply, None).unwrap();
     runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
@@ -48,64 +48,6 @@ fn adding_numbers_with_sub_expression() {
 }
 
 #[test]
-fn conditionals_and_inputs() {
-    let mut runtime = GarnishLangRuntime::new();
-
-    runtime.add_data(ExpressionData::integer(100)).unwrap();
-    runtime.add_data(ExpressionData::integer(200)).unwrap();
-    runtime.add_data(ExpressionData::integer(300)).unwrap();
-    runtime.add_data(ExpressionData::expression(3)).unwrap();
-    runtime.end_constant_data().unwrap();
-
-    runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
-    runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
-    runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
-    runtime.add_instruction(Instruction::JumpTo, Some(0)).unwrap();
-
-    runtime.add_instruction(Instruction::Put, Some(1)).unwrap(); // 5
-    runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
-    runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
-    runtime.add_instruction(Instruction::EndExpression, None).unwrap();
-
-    runtime.add_instruction(Instruction::Put, Some(0)).unwrap(); // 9
-    runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
-    runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
-    runtime.add_instruction(Instruction::JumpTo, Some(0)).unwrap();
-
-    // 13
-    runtime.add_instruction(Instruction::PutInput, None).unwrap();
-    runtime.add_instruction(Instruction::JumpIfTrue, Some(1)).unwrap();
-    runtime.add_instruction(Instruction::JumpIfFalse, Some(2)).unwrap();
-
-    runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
-    runtime.add_instruction(Instruction::EmptyApply, None).unwrap();
-    runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
-    runtime.add_instruction(Instruction::EndExpression, None).unwrap();
-
-    runtime.add_expression(16).unwrap();
-    runtime.add_expression(9).unwrap();
-    runtime.add_expression(1).unwrap();
-    runtime.add_expression(5).unwrap();
-
-    runtime.set_instruction_cursor(13).unwrap();
-
-    let inputs_expected_result = [(ExpressionData::boolean_false(), 800), (ExpressionData::boolean_true(), 900)];
-
-    for (input, expected) in inputs_expected_result {
-        let addr = runtime.add_data(input.clone()).unwrap();
-        runtime.add_input_reference(addr).unwrap();
-
-        execute_all_instructions(&mut runtime);
-
-        assert_eq!(runtime.get_result().unwrap().as_integer().unwrap(), expected);
-
-        runtime.remove_data(addr).unwrap();
-        runtime.set_instruction_cursor(13).unwrap();
-        runtime.clear_result().unwrap();
-    }
-}
-
-#[test]
 fn multiple_conditions() {
     let mut runtime = GarnishLangRuntime::new();
 
@@ -116,24 +58,24 @@ fn multiple_conditions() {
     runtime.add_data(ExpressionData::integer(2)).unwrap();
     runtime.end_constant_data().unwrap();
 
-    runtime.add_instruction(Instruction::Put, Some(0)).unwrap(); // 1
+    runtime.add_instruction(Instruction::Put, Some(1)).unwrap(); // 1
     runtime.add_instruction(Instruction::JumpTo, Some(3)).unwrap();
 
-    runtime.add_instruction(Instruction::Put, Some(1)).unwrap(); // 3
+    runtime.add_instruction(Instruction::Put, Some(2)).unwrap(); // 3
     runtime.add_instruction(Instruction::JumpTo, Some(3)).unwrap();
 
-    runtime.add_instruction(Instruction::Put, Some(2)).unwrap(); // 5
+    runtime.add_instruction(Instruction::Put, Some(3)).unwrap(); // 5
     runtime.add_instruction(Instruction::JumpTo, Some(3)).unwrap();
 
     // 7
     runtime.add_instruction(Instruction::PutInput, None).unwrap();
-    runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(4)).unwrap();
     runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
 
     runtime.add_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
 
     runtime.add_instruction(Instruction::PutInput, None).unwrap();
-    runtime.add_instruction(Instruction::Put, Some(4)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(5)).unwrap();
     runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
 
     runtime.add_instruction(Instruction::JumpIfFalse, Some(2)).unwrap();
@@ -176,13 +118,13 @@ fn value_before_jump() {
     runtime.add_data(ExpressionData::integer(300)).unwrap();
     runtime.end_constant_data().unwrap();
 
-    runtime.add_instruction(Instruction::Put, Some(0)).unwrap(); // 1
+    runtime.add_instruction(Instruction::Put, Some(1)).unwrap(); // 1
     runtime.add_instruction(Instruction::JumpTo, Some(0)).unwrap();
 
     // 3
-    runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
-    runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
-    runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
     runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
     runtime.add_instruction(Instruction::JumpIfTrue, Some(1)).unwrap();
 
@@ -210,10 +152,10 @@ fn pair_with_pair() {
     runtime.end_constant_data().unwrap();
 
     // 1
-    runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
     runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
     runtime.add_instruction(Instruction::MakePair, None).unwrap();
-    runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
     runtime.add_instruction(Instruction::MakePair, None).unwrap();
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
@@ -232,7 +174,7 @@ fn add_5_loop() {
     // 5 ~> {
     //     $ + 5 @ get number and add 5 to make next element of new list
 
-    //     ? == 25 => ? !> ^~ ?
+    //     ? == 25 ?> ? |> ^~ ?
     // }
 
     let mut runtime = GarnishLangRuntime::new();
@@ -244,13 +186,13 @@ fn add_5_loop() {
 
     // 1 - subexpression
     runtime.add_instruction(Instruction::PutInput, None).unwrap();
-    runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
     runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
     runtime.add_instruction(Instruction::PushResult, None).unwrap();
 
     // 5
     runtime.add_instruction(Instruction::PutResult, None).unwrap();
-    runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
     runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
     runtime.add_instruction(Instruction::JumpIfFalse, Some(2)).unwrap();
     runtime.add_instruction(Instruction::PutResult, None).unwrap();
@@ -264,8 +206,8 @@ fn add_5_loop() {
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
     // 14 - main
-    runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
-    runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
+    runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
     runtime.add_instruction(Instruction::Apply, None).unwrap();
     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 

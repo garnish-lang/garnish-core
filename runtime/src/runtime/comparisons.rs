@@ -23,6 +23,7 @@ impl GarnishLangRuntime {
         self.data.pop();
         self.data.pop();
 
+        self.reference_stack.push(self.data.len());
         self.add_data(match result {
             true => ExpressionData::boolean_true(),
             false => ExpressionData::boolean_false(),
@@ -50,6 +51,7 @@ mod tests {
 
         runtime.equality_comparison().unwrap();
 
+        assert_eq!(runtime.reference_stack.last().unwrap(), &1);
         assert!(runtime.data.get(1).unwrap().as_boolean().unwrap());
     }
 
@@ -67,6 +69,7 @@ mod tests {
 
         runtime.equality_comparison().unwrap();
 
+        assert_eq!(runtime.reference_stack.last().unwrap(), &1);
         assert!(!runtime.data.get(1).unwrap().as_boolean().unwrap());
     }
     #[test]
