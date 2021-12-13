@@ -82,6 +82,7 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         Definition::NestedExpression => ((false, None), (false, None)),
         Definition::ApplyIfTrue => ((true, node.get_left()), (false, None)),
         Definition::ApplyIfFalse => ((true, node.get_left()), (false, None)),
+        Definition::DefaultConditional => ((false, None), (false, None)),
         Definition::ConditionalBranch => ((true, node.get_left()), (true, node.get_right())),
         Definition::Drop => todo!(),
     }
@@ -180,6 +181,9 @@ fn resolve_node(
         Definition::ApplyIfFalse => {
             instructions.push(InstructionData::new(Instruction::JumpIfFalse, Some(current_jump_index)));
         }
+        Definition::DefaultConditional => {
+            instructions.push(InstructionData::new(Instruction::JumpTo, Some(current_jump_index)));
+        }
         Definition::ConditionalBranch => (), // no additional instructions
         // no runtime meaning, parser only utility
         Definition::Drop => (),
@@ -237,8 +241,9 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
 
                             let ((first_expected, first_index), (second_expected, second_index)) = get_resolve_info(node);
 
-                            let we_are_conditional =
-                                node.get_definition() == Definition::ApplyIfFalse || node.get_definition() == Definition::ApplyIfTrue;
+                            let we_are_conditional = node.get_definition() == Definition::ApplyIfFalse
+                                || node.get_definition() == Definition::ApplyIfTrue
+                                || node.get_definition() == Definition::DefaultConditional;
                             let we_are_parent_conditional_branch = node.get_definition() == Definition::ConditionalBranch
                                 && resolve_node_info.parent_definition != Definition::ConditionalBranch;
                             let we_are_non_chained_conditional =
@@ -1126,13 +1131,20 @@ mod conditionals {
                 (Definition::ApplyIfTrue, Some(3), Some(0), Some(2), "?>", TokenType::ApplyIfTrue),
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
                 (Definition::ConditionalBranch, None, Some(1), Some(4), ",", TokenType::Comma),
-                (Definition::ApplyIfFalse, Some(3), None, Some(5), "!>", TokenType::ApplyIfFalse),
+                (
+                    Definition::DefaultConditional,
+                    Some(3),
+                    None,
+                    Some(5),
+                    "|>",
+                    TokenType::DefaultConditional,
+                ),
                 (Definition::Number, Some(4), None, None, "15", TokenType::Number),
             ],
             vec![
                 (Instruction::Put, Some(1)),
                 (Instruction::JumpIfTrue, Some(2)),
-                (Instruction::JumpIfFalse, Some(3)),
+                (Instruction::JumpTo, Some(3)),
                 (Instruction::EndExpression, None), // 3
                 (Instruction::Put, Some(2)),
                 (Instruction::JumpTo, Some(1)),

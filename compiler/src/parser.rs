@@ -27,6 +27,7 @@ pub enum Definition {
     Reapply,
     ApplyIfTrue,
     ApplyIfFalse,
+    DefaultConditional,
     ConditionalBranch,
     True,
     False,
@@ -107,6 +108,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         // Conditionals
         TokenType::ApplyIfFalse => (Definition::ApplyIfFalse, SecondaryDefinition::Conditional),
         TokenType::ApplyIfTrue => (Definition::ApplyIfTrue, SecondaryDefinition::Conditional),
+        TokenType::DefaultConditional => (Definition::DefaultConditional, SecondaryDefinition::Conditional),
         _ => todo!(),
     }
 }
@@ -2129,7 +2131,7 @@ mod conditionals {
             LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
-            LexerToken::new("!>".to_string(), TokenType::ApplyIfFalse, 0, 0),
+            LexerToken::new("|>".to_string(), TokenType::DefaultConditional, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
@@ -2143,7 +2145,7 @@ mod conditionals {
                 (1, Definition::ApplyIfTrue, Some(3), Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
                 (3, Definition::ConditionalBranch, None, Some(1), Some(4)),
-                (4, Definition::ApplyIfFalse, Some(3), None, Some(5)),
+                (4, Definition::DefaultConditional, Some(3), None, Some(5)),
                 (5, Definition::Number, Some(4), None, None),
             ],
         );

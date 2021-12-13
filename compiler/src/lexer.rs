@@ -26,6 +26,7 @@ pub enum TokenType {
     Apply,
     ApplyIfFalse,
     ApplyIfTrue,
+    DefaultConditional,
     ApplyTo,
     Reapply,
     EmptyApply,
@@ -258,6 +259,7 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
         ("~", TokenType::Apply),
         ("!>", TokenType::ApplyIfFalse),
         ("?>", TokenType::ApplyIfTrue),
+        ("|>", TokenType::DefaultConditional),
         ("~>", TokenType::ApplyTo),
         ("^~", TokenType::Reapply),
         ("~~", TokenType::EmptyApply),
@@ -622,6 +624,21 @@ mod tests {
             vec![LexerToken {
                 text: "!>".to_string(),
                 token_type: TokenType::ApplyIfFalse,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn default_conditional() {
+        let result = lex(&"|>".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "|>".to_string(),
+                token_type: TokenType::DefaultConditional,
                 column: 0,
                 row: 0
             }]
