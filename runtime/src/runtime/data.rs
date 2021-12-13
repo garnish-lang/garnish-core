@@ -90,7 +90,7 @@ mod tests {
 
         runtime.add_data(ExpressionData::integer(100)).unwrap();
 
-        assert_eq!(runtime.data.len(), 1);
+        assert_eq!(runtime.data.len(), 2);
     }
 
     #[test]
@@ -100,7 +100,7 @@ mod tests {
         runtime.add_data(ExpressionData::integer(100)).unwrap();
         runtime.add_data(ExpressionData::integer(200)).unwrap();
 
-        assert_eq!(runtime.get_data(1).unwrap().as_integer().unwrap(), 200);
+        assert_eq!(runtime.get_data(2).unwrap().as_integer().unwrap(), 200);
     }
 
     #[test]
@@ -111,17 +111,17 @@ mod tests {
         runtime.add_data(ExpressionData::integer(200)).unwrap();
         runtime.end_constant_data().unwrap();
 
-        assert_eq!(runtime.get_end_of_constant_data(), 2);
+        assert_eq!(runtime.get_end_of_constant_data(), 3);
     }
 
     #[test]
     fn add_data_returns_addr() {
         let mut runtime = GarnishLangRuntime::new();
 
-        assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 0);
         assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 1);
         assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 2);
         assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 3);
+        assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 4);
     }
 
     #[test]
@@ -129,10 +129,10 @@ mod tests {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::integer(100)).unwrap();
-        runtime.add_data(ExpressionData::reference(0)).unwrap();
         runtime.add_data(ExpressionData::reference(1)).unwrap();
+        runtime.add_data(ExpressionData::reference(2)).unwrap();
 
-        assert_eq!(runtime.data.get(2).unwrap().as_reference().unwrap(), 0);
+        assert_eq!(runtime.data.get(3).unwrap().as_reference().unwrap(), 1);
     }
 
     #[test]
@@ -142,7 +142,7 @@ mod tests {
         runtime.add_data(ExpressionData::integer(100)).unwrap();
         runtime.add_reference_data(0).unwrap();
 
-        assert_eq!(runtime.data.len(), 2);
+        assert_eq!(runtime.data.len(), 3);
     }
 
     #[test]
@@ -152,7 +152,7 @@ mod tests {
         runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
 
         let false_sym = runtime.symbols.get("false").unwrap();
-        let false_data = runtime.data.get(0).unwrap();
+        let false_data = runtime.data.get(1).unwrap();
 
         assert_eq!(false_sym, &0);
         assert_eq!(false_data.as_symbol_name().unwrap(), "false".to_string());
@@ -175,7 +175,7 @@ mod tests {
 
         runtime.remove_data(addr).unwrap();
 
-        assert_eq!(runtime.data.len(), 4);
+        assert_eq!(runtime.data.len(), 5);
     }
 
     #[test]

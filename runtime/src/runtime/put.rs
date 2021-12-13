@@ -76,10 +76,10 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.end_constant_data().unwrap();
 
-        runtime.put(0).unwrap();
+        runtime.put(1).unwrap();
 
-        assert_eq!(runtime.data.get(1).unwrap().as_reference().unwrap(), 0);
-        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 1);
+        assert_eq!(runtime.data.get(2).unwrap().as_reference().unwrap(), 1);
+        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
     }
 
     #[test]
@@ -99,12 +99,12 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.add_input_reference(1).unwrap();
+        runtime.add_input_reference(2).unwrap();
 
         runtime.put_input().unwrap();
 
-        assert_eq!(runtime.data.get(2).unwrap(), &ExpressionData::reference(1));
-        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
+        assert_eq!(runtime.data.get(3).unwrap(), &ExpressionData::reference(2));
+        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 3);
     }
 
     #[test]
@@ -116,8 +116,8 @@ mod tests {
 
         runtime.push_input().unwrap();
 
-        assert_eq!(runtime.inputs.get(0).unwrap(), &1);
-        assert_eq!(runtime.current_result.unwrap(), 1usize);
+        assert_eq!(runtime.inputs.get(0).unwrap(), &2);
+        assert_eq!(runtime.current_result.unwrap(), 2usize);
     }
 
     #[test]
@@ -138,11 +138,11 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.current_result = Some(1);
+        runtime.current_result = Some(2);
 
         runtime.put_result().unwrap();
 
-        assert_eq!(runtime.data.get(2).unwrap(), &ExpressionData::reference(1));
-        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
+        assert_eq!(runtime.data.get(3).unwrap(), &ExpressionData::reference(2));
+        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 3);
     }
 }

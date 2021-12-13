@@ -59,14 +59,14 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
 
-        runtime.reference_stack.push(0);
         runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
 
         runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
 
         runtime.equality_comparison().unwrap();
 
-        assert!(runtime.data.get(0).unwrap().as_boolean().unwrap());
+        assert!(runtime.data.get(1).unwrap().as_boolean().unwrap());
     }
 
     #[test]
@@ -76,13 +76,13 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.reference_stack.push(0);
         runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
 
         runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
 
         runtime.equality_comparison().unwrap();
 
-        assert!(!runtime.data.get(0).unwrap().as_boolean().unwrap());
+        assert!(!runtime.data.get(1).unwrap().as_boolean().unwrap());
     }
 }

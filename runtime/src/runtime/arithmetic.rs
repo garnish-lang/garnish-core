@@ -71,16 +71,16 @@ mod tests {
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_reference_data(0).unwrap();
         runtime.add_reference_data(1).unwrap();
+        runtime.add_reference_data(2).unwrap();
 
-        runtime.reference_stack.push(0);
         runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.reference_stack, vec![2]);
-        assert_eq!(runtime.data.get(2).unwrap().bytes, 30i64.to_le_bytes());
+        assert_eq!(runtime.reference_stack, vec![3]);
+        assert_eq!(runtime.data.get(3).unwrap().bytes, 30i64.to_le_bytes());
     }
 
     #[test]
@@ -90,12 +90,12 @@ mod tests {
         runtime.add_data(ExpressionData::symbol(&"sym1".to_string(), 1)).unwrap();
         runtime.add_data(ExpressionData::symbol(&"sym2".to_string(), 2)).unwrap();
 
-        runtime.reference_stack.push(0);
         runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.reference_stack, vec![2]);
-        assert_eq!(runtime.data.get(2).unwrap().get_type(), ExpressionDataType::Unit);
+        assert_eq!(runtime.reference_stack, vec![3]);
+        assert_eq!(runtime.data.get(3).unwrap().get_type(), ExpressionDataType::Unit);
     }
 }

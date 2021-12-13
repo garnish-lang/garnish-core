@@ -64,19 +64,19 @@ mod tests {
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(0, 1)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![2], vec![2])).unwrap();
+        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.reference_stack.push(4);
+        runtime.reference_stack.push(5);
 
-        runtime.current_result = Some(3);
+        runtime.current_result = Some(4);
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_data(5).unwrap().as_reference().unwrap(), 1);
+        assert_eq!(runtime.get_data(6).unwrap().as_reference().unwrap(), 2);
     }
 
     #[test]
@@ -85,19 +85,19 @@ mod tests {
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(0, 1)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![2], vec![2])).unwrap();
+        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.reference_stack.push(4);
+        runtime.reference_stack.push(5);
 
-        runtime.add_input_reference(3).unwrap();
+        runtime.add_input_reference(4).unwrap();
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_data(5).unwrap().as_reference().unwrap(), 1);
+        assert_eq!(runtime.get_data(6).unwrap().as_reference().unwrap(), 2);
     }
 
     #[test]
@@ -106,17 +106,17 @@ mod tests {
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(0, 1)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![2], vec![2])).unwrap();
+        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
         runtime.add_data(ExpressionData::symbol_from_string(&"two".to_string())).unwrap();
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.reference_stack.push(4);
+        runtime.reference_stack.push(5);
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_data(5).unwrap().get_type(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data(6).unwrap().get_type(), ExpressionDataType::Unit);
     }
 
     #[test]
@@ -127,7 +127,7 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.reference_stack.push(0);
+        runtime.reference_stack.push(1);
 
         struct MyContext {}
 
@@ -158,8 +158,8 @@ mod tests {
 
         runtime.resolve(Some(&mut context)).unwrap();
 
-        assert_eq!(runtime.get_data(1).unwrap().as_integer().unwrap(), 100);
-        assert_eq!(runtime.reference_stack.get(0).unwrap(), &2);
-        assert_eq!(runtime.get_data(2).unwrap().as_reference().unwrap(), 1);
+        assert_eq!(runtime.get_data(2).unwrap().as_integer().unwrap(), 100);
+        assert_eq!(runtime.reference_stack.get(0).unwrap(), &3);
+        assert_eq!(runtime.get_data(3).unwrap().as_reference().unwrap(), 2);
     }
 }

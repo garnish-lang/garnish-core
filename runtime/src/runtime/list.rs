@@ -180,16 +180,16 @@ mod tests {
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.reference_stack.push(0);
         runtime.reference_stack.push(1);
         runtime.reference_stack.push(2);
+        runtime.reference_stack.push(3);
 
         runtime.add_instruction(Instruction::MakeList, Some(3)).unwrap();
 
         runtime.make_list(3).unwrap();
 
-        let list = runtime.data.get(3).unwrap().as_list().unwrap();
-        assert_eq!(list, (vec![0, 1, 2], vec![]));
+        let list = runtime.data.get(4).unwrap().as_list().unwrap();
+        assert_eq!(list, (vec![1, 2, 3], vec![]));
     }
 
     #[test]
@@ -203,21 +203,20 @@ mod tests {
         runtime.add_data(ExpressionData::symbol_from_string(&"three".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(30)).unwrap();
         // 6
-        runtime.add_data(ExpressionData::pair(0, 1)).unwrap();
-        runtime.add_data(ExpressionData::pair(2, 3)).unwrap();
-        runtime.add_data(ExpressionData::pair(4, 5)).unwrap();
+        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+        runtime.add_data(ExpressionData::pair(3, 4)).unwrap();
+        runtime.add_data(ExpressionData::pair(5, 6)).unwrap();
 
-        runtime.reference_stack.push(6);
         runtime.reference_stack.push(7);
         runtime.reference_stack.push(8);
+        runtime.reference_stack.push(9);
 
         runtime.add_instruction(Instruction::MakeList, Some(3)).unwrap();
 
         runtime.make_list(3).unwrap();
 
-        println!("{:?}", runtime.data.get(9).unwrap());
-        let list = runtime.data.get(9).unwrap().as_list().unwrap();
-        assert_eq!(list, (vec![6, 7, 8], vec![6, 7, 8]));
+        let list = runtime.data.get(10).unwrap().as_list().unwrap();
+        assert_eq!(list, (vec![7, 8, 9], vec![9, 7, 8]));
     }
 
     #[test]
@@ -226,18 +225,18 @@ mod tests {
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(0, 1)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![2], vec![2])).unwrap();
+        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
 
         runtime.add_instruction(Instruction::Access, None).unwrap();
 
-        runtime.reference_stack.push(3);
         runtime.reference_stack.push(4);
+        runtime.reference_stack.push(5);
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_data(5).unwrap().as_reference().unwrap(), 1);
+        assert_eq!(runtime.get_data(6).unwrap().as_reference().unwrap(), 2);
     }
 
     #[test]
@@ -246,18 +245,18 @@ mod tests {
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(0, 1)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![2], vec![2])).unwrap();
+        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
         runtime.add_data(ExpressionData::symbol_from_string(&"two".to_string())).unwrap();
 
         runtime.add_instruction(Instruction::Access, None).unwrap();
 
-        runtime.reference_stack.push(3);
         runtime.reference_stack.push(4);
+        runtime.reference_stack.push(5);
 
         runtime.access().unwrap();
 
         assert_eq!(runtime.reference_stack.len(), 1);
-        assert_eq!(runtime.get_data(5).unwrap().get_type(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data(6).unwrap().get_type(), ExpressionDataType::Unit);
     }
 }

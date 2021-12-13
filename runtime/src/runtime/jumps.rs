@@ -103,7 +103,7 @@ mod tests {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
 
         runtime.end_expression().unwrap();
 
@@ -116,10 +116,10 @@ mod tests {
         let mut runtime = GarnishLangRuntime::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
-        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.add_instruction(Instruction::EndExpression, Some(0)).unwrap();
-        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.add_instruction(Instruction::EmptyApply, None).unwrap();
 
         runtime.jump_path.push(4);
@@ -161,7 +161,7 @@ mod tests {
 
         runtime.jump_if_true(0).unwrap();
 
-        assert!(runtime.data.is_empty());
+        assert_eq!(runtime.get_data_len(), 1);
         assert_eq!(runtime.instruction_cursor, 2);
     }
 
@@ -179,7 +179,7 @@ mod tests {
 
         runtime.jump_if_true(0).unwrap();
 
-        assert!(runtime.data.is_empty());
+        assert_eq!(runtime.get_data_len(), 1);
         assert_eq!(runtime.instruction_cursor, 1);
     }
 
@@ -197,7 +197,7 @@ mod tests {
 
         runtime.jump_if_true(0).unwrap();
 
-        assert!(runtime.data.is_empty());
+        assert_eq!(runtime.get_data_len(), 1);
         assert_eq!(runtime.instruction_cursor, 1);
     }
 
@@ -215,7 +215,7 @@ mod tests {
 
         runtime.jump_if_false(0).unwrap();
 
-        assert!(runtime.data.is_empty());
+        assert_eq!(runtime.get_data_len(), 1);
         assert_eq!(runtime.instruction_cursor, 1);
     }
 
@@ -233,7 +233,7 @@ mod tests {
 
         runtime.jump_if_false(0).unwrap();
 
-        assert!(runtime.data.is_empty());
+        assert_eq!(runtime.get_data_len(), 1);
         assert_eq!(runtime.instruction_cursor, 2);
     }
 
@@ -251,7 +251,7 @@ mod tests {
 
         runtime.jump_if_false(0).unwrap();
 
-        assert!(runtime.data.is_empty());
+        assert_eq!(runtime.get_data_len(), 1);
         assert_eq!(runtime.instruction_cursor, 2);
     }
 
@@ -270,11 +270,11 @@ mod tests {
 
         runtime.jump_if_true(0).unwrap();
 
-        assert_eq!(runtime.data.len(), 1);
+        assert_eq!(runtime.data.len(), 2);
 
         runtime.jump_if_false(0).unwrap();
 
-        assert!(runtime.data.is_empty());
+        assert_eq!(runtime.get_data_len(), 1);
         assert_eq!(runtime.instruction_cursor, 3);
     }
 
@@ -293,11 +293,11 @@ mod tests {
 
         runtime.jump_if_false(0).unwrap();
 
-        assert_eq!(runtime.data.len(), 1);
+        assert_eq!(runtime.data.len(), 2);
 
         runtime.jump_if_true(0).unwrap();
 
-        assert!(runtime.data.is_empty());
+        assert_eq!(runtime.get_data_len(), 1);
         assert_eq!(runtime.instruction_cursor, 3);
     }
 }

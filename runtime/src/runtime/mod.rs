@@ -39,7 +39,7 @@ pub struct GarnishLangRuntime {
 impl GarnishLangRuntime {
     pub fn new() -> Self {
         GarnishLangRuntime {
-            data: vec![],
+            data: vec![ExpressionData::unit()],
             end_of_constant_data: 0,
             reference_stack: vec![],
             instructions: vec![InstructionData {
@@ -180,7 +180,7 @@ impl GarnishLangRuntime {
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::context::EmptyContext, ExpressionData, GarnishLangRuntime, Instruction};
+    use crate::{runtime::context::EmptyContext, ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
 
     #[test]
     fn create_runtime() {
@@ -188,10 +188,12 @@ mod tests {
     }
 
     #[test]
-    fn end_execution_inserted_for_new() {
+    fn default_data_for_new() {
         let runtime = GarnishLangRuntime::new();
 
         assert_eq!(runtime.get_instruction(0).unwrap().instruction, Instruction::EndExecution);
+        assert_eq!(runtime.get_data_len(), 1);
+        assert_eq!(runtime.get_data(0).unwrap().get_type(), ExpressionDataType::Unit);
     }
 
     #[test]
@@ -243,7 +245,7 @@ mod tests {
 
         runtime.add_input_reference(addr).unwrap();
 
-        assert_eq!(runtime.inputs.get(0).unwrap().to_owned(), 1);
+        assert_eq!(runtime.inputs.get(0).unwrap().to_owned(), 2);
     }
 
     #[test]
@@ -324,11 +326,11 @@ mod tests {
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.reference_stack.push(0);
         runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
 
         runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.data.get(0).unwrap().bytes, 30i64.to_le_bytes());
+        assert_eq!(runtime.data.get(1).unwrap().bytes, 30i64.to_le_bytes());
     }
 }

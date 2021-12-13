@@ -115,26 +115,26 @@ mod tests {
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
         // 1
-        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.add_instruction(Instruction::PutInput, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
         // 5
-        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
         runtime.add_instruction(Instruction::Apply, None).unwrap();
 
         runtime.expression_table.push(1);
 
-        runtime.reference_stack.push(1);
         runtime.reference_stack.push(2);
+        runtime.reference_stack.push(3);
 
         runtime.set_instruction_cursor(7).unwrap();
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(*runtime.inputs.get(0).unwrap(), 2);
+        assert_eq!(*runtime.inputs.get(0).unwrap(), 3);
         assert_eq!(runtime.instruction_cursor, 0);
         assert_eq!(*runtime.jump_path.get(0).unwrap(), 7);
     }
@@ -147,24 +147,24 @@ mod tests {
         runtime.add_data(ExpressionData::expression(0)).unwrap();
 
         // 1
-        runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.add_instruction(Instruction::PutInput, None).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
         // 5
-        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
         runtime.add_instruction(Instruction::EmptyApply, None).unwrap();
 
         runtime.expression_table.push(1);
 
-        runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
 
         runtime.set_instruction_cursor(6).unwrap();
 
         runtime.empty_apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(*runtime.inputs.get(0).unwrap(), 2);
+        assert_eq!(*runtime.inputs.get(0).unwrap(), 3);
         assert_eq!(runtime.instruction_cursor, 0);
         assert_eq!(*runtime.jump_path.get(0).unwrap(), 6);
     }
@@ -219,8 +219,8 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.reference_stack.push(0);
         runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
 
         struct MyContext {}
 
@@ -256,8 +256,8 @@ mod tests {
 
         runtime.apply(Some(&mut context)).unwrap();
 
-        assert_eq!(runtime.get_data(2).unwrap().as_integer().unwrap(), 200);
-        assert_eq!(runtime.reference_stack.get(0).unwrap(), &3);
-        assert_eq!(runtime.get_data(3).unwrap().as_reference().unwrap(), 2);
+        assert_eq!(runtime.get_data(3).unwrap().as_integer().unwrap(), 200);
+        assert_eq!(runtime.reference_stack.get(0).unwrap(), &4);
+        assert_eq!(runtime.get_data(4).unwrap().as_reference().unwrap(), 3);
     }
 }

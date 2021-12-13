@@ -34,17 +34,17 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::symbol_from_string(&"my_symbol".to_string())).unwrap();
 
-        runtime.reference_stack.push(0);
         runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
 
         runtime.add_instruction(Instruction::MakePair, None).unwrap();
 
         runtime.make_pair().unwrap();
 
-        assert_eq!(runtime.data.get(2).unwrap().get_type(), ExpressionDataType::Pair);
-        assert_eq!(runtime.data.get(2).unwrap().as_pair().unwrap(), (0, 1));
+        assert_eq!(runtime.data.get(3).unwrap().get_type(), ExpressionDataType::Pair);
+        assert_eq!(runtime.data.get(3).unwrap().as_pair().unwrap(), (1, 2));
 
         assert_eq!(runtime.reference_stack.len(), 1);
-        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
+        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 3);
     }
 }
