@@ -2,7 +2,12 @@ use log::trace;
 
 use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
 
-impl GarnishLangRuntime {
+use super::data::GarnishLangRuntimeDataPool;
+
+impl<Data> GarnishLangRuntime<Data>
+where
+    Data: GarnishLangRuntimeDataPool,
+{
     pub fn jump(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Jump | Data - {:?}", index);
         self.instruction_cursor = self.get_jump_point(index)? - 1;
@@ -76,7 +81,7 @@ mod tests {
 
     #[test]
     fn end_expression() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
@@ -89,7 +94,7 @@ mod tests {
 
     #[test]
     fn end_expression_with_path() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
@@ -107,7 +112,7 @@ mod tests {
 
     #[test]
     fn jump() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
         runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
@@ -125,7 +130,7 @@ mod tests {
 
     #[test]
     fn jump_if_true_no_ref_is_err() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::boolean_true()).unwrap();
         runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
@@ -142,7 +147,7 @@ mod tests {
 
     #[test]
     fn jump_if_false_no_ref_is_error() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::boolean_true()).unwrap();
         runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
@@ -159,7 +164,7 @@ mod tests {
 
     #[test]
     fn jump_if_true_when_true() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::boolean_true()).unwrap();
         runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
@@ -180,7 +185,7 @@ mod tests {
 
     #[test]
     fn jump_if_true_when_unit() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::unit()).unwrap();
         runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
@@ -201,7 +206,7 @@ mod tests {
 
     #[test]
     fn jump_if_true_when_false() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::boolean_false()).unwrap();
         runtime.add_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
@@ -222,7 +227,7 @@ mod tests {
 
     #[test]
     fn jump_if_false_when_true() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::boolean_true()).unwrap();
         runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
@@ -243,7 +248,7 @@ mod tests {
 
     #[test]
     fn jump_if_false_when_unit() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::unit()).unwrap();
         runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
@@ -264,7 +269,7 @@ mod tests {
 
     #[test]
     fn jump_if_false_when_false() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::boolean_false()).unwrap();
         runtime.add_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();

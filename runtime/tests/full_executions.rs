@@ -1,6 +1,6 @@
 use garnish_lang_runtime::*;
 
-fn execute_all_instructions(runtime: &mut GarnishLangRuntime) {
+fn execute_all_instructions(runtime: &mut GarnishLangRuntime<SimpleRuntimeData>) {
     loop {
         match runtime.execute_current_instruction::<EmptyContext>(None) {
             Err(e) => {
@@ -17,7 +17,7 @@ fn execute_all_instructions(runtime: &mut GarnishLangRuntime) {
 
 #[test]
 fn adding_numbers_with_sub_expression() {
-    let mut runtime = GarnishLangRuntime::new();
+    let mut runtime = GarnishLangRuntime::simple();
 
     runtime.add_data(ExpressionData::integer(100)).unwrap();
     runtime.add_data(ExpressionData::integer(200)).unwrap();
@@ -49,7 +49,7 @@ fn adding_numbers_with_sub_expression() {
 
 #[test]
 fn multiple_conditions() {
-    let mut runtime = GarnishLangRuntime::new();
+    let mut runtime = GarnishLangRuntime::simple();
 
     runtime.add_data(ExpressionData::integer(100)).unwrap();
     runtime.add_data(ExpressionData::integer(200)).unwrap();
@@ -111,7 +111,7 @@ fn multiple_conditions() {
 
 #[test]
 fn value_before_jump() {
-    let mut runtime = GarnishLangRuntime::new();
+    let mut runtime = GarnishLangRuntime::simple();
 
     runtime.add_data(ExpressionData::integer(100)).unwrap();
     runtime.add_data(ExpressionData::integer(200)).unwrap();
@@ -144,7 +144,7 @@ fn value_before_jump() {
 
 #[test]
 fn pair_with_pair() {
-    let mut runtime = GarnishLangRuntime::new();
+    let mut runtime = GarnishLangRuntime::simple();
 
     runtime.add_data(ExpressionData::integer(100)).unwrap();
     runtime.add_data(ExpressionData::integer(200)).unwrap();
@@ -177,7 +177,7 @@ fn add_5_loop() {
     //     ? == 25 ?> ? |> ^~ ?
     // }
 
-    let mut runtime = GarnishLangRuntime::new();
+    let mut runtime = GarnishLangRuntime::simple();
 
     runtime.add_data(ExpressionData::integer(5)).unwrap();
     runtime.add_data(ExpressionData::integer(25)).unwrap();

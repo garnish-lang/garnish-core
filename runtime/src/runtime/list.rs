@@ -2,7 +2,12 @@ use log::trace;
 
 use crate::{error, result::RuntimeResult, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
 
-impl GarnishLangRuntime {
+use super::data::GarnishLangRuntimeDataPool;
+
+impl<Data> GarnishLangRuntime<Data>
+where
+    Data: GarnishLangRuntimeDataPool,
+{
     pub fn make_list(&mut self, len: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Make List | Length - {:?}", len);
         let mut list = vec![];
@@ -142,7 +147,7 @@ mod tests {
 
     #[test]
     fn make_list() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
@@ -162,7 +167,7 @@ mod tests {
 
     #[test]
     fn make_list_no_refs_is_err() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
@@ -177,7 +182,7 @@ mod tests {
 
     #[test]
     fn make_list_with_associations() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
@@ -204,7 +209,7 @@ mod tests {
 
     #[test]
     fn access() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
@@ -224,7 +229,7 @@ mod tests {
 
     #[test]
     fn access_no_refs_is_err() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
@@ -241,7 +246,7 @@ mod tests {
 
     #[test]
     fn access_with_non_existent_key() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();

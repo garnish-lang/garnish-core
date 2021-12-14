@@ -2,7 +2,12 @@ use log::trace;
 
 use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
 
-impl GarnishLangRuntime {
+use super::data::GarnishLangRuntimeDataPool;
+
+impl<Data> GarnishLangRuntime<Data>
+where
+    Data: GarnishLangRuntimeDataPool,
+{
     pub fn perform_addition(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Addition");
         let (right_data, left_data) = self.next_two_ref_data()?;
@@ -33,7 +38,7 @@ mod tests {
 
     #[test]
     fn perform_addition() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
@@ -49,7 +54,7 @@ mod tests {
 
     #[test]
     fn perform_addition_no_refs_is_err() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
@@ -61,7 +66,7 @@ mod tests {
 
     #[test]
     fn perform_addition_through_references() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
@@ -79,7 +84,7 @@ mod tests {
 
     #[test]
     fn perform_addition_with_non_integers() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::symbol(&"sym1".to_string(), 1)).unwrap();
         runtime.add_data(ExpressionData::symbol(&"sym2".to_string(), 2)).unwrap();

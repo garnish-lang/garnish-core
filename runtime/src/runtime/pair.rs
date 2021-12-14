@@ -2,7 +2,12 @@ use log::trace;
 
 use crate::{ExpressionData, GarnishLangRuntime, GarnishLangRuntimeResult};
 
-impl GarnishLangRuntime {
+use super::data::GarnishLangRuntimeDataPool;
+
+impl<Data> GarnishLangRuntime<Data>
+where
+    Data: GarnishLangRuntimeDataPool,
+{
     pub fn make_pair(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Make Pair");
         let right_addr = self.next_raw_ref()?;
@@ -20,7 +25,7 @@ mod tests {
 
     #[test]
     fn make_pair() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::symbol_from_string(&"my_symbol".to_string())).unwrap();
@@ -41,7 +46,7 @@ mod tests {
 
     #[test]
     fn make_pair_no_refs_is_err() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::symbol_from_string(&"my_symbol".to_string())).unwrap();

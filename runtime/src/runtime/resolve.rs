@@ -2,9 +2,12 @@ use log::trace;
 
 use crate::{ExpressionData, GarnishLangRuntime, GarnishLangRuntimeResult};
 
-use super::context::GarnishLangRuntimeContext;
+use super::{context::GarnishLangRuntimeContext, data::GarnishLangRuntimeDataPool};
 
-impl GarnishLangRuntime {
+impl<Data> GarnishLangRuntime<Data>
+where
+    Data: GarnishLangRuntimeDataPool,
+{
     pub fn resolve<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
         trace!("Instruction - Resolve");
         let addr = self.next_raw_ref()?;
@@ -52,13 +55,16 @@ impl GarnishLangRuntime {
 mod tests {
     use crate::{
         error,
-        runtime::context::{EmptyContext, GarnishLangRuntimeContext},
+        runtime::{
+            context::{EmptyContext, GarnishLangRuntimeContext},
+            data::GarnishLangRuntimeDataPool,
+        },
         ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction,
     };
 
     #[test]
     fn resolve_no_ref_is_err() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
@@ -77,7 +83,7 @@ mod tests {
 
     #[test]
     fn resolve_from_result() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
@@ -98,7 +104,7 @@ mod tests {
 
     #[test]
     fn resolve_from_input() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
@@ -119,7 +125,7 @@ mod tests {
 
     #[test]
     fn resolve_not_found_is_unit() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
@@ -138,7 +144,7 @@ mod tests {
 
     #[test]
     fn resolve_from_context() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
 
@@ -149,7 +155,11 @@ mod tests {
         struct MyContext {}
 
         impl GarnishLangRuntimeContext for MyContext {
-            fn resolve(&mut self, sym_addr: usize, runtime: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
+            fn resolve<Data: GarnishLangRuntimeDataPool>(
+                &mut self,
+                sym_addr: usize,
+                runtime: &mut GarnishLangRuntime<Data>,
+            ) -> GarnishLangRuntimeResult<bool> {
                 match runtime.get_data(sym_addr) {
                     None => Err(error(format!("Symbol address, {:?}, given to resolve not found in runtime.", sym_addr)))?,
                     Some(data) => match data.get_type() {
@@ -166,7 +176,12 @@ mod tests {
                 }
             }
 
-            fn apply(&mut self, _: usize, _: usize, _: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
+            fn apply<Data: GarnishLangRuntimeDataPool>(
+                &mut self,
+                _: usize,
+                _: usize,
+                _: &mut GarnishLangRuntime<Data>,
+            ) -> GarnishLangRuntimeResult<bool> {
                 Ok(false)
             }
         }

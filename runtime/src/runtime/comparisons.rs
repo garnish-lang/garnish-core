@@ -2,7 +2,12 @@ use log::trace;
 
 use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
 
-impl GarnishLangRuntime {
+use super::data::GarnishLangRuntimeDataPool;
+
+impl<Data> GarnishLangRuntime<Data>
+where
+    Data: GarnishLangRuntimeDataPool,
+{
     pub fn equality_comparison(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Equality Comparison");
 
@@ -35,7 +40,7 @@ mod tests {
 
     #[test]
     fn equality_true() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
@@ -53,7 +58,7 @@ mod tests {
 
     #[test]
     fn equality_false() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
@@ -70,7 +75,7 @@ mod tests {
     }
     #[test]
     fn equality_no_references_is_err() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();

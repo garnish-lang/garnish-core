@@ -2,9 +2,12 @@ use log::trace;
 
 use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
 
-use super::context::GarnishLangRuntimeContext;
+use super::{context::GarnishLangRuntimeContext, data::GarnishLangRuntimeDataPool};
 
-impl GarnishLangRuntime {
+impl<Data> GarnishLangRuntime<Data>
+where
+    Data: GarnishLangRuntimeDataPool,
+{
     pub fn apply<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
         trace!("Instruction - Apply");
         self.apply_internal(context)
@@ -85,13 +88,16 @@ impl GarnishLangRuntime {
 mod tests {
     use crate::{
         error,
-        runtime::context::{EmptyContext, GarnishLangRuntimeContext},
+        runtime::{
+            context::{EmptyContext, GarnishLangRuntimeContext},
+            data::GarnishLangRuntimeDataPool,
+        },
         ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction,
     };
 
     #[test]
     fn apply() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::expression(0)).unwrap();
@@ -124,7 +130,7 @@ mod tests {
 
     #[test]
     fn apply_no_references_is_err() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::expression(0)).unwrap();
@@ -152,7 +158,7 @@ mod tests {
 
     #[test]
     fn empty_apply() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::expression(0)).unwrap();
@@ -182,7 +188,7 @@ mod tests {
 
     #[test]
     fn empty_apply_no_references_is_err() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::expression(0)).unwrap();
@@ -208,7 +214,7 @@ mod tests {
 
     #[test]
     fn reapply() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::expression(0)).unwrap();
@@ -249,7 +255,7 @@ mod tests {
 
     #[test]
     fn apply_from_context() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::external(3)).unwrap();
         runtime.add_data(ExpressionData::integer(100)).unwrap();
@@ -262,11 +268,16 @@ mod tests {
         struct MyContext {}
 
         impl GarnishLangRuntimeContext for MyContext {
-            fn resolve(&mut self, _: usize, _: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
+            fn resolve<Data: GarnishLangRuntimeDataPool>(&mut self, _: usize, _: &mut GarnishLangRuntime<Data>) -> GarnishLangRuntimeResult<bool> {
                 Ok(false)
             }
 
-            fn apply(&mut self, external_value: usize, input_addr: usize, runtime: &mut GarnishLangRuntime) -> GarnishLangRuntimeResult<bool> {
+            fn apply<Data: GarnishLangRuntimeDataPool>(
+                &mut self,
+                external_value: usize,
+                input_addr: usize,
+                runtime: &mut GarnishLangRuntime<Data>,
+            ) -> GarnishLangRuntimeResult<bool> {
                 assert_eq!(external_value, 3);
 
                 let value = match runtime.get_data(input_addr) {

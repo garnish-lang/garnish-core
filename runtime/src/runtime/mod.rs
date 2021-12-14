@@ -10,6 +10,7 @@ mod put;
 mod resolve;
 
 pub use context::*;
+pub use data::SimpleRuntimeData;
 
 use std::collections::HashMap;
 use std::vec;
@@ -17,13 +18,15 @@ use std::vec;
 use crate::expression_data::*;
 use crate::instruction::*;
 use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
+use crate::runtime::data::GarnishLangRuntimeDataPool;
 use crate::GarnishLangRuntimeData;
 use log::trace;
 
 use self::context::GarnishLangRuntimeContext;
 
 #[derive(Debug)]
-pub struct GarnishLangRuntime {
+pub struct GarnishLangRuntime<Data> {
+    heap: Data,
     data: Vec<ExpressionData>,
     end_of_constant_data: usize,
     reference_stack: Vec<usize>,
@@ -36,9 +39,19 @@ pub struct GarnishLangRuntime {
     expression_table: Vec<usize>,
 }
 
-impl GarnishLangRuntime {
+impl GarnishLangRuntime<SimpleRuntimeData> {
+    pub fn simple() -> Self {
+        GarnishLangRuntime::<SimpleRuntimeData>::new()
+    }
+}
+
+impl<Data> GarnishLangRuntime<Data>
+where
+    Data: GarnishLangRuntimeDataPool,
+{
     pub fn new() -> Self {
         GarnishLangRuntime {
+            heap: Data::new(),
             data: vec![ExpressionData::unit()],
             end_of_constant_data: 0,
             reference_stack: vec![],
@@ -184,12 +197,12 @@ mod tests {
 
     #[test]
     fn create_runtime() {
-        GarnishLangRuntime::new();
+        GarnishLangRuntime::simple();
     }
 
     #[test]
     fn default_data_for_new() {
-        let runtime = GarnishLangRuntime::new();
+        let runtime = GarnishLangRuntime::simple();
 
         assert_eq!(runtime.get_instruction(0).unwrap().instruction, Instruction::EndExecution);
         assert_eq!(runtime.get_data_len(), 1);
@@ -198,7 +211,7 @@ mod tests {
 
     #[test]
     fn add_expression() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
         runtime.add_expression(1).unwrap();
@@ -209,7 +222,7 @@ mod tests {
 
     #[test]
     fn add_expression_out_of_bounds() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
         let result = runtime.add_expression(5);
@@ -219,7 +232,7 @@ mod tests {
 
     #[test]
     fn add_instruction() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
 
@@ -228,7 +241,7 @@ mod tests {
 
     #[test]
     fn add_input_reference() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_input_reference(0).unwrap();
@@ -238,7 +251,7 @@ mod tests {
 
     #[test]
     fn add_input_reference_with_data_addr() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         let addr = runtime.add_data(ExpressionData::integer(10)).unwrap();
@@ -250,7 +263,7 @@ mod tests {
 
     #[test]
     fn get_instruction() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_instruction(Instruction::Put, None).unwrap();
 
@@ -259,7 +272,7 @@ mod tests {
 
     #[test]
     fn get_current_instruction() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_instruction(Instruction::Put, None).unwrap();
 
@@ -268,7 +281,7 @@ mod tests {
 
     #[test]
     fn advance_instruction() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_instruction(Instruction::Put, None).unwrap();
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
@@ -280,7 +293,7 @@ mod tests {
 
     #[test]
     fn set_instruction_cursor() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_instruction(Instruction::Put, None).unwrap();
         runtime.add_instruction(Instruction::Put, None).unwrap();
@@ -293,7 +306,7 @@ mod tests {
 
     #[test]
     fn end_execution() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_instruction(Instruction::Put, None).unwrap();
         runtime.add_instruction(Instruction::Put, None).unwrap();
@@ -308,7 +321,7 @@ mod tests {
 
     #[test]
     fn clear_result() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.push_result().unwrap();
@@ -320,7 +333,7 @@ mod tests {
 
     #[test]
     fn execute_current_instruction() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();

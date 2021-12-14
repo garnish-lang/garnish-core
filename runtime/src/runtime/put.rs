@@ -2,7 +2,12 @@ use log::trace;
 
 use crate::{error, GarnishLangRuntime, GarnishLangRuntimeResult};
 
-impl GarnishLangRuntime {
+use super::data::GarnishLangRuntimeDataPool;
+
+impl<Data> GarnishLangRuntime<Data>
+where
+    Data: GarnishLangRuntimeDataPool,
+{
     pub fn put(&mut self, i: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put | Data - {:?}", i);
         match i >= self.end_of_constant_data {
@@ -72,7 +77,7 @@ mod tests {
 
     #[test]
     fn put() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.end_constant_data().unwrap();
 
@@ -83,7 +88,7 @@ mod tests {
 
     #[test]
     fn put_outside_of_constant_data() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
 
         let result = runtime.put(0);
@@ -93,7 +98,7 @@ mod tests {
 
     #[test]
     fn put_input() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
@@ -107,7 +112,7 @@ mod tests {
 
     #[test]
     fn push_input() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
@@ -120,7 +125,7 @@ mod tests {
 
     #[test]
     fn push_result() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_instruction(Instruction::PushResult, None).unwrap();
@@ -131,7 +136,7 @@ mod tests {
 
     #[test]
     fn put_result() {
-        let mut runtime = GarnishLangRuntime::new();
+        let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
