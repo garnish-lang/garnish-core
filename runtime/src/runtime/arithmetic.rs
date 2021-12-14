@@ -14,9 +14,6 @@ impl GarnishLangRuntime {
 
                 trace!("Performing {:?} + {:?}", left, right);
 
-                self.data.pop();
-                self.data.pop();
-
                 self.add_data_ref(ExpressionData::integer(left + right))?;
 
                 Ok(())
@@ -41,6 +38,22 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
+        runtime.reference_stack.push(1);
+        runtime.reference_stack.push(2);
+
+        runtime.perform_addition().unwrap();
+
+        assert_eq!(runtime.reference_stack, vec![3]);
+        assert_eq!(runtime.data.get(3).unwrap().bytes, 30i64.to_le_bytes());
+    }
+
+    #[test]
+    fn perform_addition_no_refs_is_err() {
+        let mut runtime = GarnishLangRuntime::new();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
         let result = runtime.perform_addition();
 
         assert!(result.is_err());
@@ -60,8 +73,8 @@ mod tests {
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.reference_stack, vec![3]);
-        assert_eq!(runtime.data.get(3).unwrap().bytes, 30i64.to_le_bytes());
+        assert_eq!(runtime.reference_stack, vec![5]);
+        assert_eq!(runtime.data.get(5).unwrap().bytes, 30i64.to_le_bytes());
     }
 
     #[test]

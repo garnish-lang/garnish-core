@@ -11,8 +11,8 @@ impl GarnishLangRuntime {
                 i, self.end_of_constant_data
             ))),
             false => {
-                self.reference_stack.push(self.data.len());
-                self.add_reference_data(i)
+                self.reference_stack.push(i);
+                Ok(())
             }
         }
     }
@@ -20,11 +20,12 @@ impl GarnishLangRuntime {
     pub fn put_input(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put Input");
 
-        self.reference_stack.push(self.data.len());
-        self.add_reference_data(match self.inputs.last() {
+        self.reference_stack.push(match self.inputs.last() {
             None => Err(error(format!("No inputs available to put reference.")))?,
             Some(r) => *r,
-        })
+        });
+
+        Ok(())
     }
 
     pub fn push_input(&mut self) -> GarnishLangRuntimeResult {
@@ -46,8 +47,7 @@ impl GarnishLangRuntime {
         match self.current_result {
             None => Err(error(format!("No result available to put reference.")))?,
             Some(i) => {
-                self.reference_stack.push(self.data.len());
-                self.add_reference_data(i)?;
+                self.reference_stack.push(i);
             }
         }
 
@@ -78,8 +78,7 @@ mod tests {
 
         runtime.put(1).unwrap();
 
-        assert_eq!(runtime.data.get(2).unwrap().as_reference().unwrap(), 1);
-        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
+        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 1);
     }
 
     #[test]
@@ -103,8 +102,7 @@ mod tests {
 
         runtime.put_input().unwrap();
 
-        assert_eq!(runtime.data.get(3).unwrap(), &ExpressionData::reference(2));
-        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 3);
+        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
     }
 
     #[test]
@@ -142,7 +140,6 @@ mod tests {
 
         runtime.put_result().unwrap();
 
-        assert_eq!(runtime.data.get(3).unwrap(), &ExpressionData::reference(2));
-        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 3);
+        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
     }
 }

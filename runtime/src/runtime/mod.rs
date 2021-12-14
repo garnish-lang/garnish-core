@@ -331,6 +331,6 @@ mod tests {
 
         runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.data.get(1).unwrap().bytes, 30i64.to_le_bytes());
+        assert_eq!(runtime.data.get(3).unwrap().bytes, 30i64.to_le_bytes());
     }
 }

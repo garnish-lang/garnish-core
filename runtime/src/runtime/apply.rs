@@ -32,8 +32,7 @@ impl GarnishLangRuntime {
 
     pub fn empty_apply<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
         trace!("Instruction - Empty Apply");
-        let addr = self.add_data(ExpressionData::unit())?;
-        self.reference_stack.push(addr);
+        self.add_data_ref(ExpressionData::unit())?;
 
         self.apply_internal(context)
     }

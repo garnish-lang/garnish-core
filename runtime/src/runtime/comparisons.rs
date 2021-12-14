@@ -20,9 +20,6 @@ impl GarnishLangRuntime {
             (l, r) => Err(error(format!("Comparison between types not implemented {:?} and {:?}", l, r)))?,
         };
 
-        self.data.pop();
-        self.data.pop();
-
         self.add_data_ref(match result {
             true => ExpressionData::boolean_true(),
             false => ExpressionData::boolean_false(),
@@ -50,8 +47,8 @@ mod tests {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.reference_stack.last().unwrap(), &1);
-        assert!(runtime.data.get(1).unwrap().as_boolean().unwrap());
+        assert_eq!(runtime.reference_stack.last().unwrap(), &3);
+        assert!(runtime.data.get(3).unwrap().as_boolean().unwrap());
     }
 
     #[test]
@@ -68,8 +65,8 @@ mod tests {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.reference_stack.last().unwrap(), &1);
-        assert!(!runtime.data.get(1).unwrap().as_boolean().unwrap());
+        assert_eq!(runtime.reference_stack.last().unwrap(), &3);
+        assert!(!runtime.data.get(3).unwrap().as_boolean().unwrap());
     }
     #[test]
     fn equality_no_references_is_err() {

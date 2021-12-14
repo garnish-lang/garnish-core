@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction};
+use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
 
 impl GarnishLangRuntime {
     pub fn jump(&mut self, index: usize) -> GarnishLangRuntimeResult {
@@ -13,15 +13,6 @@ impl GarnishLangRuntime {
     pub fn jump_if_true(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Execute Expression If True | Data - {:?}", index);
         let point = self.get_jump_point(index)? - 1;
-
-        let remove_data = match self.get_instruction(self.instruction_cursor + 1) {
-            None => true,
-            Some(instruction) => match instruction.instruction {
-                Instruction::JumpIfFalse => false,
-                _ => true,
-            },
-        };
-
         let d = self.next_ref_data()?;
 
         match d.get_type() {
@@ -35,24 +26,12 @@ impl GarnishLangRuntime {
             }
         };
 
-        if remove_data {
-            self.data.pop();
-        }
-
         Ok(())
     }
 
     pub fn jump_if_false(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Execute Expression If False | Data - {:?}", index);
         let point = self.get_jump_point(index)? - 1;
-
-        let remove_data = match self.get_instruction(self.instruction_cursor + 1) {
-            None => true,
-            Some(instruction) => match instruction.instruction {
-                Instruction::JumpIfTrue => false,
-                _ => true,
-            },
-        };
 
         let d = self.next_ref_data()?;
         match d.get_type() {
@@ -64,10 +43,6 @@ impl GarnishLangRuntime {
                 trace!("Not jumping from value of type {:?} with addr {:?}", d.get_type(), self.data.len() - 1);
             }
         };
-
-        if remove_data {
-            self.data.pop();
-        }
 
         Ok(())
     }
@@ -198,7 +173,8 @@ mod tests {
 
         runtime.jump_if_true(0).unwrap();
 
-        assert_eq!(runtime.get_data_len(), 1);
+        assert!(runtime.reference_stack.is_empty());
+        assert_eq!(runtime.get_data_len(), 2);
         assert_eq!(runtime.instruction_cursor, 2);
     }
 
@@ -218,7 +194,8 @@ mod tests {
 
         runtime.jump_if_true(0).unwrap();
 
-        assert_eq!(runtime.get_data_len(), 1);
+        assert!(runtime.reference_stack.is_empty());
+        assert_eq!(runtime.get_data_len(), 2);
         assert_eq!(runtime.instruction_cursor, 1);
     }
 
@@ -238,7 +215,8 @@ mod tests {
 
         runtime.jump_if_true(0).unwrap();
 
-        assert_eq!(runtime.get_data_len(), 1);
+        assert!(runtime.reference_stack.is_empty());
+        assert_eq!(runtime.get_data_len(), 2);
         assert_eq!(runtime.instruction_cursor, 1);
     }
 
@@ -258,7 +236,8 @@ mod tests {
 
         runtime.jump_if_false(0).unwrap();
 
-        assert_eq!(runtime.get_data_len(), 1);
+        assert!(runtime.reference_stack.is_empty());
+        assert_eq!(runtime.get_data_len(), 2);
         assert_eq!(runtime.instruction_cursor, 1);
     }
 
@@ -278,7 +257,8 @@ mod tests {
 
         runtime.jump_if_false(0).unwrap();
 
-        assert_eq!(runtime.get_data_len(), 1);
+        assert!(runtime.reference_stack.is_empty());
+        assert_eq!(runtime.get_data_len(), 2);
         assert_eq!(runtime.instruction_cursor, 2);
     }
 
@@ -298,7 +278,8 @@ mod tests {
 
         runtime.jump_if_false(0).unwrap();
 
-        assert_eq!(runtime.get_data_len(), 1);
+        assert!(runtime.reference_stack.is_empty());
+        assert_eq!(runtime.get_data_len(), 2);
         assert_eq!(runtime.instruction_cursor, 2);
     }
 }
