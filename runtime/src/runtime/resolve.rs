@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{ExpressionData, GarnishLangRuntime, GarnishLangRuntimeResult};
+use crate::{GarnishLangRuntime, GarnishLangRuntimeResult};
 
 use super::{context::GarnishLangRuntimeContext, data::GarnishLangRuntimeDataPool};
 
@@ -10,10 +10,10 @@ where
 {
     pub fn resolve<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
         trace!("Instruction - Resolve");
-        let addr = self.next_raw_ref()?;
+        let addr = self.next_ref()?;
 
         // check result
-        match self.current_result {
+        match self.heap.get_result() {
             None => (),
             Some(result_ref) => match self.get_access_addr(addr, result_ref)? {
                 None => (),
@@ -25,9 +25,9 @@ where
         }
 
         // check input
-        match self.inputs.last() {
-            None => (),
-            Some(list_ref) => match self.get_access_addr(addr, *list_ref)? {
+        match self.heap.get_current_input() {
+            Err(_) => (),
+            Ok(list_ref) => match self.get_access_addr(addr, list_ref)? {
                 None => (),
                 Some(i) => {
                     self.add_reference_data(i)?;
@@ -46,8 +46,7 @@ where
         }
 
         // default to unit
-        self.add_data_ref(ExpressionData::unit())?;
-        Ok(())
+        self.push_unit()
     }
 }
 
@@ -74,7 +73,7 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.current_result = Some(4);
+        runtime.heap.set_result(Some(4)).unwrap();
 
         let result = runtime.resolve::<EmptyContext>(None);
 
@@ -93,13 +92,13 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.reference_stack.push(5);
+        runtime.heap.push_register(5).unwrap();
 
-        runtime.current_result = Some(4);
+        runtime.heap.set_result(Some(4)).unwrap();
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_data(6).unwrap().as_reference().unwrap(), 2);
+        assert_eq!(runtime.heap.get_reference(6).unwrap(), 2);
     }
 
     #[test]
@@ -114,13 +113,13 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.reference_stack.push(5);
+        runtime.heap.push_register(5).unwrap();
 
-        runtime.add_input_reference(4).unwrap();
+        runtime.heap.push_input(4).unwrap();
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_data(6).unwrap().as_reference().unwrap(), 2);
+        assert_eq!(runtime.heap.get_reference(6).unwrap(), 2);
     }
 
     #[test]
@@ -135,11 +134,11 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.reference_stack.push(5);
+        runtime.heap.push_register(5).unwrap();
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_data(6).unwrap().get_type(), ExpressionDataType::Unit);
+        assert_eq!(runtime.heap.get_data_type(6).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
@@ -150,7 +149,7 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.reference_stack.push(1);
+        runtime.heap.push_register(1).unwrap();
 
         struct MyContext {}
 
@@ -164,11 +163,11 @@ mod tests {
                     None => Err(error(format!("Symbol address, {:?}, given to resolve not found in runtime.", sym_addr)))?,
                     Some(data) => match data.get_type() {
                         ExpressionDataType::Symbol => {
-                            let addr = runtime.get_data_len();
-                            runtime.add_data(ExpressionData::integer(100))?;
-                            let raddr = runtime.get_data_len();
-                            runtime.add_reference_data(addr)?;
-                            runtime.reference_stack.push(raddr);
+                            let addr = runtime.heap.get_data_len();
+                            runtime.heap.add_integer(100)?;
+                            let raddr = runtime.heap.get_data_len();
+                            runtime.push_reference(addr)?;
+                            runtime.heap.push_register(raddr).unwrap();
                             Ok(true)
                         }
                         t => Err(error(format!("Address given to resolve is of type {:?}. Expected symbol type.", t)))?,
@@ -190,8 +189,8 @@ mod tests {
 
         runtime.resolve(Some(&mut context)).unwrap();
 
-        assert_eq!(runtime.get_data(2).unwrap().as_integer().unwrap(), 100);
-        assert_eq!(runtime.reference_stack.get(0).unwrap(), &3);
-        assert_eq!(runtime.get_data(3).unwrap().as_reference().unwrap(), 2);
+        assert_eq!(runtime.heap.get_integer(2).unwrap(), 100);
+        assert_eq!(runtime.heap.get_register().get(0).unwrap(), &3);
+        assert_eq!(runtime.heap.get_reference(3).unwrap(), 2);
     }
 }

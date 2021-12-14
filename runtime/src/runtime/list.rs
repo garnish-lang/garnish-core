@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, result::RuntimeResult, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
+use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
 
 use super::data::GarnishLangRuntimeDataPool;
 
@@ -15,15 +15,12 @@ where
 
         for _ in 0..len {
             let r = self.next_ref()?;
-            let data = self.get_raw_data_internal(r)?;
 
-            match data.get_type() {
+            match self.heap.get_data_type(r)? {
                 ExpressionDataType::Pair => {
-                    let pair = self.get_data_internal(r)?;
-                    let left = self.addr_of_raw_data(pair.as_pair().as_runtime_result()?.0)?;
+                    let (left, _) = self.heap.get_pair(r)?;
 
-                    let left_data = self.get_data_internal(left)?;
-                    match left_data.get_type() {
+                    match self.heap.get_data_type(left)? {
                         ExpressionDataType::Symbol => associative_list.push(r),
                         _ => (),
                     }
@@ -57,9 +54,7 @@ where
             ordered[i] = item;
         }
 
-        self.add_data_ref(ExpressionData::list(list, ordered))?;
-
-        Ok(())
+        self.push_list(list, ordered)
     }
 
     pub fn access(&mut self) -> GarnishLangRuntimeResult {
@@ -69,66 +64,59 @@ where
         let left_ref = self.next_ref()?;
 
         match self.get_access_addr(right_ref, left_ref)? {
-            None => {
-                self.add_data_ref(ExpressionData::unit())?;
-            }
-            Some(i) => {
-                self.add_reference_data(i)?;
-            }
+            None => self.push_unit(),
+            Some(i) => self.push_reference(i),
         }
-        Ok(())
     }
 
     pub(crate) fn get_access_addr(&self, sym: usize, list: usize) -> GarnishLangRuntimeResult<Option<usize>> {
-        let sym_data = self.get_raw_data_internal(sym)?;
-        let list_data = self.get_raw_data_internal(list)?;
+        let sym_ref = self.addr_of_raw_data(sym)?;
+        let list_ref = self.addr_of_raw_data(list)?;
 
-        match (list_data.get_type(), sym_data.get_type()) {
+        match (self.heap.get_data_type(list_ref)?, self.heap.get_data_type(sym_ref)?) {
             (ExpressionDataType::List, ExpressionDataType::Symbol) => {
-                let sym_val = sym_data.as_symbol_value().as_runtime_result()?;
+                let sym_val = self.heap.get_symbol(sym_ref)?;
 
-                let (_, assocations) = list_data.as_list().as_runtime_result()?;
+                let assocations_len = self.heap.get_list_associations_len(list_ref)?;
 
-                let mut i = sym_val as usize % assocations.len();
+                let mut i = sym_val as usize % assocations_len;
                 let mut count = 0;
 
                 loop {
                     // check to make sure item has same symbol
-                    let data = self.get_raw_data_internal(assocations[i])?; // this should be a pair
+                    let association_ref = self.heap.get_list_association(list_ref, i)?;
+                    let pair_ref = self.addr_of_raw_data(association_ref)?; // this should be a pair
 
                     // should have symbol on left
-                    match data.get_type() {
+                    match self.heap.get_data_type(pair_ref)? {
                         ExpressionDataType::Pair => {
-                            match data.as_pair() {
-                                Err(e) => Err(error(e))?,
-                                Ok((left, right)) => {
-                                    let left_data = self.get_raw_data_internal(left)?;
+                            let (left, right) = self.heap.get_pair(pair_ref)?;
 
-                                    match left_data.get_type() {
-                                        ExpressionDataType::Symbol => {
-                                            let v = left_data.as_symbol_value().as_runtime_result()?;
+                            let left_ref = self.addr_of_raw_data(left)?;
 
-                                            if v == sym_val {
-                                                // found match
-                                                // insert pair right as value
-                                                return Ok(Some(right));
-                                            }
-                                        }
-                                        t => Err(error(format!("Association created with non-symbol type {:?} on pair left.", t)))?,
+                            match self.heap.get_data_type(left_ref)? {
+                                ExpressionDataType::Symbol => {
+                                    let v = self.heap.get_symbol(left_ref)?;
+
+                                    if v == sym_val {
+                                        // found match
+                                        // insert pair right as value
+                                        return Ok(Some(right));
                                     }
                                 }
-                            };
+                                t => Err(error(format!("Association created with non-symbol type {:?} on pair left.", t)))?,
+                            }
                         }
                         t => Err(error(format!("Association created with non-pair type {:?}.", t)))?,
                     }
 
                     i += 1;
-                    if i >= assocations.len() {
+                    if i >= assocations_len {
                         i = 0;
                     }
 
                     count += 1;
-                    if count > assocations.len() {
+                    if count > assocations_len {
                         return Ok(None);
                     }
                 }
@@ -143,7 +131,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
+    use crate::{runtime::data::GarnishLangRuntimeDataPool, ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
 
     #[test]
     fn make_list() {
@@ -153,16 +141,18 @@ mod tests {
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.reference_stack.push(1);
-        runtime.reference_stack.push(2);
-        runtime.reference_stack.push(3);
+        runtime.heap.push_register(1).unwrap();
+        runtime.heap.push_register(2).unwrap();
+        runtime.heap.push_register(3).unwrap();
 
         runtime.add_instruction(Instruction::MakeList, Some(3)).unwrap();
 
         runtime.make_list(3).unwrap();
 
-        let list = runtime.data.get(4).unwrap().as_list().unwrap();
-        assert_eq!(list, (vec![1, 2, 3], vec![]));
+        assert_eq!(runtime.heap.get_list_len(4).unwrap(), 3);
+        assert_eq!(runtime.heap.get_list_item(4, 0).unwrap(), 1);
+        assert_eq!(runtime.heap.get_list_item(4, 1).unwrap(), 2);
+        assert_eq!(runtime.heap.get_list_item(4, 2).unwrap(), 3);
     }
 
     #[test]
@@ -195,16 +185,23 @@ mod tests {
         runtime.add_data(ExpressionData::pair(3, 4)).unwrap();
         runtime.add_data(ExpressionData::pair(5, 6)).unwrap();
 
-        runtime.reference_stack.push(7);
-        runtime.reference_stack.push(8);
-        runtime.reference_stack.push(9);
+        runtime.heap.push_register(7).unwrap();
+        runtime.heap.push_register(8).unwrap();
+        runtime.heap.push_register(9).unwrap();
 
         runtime.add_instruction(Instruction::MakeList, Some(3)).unwrap();
 
         runtime.make_list(3).unwrap();
 
-        let list = runtime.data.get(10).unwrap().as_list().unwrap();
-        assert_eq!(list, (vec![7, 8, 9], vec![9, 7, 8]));
+        assert_eq!(runtime.heap.get_list_len(10).unwrap(), 3);
+        assert_eq!(runtime.heap.get_list_item(10, 0).unwrap(), 7);
+        assert_eq!(runtime.heap.get_list_item(10, 1).unwrap(), 8);
+        assert_eq!(runtime.heap.get_list_item(10, 2).unwrap(), 9);
+
+        assert_eq!(runtime.heap.get_list_associations_len(10).unwrap(), 3);
+        assert_eq!(runtime.heap.get_list_association(10, 0).unwrap(), 9);
+        assert_eq!(runtime.heap.get_list_association(10, 1).unwrap(), 7);
+        assert_eq!(runtime.heap.get_list_association(10, 2).unwrap(), 8);
     }
 
     #[test]
@@ -219,12 +216,12 @@ mod tests {
 
         runtime.add_instruction(Instruction::Access, None).unwrap();
 
-        runtime.reference_stack.push(4);
-        runtime.reference_stack.push(5);
+        runtime.heap.push_register(4).unwrap();
+        runtime.heap.push_register(5).unwrap();
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_data(6).unwrap().as_reference().unwrap(), 2);
+        assert_eq!(runtime.heap.get_reference(6).unwrap(), 2);
     }
 
     #[test]
@@ -256,12 +253,12 @@ mod tests {
 
         runtime.add_instruction(Instruction::Access, None).unwrap();
 
-        runtime.reference_stack.push(4);
-        runtime.reference_stack.push(5);
+        runtime.heap.push_register(4).unwrap();
+        runtime.heap.push_register(5).unwrap();
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.reference_stack.len(), 1);
-        assert_eq!(runtime.get_data(6).unwrap().get_type(), ExpressionDataType::Unit);
+        assert_eq!(runtime.heap.get_register().len(), 1);
+        assert_eq!(runtime.heap.get_data_type(6).unwrap(), ExpressionDataType::Unit);
     }
 }

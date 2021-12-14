@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
+use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
 
 use super::{context::GarnishLangRuntimeContext, data::GarnishLangRuntimeDataPool};
 
@@ -15,71 +15,50 @@ where
 
     pub fn reapply(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Reapply | Data - {:?}", index);
-        match self.reference_stack.len() {
-            0 => Err(error(format!("Not enough references to perform reapply."))),
-            _ => {
-                let right_ref = self.reference_stack.pop().unwrap();
 
-                let right_addr = self.addr_of_raw_data(right_ref)?;
+        let right_addr = self.next_ref()?;
+        let point = self.heap.get_jump_point(index)?;
 
-                let point = self.get_jump_point(index)?;
-
-                self.set_instruction_cursor(point - 1)?;
-                self.inputs.pop();
-                self.inputs.push(right_addr);
-
-                Ok(())
-            }
-        }
+        self.heap.set_instruction_cursor(point - 1)?;
+        self.heap.pop_input()?;
+        self.heap.push_input(right_addr)
     }
 
     pub fn empty_apply<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
         trace!("Instruction - Empty Apply");
-        self.add_data_ref(ExpressionData::unit())?;
+        self.push_unit()?;
 
         self.apply_internal(context)
     }
 
     fn apply_internal<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
-        let right_ref = self.next_ref()?;
-        let right_addr = self.addr_of_raw_data(right_ref)?;
-        let left_data = self.next_ref_data()?;
+        let right_addr = self.next_ref()?;
+        let left_addr = self.next_ref()?;
 
-        match left_data.get_type() {
+        match self.heap.get_data_type(left_addr)? {
             ExpressionDataType::Expression => {
-                let expression_index = left_data.as_expression().as_runtime_result()?;
+                let expression_index = self.heap.get_expression(left_addr)?;
 
-                let next_instruction = self.get_jump_point(expression_index)?;
+                let next_instruction = self.heap.get_jump_point(expression_index)?;
 
                 // Expression stores index of expression table, look up actual instruction index
 
-                self.jump_path.push(self.instruction_cursor);
-                self.set_instruction_cursor(next_instruction - 1)?;
-                self.inputs.push(right_addr);
-
-                Ok(())
+                self.heap.push_jump_path(self.heap.get_instruction_cursor()?)?;
+                self.heap.set_instruction_cursor(next_instruction - 1)?;
+                self.heap.push_input(right_addr)
             }
             ExpressionDataType::External => {
-                let external_value = left_data.as_external().as_runtime_result()?;
+                let external_value = self.heap.get_expression(left_addr)?;
 
                 match context {
-                    None => {
-                        self.add_data_ref(ExpressionData::unit())?;
-                        Ok(())
-                    }
+                    None => self.push_unit(),
                     Some(c) => match c.apply(external_value, right_addr, self)? {
                         true => Ok(()),
-                        false => {
-                            self.add_data_ref(ExpressionData::unit())?;
-                            Ok(())
-                        }
+                        false => self.push_unit(),
                     },
                 }
             }
-            _ => Err(error(format!(
-                "Data type {:?} not supported on left side of apply operation.",
-                left_data.get_type()
-            ))),
+            t => Err(error(format!("Data type {:?} not supported on left side of apply operation.", t))),
         }
     }
 }
@@ -114,18 +93,18 @@ mod tests {
         runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
         runtime.add_instruction(Instruction::Apply, None).unwrap();
 
-        runtime.expression_table.push(1);
+        runtime.heap.push_jump_point(1).unwrap();
 
-        runtime.reference_stack.push(2);
-        runtime.reference_stack.push(3);
+        runtime.heap.push_register(2).unwrap();
+        runtime.heap.push_register(3).unwrap();
 
-        runtime.set_instruction_cursor(7).unwrap();
+        runtime.heap.set_instruction_cursor(7).unwrap();
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(*runtime.inputs.get(0).unwrap(), 3);
-        assert_eq!(runtime.instruction_cursor, 0);
-        assert_eq!(*runtime.jump_path.get(0).unwrap(), 7);
+        assert_eq!(runtime.heap.get_input(0).unwrap(), 3);
+        assert_eq!(runtime.heap.get_instruction_cursor().unwrap(), 0);
+        assert_eq!(runtime.heap.get_jump_path(0).unwrap(), 7);
     }
 
     #[test]
@@ -147,7 +126,7 @@ mod tests {
         runtime.add_instruction(Instruction::Put, Some(3)).unwrap();
         runtime.add_instruction(Instruction::Apply, None).unwrap();
 
-        runtime.expression_table.push(1);
+        runtime.heap.push_jump_point(1).unwrap();
 
         runtime.set_instruction_cursor(7).unwrap();
 
@@ -173,17 +152,17 @@ mod tests {
         runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
         runtime.add_instruction(Instruction::EmptyApply, None).unwrap();
 
-        runtime.expression_table.push(1);
+        runtime.heap.push_jump_point(1).unwrap();
 
-        runtime.reference_stack.push(2);
+        runtime.heap.push_register(2).unwrap();
 
-        runtime.set_instruction_cursor(6).unwrap();
+        runtime.heap.set_instruction_cursor(6).unwrap();
 
         runtime.empty_apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(*runtime.inputs.get(0).unwrap(), 3);
-        assert_eq!(runtime.instruction_cursor, 0);
-        assert_eq!(*runtime.jump_path.get(0).unwrap(), 6);
+        assert_eq!(runtime.heap.get_input(0).unwrap(), 3);
+        assert_eq!(runtime.heap.get_instruction_cursor().unwrap(), 0);
+        assert_eq!(runtime.heap.get_jump_path(0).unwrap(), 6);
     }
 
     #[test]
@@ -203,9 +182,9 @@ mod tests {
         runtime.add_instruction(Instruction::Put, Some(2)).unwrap();
         runtime.add_instruction(Instruction::EmptyApply, None).unwrap();
 
-        runtime.expression_table.push(1);
+        runtime.heap.push_jump_point(1).unwrap();
 
-        runtime.set_instruction_cursor(6).unwrap();
+        runtime.heap.set_instruction_cursor(6).unwrap();
 
         let result = runtime.empty_apply::<EmptyContext>(None);
 
@@ -235,22 +214,22 @@ mod tests {
         runtime.add_instruction(Instruction::Reapply, Some(0)).unwrap();
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
-        runtime.expression_table.push(4);
+        runtime.heap.push_jump_point(4).unwrap();
 
-        runtime.reference_stack.push(4);
+        runtime.heap.push_register(4).unwrap();
 
-        runtime.inputs.push(2);
-        runtime.current_result = Some(4);
-        runtime.jump_path.push(9);
+        runtime.heap.push_input(2).unwrap();
+        runtime.heap.set_result(Some(4)).unwrap();
+        runtime.heap.push_jump_path(9).unwrap();
 
-        runtime.set_instruction_cursor(8).unwrap();
+        runtime.heap.set_instruction_cursor(8).unwrap();
 
         runtime.reapply(0).unwrap();
 
-        assert_eq!(runtime.inputs.len(), 1);
-        assert_eq!(*runtime.inputs.get(0).unwrap(), 4);
-        assert_eq!(runtime.instruction_cursor, 3);
-        assert_eq!(*runtime.jump_path.get(0).unwrap(), 9);
+        assert_eq!(runtime.heap.get_input_count(), 1);
+        assert_eq!(runtime.heap.get_input(0).unwrap(), 4);
+        assert_eq!(runtime.heap.get_instruction_cursor().unwrap(), 3);
+        assert_eq!(runtime.heap.get_jump_path(0).unwrap(), 9);
     }
 
     #[test]
@@ -262,8 +241,8 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.reference_stack.push(1);
-        runtime.reference_stack.push(2);
+        runtime.heap.push_register(1).unwrap();
+        runtime.heap.push_register(2).unwrap();
 
         struct MyContext {}
 
@@ -291,11 +270,7 @@ mod tests {
                     },
                 };
 
-                let addr = runtime.get_data_len();
-                runtime.add_data(ExpressionData::integer(value))?;
-                let raddr = runtime.get_data_len();
-                runtime.add_reference_data(addr)?;
-                runtime.reference_stack.push(raddr);
+                runtime.push_integer(value)?;
                 Ok(true)
             }
         }
@@ -304,8 +279,7 @@ mod tests {
 
         runtime.apply(Some(&mut context)).unwrap();
 
-        assert_eq!(runtime.get_data(3).unwrap().as_integer().unwrap(), 200);
-        assert_eq!(runtime.reference_stack.get(0).unwrap(), &4);
-        assert_eq!(runtime.get_data(4).unwrap().as_reference().unwrap(), 3);
+        assert_eq!(runtime.heap.get_integer(3).unwrap(), 200);
+        assert_eq!(runtime.heap.get_register().get(0).unwrap(), &3);
     }
 }

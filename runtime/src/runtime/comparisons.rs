@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
+use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
 
 use super::data::GarnishLangRuntimeDataPool;
 
@@ -11,12 +11,12 @@ where
     pub fn equality_comparison(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Equality Comparison");
 
-        let (right_data, left_data) = self.next_two_ref_data()?;
+        let (right_addr, left_addr) = self.next_two_raw_ref()?;
 
-        let result = match (left_data.get_type(), right_data.get_type()) {
+        let result = match (self.heap.get_data_type(left_addr)?, self.heap.get_data_type(right_addr)?) {
             (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                let left = left_data.as_integer().as_runtime_result()?;
-                let right = right_data.as_integer().as_runtime_result()?;
+                let left = self.heap.get_integer(left_addr)?;
+                let right = self.heap.get_integer(right_addr)?;
 
                 trace!("Comparing {:?} == {:?}", left, right);
 
@@ -25,18 +25,13 @@ where
             (l, r) => Err(error(format!("Comparison between types not implemented {:?} and {:?}", l, r)))?,
         };
 
-        self.add_data_ref(match result {
-            true => ExpressionData::boolean_true(),
-            false => ExpressionData::boolean_false(),
-        })?;
-
-        Ok(())
+        self.push_boolean(result)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionData, GarnishLangRuntime, Instruction};
+    use crate::{runtime::data::GarnishLangRuntimeDataPool, ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
 
     #[test]
     fn equality_true() {
@@ -45,15 +40,15 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
 
-        runtime.reference_stack.push(1);
-        runtime.reference_stack.push(2);
+        runtime.heap.push_register(1).unwrap();
+        runtime.heap.push_register(2).unwrap();
 
         runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.reference_stack.last().unwrap(), &3);
-        assert!(runtime.data.get(3).unwrap().as_boolean().unwrap());
+        assert_eq!(runtime.heap.get_register(), &vec![3]);
+        assert_eq!(runtime.heap.get_data_type(3).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
@@ -63,16 +58,17 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.reference_stack.push(1);
-        runtime.reference_stack.push(2);
+        runtime.heap.push_register(1).unwrap();
+        runtime.heap.push_register(2).unwrap();
 
         runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.reference_stack.last().unwrap(), &3);
-        assert!(!runtime.data.get(3).unwrap().as_boolean().unwrap());
+        assert_eq!(runtime.heap.get_register(), &vec![3]);
+        assert_eq!(runtime.heap.get_data_type(3).unwrap(), ExpressionDataType::False);
     }
+
     #[test]
     fn equality_no_references_is_err() {
         let mut runtime = GarnishLangRuntime::simple();

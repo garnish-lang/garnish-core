@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{ExpressionData, GarnishLangRuntime, GarnishLangRuntimeResult};
+use crate::{GarnishLangRuntime, GarnishLangRuntimeResult};
 
 use super::data::GarnishLangRuntimeDataPool;
 
@@ -10,18 +10,16 @@ where
 {
     pub fn make_pair(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Make Pair");
-        let right_addr = self.next_raw_ref()?;
-        let left_addr = self.next_raw_ref()?;
 
-        self.add_data_ref(ExpressionData::pair(left_addr, right_addr))?;
+        let (right_addr, left_addr) = self.next_two_raw_ref()?;
 
-        Ok(())
+        self.push_pair(left_addr, right_addr)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
+    use crate::{runtime::data::GarnishLangRuntimeDataPool, ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
 
     #[test]
     fn make_pair() {
@@ -30,18 +28,18 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::symbol_from_string(&"my_symbol".to_string())).unwrap();
 
-        runtime.reference_stack.push(1);
-        runtime.reference_stack.push(2);
+        runtime.heap.push_register(1).unwrap();
+        runtime.heap.push_register(2).unwrap();
 
         runtime.add_instruction(Instruction::MakePair, None).unwrap();
 
         runtime.make_pair().unwrap();
 
-        assert_eq!(runtime.data.get(3).unwrap().get_type(), ExpressionDataType::Pair);
-        assert_eq!(runtime.data.get(3).unwrap().as_pair().unwrap(), (1, 2));
+        assert_eq!(runtime.heap.get_data_type(3).unwrap(), ExpressionDataType::Pair);
+        assert_eq!(runtime.heap.get_pair(3).unwrap(), (1, 2));
 
-        assert_eq!(runtime.reference_stack.len(), 1);
-        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 3);
+        assert_eq!(runtime.heap.get_register().len(), 1);
+        assert_eq!(*runtime.heap.get_register().get(0).unwrap(), 3);
     }
 
     #[test]

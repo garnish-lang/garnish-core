@@ -42,6 +42,16 @@ pub fn error(message: String) -> GarnishLangRuntimeError {
     GarnishLangRuntimeError::new(message)
 }
 
+pub trait DropResult<T, F> {
+    fn drop(self) -> Result<(), F>;
+}
+
+impl<T, F> DropResult<T, F> for Result<T, F> {
+    fn drop(self) -> Result<(), F> {
+        self.and(Ok(()))
+    }
+}
+
 pub trait RuntimeResult<T> {
     fn as_runtime_result(self) -> GarnishLangRuntimeResult<T>;
 }
@@ -54,6 +64,15 @@ where
         match self {
             Err(e) => Err(error(e.to_string())),
             Ok(v) => Ok(v),
+        }
+    }
+}
+
+impl<T> RuntimeResult<T> for Option<T> {
+    fn as_runtime_result(self) -> GarnishLangRuntimeResult<T> {
+        match self {
+            None => Err(error(format!("No value found"))),
+            Some(v) => Ok(v),
         }
     }
 }

@@ -10,70 +10,50 @@ where
 {
     pub fn put(&mut self, i: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put | Data - {:?}", i);
-        match i >= self.end_of_constant_data {
+        match i >= self.heap.get_end_of_constant_data() {
             true => Err(error(format!(
                 "Attempting to put reference to {:?} which is out of bounds of constant data that ends at {:?}.",
-                i, self.end_of_constant_data
+                i,
+                self.heap.get_end_of_constant_data()
             ))),
-            false => {
-                self.reference_stack.push(i);
-                Ok(())
-            }
+            false => self.heap.push_register(i),
         }
     }
 
     pub fn put_input(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put Input");
 
-        self.reference_stack.push(match self.inputs.last() {
-            None => Err(error(format!("No inputs available to put reference.")))?,
-            Some(r) => *r,
-        });
-
-        Ok(())
+        self.heap.push_register(self.heap.get_current_input()?)
     }
 
     pub fn push_input(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Push Input");
-        let r = self.addr_of_raw_data(match self.data.len() > 0 {
-            true => self.data.len() - 1,
-            false => Err(error(format!("No data available to push as input.")))?,
-        })?;
+        let r = self.next_ref()?;
 
-        self.inputs.push(r);
-        self.current_result = Some(r);
-
-        Ok(())
+        self.heap.push_input(r)?;
+        self.heap.set_result(Some(r))
     }
 
     pub fn put_result(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put Result");
 
-        match self.current_result {
-            None => Err(error(format!("No result available to put reference.")))?,
-            Some(i) => {
-                self.reference_stack.push(i);
-            }
+        match self.heap.get_result() {
+            None => Err(error(format!("No result available to put reference."))),
+            Some(i) => self.heap.push_register(i),
         }
-
-        Ok(())
     }
 
     pub fn push_result(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Output Result");
-        match self.data.len() {
-            0 => Err(error(format!("Not enough data to perform output result operation."))),
-            n => {
-                self.current_result = Some(self.addr_of_raw_data(n - 1)?);
-                Ok(())
-            }
-        }
+
+        let r = self.next_ref()?;
+        self.heap.set_result(Some(r))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionData, GarnishLangRuntime, Instruction};
+    use crate::{runtime::data::GarnishLangRuntimeDataPool, ExpressionData, GarnishLangRuntime, Instruction};
 
     #[test]
     fn put() {
@@ -83,7 +63,7 @@ mod tests {
 
         runtime.put(1).unwrap();
 
-        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 1);
+        assert_eq!(*runtime.heap.get_register().get(0).unwrap(), 1);
     }
 
     #[test]
@@ -103,11 +83,11 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.add_input_reference(2).unwrap();
+        runtime.heap.push_input(2).unwrap();
 
         runtime.put_input().unwrap();
 
-        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
+        assert_eq!(*runtime.heap.get_register().get(0).unwrap(), 2);
     }
 
     #[test]
@@ -117,10 +97,22 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
+        runtime.heap.push_register(2).unwrap();
+
         runtime.push_input().unwrap();
 
-        assert_eq!(runtime.inputs.get(0).unwrap(), &2);
-        assert_eq!(runtime.current_result.unwrap(), 2usize);
+        assert_eq!(runtime.heap.get_input(0).unwrap(), 2usize);
+        assert_eq!(runtime.heap.get_result().unwrap(), 2usize);
+    }
+
+    #[test]
+    fn push_input_no_register_is_err() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        assert!(runtime.push_input().is_err());
     }
 
     #[test]
@@ -129,9 +121,23 @@ mod tests {
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_instruction(Instruction::PushResult, None).unwrap();
+
+        runtime.heap.push_register(1).unwrap();
+
         runtime.push_result().unwrap();
 
-        assert_eq!(runtime.get_result().unwrap().bytes, 10i64.to_le_bytes());
+        assert_eq!(runtime.heap.get_result().unwrap(), 1usize);
+        assert_eq!(runtime.heap.get_integer(runtime.heap.get_result().unwrap()).unwrap(), 10i64);
+    }
+
+    #[test]
+    fn push_result_no_register_is_err() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_instruction(Instruction::PushResult, None).unwrap();
+
+        assert!(runtime.push_result().is_err());
     }
 
     #[test]
@@ -141,10 +147,10 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.current_result = Some(2);
+        runtime.heap.set_result(Some(2)).unwrap();
 
         runtime.put_result().unwrap();
 
-        assert_eq!(*runtime.reference_stack.get(0).unwrap(), 2);
+        assert_eq!(*runtime.heap.get_register().get(0).unwrap(), 2);
     }
 }

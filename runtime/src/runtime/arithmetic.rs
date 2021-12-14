@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
+use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
 
 use super::data::GarnishLangRuntimeDataPool;
 
@@ -10,31 +10,26 @@ where
 {
     pub fn perform_addition(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Addition");
-        let (right_data, left_data) = self.next_two_ref_data()?;
 
-        match (left_data.get_type(), right_data.get_type()) {
+        let (right_addr, left_addr) = self.next_two_raw_ref()?;
+
+        match (self.heap.get_data_type(left_addr)?, self.heap.get_data_type(right_addr)?) {
             (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                let left = left_data.as_integer().as_runtime_result()?;
-                let right = right_data.as_integer().as_runtime_result()?;
+                let left = self.heap.get_integer(left_addr)?;
+                let right = self.heap.get_integer(right_addr)?;
 
                 trace!("Performing {:?} + {:?}", left, right);
 
-                self.add_data_ref(ExpressionData::integer(left + right))?;
-
-                Ok(())
+                self.push_integer(left + right)
             }
-            _ => {
-                self.add_data_ref(ExpressionData::unit())?;
-
-                Ok(())
-            }
+            _ => self.push_unit(),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntime};
+    use crate::{runtime::data::GarnishLangRuntimeDataPool, ExpressionData, ExpressionDataType, GarnishLangRuntime};
 
     #[test]
     fn perform_addition() {
@@ -43,13 +38,13 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.reference_stack.push(1);
-        runtime.reference_stack.push(2);
+        runtime.heap.push_register(1).unwrap();
+        runtime.heap.push_register(2).unwrap();
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.reference_stack, vec![3]);
-        assert_eq!(runtime.data.get(3).unwrap().bytes, 30i64.to_le_bytes());
+        assert_eq!(runtime.heap.get_register(), &vec![3]);
+        assert_eq!(runtime.heap.get_integer(3).unwrap(), 30);
     }
 
     #[test]
@@ -73,13 +68,13 @@ mod tests {
         runtime.add_reference_data(1).unwrap();
         runtime.add_reference_data(2).unwrap();
 
-        runtime.reference_stack.push(1);
-        runtime.reference_stack.push(2);
+        runtime.heap.push_register(1).unwrap();
+        runtime.heap.push_register(2).unwrap();
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.reference_stack, vec![5]);
-        assert_eq!(runtime.data.get(5).unwrap().bytes, 30i64.to_le_bytes());
+        assert_eq!(runtime.heap.get_register(), &vec![5]);
+        assert_eq!(runtime.heap.get_integer(5).unwrap(), 30);
     }
 
     #[test]
@@ -89,12 +84,12 @@ mod tests {
         runtime.add_data(ExpressionData::symbol(&"sym1".to_string(), 1)).unwrap();
         runtime.add_data(ExpressionData::symbol(&"sym2".to_string(), 2)).unwrap();
 
-        runtime.reference_stack.push(1);
-        runtime.reference_stack.push(2);
+        runtime.heap.push_register(1).unwrap();
+        runtime.heap.push_register(2).unwrap();
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.reference_stack, vec![3]);
-        assert_eq!(runtime.data.get(3).unwrap().get_type(), ExpressionDataType::Unit);
+        assert_eq!(runtime.heap.get_register(), &vec![3]);
+        assert_eq!(runtime.heap.get_data_type(3).unwrap(), ExpressionDataType::Unit);
     }
 }

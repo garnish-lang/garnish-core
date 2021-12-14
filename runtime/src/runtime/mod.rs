@@ -27,16 +27,16 @@ use self::context::GarnishLangRuntimeContext;
 #[derive(Debug)]
 pub struct GarnishLangRuntime<Data> {
     heap: Data,
-    data: Vec<ExpressionData>,
-    end_of_constant_data: usize,
-    reference_stack: Vec<usize>,
-    instructions: Vec<InstructionData>,
-    instruction_cursor: usize,
-    current_result: Option<usize>,
-    jump_path: Vec<usize>,
-    inputs: Vec<usize>,
-    symbols: HashMap<String, u64>,
-    expression_table: Vec<usize>,
+    data: Vec<ExpressionData>,          //
+    end_of_constant_data: usize,        //
+    reference_stack: Vec<usize>,        //
+    instructions: Vec<InstructionData>, //
+    instruction_cursor: usize,          //
+    current_result: Option<usize>,      //
+    jump_path: Vec<usize>,              //
+    inputs: Vec<usize>,                 //
+    symbols: HashMap<String, u64>,      //
+    expression_table: Vec<usize>,       //
 }
 
 impl GarnishLangRuntime<SimpleRuntimeData> {
@@ -193,7 +193,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::context::EmptyContext, ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
+    use crate::{
+        runtime::{context::EmptyContext, data::GarnishLangRuntimeDataPool},
+        ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction,
+    };
 
     #[test]
     fn create_runtime() {
@@ -324,6 +327,8 @@ mod tests {
         let mut runtime = GarnishLangRuntime::simple();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
+
+        runtime.heap.push_register(1).unwrap();
         runtime.push_result().unwrap();
 
         runtime.clear_result().unwrap();
@@ -339,11 +344,14 @@ mod tests {
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.reference_stack.push(1);
-        runtime.reference_stack.push(2);
+        runtime.heap.push_register(1).unwrap();
+        runtime.heap.push_register(2).unwrap();
+
+        runtime.set_instruction_cursor(1).unwrap();
 
         runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.data.get(3).unwrap().bytes, 30i64.to_le_bytes());
+        assert_eq!(runtime.heap.get_register(), &vec![3]);
+        assert_eq!(runtime.heap.get_integer(3).unwrap(), 30);
     }
 }
