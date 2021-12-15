@@ -7,7 +7,7 @@ where
     Data: GarnishLangRuntimeDataPool,
 {
     pub fn get_data_pool(&self) -> &Data {
-        &self.heap
+        &self.data
     }
 
     pub fn add_data(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<usize> {
@@ -16,8 +16,8 @@ where
         let data = match data.get_type() {
             ExpressionDataType::Reference => {
                 let ref_addr = data.as_reference().as_runtime_result()?;
-                match self.heap.get_data_type(ref_addr)? {
-                    ExpressionDataType::Reference => ExpressionData::reference(self.heap.get_reference(ref_addr)?),
+                match self.data.get_data_type(ref_addr)? {
+                    ExpressionDataType::Reference => ExpressionData::reference(self.data.get_reference(ref_addr)?),
                     _ => data,
                 }
             }
@@ -28,27 +28,27 @@ where
             _ => data,
         };
 
-        let addr = self.heap.get_data_len();
-        self.heap.add_data(data.clone())?;
+        let addr = self.data.get_data_len();
+        self.data.add_data(data.clone())?;
         Ok(addr)
     }
 
     pub fn end_constant_data(&mut self) -> GarnishLangRuntimeResult {
-        self.heap.set_end_of_constant(self.heap.get_data_len())
+        self.data.set_end_of_constant(self.data.get_data_len())
     }
 
     pub fn get_end_of_constant_data(&self) -> usize {
-        self.heap.get_end_of_constant_data()
+        self.data.get_end_of_constant_data()
     }
 
     pub fn add_data_ref(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<usize> {
         let addr = self.add_data(data)?;
-        self.heap.push_register(addr).unwrap();
+        self.data.push_register(addr).unwrap();
         Ok(addr)
     }
 
     pub fn get_data_len(&self) -> usize {
-        self.heap.get_data_len()
+        self.data.get_data_len()
     }
 
     pub fn add_reference_data(&mut self, reference: usize) -> GarnishLangRuntimeResult<usize> {
@@ -56,11 +56,11 @@ where
     }
 
     pub fn remove_non_constant_data(&mut self) -> GarnishLangRuntimeResult {
-        self.heap.remove_non_constant_data()
+        self.data.remove_non_constant_data()
     }
 
     pub(crate) fn next_ref(&mut self) -> GarnishLangRuntimeResult<usize> {
-        self.heap.pop_register()
+        self.data.pop_register()
     }
 
     pub(crate) fn next_two_raw_ref(&mut self) -> GarnishLangRuntimeResult<(usize, usize)> {
@@ -71,8 +71,8 @@ where
     }
 
     pub(crate) fn addr_of_raw_data(&self, addr: usize) -> GarnishLangRuntimeResult<usize> {
-        Ok(match self.heap.get_data_type(addr)? {
-            ExpressionDataType::Reference => self.heap.get_reference(addr)?,
+        Ok(match self.data.get_data_type(addr)? {
+            ExpressionDataType::Reference => self.data.get_reference(addr)?,
             _ => addr,
         })
     }
@@ -80,31 +80,31 @@ where
     // push utilities
 
     pub fn push_unit(&mut self) -> GarnishLangRuntimeResult {
-        self.heap.add_unit().and_then(|v| self.heap.push_register(v))
+        self.data.add_unit().and_then(|v| self.data.push_register(v))
     }
 
     pub fn push_integer(&mut self, value: i64) -> GarnishLangRuntimeResult {
-        self.heap.add_integer(value).and_then(|v| self.heap.push_register(v))
+        self.data.add_integer(value).and_then(|v| self.data.push_register(v))
     }
 
     pub fn push_boolean(&mut self, value: bool) -> GarnishLangRuntimeResult {
         match value {
-            true => self.heap.add_true(),
-            false => self.heap.add_false(),
+            true => self.data.add_true(),
+            false => self.data.add_false(),
         }
-        .and_then(|v| self.heap.push_register(v))
+        .and_then(|v| self.data.push_register(v))
     }
 
     pub fn push_list(&mut self, list: Vec<usize>, associations: Vec<usize>) -> GarnishLangRuntimeResult {
-        self.heap.add_list(list, associations).and_then(|v| self.heap.push_register(v))
+        self.data.add_list(list, associations).and_then(|v| self.data.push_register(v))
     }
 
     pub fn push_reference(&mut self, value: usize) -> GarnishLangRuntimeResult {
-        self.heap.add_reference(value).and_then(|v| self.heap.push_register(v))
+        self.data.add_reference(value).and_then(|v| self.data.push_register(v))
     }
 
     pub fn push_pair(&mut self, left: usize, right: usize) -> GarnishLangRuntimeResult {
-        self.heap.add_pair((left, right)).and_then(|v| self.heap.push_register(v))
+        self.data.add_pair((left, right)).and_then(|v| self.data.push_register(v))
     }
 }
 
@@ -127,7 +127,7 @@ mod tests {
 
         runtime.add_data_ref(ExpressionData::integer(100)).unwrap();
 
-        assert_eq!(runtime.heap.get_register(), &vec![1]);
+        assert_eq!(runtime.data.get_register(), &vec![1]);
         assert_eq!(runtime.get_data_len(), 2);
     }
 
@@ -138,7 +138,7 @@ mod tests {
         runtime.add_data(ExpressionData::integer(100)).unwrap();
         runtime.add_data(ExpressionData::integer(200)).unwrap();
 
-        assert_eq!(runtime.heap.get_integer(2).unwrap(), 200);
+        assert_eq!(runtime.data.get_integer(2).unwrap(), 200);
     }
 
     #[test]
@@ -170,7 +170,7 @@ mod tests {
         runtime.add_data(ExpressionData::reference(1)).unwrap();
         runtime.add_data(ExpressionData::reference(2)).unwrap();
 
-        assert_eq!(runtime.heap.get_reference(3).unwrap(), 1);
+        assert_eq!(runtime.data.get_reference(3).unwrap(), 1);
     }
 
     #[test]
@@ -215,7 +215,7 @@ mod internal {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.heap.push_register(2).unwrap();
+        runtime.data.push_register(2).unwrap();
 
         let result = runtime.next_ref().unwrap();
 
@@ -239,8 +239,8 @@ mod internal {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.heap.push_register(1).unwrap();
-        runtime.heap.push_register(2).unwrap();
+        runtime.data.push_register(1).unwrap();
+        runtime.data.push_register(2).unwrap();
 
         let (first, second) = runtime.next_two_raw_ref().unwrap();
 
@@ -254,7 +254,7 @@ mod internal {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.heap.push_register(1).unwrap();
+        runtime.data.push_register(1).unwrap();
 
         let result = runtime.next_two_raw_ref();
 

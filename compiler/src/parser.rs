@@ -165,6 +165,10 @@ impl ParseResult {
         self.root
     }
 
+    pub fn get_nodes(&self) -> &Vec<ParseNode> {
+        &self.nodes
+    }
+
     pub fn get_node(&self, index: usize) -> Option<&ParseNode> {
         self.nodes.get(index)
     }

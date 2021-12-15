@@ -10,36 +10,36 @@ where
 {
     pub fn put(&mut self, i: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put | Data - {:?}", i);
-        match i >= self.heap.get_end_of_constant_data() {
+        match i >= self.data.get_end_of_constant_data() {
             true => Err(error(format!(
                 "Attempting to put reference to {:?} which is out of bounds of constant data that ends at {:?}.",
                 i,
-                self.heap.get_end_of_constant_data()
+                self.data.get_end_of_constant_data()
             ))),
-            false => self.heap.push_register(i),
+            false => self.data.push_register(i),
         }
     }
 
     pub fn put_input(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put Input");
 
-        self.heap.push_register(self.heap.get_current_input()?)
+        self.data.push_register(self.data.get_current_input()?)
     }
 
     pub fn push_input(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Push Input");
         let r = self.next_ref()?;
 
-        self.heap.push_input(r)?;
-        self.heap.set_result(Some(r))
+        self.data.push_input(r)?;
+        self.data.set_result(Some(r))
     }
 
     pub fn put_result(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put Result");
 
-        match self.heap.get_result() {
+        match self.data.get_result() {
             None => Err(error(format!("No result available to put reference."))),
-            Some(i) => self.heap.push_register(i),
+            Some(i) => self.data.push_register(i),
         }
     }
 
@@ -47,7 +47,7 @@ where
         trace!("Instruction - Output Result");
 
         let r = self.next_ref()?;
-        self.heap.set_result(Some(r))
+        self.data.set_result(Some(r))
     }
 }
 
@@ -63,7 +63,7 @@ mod tests {
 
         runtime.put(1).unwrap();
 
-        assert_eq!(*runtime.heap.get_register().get(0).unwrap(), 1);
+        assert_eq!(*runtime.data.get_register().get(0).unwrap(), 1);
     }
 
     #[test]
@@ -83,11 +83,11 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.heap.push_input(2).unwrap();
+        runtime.data.push_input(2).unwrap();
 
         runtime.put_input().unwrap();
 
-        assert_eq!(*runtime.heap.get_register().get(0).unwrap(), 2);
+        assert_eq!(*runtime.data.get_register().get(0).unwrap(), 2);
     }
 
     #[test]
@@ -97,12 +97,12 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.heap.push_register(2).unwrap();
+        runtime.data.push_register(2).unwrap();
 
         runtime.push_input().unwrap();
 
-        assert_eq!(runtime.heap.get_input(0).unwrap(), 2usize);
-        assert_eq!(runtime.heap.get_result().unwrap(), 2usize);
+        assert_eq!(runtime.data.get_input(0).unwrap(), 2usize);
+        assert_eq!(runtime.data.get_result().unwrap(), 2usize);
     }
 
     #[test]
@@ -122,12 +122,12 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_instruction(Instruction::PushResult, None).unwrap();
 
-        runtime.heap.push_register(1).unwrap();
+        runtime.data.push_register(1).unwrap();
 
         runtime.push_result().unwrap();
 
-        assert_eq!(runtime.heap.get_result().unwrap(), 1usize);
-        assert_eq!(runtime.heap.get_integer(runtime.heap.get_result().unwrap()).unwrap(), 10i64);
+        assert_eq!(runtime.data.get_result().unwrap(), 1usize);
+        assert_eq!(runtime.data.get_integer(runtime.data.get_result().unwrap()).unwrap(), 10i64);
     }
 
     #[test]
@@ -147,10 +147,10 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.heap.set_result(Some(2)).unwrap();
+        runtime.data.set_result(Some(2)).unwrap();
 
         runtime.put_result().unwrap();
 
-        assert_eq!(*runtime.heap.get_register().get(0).unwrap(), 2);
+        assert_eq!(*runtime.data.get_register().get(0).unwrap(), 2);
     }
 }

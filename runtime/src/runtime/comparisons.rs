@@ -13,10 +13,10 @@ where
 
         let (right_addr, left_addr) = self.next_two_raw_ref()?;
 
-        let result = match (self.heap.get_data_type(left_addr)?, self.heap.get_data_type(right_addr)?) {
+        let result = match (self.data.get_data_type(left_addr)?, self.data.get_data_type(right_addr)?) {
             (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                let left = self.heap.get_integer(left_addr)?;
-                let right = self.heap.get_integer(right_addr)?;
+                let left = self.data.get_integer(left_addr)?;
+                let right = self.data.get_integer(right_addr)?;
 
                 trace!("Comparing {:?} == {:?}", left, right);
 
@@ -40,15 +40,15 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
 
-        runtime.heap.push_register(1).unwrap();
-        runtime.heap.push_register(2).unwrap();
+        runtime.data.push_register(1).unwrap();
+        runtime.data.push_register(2).unwrap();
 
         runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.heap.get_register(), &vec![3]);
-        assert_eq!(runtime.heap.get_data_type(3).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.data.get_register(), &vec![3]);
+        assert_eq!(runtime.data.get_data_type(3).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
@@ -58,15 +58,15 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.heap.push_register(1).unwrap();
-        runtime.heap.push_register(2).unwrap();
+        runtime.data.push_register(1).unwrap();
+        runtime.data.push_register(2).unwrap();
 
         runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.heap.get_register(), &vec![3]);
-        assert_eq!(runtime.heap.get_data_type(3).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.data.get_register(), &vec![3]);
+        assert_eq!(runtime.data.get_data_type(3).unwrap(), ExpressionDataType::False);
     }
 
     #[test]

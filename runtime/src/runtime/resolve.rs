@@ -13,7 +13,7 @@ where
         let addr = self.next_ref()?;
 
         // check result
-        match self.heap.get_result() {
+        match self.data.get_result() {
             None => (),
             Some(result_ref) => match self.get_access_addr(addr, result_ref)? {
                 None => (),
@@ -25,7 +25,7 @@ where
         }
 
         // check input
-        match self.heap.get_current_input() {
+        match self.data.get_current_input() {
             Err(_) => (),
             Ok(list_ref) => match self.get_access_addr(addr, list_ref)? {
                 None => (),
@@ -73,7 +73,7 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.heap.set_result(Some(4)).unwrap();
+        runtime.data.set_result(Some(4)).unwrap();
 
         let result = runtime.resolve::<EmptyContext>(None);
 
@@ -92,13 +92,13 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.heap.push_register(5).unwrap();
+        runtime.data.push_register(5).unwrap();
 
-        runtime.heap.set_result(Some(4)).unwrap();
+        runtime.data.set_result(Some(4)).unwrap();
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.heap.get_reference(6).unwrap(), 2);
+        assert_eq!(runtime.data.get_reference(6).unwrap(), 2);
     }
 
     #[test]
@@ -113,13 +113,13 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.heap.push_register(5).unwrap();
+        runtime.data.push_register(5).unwrap();
 
-        runtime.heap.push_input(4).unwrap();
+        runtime.data.push_input(4).unwrap();
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.heap.get_reference(6).unwrap(), 2);
+        assert_eq!(runtime.data.get_reference(6).unwrap(), 2);
     }
 
     #[test]
@@ -134,11 +134,11 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.heap.push_register(5).unwrap();
+        runtime.data.push_register(5).unwrap();
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.heap.get_data_type(6).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.data.get_data_type(6).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
@@ -149,7 +149,7 @@ mod tests {
 
         runtime.add_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.heap.push_register(1).unwrap();
+        runtime.data.push_register(1).unwrap();
 
         struct MyContext {}
 
@@ -159,13 +159,13 @@ mod tests {
                 sym_addr: usize,
                 runtime: &mut GarnishLangRuntime<Data>,
             ) -> GarnishLangRuntimeResult<bool> {
-                match runtime.heap.get_data_type(sym_addr)? {
+                match runtime.data.get_data_type(sym_addr)? {
                     ExpressionDataType::Symbol => {
-                        let addr = runtime.heap.get_data_len();
-                        runtime.heap.add_integer(100)?;
-                        let raddr = runtime.heap.get_data_len();
+                        let addr = runtime.data.get_data_len();
+                        runtime.data.add_integer(100)?;
+                        let raddr = runtime.data.get_data_len();
                         runtime.push_reference(addr)?;
-                        runtime.heap.push_register(raddr).unwrap();
+                        runtime.data.push_register(raddr).unwrap();
                         Ok(true)
                     }
                     t => Err(error(format!("Address given to resolve is of type {:?}. Expected symbol type.", t)))?,
@@ -186,8 +186,8 @@ mod tests {
 
         runtime.resolve(Some(&mut context)).unwrap();
 
-        assert_eq!(runtime.heap.get_integer(2).unwrap(), 100);
-        assert_eq!(runtime.heap.get_register().get(0).unwrap(), &3);
-        assert_eq!(runtime.heap.get_reference(3).unwrap(), 2);
+        assert_eq!(runtime.data.get_integer(2).unwrap(), 100);
+        assert_eq!(runtime.data.get_register().get(0).unwrap(), &3);
+        assert_eq!(runtime.data.get_reference(3).unwrap(), 2);
     }
 }

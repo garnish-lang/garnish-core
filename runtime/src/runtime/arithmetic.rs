@@ -13,10 +13,10 @@ where
 
         let (right_addr, left_addr) = self.next_two_raw_ref()?;
 
-        match (self.heap.get_data_type(left_addr)?, self.heap.get_data_type(right_addr)?) {
+        match (self.data.get_data_type(left_addr)?, self.data.get_data_type(right_addr)?) {
             (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                let left = self.heap.get_integer(left_addr)?;
-                let right = self.heap.get_integer(right_addr)?;
+                let left = self.data.get_integer(left_addr)?;
+                let right = self.data.get_integer(right_addr)?;
 
                 trace!("Performing {:?} + {:?}", left, right);
 
@@ -38,13 +38,13 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.heap.push_register(1).unwrap();
-        runtime.heap.push_register(2).unwrap();
+        runtime.data.push_register(1).unwrap();
+        runtime.data.push_register(2).unwrap();
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.heap.get_register(), &vec![3]);
-        assert_eq!(runtime.heap.get_integer(3).unwrap(), 30);
+        assert_eq!(runtime.data.get_register(), &vec![3]);
+        assert_eq!(runtime.data.get_integer(3).unwrap(), 30);
     }
 
     #[test]
@@ -68,13 +68,13 @@ mod tests {
         runtime.add_reference_data(1).unwrap();
         runtime.add_reference_data(2).unwrap();
 
-        runtime.heap.push_register(1).unwrap();
-        runtime.heap.push_register(2).unwrap();
+        runtime.data.push_register(1).unwrap();
+        runtime.data.push_register(2).unwrap();
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.heap.get_register(), &vec![5]);
-        assert_eq!(runtime.heap.get_integer(5).unwrap(), 30);
+        assert_eq!(runtime.data.get_register(), &vec![5]);
+        assert_eq!(runtime.data.get_integer(5).unwrap(), 30);
     }
 
     #[test]
@@ -84,12 +84,12 @@ mod tests {
         runtime.add_data(ExpressionData::symbol(&"sym1".to_string(), 1)).unwrap();
         runtime.add_data(ExpressionData::symbol(&"sym2".to_string(), 2)).unwrap();
 
-        runtime.heap.push_register(1).unwrap();
-        runtime.heap.push_register(2).unwrap();
+        runtime.data.push_register(1).unwrap();
+        runtime.data.push_register(2).unwrap();
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.heap.get_register(), &vec![3]);
-        assert_eq!(runtime.heap.get_data_type(3).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.data.get_register(), &vec![3]);
+        assert_eq!(runtime.data.get_data_type(3).unwrap(), ExpressionDataType::Unit);
     }
 }

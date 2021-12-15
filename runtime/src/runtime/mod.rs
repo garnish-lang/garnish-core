@@ -22,7 +22,7 @@ use self::context::GarnishLangRuntimeContext;
 
 #[derive(Debug)]
 pub struct GarnishLangRuntime<Data> {
-    heap: Data,
+    data: Data,
 }
 
 impl GarnishLangRuntime<SimpleRuntimeData> {
@@ -36,47 +36,51 @@ where
     Data: GarnishLangRuntimeDataPool,
 {
     pub fn new() -> Self {
-        GarnishLangRuntime { heap: Data::new() }
+        GarnishLangRuntime { data: Data::new() }
+    }
+
+    pub fn new_with_data(data: Data) -> Self {
+        GarnishLangRuntime { data }
     }
 
     pub fn add_expression(&mut self, index: usize) -> GarnishLangRuntimeResult {
-        self.heap.push_jump_point(index)
+        self.data.push_jump_point(index)
     }
 
     pub fn add_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> GarnishLangRuntimeResult {
-        self.heap.push_instruction(InstructionData { instruction, data })
+        self.data.push_instruction(InstructionData { instruction, data })
     }
 
     pub fn get_instruction(&self, i: usize) -> GarnishLangRuntimeResult<&InstructionData> {
-        self.heap.get_instruction(i)
+        self.data.get_instruction(i)
     }
 
     pub fn get_current_instruction(&self) -> GarnishLangRuntimeResult<&InstructionData> {
-        self.heap.get_instruction(self.heap.get_instruction_cursor()?)
+        self.data.get_instruction(self.data.get_instruction_cursor()?)
     }
 
     pub fn set_instruction_cursor(&mut self, i: usize) -> GarnishLangRuntimeResult {
-        self.heap.set_instruction_cursor(i)
+        self.data.set_instruction_cursor(i)
     }
 
     pub fn add_input_reference(&mut self, reference: usize) -> GarnishLangRuntimeResult {
-        match reference < self.heap.get_data_len() {
+        match reference < self.data.get_data_len() {
             false => Err(error(format!("Input reference beyond bounds of data."))),
-            true => self.heap.push_input(reference),
+            true => self.data.push_input(reference),
         }
     }
 
     pub fn get_result(&self) -> Option<usize> {
-        self.heap.get_result()
+        self.data.get_result()
     }
 
     pub fn clear_result(&mut self) -> GarnishLangRuntimeResult {
-        self.heap.set_result(None)
+        self.data.set_result(None)
     }
 
     pub fn end_execution(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - End Execution");
-        self.heap.set_instruction_cursor(self.heap.get_instruction_len())?;
+        self.data.set_instruction_cursor(self.data.get_instruction_len())?;
 
         Ok(())
     }
@@ -85,7 +89,7 @@ where
         &mut self,
         context: Option<&mut T>,
     ) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
-        let instruction_data = self.heap.get_instruction(self.heap.get_instruction_cursor()?)?;
+        let instruction_data = self.data.get_instruction(self.data.get_instruction_cursor()?)?;
         match instruction_data.instruction {
             Instruction::PerformAddition => self.perform_addition()?,
             Instruction::PutInput => self.put_input()?,
@@ -130,10 +134,10 @@ where
     }
 
     fn advance_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
-        match self.heap.get_instruction_cursor()? + 1 >= self.heap.get_instruction_len() {
+        match self.data.get_instruction_cursor()? + 1 >= self.data.get_instruction_len() {
             true => Ok(GarnishLangRuntimeData::new(GarnishLangRuntimeState::End)),
             false => {
-                self.heap.advance_instruction_cursor()?;
+                self.data.advance_instruction_cursor()?;
                 Ok(GarnishLangRuntimeData::new(GarnishLangRuntimeState::Running))
             }
         }
@@ -158,7 +162,7 @@ mod tests {
 
         assert_eq!(runtime.get_instruction(0).unwrap().instruction, Instruction::EndExecution);
         assert_eq!(runtime.get_data_len(), 1);
-        assert_eq!(runtime.heap.get_data_type(0).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.data.get_data_type(0).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
@@ -168,8 +172,8 @@ mod tests {
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
         runtime.add_expression(1).unwrap();
 
-        assert_eq!(runtime.heap.get_jump_points().len(), 1);
-        assert_eq!(*runtime.heap.get_jump_points().get(0).unwrap(), 1);
+        assert_eq!(runtime.data.get_jump_points().len(), 1);
+        assert_eq!(*runtime.data.get_jump_points().get(0).unwrap(), 1);
     }
 
     #[test]
@@ -188,7 +192,7 @@ mod tests {
 
         runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
 
-        assert_eq!(runtime.heap.get_instructions().len(), 2);
+        assert_eq!(runtime.data.get_instructions().len(), 2);
     }
 
     #[test]
@@ -198,7 +202,7 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_input_reference(0).unwrap();
 
-        assert_eq!(runtime.heap.get_input(0).unwrap().to_owned(), 0);
+        assert_eq!(runtime.data.get_input(0).unwrap().to_owned(), 0);
     }
 
     #[test]
@@ -210,7 +214,7 @@ mod tests {
 
         runtime.add_input_reference(addr).unwrap();
 
-        assert_eq!(runtime.heap.get_input(0).unwrap().to_owned(), 2);
+        assert_eq!(runtime.data.get_input(0).unwrap().to_owned(), 2);
     }
 
     #[test]
@@ -228,7 +232,7 @@ mod tests {
 
         runtime.add_instruction(Instruction::Put, None).unwrap();
 
-        runtime.heap.set_instruction_cursor(1).unwrap();
+        runtime.data.set_instruction_cursor(1).unwrap();
 
         assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::Put);
     }
@@ -240,7 +244,7 @@ mod tests {
         runtime.add_instruction(Instruction::Put, None).unwrap();
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
 
-        runtime.heap.set_instruction_cursor(1).unwrap();
+        runtime.data.set_instruction_cursor(1).unwrap();
 
         runtime.advance_instruction().unwrap();
 
@@ -272,7 +276,7 @@ mod tests {
 
         runtime.end_execution().unwrap();
 
-        assert_eq!(runtime.heap.get_instruction_cursor().unwrap(), 4);
+        assert_eq!(runtime.data.get_instruction_cursor().unwrap(), 4);
     }
 
     #[test]
@@ -281,12 +285,12 @@ mod tests {
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
 
-        runtime.heap.push_register(1).unwrap();
+        runtime.data.push_register(1).unwrap();
         runtime.push_result().unwrap();
 
         runtime.clear_result().unwrap();
 
-        assert!(runtime.heap.get_result().is_none());
+        assert!(runtime.data.get_result().is_none());
     }
 
     #[test]
@@ -297,14 +301,14 @@ mod tests {
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.heap.push_register(1).unwrap();
-        runtime.heap.push_register(2).unwrap();
+        runtime.data.push_register(1).unwrap();
+        runtime.data.push_register(2).unwrap();
 
         runtime.set_instruction_cursor(1).unwrap();
 
         runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.heap.get_register(), &vec![3]);
-        assert_eq!(runtime.heap.get_integer(3).unwrap(), 30);
+        assert_eq!(runtime.data.get_register(), &vec![3]);
+        assert_eq!(runtime.data.get_integer(3).unwrap(), 30);
     }
 }

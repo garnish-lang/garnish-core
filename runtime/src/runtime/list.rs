@@ -16,11 +16,11 @@ where
         for _ in 0..len {
             let r = self.next_ref()?;
 
-            match self.heap.get_data_type(r)? {
+            match self.data.get_data_type(r)? {
                 ExpressionDataType::Pair => {
-                    let (left, _) = self.heap.get_pair(r)?;
+                    let (left, _) = self.data.get_pair(r)?;
 
-                    match self.heap.get_data_type(left)? {
+                    match self.data.get_data_type(left)? {
                         ExpressionDataType::Symbol => associative_list.push(r),
                         _ => (),
                     }
@@ -73,30 +73,30 @@ where
         let sym_ref = self.addr_of_raw_data(sym)?;
         let list_ref = self.addr_of_raw_data(list)?;
 
-        match (self.heap.get_data_type(list_ref)?, self.heap.get_data_type(sym_ref)?) {
+        match (self.data.get_data_type(list_ref)?, self.data.get_data_type(sym_ref)?) {
             (ExpressionDataType::List, ExpressionDataType::Symbol) => {
-                let sym_val = self.heap.get_symbol(sym_ref)?;
+                let sym_val = self.data.get_symbol(sym_ref)?;
 
-                let assocations_len = self.heap.get_list_associations_len(list_ref)?;
+                let assocations_len = self.data.get_list_associations_len(list_ref)?;
 
                 let mut i = sym_val as usize % assocations_len;
                 let mut count = 0;
 
                 loop {
                     // check to make sure item has same symbol
-                    let association_ref = self.heap.get_list_association(list_ref, i)?;
+                    let association_ref = self.data.get_list_association(list_ref, i)?;
                     let pair_ref = self.addr_of_raw_data(association_ref)?; // this should be a pair
 
                     // should have symbol on left
-                    match self.heap.get_data_type(pair_ref)? {
+                    match self.data.get_data_type(pair_ref)? {
                         ExpressionDataType::Pair => {
-                            let (left, right) = self.heap.get_pair(pair_ref)?;
+                            let (left, right) = self.data.get_pair(pair_ref)?;
 
                             let left_ref = self.addr_of_raw_data(left)?;
 
-                            match self.heap.get_data_type(left_ref)? {
+                            match self.data.get_data_type(left_ref)? {
                                 ExpressionDataType::Symbol => {
-                                    let v = self.heap.get_symbol(left_ref)?;
+                                    let v = self.data.get_symbol(left_ref)?;
 
                                     if v == sym_val {
                                         // found match
@@ -141,18 +141,18 @@ mod tests {
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.heap.push_register(1).unwrap();
-        runtime.heap.push_register(2).unwrap();
-        runtime.heap.push_register(3).unwrap();
+        runtime.data.push_register(1).unwrap();
+        runtime.data.push_register(2).unwrap();
+        runtime.data.push_register(3).unwrap();
 
         runtime.add_instruction(Instruction::MakeList, Some(3)).unwrap();
 
         runtime.make_list(3).unwrap();
 
-        assert_eq!(runtime.heap.get_list_len(4).unwrap(), 3);
-        assert_eq!(runtime.heap.get_list_item(4, 0).unwrap(), 1);
-        assert_eq!(runtime.heap.get_list_item(4, 1).unwrap(), 2);
-        assert_eq!(runtime.heap.get_list_item(4, 2).unwrap(), 3);
+        assert_eq!(runtime.data.get_list_len(4).unwrap(), 3);
+        assert_eq!(runtime.data.get_list_item(4, 0).unwrap(), 1);
+        assert_eq!(runtime.data.get_list_item(4, 1).unwrap(), 2);
+        assert_eq!(runtime.data.get_list_item(4, 2).unwrap(), 3);
     }
 
     #[test]
@@ -185,23 +185,23 @@ mod tests {
         runtime.add_data(ExpressionData::pair(3, 4)).unwrap();
         runtime.add_data(ExpressionData::pair(5, 6)).unwrap();
 
-        runtime.heap.push_register(7).unwrap();
-        runtime.heap.push_register(8).unwrap();
-        runtime.heap.push_register(9).unwrap();
+        runtime.data.push_register(7).unwrap();
+        runtime.data.push_register(8).unwrap();
+        runtime.data.push_register(9).unwrap();
 
         runtime.add_instruction(Instruction::MakeList, Some(3)).unwrap();
 
         runtime.make_list(3).unwrap();
 
-        assert_eq!(runtime.heap.get_list_len(10).unwrap(), 3);
-        assert_eq!(runtime.heap.get_list_item(10, 0).unwrap(), 7);
-        assert_eq!(runtime.heap.get_list_item(10, 1).unwrap(), 8);
-        assert_eq!(runtime.heap.get_list_item(10, 2).unwrap(), 9);
+        assert_eq!(runtime.data.get_list_len(10).unwrap(), 3);
+        assert_eq!(runtime.data.get_list_item(10, 0).unwrap(), 7);
+        assert_eq!(runtime.data.get_list_item(10, 1).unwrap(), 8);
+        assert_eq!(runtime.data.get_list_item(10, 2).unwrap(), 9);
 
-        assert_eq!(runtime.heap.get_list_associations_len(10).unwrap(), 3);
-        assert_eq!(runtime.heap.get_list_association(10, 0).unwrap(), 9);
-        assert_eq!(runtime.heap.get_list_association(10, 1).unwrap(), 7);
-        assert_eq!(runtime.heap.get_list_association(10, 2).unwrap(), 8);
+        assert_eq!(runtime.data.get_list_associations_len(10).unwrap(), 3);
+        assert_eq!(runtime.data.get_list_association(10, 0).unwrap(), 9);
+        assert_eq!(runtime.data.get_list_association(10, 1).unwrap(), 7);
+        assert_eq!(runtime.data.get_list_association(10, 2).unwrap(), 8);
     }
 
     #[test]
@@ -216,12 +216,12 @@ mod tests {
 
         runtime.add_instruction(Instruction::Access, None).unwrap();
 
-        runtime.heap.push_register(4).unwrap();
-        runtime.heap.push_register(5).unwrap();
+        runtime.data.push_register(4).unwrap();
+        runtime.data.push_register(5).unwrap();
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.heap.get_reference(6).unwrap(), 2);
+        assert_eq!(runtime.data.get_reference(6).unwrap(), 2);
     }
 
     #[test]
@@ -253,12 +253,12 @@ mod tests {
 
         runtime.add_instruction(Instruction::Access, None).unwrap();
 
-        runtime.heap.push_register(4).unwrap();
-        runtime.heap.push_register(5).unwrap();
+        runtime.data.push_register(4).unwrap();
+        runtime.data.push_register(5).unwrap();
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.heap.get_register().len(), 1);
-        assert_eq!(runtime.heap.get_data_type(6).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.data.get_register().len(), 1);
+        assert_eq!(runtime.data.get_data_type(6).unwrap(), ExpressionDataType::Unit);
     }
 }
