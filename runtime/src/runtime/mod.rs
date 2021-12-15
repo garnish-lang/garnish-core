@@ -8,6 +8,7 @@ mod list;
 mod pair;
 mod put;
 mod resolve;
+mod utilities;
 
 pub use context::*;
 pub use data::{GarnishLangRuntimeDataPool, SimpleRuntimeData};
