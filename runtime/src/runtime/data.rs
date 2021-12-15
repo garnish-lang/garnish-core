@@ -6,6 +6,8 @@ pub trait GarnishLangRuntimeDataPool {
     fn set_end_of_constant(&mut self, addr: usize) -> GarnishLangRuntimeResult;
     fn get_end_of_constant_data(&self) -> usize;
 
+    fn remove_non_constant_data(&mut self) -> GarnishLangRuntimeResult;
+
     fn get_data_len(&self) -> usize;
 
     fn set_result(&mut self, result: Option<usize>) -> GarnishLangRuntimeResult;
@@ -238,6 +240,12 @@ impl GarnishLangRuntimeDataPool for SimpleRuntimeData {
 
     fn get_end_of_constant_data(&self) -> usize {
         self.end_of_constant_data
+    }
+
+    fn remove_non_constant_data(&mut self) -> GarnishLangRuntimeResult {
+        self.data = Vec::from(&self.data[..self.end_of_constant_data]);
+
+        Ok(())
     }
 
     fn get_data_len(&self) -> usize {

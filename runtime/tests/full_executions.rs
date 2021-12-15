@@ -53,68 +53,6 @@ fn adding_numbers_with_sub_expression() {
     )
 }
 
-// #[test]
-// fn multiple_conditions() {
-//     let mut runtime = GarnishLangRuntime::simple();
-
-//     runtime.add_data(ExpressionData::integer(100)).unwrap();
-//     runtime.add_data(ExpressionData::integer(200)).unwrap();
-//     runtime.add_data(ExpressionData::integer(300)).unwrap();
-//     runtime.add_data(ExpressionData::integer(1)).unwrap();
-//     runtime.add_data(ExpressionData::integer(2)).unwrap();
-//     runtime.end_constant_data().unwrap();
-
-//     runtime.add_instruction(Instruction::Put, Some(1)).unwrap(); // 1
-//     runtime.add_instruction(Instruction::JumpTo, Some(3)).unwrap();
-
-//     runtime.add_instruction(Instruction::Put, Some(2)).unwrap(); // 3
-//     runtime.add_instruction(Instruction::JumpTo, Some(3)).unwrap();
-
-//     runtime.add_instruction(Instruction::Put, Some(3)).unwrap(); // 5
-//     runtime.add_instruction(Instruction::JumpTo, Some(3)).unwrap();
-
-//     // 7
-//     runtime.add_instruction(Instruction::PutInput, None).unwrap();
-//     runtime.add_instruction(Instruction::Put, Some(4)).unwrap();
-//     runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
-
-//     runtime.add_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
-
-//     runtime.add_instruction(Instruction::PutInput, None).unwrap();
-//     runtime.add_instruction(Instruction::Put, Some(5)).unwrap();
-//     runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
-
-//     runtime.add_instruction(Instruction::JumpIfFalse, Some(2)).unwrap();
-//     runtime.add_instruction(Instruction::JumpIfTrue, Some(1)).unwrap();
-
-//     runtime.add_instruction(Instruction::EndExpression, None).unwrap();
-
-//     runtime.add_expression(1).unwrap();
-//     runtime.add_expression(3).unwrap();
-//     runtime.add_expression(5).unwrap();
-//     runtime.add_expression(16).unwrap();
-
-//     let inputs_expected_result = [
-//         (ExpressionData::integer(1), 100),
-//         (ExpressionData::integer(2), 200),
-//         (ExpressionData::integer(3), 300),
-//     ];
-
-//     for (input, expected) in inputs_expected_result {
-//         runtime.set_instruction_cursor(7).unwrap();
-
-//         let addr = runtime.add_data(input.clone()).unwrap();
-//         runtime.add_input_reference(addr).unwrap();
-
-//         execute_all_instructions(&mut runtime);
-
-//         assert_eq!(runtime.get_result().unwrap().as_integer().unwrap(), expected);
-
-//         runtime.remove_data(addr).unwrap();
-//         runtime.clear_result().unwrap();
-//     }
-// }
-
 #[test]
 fn value_before_jump() {
     let mut runtime = GarnishLangRuntime::simple();
