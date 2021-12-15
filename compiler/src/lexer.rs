@@ -1,6 +1,8 @@
 use log::trace;
 use std::{collections::HashMap, iter, vec};
 
+use crate::{LexerAnnotationProcessor, LexerAnnotationProcessorInstruction, NoOpProcessor};
+
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum TokenType {
     Unknown,
@@ -236,6 +238,10 @@ fn start_token<'a>(
 }
 
 pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
+    lex_with_processor(input, &mut NoOpProcessor::new())
+}
+
+pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor: &mut T) -> Result<Vec<LexerToken>, String> {
     trace!("Beginning lexing");
 
     let mut tokens = vec![];
@@ -426,6 +432,17 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                     false
                 } else {
                     // end token
+
+                    match processor.yield_annotation(&current_characters, token_start_row, token_start_column) {
+                        Err(e) => Err(format!("{:?}", e.to_string()))?,
+                        Ok(v) => match v.get_instruction() {
+                            LexerAnnotationProcessorInstruction::Drop => {
+                                state = LexingState::NoToken;
+                            }
+                            LexerAnnotationProcessorInstruction::NoOp => (),
+                        },
+                    }
+
                     true
                 }
             }
@@ -433,6 +450,16 @@ pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
                 // line annotations continue until end of line
                 // for simplicity we include entire line as the token
                 if c == '\n' || c == '\0' {
+                    match processor.yield_line_annotation(&current_characters, token_start_row, token_start_column) {
+                        Err(e) => Err(format!("{:?}", e.to_string()))?,
+                        Ok(v) => match v.get_instruction() {
+                            LexerAnnotationProcessorInstruction::Drop => {
+                                state = LexingState::NoToken;
+                            }
+                            LexerAnnotationProcessorInstruction::NoOp => (),
+                        },
+                    }
+
                     true
                 } else {
                     current_characters.push(c);
