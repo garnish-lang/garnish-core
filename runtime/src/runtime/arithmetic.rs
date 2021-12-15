@@ -2,11 +2,11 @@ use log::trace;
 
 use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
 
-use super::data::GarnishLangRuntimeDataPool;
+use super::data::GarnishLangRuntimeData;
 
 impl<Data> GarnishLangRuntime<Data>
 where
-    Data: GarnishLangRuntimeDataPool,
+    Data: GarnishLangRuntimeData,
 {
     pub fn perform_addition(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Addition");
@@ -29,7 +29,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::data::GarnishLangRuntimeDataPool, ExpressionData, ExpressionDataType, GarnishLangRuntime};
+    use crate::{runtime::data::GarnishLangRuntimeData, ExpressionData, ExpressionDataType, GarnishLangRuntime};
 
     #[test]
     fn perform_addition() {

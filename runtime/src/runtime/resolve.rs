@@ -2,11 +2,11 @@ use log::trace;
 
 use crate::{GarnishLangRuntime, GarnishLangRuntimeResult};
 
-use super::{context::GarnishLangRuntimeContext, data::GarnishLangRuntimeDataPool};
+use super::{context::GarnishLangRuntimeContext, data::GarnishLangRuntimeData};
 
 impl<Data> GarnishLangRuntime<Data>
 where
-    Data: GarnishLangRuntimeDataPool,
+    Data: GarnishLangRuntimeData,
 {
     pub fn resolve<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
         trace!("Instruction - Resolve");
@@ -56,7 +56,7 @@ mod tests {
         error,
         runtime::{
             context::{EmptyContext, GarnishLangRuntimeContext},
-            data::GarnishLangRuntimeDataPool,
+            data::GarnishLangRuntimeData,
         },
         ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction,
     };
@@ -154,7 +154,7 @@ mod tests {
         struct MyContext {}
 
         impl GarnishLangRuntimeContext for MyContext {
-            fn resolve<Data: GarnishLangRuntimeDataPool>(
+            fn resolve<Data: GarnishLangRuntimeData>(
                 &mut self,
                 sym_addr: usize,
                 runtime: &mut GarnishLangRuntime<Data>,
@@ -172,7 +172,7 @@ mod tests {
                 }
             }
 
-            fn apply<Data: GarnishLangRuntimeDataPool>(
+            fn apply<Data: GarnishLangRuntimeData>(
                 &mut self,
                 _: usize,
                 _: usize,

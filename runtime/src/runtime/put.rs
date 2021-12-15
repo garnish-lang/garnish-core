@@ -2,11 +2,11 @@ use log::trace;
 
 use crate::{error, GarnishLangRuntime, GarnishLangRuntimeResult};
 
-use super::data::GarnishLangRuntimeDataPool;
+use super::data::GarnishLangRuntimeData;
 
 impl<Data> GarnishLangRuntime<Data>
 where
-    Data: GarnishLangRuntimeDataPool,
+    Data: GarnishLangRuntimeData,
 {
     pub fn put(&mut self, i: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put | Data - {:?}", i);
@@ -53,7 +53,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::data::GarnishLangRuntimeDataPool, ExpressionData, GarnishLangRuntime, Instruction};
+    use crate::{runtime::data::GarnishLangRuntimeData, ExpressionData, GarnishLangRuntime, Instruction};
 
     #[test]
     fn put() {

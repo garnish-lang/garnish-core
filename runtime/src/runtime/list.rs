@@ -2,11 +2,11 @@ use log::trace;
 
 use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
 
-use super::data::GarnishLangRuntimeDataPool;
+use super::data::GarnishLangRuntimeData;
 
 impl<Data> GarnishLangRuntime<Data>
 where
-    Data: GarnishLangRuntimeDataPool,
+    Data: GarnishLangRuntimeData,
 {
     pub fn make_list(&mut self, len: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Make List | Length - {:?}", len);
@@ -131,7 +131,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::data::GarnishLangRuntimeDataPool, ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
+    use crate::{runtime::data::GarnishLangRuntimeData, ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
 
     #[test]
     fn make_list() {

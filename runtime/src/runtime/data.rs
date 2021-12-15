@@ -1,6 +1,6 @@
 use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntimeResult, Instruction, InstructionData, RuntimeResult};
 
-pub trait GarnishLangRuntimeDataPool {
+pub trait GarnishLangRuntimeData {
     fn new() -> Self;
 
     fn set_end_of_constant(&mut self, addr: usize) -> GarnishLangRuntimeResult;
@@ -104,7 +104,7 @@ impl SimpleRuntimeData {
     }
 }
 
-impl GarnishLangRuntimeDataPool for SimpleRuntimeData {
+impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn new() -> Self {
         SimpleRuntimeData {
             register: vec![],

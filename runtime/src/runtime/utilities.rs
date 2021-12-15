@@ -1,10 +1,10 @@
 // use log::trace;
 
-use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeDataPool, GarnishLangRuntimeResult, RuntimeResult};
+use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeData, GarnishLangRuntimeResult, RuntimeResult};
 
 impl<Data> GarnishLangRuntime<Data>
 where
-    Data: GarnishLangRuntimeDataPool,
+    Data: GarnishLangRuntimeData,
 {
     pub fn get_data_pool(&self) -> &Data {
         &self.data
@@ -110,7 +110,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::data::GarnishLangRuntimeDataPool, ExpressionData, GarnishLangRuntime, Instruction};
+    use crate::{runtime::data::GarnishLangRuntimeData, ExpressionData, GarnishLangRuntime, Instruction};
 
     #[test]
     fn add_data() {
@@ -207,7 +207,7 @@ mod tests {
 
 #[cfg(test)]
 mod internal {
-    use crate::{ExpressionData, GarnishLangRuntime, GarnishLangRuntimeDataPool};
+    use crate::{ExpressionData, GarnishLangRuntime, GarnishLangRuntimeData};
 
     #[test]
     fn next_ref() {

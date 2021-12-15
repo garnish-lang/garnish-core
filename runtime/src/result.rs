@@ -9,7 +9,7 @@ pub enum GarnishLangRuntimeState {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct GarnishLangRuntimeData {
+pub struct GarnishLangRuntimeInfo {
     state: GarnishLangRuntimeState,
 }
 
@@ -18,9 +18,9 @@ pub struct GarnishLangRuntimeError {
     message: String,
 }
 
-impl GarnishLangRuntimeData {
+impl GarnishLangRuntimeInfo {
     pub fn new(state: GarnishLangRuntimeState) -> Self {
-        return GarnishLangRuntimeData { state };
+        return GarnishLangRuntimeInfo { state };
     }
 
     pub fn get_state(&self) -> GarnishLangRuntimeState {

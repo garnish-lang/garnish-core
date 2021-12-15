@@ -11,11 +11,11 @@ mod resolve;
 mod utilities;
 
 pub use context::*;
-pub use data::{GarnishLangRuntimeDataPool, SimpleRuntimeData};
+pub use data::{GarnishLangRuntimeData, SimpleRuntimeData};
 
 use crate::instruction::*;
 use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
-use crate::GarnishLangRuntimeData;
+use crate::GarnishLangRuntimeInfo;
 use log::trace;
 
 use self::context::GarnishLangRuntimeContext;
@@ -33,7 +33,7 @@ impl GarnishLangRuntime<SimpleRuntimeData> {
 
 impl<Data> GarnishLangRuntime<Data>
 where
-    Data: GarnishLangRuntimeDataPool,
+    Data: GarnishLangRuntimeData,
 {
     pub fn new() -> Self {
         GarnishLangRuntime { data: Data::new() }
@@ -88,7 +88,7 @@ where
     pub fn execute_current_instruction<T: GarnishLangRuntimeContext>(
         &mut self,
         context: Option<&mut T>,
-    ) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
+    ) -> GarnishLangRuntimeResult<GarnishLangRuntimeInfo> {
         let instruction_data = self.data.get_instruction(self.data.get_instruction_cursor()?)?;
         match instruction_data.instruction {
             Instruction::PerformAddition => self.perform_addition()?,
@@ -133,12 +133,12 @@ where
         self.advance_instruction()
     }
 
-    fn advance_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
+    fn advance_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeInfo> {
         match self.data.get_instruction_cursor()? + 1 >= self.data.get_instruction_len() {
-            true => Ok(GarnishLangRuntimeData::new(GarnishLangRuntimeState::End)),
+            true => Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::End)),
             false => {
                 self.data.advance_instruction_cursor()?;
-                Ok(GarnishLangRuntimeData::new(GarnishLangRuntimeState::Running))
+                Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::Running))
             }
         }
     }
@@ -147,7 +147,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        runtime::{context::EmptyContext, data::GarnishLangRuntimeDataPool},
+        runtime::{context::EmptyContext, data::GarnishLangRuntimeData},
         ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction,
     };
 

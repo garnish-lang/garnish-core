@@ -1,14 +1,11 @@
 use crate::{GarnishLangRuntime, GarnishLangRuntimeResult};
 
-use super::data::GarnishLangRuntimeDataPool;
+use super::data::GarnishLangRuntimeData;
 
 pub trait GarnishLangRuntimeContext {
-    fn resolve<Data: GarnishLangRuntimeDataPool>(
-        &mut self,
-        symbol_addr: usize,
-        runtime: &mut GarnishLangRuntime<Data>,
-    ) -> GarnishLangRuntimeResult<bool>;
-    fn apply<Data: GarnishLangRuntimeDataPool>(
+    fn resolve<Data: GarnishLangRuntimeData>(&mut self, symbol_addr: usize, runtime: &mut GarnishLangRuntime<Data>)
+        -> GarnishLangRuntimeResult<bool>;
+    fn apply<Data: GarnishLangRuntimeData>(
         &mut self,
         external_value: usize,
         input_addr: usize,
