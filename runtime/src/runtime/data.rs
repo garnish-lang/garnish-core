@@ -1,66 +1,81 @@
-use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntimeResult, Instruction, InstructionData, RuntimeResult};
+use crate::{ExpressionData, ExpressionDataType, Instruction, InstructionData};
 
 pub trait GarnishLangRuntimeData {
+    type Error: ToString;
+
     fn new() -> Self;
 
-    fn set_end_of_constant(&mut self, addr: usize) -> GarnishLangRuntimeResult;
+    fn set_end_of_constant(&mut self, addr: usize) -> Result<(), Self::Error>;
     fn get_end_of_constant_data(&self) -> usize;
 
-    fn remove_non_constant_data(&mut self) -> GarnishLangRuntimeResult;
+    fn remove_non_constant_data(&mut self) -> Result<(), Self::Error>;
 
     fn get_data_len(&self) -> usize;
 
-    fn set_result(&mut self, result: Option<usize>) -> GarnishLangRuntimeResult;
+    fn set_result(&mut self, result: Option<usize>) -> Result<(), Self::Error>;
     fn get_result(&self) -> Option<usize>;
 
-    fn push_input(&mut self, addr: usize) -> GarnishLangRuntimeResult;
-    fn pop_input(&mut self) -> GarnishLangRuntimeResult<usize>;
-    fn get_input(&self, index: usize) -> GarnishLangRuntimeResult<usize>;
+    fn push_input(&mut self, addr: usize) -> Result<(), Self::Error>;
+    fn pop_input(&mut self) -> Result<usize, Self::Error>;
+    fn get_input(&self, index: usize) -> Result<usize, Self::Error>;
     fn get_input_count(&self) -> usize;
-    fn get_current_input(&self) -> GarnishLangRuntimeResult<usize>;
+    fn get_current_input(&self) -> Result<usize, Self::Error>;
 
-    fn get_data_type(&self, index: usize) -> GarnishLangRuntimeResult<ExpressionDataType>;
-    fn get_integer(&self, index: usize) -> GarnishLangRuntimeResult<i64>;
-    fn get_reference(&self, index: usize) -> GarnishLangRuntimeResult<usize>;
-    fn get_symbol(&self, index: usize) -> GarnishLangRuntimeResult<u64>;
-    fn get_expression(&self, index: usize) -> GarnishLangRuntimeResult<usize>;
-    fn get_external(&self, index: usize) -> GarnishLangRuntimeResult<usize>;
-    fn get_pair(&self, index: usize) -> GarnishLangRuntimeResult<(usize, usize)>;
-    fn get_list_len(&self, index: usize) -> GarnishLangRuntimeResult<usize>;
-    fn get_list_item(&self, list_index: usize, item_index: usize) -> GarnishLangRuntimeResult<usize>;
-    fn get_list_associations_len(&self, index: usize) -> GarnishLangRuntimeResult<usize>;
-    fn get_list_association(&self, list_index: usize, item_index: usize) -> GarnishLangRuntimeResult<usize>;
+    fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error>;
+    fn get_integer(&self, index: usize) -> Result<i64, Self::Error>;
+    fn get_reference(&self, index: usize) -> Result<usize, Self::Error>;
+    fn get_symbol(&self, index: usize) -> Result<u64, Self::Error>;
+    fn get_expression(&self, index: usize) -> Result<usize, Self::Error>;
+    fn get_external(&self, index: usize) -> Result<usize, Self::Error>;
+    fn get_pair(&self, index: usize) -> Result<(usize, usize), Self::Error>;
+    fn get_list_len(&self, index: usize) -> Result<usize, Self::Error>;
+    fn get_list_item(&self, list_index: usize, item_index: usize) -> Result<usize, Self::Error>;
+    fn get_list_associations_len(&self, index: usize) -> Result<usize, Self::Error>;
+    fn get_list_association(&self, list_index: usize, item_index: usize) -> Result<usize, Self::Error>;
 
-    fn add_integer(&mut self, value: i64) -> GarnishLangRuntimeResult<usize>;
-    fn add_reference(&mut self, value: usize) -> GarnishLangRuntimeResult<usize>;
-    fn add_symbol(&mut self, value: u64) -> GarnishLangRuntimeResult<usize>;
-    fn add_expression(&mut self, value: usize) -> GarnishLangRuntimeResult<usize>;
-    fn add_external(&mut self, value: usize) -> GarnishLangRuntimeResult<usize>;
-    fn add_pair(&mut self, value: (usize, usize)) -> GarnishLangRuntimeResult<usize>;
-    fn add_list(&mut self, value: Vec<usize>, associations: Vec<usize>) -> GarnishLangRuntimeResult<usize>;
-    fn add_unit(&mut self) -> GarnishLangRuntimeResult<usize>;
-    fn add_true(&mut self) -> GarnishLangRuntimeResult<usize>;
-    fn add_false(&mut self) -> GarnishLangRuntimeResult<usize>;
+    fn add_integer(&mut self, value: i64) -> Result<usize, Self::Error>;
+    fn add_reference(&mut self, value: usize) -> Result<usize, Self::Error>;
+    fn add_symbol(&mut self, value: u64) -> Result<usize, Self::Error>;
+    fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error>;
+    fn add_external(&mut self, value: usize) -> Result<usize, Self::Error>;
+    fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error>;
+    fn add_list(&mut self, value: Vec<usize>, associations: Vec<usize>) -> Result<usize, Self::Error>;
+    fn add_unit(&mut self) -> Result<usize, Self::Error>;
+    fn add_true(&mut self) -> Result<usize, Self::Error>;
+    fn add_false(&mut self) -> Result<usize, Self::Error>;
 
-    fn push_register(&mut self, addr: usize) -> GarnishLangRuntimeResult;
-    fn pop_register(&mut self) -> GarnishLangRuntimeResult<usize>;
+    fn push_register(&mut self, addr: usize) -> Result<(), Self::Error>;
+    fn pop_register(&mut self) -> Result<usize, Self::Error>;
 
-    fn push_instruction(&mut self, instruction: InstructionData) -> GarnishLangRuntimeResult;
-    fn get_instruction(&self, index: usize) -> GarnishLangRuntimeResult<&InstructionData>;
-    fn set_instruction_cursor(&mut self, index: usize) -> GarnishLangRuntimeResult;
-    fn advance_instruction_cursor(&mut self) -> GarnishLangRuntimeResult;
-    fn get_instruction_cursor(&self) -> GarnishLangRuntimeResult<usize>;
+    fn push_instruction(&mut self, instruction: InstructionData) -> Result<(), Self::Error>;
+    fn get_instruction(&self, index: usize) -> Result<&InstructionData, Self::Error>;
+    fn set_instruction_cursor(&mut self, index: usize) -> Result<(), Self::Error>;
+    fn advance_instruction_cursor(&mut self) -> Result<(), Self::Error>;
+    fn get_instruction_cursor(&self) -> Result<usize, Self::Error>;
     fn get_instruction_len(&self) -> usize;
 
-    fn push_jump_point(&mut self, index: usize) -> GarnishLangRuntimeResult;
-    fn get_jump_point(&self, index: usize) -> GarnishLangRuntimeResult<usize>;
+    fn push_jump_point(&mut self, index: usize) -> Result<(), Self::Error>;
+    fn get_jump_point(&self, index: usize) -> Result<usize, Self::Error>;
 
-    fn push_jump_path(&mut self, index: usize) -> GarnishLangRuntimeResult;
-    fn pop_jump_path(&mut self) -> GarnishLangRuntimeResult<usize>;
-    fn get_jump_path(&self, index: usize) -> GarnishLangRuntimeResult<usize>;
+    fn push_jump_path(&mut self, index: usize) -> Result<(), Self::Error>;
+    fn pop_jump_path(&mut self) -> Result<usize, Self::Error>;
+    fn get_jump_path(&self, index: usize) -> Result<usize, Self::Error>;
 
     // maybe temporary
-    fn add_data(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<usize>;
+    fn add_data(&mut self, data: ExpressionData) -> Result<usize, Self::Error>;
+}
+
+trait AsDataResult<T> {
+    fn as_result(self) -> Result<T, String>;
+}
+
+impl<T> AsDataResult<T> for Option<T> {
+    fn as_result(self) -> Result<T, String> {
+        match self {
+            None => Err(format!("No data found.")),
+            Some(v) => Ok(v),
+        }
+    }
 }
 
 pub struct SimpleRuntimeData {
@@ -76,9 +91,9 @@ pub struct SimpleRuntimeData {
 }
 
 impl SimpleRuntimeData {
-    pub fn get(&self, index: usize) -> GarnishLangRuntimeResult<&ExpressionData> {
+    pub fn get(&self, index: usize) -> Result<&ExpressionData, String> {
         match self.data.get(index) {
-            None => Err(error(format!("No data at addr {:?}", index))),
+            None => Err(format!("No data at addr {:?}", index)),
             Some(d) => Ok(d),
         }
     }
@@ -105,6 +120,8 @@ impl SimpleRuntimeData {
 }
 
 impl GarnishLangRuntimeData for SimpleRuntimeData {
+    type Error = String;
+
     fn new() -> Self {
         SimpleRuntimeData {
             register: vec![],
@@ -119,121 +136,121 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         }
     }
 
-    fn get_data_type(&self, index: usize) -> GarnishLangRuntimeResult<ExpressionDataType> {
+    fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error> {
         Ok(self.get(index)?.get_type())
     }
 
-    fn get_integer(&self, index: usize) -> GarnishLangRuntimeResult<i64> {
-        self.get(index)?.as_integer().as_runtime_result()
+    fn get_integer(&self, index: usize) -> Result<i64, Self::Error> {
+        self.get(index)?.as_integer()
     }
 
-    fn get_reference(&self, index: usize) -> GarnishLangRuntimeResult<usize> {
-        self.get(index)?.as_reference().as_runtime_result()
+    fn get_reference(&self, index: usize) -> Result<usize, Self::Error> {
+        self.get(index)?.as_reference()
     }
 
-    fn get_symbol(&self, index: usize) -> GarnishLangRuntimeResult<u64> {
-        self.get(index)?.as_symbol_value().as_runtime_result()
+    fn get_symbol(&self, index: usize) -> Result<u64, Self::Error> {
+        self.get(index)?.as_symbol_value()
     }
 
-    fn get_expression(&self, index: usize) -> GarnishLangRuntimeResult<usize> {
-        self.get(index)?.as_expression().as_runtime_result()
+    fn get_expression(&self, index: usize) -> Result<usize, Self::Error> {
+        self.get(index)?.as_expression()
     }
 
-    fn get_external(&self, index: usize) -> GarnishLangRuntimeResult<usize> {
-        self.get(index)?.as_external().as_runtime_result()
+    fn get_external(&self, index: usize) -> Result<usize, Self::Error> {
+        self.get(index)?.as_external()
     }
 
-    fn get_pair(&self, index: usize) -> GarnishLangRuntimeResult<(usize, usize)> {
-        self.get(index)?.as_pair().as_runtime_result()
+    fn get_pair(&self, index: usize) -> Result<(usize, usize), Self::Error> {
+        self.get(index)?.as_pair()
     }
 
-    fn get_list_len(&self, index: usize) -> GarnishLangRuntimeResult<usize> {
-        Ok(self.get(index)?.as_list().as_runtime_result()?.0.len())
+    fn get_list_len(&self, index: usize) -> Result<usize, Self::Error> {
+        Ok(self.get(index)?.as_list()?.0.len())
     }
 
-    fn get_list_item(&self, list_index: usize, item_index: usize) -> GarnishLangRuntimeResult<usize> {
-        match self.get(list_index)?.as_list().as_runtime_result()?.0.get(item_index) {
-            None => Err(error(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))),
+    fn get_list_item(&self, list_index: usize, item_index: usize) -> Result<usize, Self::Error> {
+        match self.get(list_index)?.as_list()?.0.get(item_index) {
+            None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index)),
             Some(v) => Ok(*v),
         }
     }
 
-    fn get_list_associations_len(&self, index: usize) -> GarnishLangRuntimeResult<usize> {
-        Ok(self.get(index)?.as_list().as_runtime_result()?.1.len())
+    fn get_list_associations_len(&self, index: usize) -> Result<usize, Self::Error> {
+        Ok(self.get(index)?.as_list()?.1.len())
     }
 
-    fn get_list_association(&self, list_index: usize, item_index: usize) -> GarnishLangRuntimeResult<usize> {
-        match self.get(list_index)?.as_list().as_runtime_result()?.1.get(item_index) {
-            None => Err(error(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))),
+    fn get_list_association(&self, list_index: usize, item_index: usize) -> Result<usize, Self::Error> {
+        match self.get(list_index)?.as_list()?.1.get(item_index) {
+            None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index)),
             Some(v) => Ok(*v),
         }
     }
 
-    fn add_integer(&mut self, value: i64) -> GarnishLangRuntimeResult<usize> {
+    fn add_integer(&mut self, value: i64) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::integer(value));
         Ok(self.data.len() - 1)
     }
 
-    fn add_reference(&mut self, value: usize) -> GarnishLangRuntimeResult<usize> {
+    fn add_reference(&mut self, value: usize) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::reference(value));
         Ok(self.data.len() - 1)
     }
 
-    fn add_symbol(&mut self, value: u64) -> GarnishLangRuntimeResult<usize> {
+    fn add_symbol(&mut self, value: u64) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::symbol(&"".to_string(), value));
         Ok(self.data.len() - 1)
     }
 
-    fn add_expression(&mut self, value: usize) -> GarnishLangRuntimeResult<usize> {
+    fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::expression(value));
         Ok(self.data.len() - 1)
     }
 
-    fn add_external(&mut self, value: usize) -> GarnishLangRuntimeResult<usize> {
+    fn add_external(&mut self, value: usize) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::external(value));
         Ok(self.data.len() - 1)
     }
 
-    fn add_pair(&mut self, value: (usize, usize)) -> GarnishLangRuntimeResult<usize> {
+    fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::pair(value.0, value.1));
         Ok(self.data.len() - 1)
     }
 
-    fn add_list(&mut self, value: Vec<usize>, associations: Vec<usize>) -> GarnishLangRuntimeResult<usize> {
+    fn add_list(&mut self, value: Vec<usize>, associations: Vec<usize>) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::list(value, associations));
         Ok(self.data.len() - 1)
     }
 
-    fn add_data(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<usize> {
+    fn add_data(&mut self, data: ExpressionData) -> Result<usize, Self::Error> {
         self.data.push(data);
         Ok(self.data.len() - 1)
     }
 
-    fn add_unit(&mut self) -> GarnishLangRuntimeResult<usize> {
+    fn add_unit(&mut self) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::unit());
         Ok(self.data.len() - 1)
     }
 
-    fn add_true(&mut self) -> GarnishLangRuntimeResult<usize> {
+    fn add_true(&mut self) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::boolean_true());
         Ok(self.data.len() - 1)
     }
 
-    fn add_false(&mut self) -> GarnishLangRuntimeResult<usize> {
+    fn add_false(&mut self) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::boolean_false());
         Ok(self.data.len() - 1)
     }
 
-    fn push_register(&mut self, addr: usize) -> GarnishLangRuntimeResult {
+    fn push_register(&mut self, addr: usize) -> Result<(), Self::Error> {
         self.register.push(addr);
         Ok(())
     }
 
-    fn pop_register(&mut self) -> GarnishLangRuntimeResult<usize> {
-        self.register.pop().as_runtime_result()
+    fn pop_register(&mut self) -> Result<usize, Self::Error> {
+        self.register.pop().as_result()
     }
 
-    fn set_end_of_constant(&mut self, addr: usize) -> GarnishLangRuntimeResult {
+    fn set_end_of_constant(&mut self, addr: usize) -> Result<(), Self::Error> {
         self.end_of_constant_data = addr;
         Ok(())
     }
@@ -242,7 +259,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.end_of_constant_data
     }
 
-    fn remove_non_constant_data(&mut self) -> GarnishLangRuntimeResult {
+    fn remove_non_constant_data(&mut self) -> Result<(), Self::Error> {
         self.data = Vec::from(&self.data[..self.end_of_constant_data]);
 
         Ok(())
@@ -252,7 +269,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.data.len()
     }
 
-    fn set_result(&mut self, result: Option<usize>) -> GarnishLangRuntimeResult {
+    fn set_result(&mut self, result: Option<usize>) -> Result<(), Self::Error> {
         self.current_result = result;
         Ok(())
     }
@@ -261,47 +278,47 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.current_result
     }
 
-    fn push_input(&mut self, addr: usize) -> GarnishLangRuntimeResult {
+    fn push_input(&mut self, addr: usize) -> Result<(), Self::Error> {
         self.inputs.push(addr);
         Ok(())
     }
 
-    fn pop_input(&mut self) -> GarnishLangRuntimeResult<usize> {
-        self.inputs.pop().as_runtime_result()
+    fn pop_input(&mut self) -> Result<usize, Self::Error> {
+        self.inputs.pop().as_result()
     }
 
-    fn get_input(&self, index: usize) -> GarnishLangRuntimeResult<usize> {
-        self.inputs.get(index).cloned().as_runtime_result()
+    fn get_input(&self, index: usize) -> Result<usize, Self::Error> {
+        self.inputs.get(index).cloned().as_result()
     }
 
     fn get_input_count(&self) -> usize {
         self.inputs.len()
     }
 
-    fn get_current_input(&self) -> GarnishLangRuntimeResult<usize> {
-        self.inputs.last().cloned().as_runtime_result()
+    fn get_current_input(&self) -> Result<usize, Self::Error> {
+        self.inputs.last().cloned().as_result()
     }
 
-    fn push_instruction(&mut self, instruction: InstructionData) -> GarnishLangRuntimeResult {
+    fn push_instruction(&mut self, instruction: InstructionData) -> Result<(), Self::Error> {
         self.instructions.push(instruction);
         Ok(())
     }
 
-    fn get_instruction(&self, index: usize) -> GarnishLangRuntimeResult<&InstructionData> {
-        self.instructions.get(index).as_runtime_result()
+    fn get_instruction(&self, index: usize) -> Result<&InstructionData, Self::Error> {
+        self.instructions.get(index).as_result()
     }
 
-    fn set_instruction_cursor(&mut self, index: usize) -> GarnishLangRuntimeResult {
+    fn set_instruction_cursor(&mut self, index: usize) -> Result<(), Self::Error> {
         self.instruction_cursor = index;
         Ok(())
     }
 
-    fn advance_instruction_cursor(&mut self) -> GarnishLangRuntimeResult {
+    fn advance_instruction_cursor(&mut self) -> Result<(), Self::Error> {
         self.instruction_cursor += 1;
         Ok(())
     }
 
-    fn get_instruction_cursor(&self) -> GarnishLangRuntimeResult<usize> {
+    fn get_instruction_cursor(&self) -> Result<usize, Self::Error> {
         Ok(self.instruction_cursor)
     }
 
@@ -309,33 +326,33 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.instructions.len()
     }
 
-    fn push_jump_point(&mut self, index: usize) -> GarnishLangRuntimeResult {
+    fn push_jump_point(&mut self, index: usize) -> Result<(), Self::Error> {
         if index >= self.instructions.len() {
-            return Err(error(format!(
+            return Err(format!(
                 "Specified jump point {:?} is out of bounds of instructions with length {:?}",
                 index,
                 self.instructions.len()
-            )));
+            ));
         }
 
         self.expression_table.push(index);
         Ok(())
     }
 
-    fn get_jump_point(&self, index: usize) -> GarnishLangRuntimeResult<usize> {
-        self.expression_table.get(index).cloned().as_runtime_result()
+    fn get_jump_point(&self, index: usize) -> Result<usize, Self::Error> {
+        self.expression_table.get(index).cloned().as_result()
     }
 
-    fn push_jump_path(&mut self, index: usize) -> GarnishLangRuntimeResult {
+    fn push_jump_path(&mut self, index: usize) -> Result<(), Self::Error> {
         self.jump_path.push(index);
         Ok(())
     }
 
-    fn pop_jump_path(&mut self) -> GarnishLangRuntimeResult<usize> {
-        self.jump_path.pop().as_runtime_result()
+    fn pop_jump_path(&mut self) -> Result<usize, Self::Error> {
+        self.jump_path.pop().as_result()
     }
 
-    fn get_jump_path(&self, index: usize) -> GarnishLangRuntimeResult<usize> {
-        self.jump_path.get(index).cloned().as_runtime_result()
+    fn get_jump_path(&self, index: usize) -> Result<usize, Self::Error> {
+        self.jump_path.get(index).cloned().as_result()
     }
 }

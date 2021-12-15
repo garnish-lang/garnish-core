@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
+use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
 
 use super::data::GarnishLangRuntimeData;
 
@@ -10,26 +10,28 @@ where
 {
     pub fn jump(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Jump | Data - {:?}", index);
-        self.data.set_instruction_cursor(self.data.get_jump_point(index)? - 1)
+        self.data
+            .set_instruction_cursor(self.data.get_jump_point(index).as_runtime_result()? - 1)
+            .as_runtime_result()
     }
 
     pub fn jump_if_true(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Execute Expression If True | Data - {:?}", index);
-        let point = self.data.get_jump_point(index)? - 1;
+        let point = self.data.get_jump_point(index).as_runtime_result()? - 1;
         let d = self.next_ref()?;
 
-        match self.data.get_data_type(d)? {
+        match self.data.get_data_type(d).as_runtime_result()? {
             ExpressionDataType::False | ExpressionDataType::Unit => {
                 trace!(
                     "Not jumping from value of type {:?} with addr {:?}",
-                    self.data.get_data_type(d)?,
+                    self.data.get_data_type(d).as_runtime_result()?,
                     self.get_data_len() - 1
                 );
             }
             // all other values are considered true
             t => {
                 trace!("Jumping from value of type {:?} with addr {:?}", t, self.get_data_len() - 1);
-                self.data.set_instruction_cursor(point)?
+                self.data.set_instruction_cursor(point).as_runtime_result()?
             }
         };
 
@@ -38,17 +40,17 @@ where
 
     pub fn jump_if_false(&mut self, index: usize) -> GarnishLangRuntimeResult {
         trace!("Instruction - Execute Expression If False | Data - {:?}", index);
-        let point = self.data.get_jump_point(index)? - 1;
+        let point = self.data.get_jump_point(index).as_runtime_result()? - 1;
         let d = self.next_ref()?;
 
-        match self.data.get_data_type(d)? {
+        match self.data.get_data_type(d).as_runtime_result()? {
             ExpressionDataType::False | ExpressionDataType::Unit => {
                 trace!(
                     "Jumping from value of type {:?} with addr {:?}",
-                    self.data.get_data_type(d)?,
+                    self.data.get_data_type(d).as_runtime_result()?,
                     self.get_data_len() - 1
                 );
-                self.data.set_instruction_cursor(point)?
+                self.data.set_instruction_cursor(point).as_runtime_result()?
             }
             t => {
                 trace!("Not jumping from value of type {:?} with addr {:?}", t, self.get_data_len() - 1);
@@ -64,11 +66,11 @@ where
             Err(_) => {
                 // no more jumps, this should be the end of the entire execution
                 let r = self.next_ref()?;
-                self.data.advance_instruction_cursor()?;
-                self.data.set_result(Some(self.addr_of_raw_data(r)?))?;
+                self.data.advance_instruction_cursor().as_runtime_result()?;
+                self.data.set_result(Some(self.addr_of_raw_data(r)?)).as_runtime_result()?;
             }
             Ok(jump_point) => {
-                self.data.set_instruction_cursor(jump_point)?;
+                self.data.set_instruction_cursor(jump_point).as_runtime_result()?;
             }
         }
 

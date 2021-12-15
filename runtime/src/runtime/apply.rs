@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
+use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
 
 use super::{context::GarnishLangRuntimeContext, data::GarnishLangRuntimeData};
 
@@ -17,11 +17,11 @@ where
         trace!("Instruction - Reapply | Data - {:?}", index);
 
         let right_addr = self.next_ref()?;
-        let point = self.data.get_jump_point(index)?;
+        let point = self.data.get_jump_point(index).as_runtime_result()?;
 
-        self.data.set_instruction_cursor(point - 1)?;
-        self.data.pop_input()?;
-        self.data.push_input(right_addr)
+        self.data.set_instruction_cursor(point - 1).as_runtime_result()?;
+        self.data.pop_input().as_runtime_result()?;
+        self.data.push_input(right_addr).as_runtime_result()
     }
 
     pub fn empty_apply<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
@@ -35,20 +35,22 @@ where
         let right_addr = self.next_ref()?;
         let left_addr = self.next_ref()?;
 
-        match self.data.get_data_type(left_addr)? {
+        match self.data.get_data_type(left_addr).as_runtime_result()? {
             ExpressionDataType::Expression => {
-                let expression_index = self.data.get_expression(left_addr)?;
+                let expression_index = self.data.get_expression(left_addr).as_runtime_result()?;
 
-                let next_instruction = self.data.get_jump_point(expression_index)?;
+                let next_instruction = self.data.get_jump_point(expression_index).as_runtime_result()?;
 
                 // Expression stores index of expression table, look up actual instruction index
 
-                self.data.push_jump_path(self.data.get_instruction_cursor()?)?;
-                self.data.set_instruction_cursor(next_instruction - 1)?;
-                self.data.push_input(right_addr)
+                self.data
+                    .push_jump_path(self.data.get_instruction_cursor().as_runtime_result()?)
+                    .as_runtime_result()?;
+                self.data.set_instruction_cursor(next_instruction - 1).as_runtime_result()?;
+                self.data.push_input(right_addr).as_runtime_result()
             }
             ExpressionDataType::External => {
-                let external_value = self.data.get_expression(left_addr)?;
+                let external_value = self.data.get_expression(left_addr).as_runtime_result()?;
 
                 match context {
                     None => self.push_unit(),
@@ -70,7 +72,7 @@ mod tests {
             context::{EmptyContext, GarnishLangRuntimeContext},
             data::GarnishLangRuntimeData,
         },
-        ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction,
+        ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction, RuntimeResult,
     };
 
     #[test]
@@ -258,8 +260,8 @@ mod tests {
             ) -> GarnishLangRuntimeResult<bool> {
                 assert_eq!(external_value, 3);
 
-                let value = match runtime.data.get_data_type(input_addr)? {
-                    ExpressionDataType::Integer => runtime.data.get_integer(input_addr)?,
+                let value = match runtime.data.get_data_type(input_addr).as_runtime_result()? {
+                    ExpressionDataType::Integer => runtime.data.get_integer(input_addr).as_runtime_result()?,
                     _ => return Ok(false),
                 };
 

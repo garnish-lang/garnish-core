@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, GarnishLangRuntime, GarnishLangRuntimeResult};
+use crate::{error, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
 
 use super::data::GarnishLangRuntimeData;
 
@@ -16,22 +16,24 @@ where
                 i,
                 self.data.get_end_of_constant_data()
             ))),
-            false => self.data.push_register(i),
+            false => self.data.push_register(i).as_runtime_result(),
         }
     }
 
     pub fn put_input(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Put Input");
 
-        self.data.push_register(self.data.get_current_input()?)
+        self.data
+            .push_register(self.data.get_current_input().as_runtime_result()?)
+            .as_runtime_result()
     }
 
     pub fn push_input(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - Push Input");
         let r = self.next_ref()?;
 
-        self.data.push_input(r)?;
-        self.data.set_result(Some(r))
+        self.data.push_input(r).as_runtime_result()?;
+        self.data.set_result(Some(r)).as_runtime_result()
     }
 
     pub fn put_result(&mut self) -> GarnishLangRuntimeResult {
@@ -39,7 +41,7 @@ where
 
         match self.data.get_result() {
             None => Err(error(format!("No result available to put reference."))),
-            Some(i) => self.data.push_register(i),
+            Some(i) => self.data.push_register(i).as_runtime_result(),
         }
     }
 
@@ -47,7 +49,7 @@ where
         trace!("Instruction - Output Result");
 
         let r = self.next_ref()?;
-        self.data.set_result(Some(r))
+        self.data.set_result(Some(r)).as_runtime_result()
     }
 }
 

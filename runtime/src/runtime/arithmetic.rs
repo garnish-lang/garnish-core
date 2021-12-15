@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult};
+use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
 
 use super::data::GarnishLangRuntimeData;
 
@@ -13,10 +13,13 @@ where
 
         let (right_addr, left_addr) = self.next_two_raw_ref()?;
 
-        match (self.data.get_data_type(left_addr)?, self.data.get_data_type(right_addr)?) {
+        match (
+            self.data.get_data_type(left_addr).as_runtime_result()?,
+            self.data.get_data_type(right_addr).as_runtime_result()?,
+        ) {
             (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                let left = self.data.get_integer(left_addr)?;
-                let right = self.data.get_integer(right_addr)?;
+                let left = self.data.get_integer(left_addr).as_runtime_result()?;
+                let right = self.data.get_integer(right_addr).as_runtime_result()?;
 
                 trace!("Performing {:?} + {:?}", left, right);
 

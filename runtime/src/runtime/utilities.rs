@@ -16,8 +16,8 @@ where
         let data = match data.get_type() {
             ExpressionDataType::Reference => {
                 let ref_addr = data.as_reference().as_runtime_result()?;
-                match self.data.get_data_type(ref_addr)? {
-                    ExpressionDataType::Reference => ExpressionData::reference(self.data.get_reference(ref_addr)?),
+                match self.data.get_data_type(ref_addr).as_runtime_result()? {
+                    ExpressionDataType::Reference => ExpressionData::reference(self.data.get_reference(ref_addr).as_runtime_result()?),
                     _ => data,
                 }
             }
@@ -29,12 +29,12 @@ where
         };
 
         let addr = self.data.get_data_len();
-        self.data.add_data(data.clone())?;
+        self.data.add_data(data.clone()).as_runtime_result()?;
         Ok(addr)
     }
 
     pub fn end_constant_data(&mut self) -> GarnishLangRuntimeResult {
-        self.data.set_end_of_constant(self.data.get_data_len())
+        self.data.set_end_of_constant(self.data.get_data_len()).as_runtime_result()
     }
 
     pub fn get_end_of_constant_data(&self) -> usize {
@@ -43,7 +43,7 @@ where
 
     pub fn add_data_ref(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<usize> {
         let addr = self.add_data(data)?;
-        self.data.push_register(addr).unwrap();
+        self.data.push_register(addr).as_runtime_result()?;
         Ok(addr)
     }
 
@@ -56,11 +56,11 @@ where
     }
 
     pub fn remove_non_constant_data(&mut self) -> GarnishLangRuntimeResult {
-        self.data.remove_non_constant_data()
+        self.data.remove_non_constant_data().as_runtime_result()
     }
 
     pub(crate) fn next_ref(&mut self) -> GarnishLangRuntimeResult<usize> {
-        self.data.pop_register()
+        self.data.pop_register().as_runtime_result()
     }
 
     pub(crate) fn next_two_raw_ref(&mut self) -> GarnishLangRuntimeResult<(usize, usize)> {
@@ -71,8 +71,8 @@ where
     }
 
     pub(crate) fn addr_of_raw_data(&self, addr: usize) -> GarnishLangRuntimeResult<usize> {
-        Ok(match self.data.get_data_type(addr)? {
-            ExpressionDataType::Reference => self.data.get_reference(addr)?,
+        Ok(match self.data.get_data_type(addr).as_runtime_result()? {
+            ExpressionDataType::Reference => self.data.get_reference(addr).as_runtime_result()?,
             _ => addr,
         })
     }
@@ -80,11 +80,11 @@ where
     // push utilities
 
     pub fn push_unit(&mut self) -> GarnishLangRuntimeResult {
-        self.data.add_unit().and_then(|v| self.data.push_register(v))
+        self.data.add_unit().and_then(|v| self.data.push_register(v)).as_runtime_result()
     }
 
     pub fn push_integer(&mut self, value: i64) -> GarnishLangRuntimeResult {
-        self.data.add_integer(value).and_then(|v| self.data.push_register(v))
+        self.data.add_integer(value).and_then(|v| self.data.push_register(v)).as_runtime_result()
     }
 
     pub fn push_boolean(&mut self, value: bool) -> GarnishLangRuntimeResult {
@@ -93,18 +93,28 @@ where
             false => self.data.add_false(),
         }
         .and_then(|v| self.data.push_register(v))
+        .as_runtime_result()
     }
 
     pub fn push_list(&mut self, list: Vec<usize>, associations: Vec<usize>) -> GarnishLangRuntimeResult {
-        self.data.add_list(list, associations).and_then(|v| self.data.push_register(v))
+        self.data
+            .add_list(list, associations)
+            .and_then(|v| self.data.push_register(v))
+            .as_runtime_result()
     }
 
     pub fn push_reference(&mut self, value: usize) -> GarnishLangRuntimeResult {
-        self.data.add_reference(value).and_then(|v| self.data.push_register(v))
+        self.data
+            .add_reference(value)
+            .and_then(|v| self.data.push_register(v))
+            .as_runtime_result()
     }
 
     pub fn push_pair(&mut self, left: usize, right: usize) -> GarnishLangRuntimeResult {
-        self.data.add_pair((left, right)).and_then(|v| self.data.push_register(v))
+        self.data
+            .add_pair((left, right))
+            .and_then(|v| self.data.push_register(v))
+            .as_runtime_result()
     }
 }
 

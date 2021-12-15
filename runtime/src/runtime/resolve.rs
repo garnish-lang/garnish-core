@@ -58,7 +58,7 @@ mod tests {
             context::{EmptyContext, GarnishLangRuntimeContext},
             data::GarnishLangRuntimeData,
         },
-        ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction,
+        ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction, RuntimeResult,
     };
 
     #[test]
@@ -159,13 +159,13 @@ mod tests {
                 sym_addr: usize,
                 runtime: &mut GarnishLangRuntime<Data>,
             ) -> GarnishLangRuntimeResult<bool> {
-                match runtime.data.get_data_type(sym_addr)? {
+                match runtime.data.get_data_type(sym_addr).as_runtime_result()? {
                     ExpressionDataType::Symbol => {
                         let addr = runtime.data.get_data_len();
-                        runtime.data.add_integer(100)?;
+                        runtime.data.add_integer(100).as_runtime_result()?;
                         let raddr = runtime.data.get_data_len();
                         runtime.push_reference(addr)?;
-                        runtime.data.push_register(raddr).unwrap();
+                        runtime.data.push_register(raddr).as_runtime_result()?;
                         Ok(true)
                     }
                     t => Err(error(format!("Address given to resolve is of type {:?}. Expected symbol type.", t)))?,

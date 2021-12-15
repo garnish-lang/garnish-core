@@ -13,9 +13,9 @@ mod utilities;
 pub use context::*;
 pub use data::{GarnishLangRuntimeData, SimpleRuntimeData};
 
-use crate::instruction::*;
 use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
 use crate::GarnishLangRuntimeInfo;
+use crate::{instruction::*, RuntimeResult};
 use log::trace;
 
 use self::context::GarnishLangRuntimeContext;
@@ -44,29 +44,31 @@ where
     }
 
     pub fn add_expression(&mut self, index: usize) -> GarnishLangRuntimeResult {
-        self.data.push_jump_point(index)
+        self.data.push_jump_point(index).as_runtime_result()
     }
 
     pub fn add_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> GarnishLangRuntimeResult {
-        self.data.push_instruction(InstructionData { instruction, data })
+        self.data.push_instruction(InstructionData { instruction, data }).as_runtime_result()
     }
 
     pub fn get_instruction(&self, i: usize) -> GarnishLangRuntimeResult<&InstructionData> {
-        self.data.get_instruction(i)
+        self.data.get_instruction(i).as_runtime_result()
     }
 
     pub fn get_current_instruction(&self) -> GarnishLangRuntimeResult<&InstructionData> {
-        self.data.get_instruction(self.data.get_instruction_cursor()?)
+        self.data
+            .get_instruction(self.data.get_instruction_cursor().as_runtime_result()?)
+            .as_runtime_result()
     }
 
     pub fn set_instruction_cursor(&mut self, i: usize) -> GarnishLangRuntimeResult {
-        self.data.set_instruction_cursor(i)
+        self.data.set_instruction_cursor(i).as_runtime_result()
     }
 
     pub fn add_input_reference(&mut self, reference: usize) -> GarnishLangRuntimeResult {
         match reference < self.data.get_data_len() {
             false => Err(error(format!("Input reference beyond bounds of data."))),
-            true => self.data.push_input(reference),
+            true => self.data.push_input(reference).as_runtime_result(),
         }
     }
 
@@ -75,12 +77,12 @@ where
     }
 
     pub fn clear_result(&mut self) -> GarnishLangRuntimeResult {
-        self.data.set_result(None)
+        self.data.set_result(None).as_runtime_result()
     }
 
     pub fn end_execution(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - End Execution");
-        self.data.set_instruction_cursor(self.data.get_instruction_len())?;
+        self.data.set_instruction_cursor(self.data.get_instruction_len()).as_runtime_result()?;
 
         Ok(())
     }
@@ -89,7 +91,10 @@ where
         &mut self,
         context: Option<&mut T>,
     ) -> GarnishLangRuntimeResult<GarnishLangRuntimeInfo> {
-        let instruction_data = self.data.get_instruction(self.data.get_instruction_cursor()?)?;
+        let instruction_data = self
+            .data
+            .get_instruction(self.data.get_instruction_cursor().as_runtime_result()?)
+            .as_runtime_result()?;
         match instruction_data.instruction {
             Instruction::PerformAddition => self.perform_addition()?,
             Instruction::PutInput => self.put_input()?,
@@ -134,10 +139,10 @@ where
     }
 
     fn advance_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeInfo> {
-        match self.data.get_instruction_cursor()? + 1 >= self.data.get_instruction_len() {
+        match self.data.get_instruction_cursor().as_runtime_result()? + 1 >= self.data.get_instruction_len() {
             true => Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::End)),
             false => {
-                self.data.advance_instruction_cursor()?;
+                self.data.advance_instruction_cursor().as_runtime_result()?;
                 Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::Running))
             }
         }
