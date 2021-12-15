@@ -66,7 +66,6 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        error,
         runtime::{
             context::{EmptyContext, GarnishLangRuntimeContext},
             data::GarnishLangRuntimeDataPool,
@@ -259,18 +258,12 @@ mod tests {
             ) -> GarnishLangRuntimeResult<bool> {
                 assert_eq!(external_value, 3);
 
-                let value = match runtime.get_data(input_addr) {
-                    None => Err(error(format!("Input address given to external apply doesn't have data.")))?,
-                    Some(data) => match data.get_type() {
-                        ExpressionDataType::Integer => match data.as_integer() {
-                            Err(e) => Err(error(e))?,
-                            Ok(i) => i * 2,
-                        },
-                        _ => return Ok(false),
-                    },
+                let value = match runtime.heap.get_data_type(input_addr)? {
+                    ExpressionDataType::Integer => runtime.heap.get_integer(input_addr)?,
+                    _ => return Ok(false),
                 };
 
-                runtime.push_integer(value)?;
+                runtime.push_integer(value * 2)?;
                 Ok(true)
             }
         }

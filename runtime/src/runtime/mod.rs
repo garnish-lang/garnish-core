@@ -10,15 +10,10 @@ mod put;
 mod resolve;
 
 pub use context::*;
-pub use data::SimpleRuntimeData;
+pub use data::{GarnishLangRuntimeDataPool, SimpleRuntimeData};
 
-use std::collections::HashMap;
-use std::vec;
-
-use crate::expression_data::*;
 use crate::instruction::*;
 use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
-use crate::runtime::data::GarnishLangRuntimeDataPool;
 use crate::GarnishLangRuntimeData;
 use log::trace;
 
@@ -27,16 +22,6 @@ use self::context::GarnishLangRuntimeContext;
 #[derive(Debug)]
 pub struct GarnishLangRuntime<Data> {
     heap: Data,
-    data: Vec<ExpressionData>,          //
-    end_of_constant_data: usize,        //
-    reference_stack: Vec<usize>,        //
-    instructions: Vec<InstructionData>, //
-    instruction_cursor: usize,          //
-    current_result: Option<usize>,      //
-    jump_path: Vec<usize>,              //
-    inputs: Vec<usize>,                 //
-    symbols: HashMap<String, u64>,      //
-    expression_table: Vec<usize>,       //
 }
 
 impl GarnishLangRuntime<SimpleRuntimeData> {
@@ -50,82 +35,47 @@ where
     Data: GarnishLangRuntimeDataPool,
 {
     pub fn new() -> Self {
-        GarnishLangRuntime {
-            heap: Data::new(),
-            data: vec![ExpressionData::unit()],
-            end_of_constant_data: 0,
-            reference_stack: vec![],
-            instructions: vec![InstructionData {
-                instruction: Instruction::EndExecution,
-                data: None,
-            }],
-            instruction_cursor: 1,
-            current_result: None,
-            jump_path: vec![],
-            inputs: vec![],
-            symbols: HashMap::new(),
-            expression_table: vec![],
-        }
+        GarnishLangRuntime { heap: Data::new() }
     }
 
     pub fn add_expression(&mut self, index: usize) -> GarnishLangRuntimeResult {
-        match index < self.instructions.len() {
-            false => Err(error(format!("No instruction at {:?} to register as expression.", index)))?,
-            true => {
-                self.expression_table.push(index);
-                Ok(())
-            }
-        }
+        self.heap.push_jump_point(index)
     }
 
     pub fn add_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> GarnishLangRuntimeResult {
-        self.instructions.push(InstructionData { instruction, data });
-        Ok(())
+        self.heap.push_instruction(InstructionData { instruction, data })
     }
 
-    pub fn get_instruction(&self, i: usize) -> Option<&InstructionData> {
-        self.instructions.get(i)
+    pub fn get_instruction(&self, i: usize) -> GarnishLangRuntimeResult<&InstructionData> {
+        self.heap.get_instruction(i)
     }
 
-    pub fn get_current_instruction(&self) -> Option<&InstructionData> {
-        self.instructions.get(self.instruction_cursor)
+    pub fn get_current_instruction(&self) -> GarnishLangRuntimeResult<&InstructionData> {
+        self.heap.get_instruction(self.heap.get_instruction_cursor()?)
     }
 
     pub fn set_instruction_cursor(&mut self, i: usize) -> GarnishLangRuntimeResult {
-        match i >= self.instructions.len() {
-            true => Err(error(format!("Instruction doesn't exist."))),
-            false => {
-                self.instruction_cursor = i;
-                Ok(())
-            }
-        }
+        self.heap.set_instruction_cursor(i)
     }
 
     pub fn add_input_reference(&mut self, reference: usize) -> GarnishLangRuntimeResult {
-        match reference < self.data.len() {
+        match reference < self.heap.get_data_len() {
             false => Err(error(format!("Input reference beyond bounds of data."))),
-            true => {
-                self.inputs.push(reference);
-                Ok(())
-            }
+            true => self.heap.push_input(reference),
         }
     }
 
-    pub fn get_result(&self) -> Option<&ExpressionData> {
-        match self.current_result {
-            None => None,
-            Some(i) => self.data.get(i),
-        }
+    pub fn get_result(&self) -> Option<usize> {
+        self.heap.get_result()
     }
 
     pub fn clear_result(&mut self) -> GarnishLangRuntimeResult {
-        self.current_result = None;
-        Ok(())
+        self.heap.set_result(None)
     }
 
     pub fn end_execution(&mut self) -> GarnishLangRuntimeResult {
         trace!("Instruction - End Execution");
-        self.instruction_cursor = self.instructions.len();
+        self.heap.set_instruction_cursor(self.heap.get_instruction_len())?;
 
         Ok(())
     }
@@ -134,57 +84,55 @@ where
         &mut self,
         context: Option<&mut T>,
     ) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
-        match self.instructions.get(self.instruction_cursor) {
-            None => Err(error(format!("No instructions left.")))?,
-            Some(instruction_data) => match instruction_data.instruction {
-                Instruction::PerformAddition => self.perform_addition()?,
-                Instruction::PutInput => self.put_input()?,
-                Instruction::PutResult => self.put_result()?,
-                Instruction::PushInput => self.push_input()?,
-                Instruction::PushResult => self.push_result()?,
-                Instruction::EndExpression => self.end_expression()?,
-                Instruction::EqualityComparison => self.equality_comparison()?,
-                Instruction::JumpIfTrue => match instruction_data.data {
-                    None => Err(error(format!("No address given with jump if true instruction.")))?,
-                    Some(i) => self.jump_if_true(i)?,
-                },
-                Instruction::JumpIfFalse => match instruction_data.data {
-                    None => Err(error(format!("No address given with jump if false instruction.")))?,
-                    Some(i) => self.jump_if_false(i)?,
-                },
-                Instruction::Put => match instruction_data.data {
-                    None => Err(error(format!("No address given with put instruction.")))?,
-                    Some(i) => self.put(i)?,
-                },
-                Instruction::EndExecution => self.end_execution()?,
-                Instruction::JumpTo => match instruction_data.data {
-                    None => Err(error(format!("No address given with jump instruction.")))?,
-                    Some(i) => self.jump(i)?,
-                },
-                Instruction::MakePair => self.make_pair()?,
-                Instruction::MakeList => match instruction_data.data {
-                    None => Err(error(format!("No address given with make list instruction.")))?,
-                    Some(i) => self.make_list(i)?,
-                },
-                Instruction::Apply => self.apply(context)?,
-                Instruction::EmptyApply => self.empty_apply(context)?,
-                Instruction::Reapply => match instruction_data.data {
-                    None => Err(error(format!("No address given with reapply instruction.")))?,
-                    Some(i) => self.reapply(i)?,
-                },
-                Instruction::Access => self.access()?,
-                Instruction::Resolve => self.resolve(context)?,
+        let instruction_data = self.heap.get_instruction(self.heap.get_instruction_cursor()?)?;
+        match instruction_data.instruction {
+            Instruction::PerformAddition => self.perform_addition()?,
+            Instruction::PutInput => self.put_input()?,
+            Instruction::PutResult => self.put_result()?,
+            Instruction::PushInput => self.push_input()?,
+            Instruction::PushResult => self.push_result()?,
+            Instruction::EndExpression => self.end_expression()?,
+            Instruction::EqualityComparison => self.equality_comparison()?,
+            Instruction::JumpIfTrue => match instruction_data.data {
+                None => Err(error(format!("No address given with jump if true instruction.")))?,
+                Some(i) => self.jump_if_true(i)?,
             },
-        }
+            Instruction::JumpIfFalse => match instruction_data.data {
+                None => Err(error(format!("No address given with jump if false instruction.")))?,
+                Some(i) => self.jump_if_false(i)?,
+            },
+            Instruction::Put => match instruction_data.data {
+                None => Err(error(format!("No address given with put instruction.")))?,
+                Some(i) => self.put(i)?,
+            },
+            Instruction::EndExecution => self.end_execution()?,
+            Instruction::JumpTo => match instruction_data.data {
+                None => Err(error(format!("No address given with jump instruction.")))?,
+                Some(i) => self.jump(i)?,
+            },
+            Instruction::MakePair => self.make_pair()?,
+            Instruction::MakeList => match instruction_data.data {
+                None => Err(error(format!("No address given with make list instruction.")))?,
+                Some(i) => self.make_list(i)?,
+            },
+            Instruction::Apply => self.apply(context)?,
+            Instruction::EmptyApply => self.empty_apply(context)?,
+            Instruction::Reapply => match instruction_data.data {
+                None => Err(error(format!("No address given with reapply instruction.")))?,
+                Some(i) => self.reapply(i)?,
+            },
+            Instruction::Access => self.access()?,
+            Instruction::Resolve => self.resolve(context)?,
+        };
 
         self.advance_instruction()
     }
 
     fn advance_instruction(&mut self) -> GarnishLangRuntimeResult<GarnishLangRuntimeData> {
-        match self.instruction_cursor + 1 >= self.instructions.len() {
+        match self.heap.get_instruction_cursor()? + 1 >= self.heap.get_instruction_len() {
             true => Ok(GarnishLangRuntimeData::new(GarnishLangRuntimeState::End)),
             false => {
-                self.instruction_cursor += 1;
+                self.heap.advance_instruction_cursor()?;
                 Ok(GarnishLangRuntimeData::new(GarnishLangRuntimeState::Running))
             }
         }
@@ -209,7 +157,7 @@ mod tests {
 
         assert_eq!(runtime.get_instruction(0).unwrap().instruction, Instruction::EndExecution);
         assert_eq!(runtime.get_data_len(), 1);
-        assert_eq!(runtime.get_data(0).unwrap().get_type(), ExpressionDataType::Unit);
+        assert_eq!(runtime.heap.get_data_type(0).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
@@ -219,8 +167,8 @@ mod tests {
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
         runtime.add_expression(1).unwrap();
 
-        assert_eq!(runtime.expression_table.len(), 1);
-        assert_eq!(*runtime.expression_table.get(0).unwrap(), 1);
+        assert_eq!(runtime.heap.get_jump_points().len(), 1);
+        assert_eq!(*runtime.heap.get_jump_points().get(0).unwrap(), 1);
     }
 
     #[test]
@@ -239,7 +187,7 @@ mod tests {
 
         runtime.add_instruction(Instruction::Put, Some(0)).unwrap();
 
-        assert_eq!(runtime.instructions.len(), 2);
+        assert_eq!(runtime.heap.get_instructions().len(), 2);
     }
 
     #[test]
@@ -249,7 +197,7 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_input_reference(0).unwrap();
 
-        assert_eq!(runtime.inputs.get(0).unwrap().to_owned(), 0);
+        assert_eq!(runtime.heap.get_input(0).unwrap().to_owned(), 0);
     }
 
     #[test]
@@ -261,7 +209,7 @@ mod tests {
 
         runtime.add_input_reference(addr).unwrap();
 
-        assert_eq!(runtime.inputs.get(0).unwrap().to_owned(), 2);
+        assert_eq!(runtime.heap.get_input(0).unwrap().to_owned(), 2);
     }
 
     #[test]
@@ -279,6 +227,8 @@ mod tests {
 
         runtime.add_instruction(Instruction::Put, None).unwrap();
 
+        runtime.heap.set_instruction_cursor(1).unwrap();
+
         assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::Put);
     }
 
@@ -288,6 +238,8 @@ mod tests {
 
         runtime.add_instruction(Instruction::Put, None).unwrap();
         runtime.add_instruction(Instruction::EndExpression, None).unwrap();
+
+        runtime.heap.set_instruction_cursor(1).unwrap();
 
         runtime.advance_instruction().unwrap();
 
@@ -319,7 +271,7 @@ mod tests {
 
         runtime.end_execution().unwrap();
 
-        assert_eq!(runtime.instruction_cursor, 4);
+        assert_eq!(runtime.heap.get_instruction_cursor().unwrap(), 4);
     }
 
     #[test]
@@ -333,7 +285,7 @@ mod tests {
 
         runtime.clear_result().unwrap();
 
-        assert!(runtime.current_result.is_none());
+        assert!(runtime.heap.get_result().is_none());
     }
 
     #[test]

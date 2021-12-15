@@ -159,19 +159,16 @@ mod tests {
                 sym_addr: usize,
                 runtime: &mut GarnishLangRuntime<Data>,
             ) -> GarnishLangRuntimeResult<bool> {
-                match runtime.get_data(sym_addr) {
-                    None => Err(error(format!("Symbol address, {:?}, given to resolve not found in runtime.", sym_addr)))?,
-                    Some(data) => match data.get_type() {
-                        ExpressionDataType::Symbol => {
-                            let addr = runtime.heap.get_data_len();
-                            runtime.heap.add_integer(100)?;
-                            let raddr = runtime.heap.get_data_len();
-                            runtime.push_reference(addr)?;
-                            runtime.heap.push_register(raddr).unwrap();
-                            Ok(true)
-                        }
-                        t => Err(error(format!("Address given to resolve is of type {:?}. Expected symbol type.", t)))?,
-                    },
+                match runtime.heap.get_data_type(sym_addr)? {
+                    ExpressionDataType::Symbol => {
+                        let addr = runtime.heap.get_data_len();
+                        runtime.heap.add_integer(100)?;
+                        let raddr = runtime.heap.get_data_len();
+                        runtime.push_reference(addr)?;
+                        runtime.heap.push_register(raddr).unwrap();
+                        Ok(true)
+                    }
+                    t => Err(error(format!("Address given to resolve is of type {:?}. Expected symbol type.", t)))?,
                 }
             }
 

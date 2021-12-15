@@ -23,12 +23,12 @@ where
                 trace!(
                     "Not jumping from value of type {:?} with addr {:?}",
                     self.heap.get_data_type(d)?,
-                    self.data.len() - 1
+                    self.get_data_len() - 1
                 );
             }
             // all other values are considered true
             t => {
-                trace!("Jumping from value of type {:?} with addr {:?}", t, self.data.len() - 1);
+                trace!("Jumping from value of type {:?} with addr {:?}", t, self.get_data_len() - 1);
                 self.heap.set_instruction_cursor(point)?
             }
         };
@@ -46,12 +46,12 @@ where
                 trace!(
                     "Jumping from value of type {:?} with addr {:?}",
                     self.heap.get_data_type(d)?,
-                    self.data.len() - 1
+                    self.get_data_len() - 1
                 );
                 self.heap.set_instruction_cursor(point)?
             }
             t => {
-                trace!("Not jumping from value of type {:?} with addr {:?}", t, self.data.len() - 1);
+                trace!("Not jumping from value of type {:?} with addr {:?}", t, self.get_data_len() - 1);
             }
         };
 
@@ -62,8 +62,10 @@ where
         trace!("Instruction - End Expression");
         match self.heap.pop_jump_path() {
             Err(_) => {
+                // no more jumps, this should be the end of the entire execution
+                let r = self.next_ref()?;
                 self.heap.advance_instruction_cursor()?;
-                self.heap.set_result(Some(self.addr_of_raw_data(self.heap.get_data_len() - 1)?))?;
+                self.heap.set_result(Some(self.addr_of_raw_data(r)?))?;
             }
             Ok(jump_point) => {
                 self.heap.set_instruction_cursor(jump_point)?;
@@ -93,6 +95,25 @@ mod tests {
 
         assert_eq!(runtime.heap.get_instruction_cursor().unwrap(), 2);
         assert_eq!(runtime.heap.get_integer(runtime.heap.get_result().unwrap()).unwrap(), 10);
+    }
+
+    #[test]
+    fn end_expression_last_register_is_result() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_data(ExpressionData::integer(30)).unwrap();
+        runtime.add_instruction(Instruction::Put, Some(1)).unwrap();
+
+        runtime.heap.set_instruction_cursor(1).unwrap();
+        runtime.heap.push_register(2).unwrap();
+        runtime.heap.set_result(Some(1)).unwrap();
+
+        runtime.end_expression().unwrap();
+
+        assert_eq!(runtime.heap.get_instruction_cursor().unwrap(), 2);
+        assert_eq!(runtime.heap.get_integer(runtime.heap.get_result().unwrap()).unwrap(), 20);
     }
 
     #[test]

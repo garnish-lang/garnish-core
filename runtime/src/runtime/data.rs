@@ -1,6 +1,6 @@
 // use log::trace;
 
-use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, InstructionData, RuntimeResult};
+use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction, InstructionData, RuntimeResult};
 
 pub trait GarnishLangRuntimeDataPool {
     fn new() -> Self;
@@ -50,6 +50,7 @@ pub trait GarnishLangRuntimeDataPool {
     fn set_instruction_cursor(&mut self, index: usize) -> GarnishLangRuntimeResult;
     fn advance_instruction_cursor(&mut self) -> GarnishLangRuntimeResult;
     fn get_instruction_cursor(&self) -> GarnishLangRuntimeResult<usize>;
+    fn get_instruction_len(&self) -> usize;
 
     fn push_jump_point(&mut self, index: usize) -> GarnishLangRuntimeResult;
     fn get_jump_point(&self, index: usize) -> GarnishLangRuntimeResult<usize>;
@@ -89,6 +90,18 @@ impl SimpleRuntimeData {
     pub fn get_jump_path_vec(&self) -> &Vec<usize> {
         &self.jump_path
     }
+
+    pub fn get_jump_points(&self) -> &Vec<usize> {
+        &self.expression_table
+    }
+
+    pub fn get_instructions(&self) -> &Vec<InstructionData> {
+        &self.instructions
+    }
+
+    pub fn get_data(&self) -> &Vec<ExpressionData> {
+        &self.data
+    }
 }
 
 impl GarnishLangRuntimeDataPool for SimpleRuntimeData {
@@ -100,7 +113,7 @@ impl GarnishLangRuntimeDataPool for SimpleRuntimeData {
             current_result: None,
             inputs: vec![],
             instruction_cursor: 0,
-            instructions: vec![],
+            instructions: vec![InstructionData::new(Instruction::EndExecution, None)],
             expression_table: vec![],
             jump_path: vec![],
         }
@@ -286,7 +299,19 @@ impl GarnishLangRuntimeDataPool for SimpleRuntimeData {
         Ok(self.instruction_cursor)
     }
 
+    fn get_instruction_len(&self) -> usize {
+        self.instructions.len()
+    }
+
     fn push_jump_point(&mut self, index: usize) -> GarnishLangRuntimeResult {
+        if index >= self.instructions.len() {
+            return Err(error(format!(
+                "Specified jump point {:?} is out of bounds of instructions with length {:?}",
+                index,
+                self.instructions.len()
+            )));
+        }
+
         self.expression_table.push(index);
         Ok(())
     }
@@ -313,26 +338,29 @@ impl<Data> GarnishLangRuntime<Data>
 where
     Data: GarnishLangRuntimeDataPool,
 {
+    pub fn get_data_pool(&self) -> &Data {
+        &self.heap
+    }
+
     pub fn add_data(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<usize> {
         // Check if give a reference of reference
         // flatten reference to point to non-Reference data
         let data = match data.get_type() {
-            ExpressionDataType::Reference => match self.data.get(data.as_reference().as_runtime_result()?) {
-                None => Err(error(format!("Reference given doesn't not exist in data.")))?,
-                Some(d) => match d.get_type() {
-                    ExpressionDataType::Reference => d.clone(),
+            ExpressionDataType::Reference => {
+                let ref_addr = data.as_reference().as_runtime_result()?;
+                match self.heap.get_data_type(ref_addr)? {
+                    ExpressionDataType::Reference => ExpressionData::reference(self.heap.get_reference(ref_addr)?),
                     _ => data,
-                },
-            },
+                }
+            }
             ExpressionDataType::Symbol => {
-                self.symbols.extend(data.symbols.clone());
+                // self.symbols.extend(data.symbols.clone());
                 data
             }
             _ => data,
         };
 
-        let addr = self.data.len();
-        self.data.push(data.clone());
+        let addr = self.heap.get_data_len();
         self.heap.add_data(data.clone())?;
         Ok(addr)
     }
@@ -345,33 +373,30 @@ where
         self.heap.get_end_of_constant_data()
     }
 
-    pub fn get_data(&self, index: usize) -> Option<&ExpressionData> {
-        self.data.get(index)
-    }
-
     pub fn add_data_ref(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<usize> {
         let addr = self.add_data(data)?;
-        self.reference_stack.push(addr);
+        self.heap.push_register(addr).unwrap();
         Ok(addr)
     }
 
     pub fn get_data_len(&self) -> usize {
-        self.data.len()
+        self.heap.get_data_len()
     }
 
     pub fn add_reference_data(&mut self, reference: usize) -> GarnishLangRuntimeResult<usize> {
         self.add_data(ExpressionData::reference(reference))
     }
 
-    pub fn remove_data(&mut self, from: usize) -> GarnishLangRuntimeResult {
-        match from < self.data.len() {
-            true => {
-                self.data = Vec::from(&self.data[..from]);
-                Ok(())
-            }
-            false => Err(error(format!("Given address is beyond data size."))),
-        }
-    }
+    // move to GarnishLangRuntimeDataPool trait
+    // pub fn remove_data(&mut self, from: usize) -> GarnishLangRuntimeResult {
+    //     match from < self.get_data_len() {
+    //         true => {
+    //             self.data = Vec::from(&self.data[..from]);
+    //             Ok(())
+    //         }
+    //         false => Err(error(format!("Given address is beyond data size."))),
+    //     }
+    // }
 
     pub(crate) fn next_ref(&mut self) -> GarnishLangRuntimeResult<usize> {
         self.heap.pop_register()
@@ -424,7 +449,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionData, GarnishLangRuntime, Instruction};
+    use crate::{runtime::data::GarnishLangRuntimeDataPool, ExpressionData, GarnishLangRuntime};
 
     #[test]
     fn add_data() {
@@ -432,7 +457,7 @@ mod tests {
 
         runtime.add_data(ExpressionData::integer(100)).unwrap();
 
-        assert_eq!(runtime.data.len(), 2);
+        assert_eq!(runtime.get_data_len(), 2);
     }
 
     #[test]
@@ -441,8 +466,8 @@ mod tests {
 
         runtime.add_data_ref(ExpressionData::integer(100)).unwrap();
 
-        assert_eq!(runtime.reference_stack, vec![1]);
-        assert_eq!(runtime.data.len(), 2);
+        assert_eq!(runtime.heap.get_register(), &vec![1]);
+        assert_eq!(runtime.get_data_len(), 2);
     }
 
     #[test]
@@ -452,7 +477,7 @@ mod tests {
         runtime.add_data(ExpressionData::integer(100)).unwrap();
         runtime.add_data(ExpressionData::integer(200)).unwrap();
 
-        assert_eq!(runtime.get_data(2).unwrap().as_integer().unwrap(), 200);
+        assert_eq!(runtime.heap.get_integer(2).unwrap(), 200);
     }
 
     #[test]
@@ -484,7 +509,7 @@ mod tests {
         runtime.add_data(ExpressionData::reference(1)).unwrap();
         runtime.add_data(ExpressionData::reference(2)).unwrap();
 
-        assert_eq!(runtime.data.get(3).unwrap().as_reference().unwrap(), 1);
+        assert_eq!(runtime.heap.get_reference(3).unwrap(), 1);
     }
 
     #[test]
@@ -494,59 +519,45 @@ mod tests {
         runtime.add_data(ExpressionData::integer(100)).unwrap();
         runtime.add_reference_data(0).unwrap();
 
-        assert_eq!(runtime.data.len(), 3);
+        assert_eq!(runtime.get_data_len(), 3);
     }
 
-    #[test]
-    fn add_symbol() {
-        let mut runtime = GarnishLangRuntime::simple();
+    // #[test]
+    // fn remove_data() {
+    //     let mut runtime = GarnishLangRuntime::simple();
 
-        runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
+    //     runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
+    //     runtime.add_data(ExpressionData::integer(10)).unwrap();
+    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
+    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
+    //     let addr = runtime.add_data(ExpressionData::integer(20)).unwrap();
+    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
+    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        let false_sym = runtime.symbols.get("false").unwrap();
-        let false_data = runtime.data.get(1).unwrap();
+    //     runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        assert_eq!(false_sym, &0);
-        assert_eq!(false_data.as_symbol_name().unwrap(), "false".to_string());
-        assert_eq!(false_data.as_symbol_value().unwrap(), 0u64);
-    }
+    //     runtime.remove_data(addr).unwrap();
 
-    #[test]
-    fn remove_data() {
-        let mut runtime = GarnishLangRuntime::simple();
+    //     assert_eq!(runtime.get_data_len(), 5);
+    // }
 
-        runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        let addr = runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+    // #[test]
+    // fn remove_data_out_of_bounds() {
+    //     let mut runtime = GarnishLangRuntime::simple();
 
-        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+    //     runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
+    //     runtime.add_data(ExpressionData::integer(10)).unwrap();
+    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
+    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
+    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
+    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.remove_data(addr).unwrap();
+    //     runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
-        assert_eq!(runtime.data.len(), 5);
-    }
+    //     let result = runtime.remove_data(10);
 
-    #[test]
-    fn remove_data_out_of_bounds() {
-        let mut runtime = GarnishLangRuntime::simple();
-
-        runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-
-        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
-
-        let result = runtime.remove_data(10);
-
-        assert!(result.is_err());
-    }
+    //     assert!(result.is_err());
+    // }
 }
 
 #[cfg(test)]
