@@ -207,70 +207,68 @@ mod tests {
 
 #[cfg(test)]
 mod internal {
-    // use crate::{ExpressionData, GarnishLangRuntime};
+    use crate::{ExpressionData, GarnishLangRuntime, GarnishLangRuntimeDataPool};
 
-    // #[test]
-    // fn next_ref_data() {
-    //     let mut runtime = GarnishLangRuntime::simple();
-    //     runtime.add_data(ExpressionData::integer(10)).unwrap();
-    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
+    #[test]
+    fn next_ref() {
+        let mut runtime = GarnishLangRuntime::simple();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-    //     runtime.reference_stack.push(2);
+        runtime.heap.push_register(2).unwrap();
 
-    //     let result = runtime.next_ref_data();
+        let result = runtime.next_ref().unwrap();
 
-    //     assert_eq!(result.unwrap().as_integer().unwrap(), 20);
-    // }
+        assert_eq!(result, 2);
+    }
 
-    // #[test]
-    // fn next_ref_data_no_ref_is_error() {
-    //     let mut runtime = GarnishLangRuntime::simple();
-    //     runtime.add_data(ExpressionData::integer(10)).unwrap();
-    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
+    #[test]
+    fn next_ref_data_no_ref_is_error() {
+        let mut runtime = GarnishLangRuntime::simple();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-    //     let result = runtime.next_ref_data();
+        let result = runtime.next_ref();
 
-    //     assert!(result.is_err());
-    // }
+        assert!(result.is_err());
+    }
 
-    // #[test]
-    // fn next_two_ref_data() {
-    //     let mut runtime = GarnishLangRuntime::simple();
-    //     runtime.add_data(ExpressionData::integer(10)).unwrap();
-    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
+    #[test]
+    fn next_two_ref_data() {
+        let mut runtime = GarnishLangRuntime::simple();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-    //     runtime.reference_stack.push(1);
-    //     runtime.reference_stack.push(2);
+        runtime.heap.push_register(1).unwrap();
+        runtime.heap.push_register(2).unwrap();
 
-    //     let result = runtime.next_two_ref_data();
+        let (first, second) = runtime.next_two_raw_ref().unwrap();
 
-    //     let (first, second) = result.unwrap();
+        assert_eq!(first, 2);
+        assert_eq!(second, 1);
+    }
 
-    //     assert_eq!(first.as_integer().unwrap(), 20);
-    //     assert_eq!(second.as_integer().unwrap(), 10);
-    // }
+    #[test]
+    fn next_two_ref_data_one_ref_is_error() {
+        let mut runtime = GarnishLangRuntime::simple();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-    // #[test]
-    // fn next_two_ref_data_one_ref_is_error() {
-    //     let mut runtime = GarnishLangRuntime::simple();
-    //     runtime.add_data(ExpressionData::integer(10)).unwrap();
-    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.heap.push_register(1).unwrap();
 
-    //     runtime.reference_stack.push(1);
+        let result = runtime.next_two_raw_ref();
 
-    //     let result = runtime.next_two_ref_data();
+        assert!(result.is_err());
+    }
 
-    //     assert!(result.is_err());
-    // }
+    #[test]
+    fn next_two_ref_data_zero_refs_is_error() {
+        let mut runtime = GarnishLangRuntime::simple();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-    // #[test]
-    // fn next_two_ref_data_zero_refs_is_error() {
-    //     let mut runtime = GarnishLangRuntime::simple();
-    //     runtime.add_data(ExpressionData::integer(10)).unwrap();
-    //     runtime.add_data(ExpressionData::integer(20)).unwrap();
+        let result = runtime.next_two_raw_ref();
 
-    //     let result = runtime.next_two_ref_data();
-
-    //     assert!(result.is_err());
-    // }
+        assert!(result.is_err());
+    }
 }
