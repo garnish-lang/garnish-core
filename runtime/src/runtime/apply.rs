@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
+use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, NestInto};
 
 use super::{context::GarnishLangRuntimeContext, data::GarnishLangRuntimeData};
 
@@ -8,49 +8,47 @@ impl<Data> GarnishLangRuntime<Data>
 where
     Data: GarnishLangRuntimeData,
 {
-    pub fn apply<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
+    pub fn apply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Apply");
         self.apply_internal(context)
     }
 
-    pub fn reapply(&mut self, index: usize) -> GarnishLangRuntimeResult {
+    pub fn reapply(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Reapply | Data - {:?}", index);
 
         let right_addr = self.next_ref()?;
-        let point = self.data.get_jump_point(index).as_runtime_result()?;
+        let point = self.data.get_jump_point(index).nest_into()?;
 
-        self.data.set_instruction_cursor(point - 1).as_runtime_result()?;
-        self.data.pop_input().as_runtime_result()?;
-        self.data.push_input(right_addr).as_runtime_result()
+        self.data.set_instruction_cursor(point - 1).nest_into()?;
+        self.data.pop_input().nest_into()?;
+        self.data.push_input(right_addr).nest_into()
     }
 
-    pub fn empty_apply<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
+    pub fn empty_apply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Empty Apply");
         self.push_unit()?;
 
         self.apply_internal(context)
     }
 
-    fn apply_internal<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
+    fn apply_internal<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
         let right_addr = self.next_ref()?;
         let left_addr = self.next_ref()?;
 
-        match self.data.get_data_type(left_addr).as_runtime_result()? {
+        match self.data.get_data_type(left_addr).nest_into()? {
             ExpressionDataType::Expression => {
-                let expression_index = self.data.get_expression(left_addr).as_runtime_result()?;
+                let expression_index = self.data.get_expression(left_addr).nest_into()?;
 
-                let next_instruction = self.data.get_jump_point(expression_index).as_runtime_result()?;
+                let next_instruction = self.data.get_jump_point(expression_index).nest_into()?;
 
                 // Expression stores index of expression table, look up actual instruction index
 
-                self.data
-                    .push_jump_path(self.data.get_instruction_cursor().as_runtime_result()?)
-                    .as_runtime_result()?;
-                self.data.set_instruction_cursor(next_instruction - 1).as_runtime_result()?;
-                self.data.push_input(right_addr).as_runtime_result()
+                self.data.push_jump_path(self.data.get_instruction_cursor().nest_into()?).nest_into()?;
+                self.data.set_instruction_cursor(next_instruction - 1).nest_into()?;
+                self.data.push_input(right_addr).nest_into()
             }
             ExpressionDataType::External => {
-                let external_value = self.data.get_expression(left_addr).as_runtime_result()?;
+                let external_value = self.data.get_expression(left_addr).nest_into()?;
 
                 match context {
                     None => self.push_unit(),
@@ -72,7 +70,7 @@ mod tests {
             context::{EmptyContext, GarnishLangRuntimeContext},
             data::GarnishLangRuntimeData,
         },
-        ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction, RuntimeResult,
+        ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
     };
 
     #[test]
@@ -247,21 +245,21 @@ mod tests {
 
         struct MyContext {}
 
-        impl GarnishLangRuntimeContext for MyContext {
-            fn resolve<Data: GarnishLangRuntimeData>(&mut self, _: usize, _: &mut GarnishLangRuntime<Data>) -> GarnishLangRuntimeResult<bool> {
+        impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
+            fn resolve(&mut self, _: usize, _: &mut GarnishLangRuntime<SimpleRuntimeData>) -> GarnishLangRuntimeResult<String, bool> {
                 Ok(false)
             }
 
-            fn apply<Data: GarnishLangRuntimeData>(
+            fn apply(
                 &mut self,
                 external_value: usize,
                 input_addr: usize,
-                runtime: &mut GarnishLangRuntime<Data>,
-            ) -> GarnishLangRuntimeResult<bool> {
+                runtime: &mut GarnishLangRuntime<SimpleRuntimeData>,
+            ) -> GarnishLangRuntimeResult<String, bool> {
                 assert_eq!(external_value, 3);
 
-                let value = match runtime.data.get_data_type(input_addr).as_runtime_result()? {
-                    ExpressionDataType::Integer => runtime.data.get_integer(input_addr).as_runtime_result()?,
+                let value = match runtime.data.get_data_type(input_addr).nest_into()? {
+                    ExpressionDataType::Integer => runtime.data.get_integer(input_addr).nest_into()?,
                     _ => return Ok(false),
                 };
 

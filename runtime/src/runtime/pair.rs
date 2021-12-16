@@ -8,7 +8,7 @@ impl<Data> GarnishLangRuntime<Data>
 where
     Data: GarnishLangRuntimeData,
 {
-    pub fn make_pair(&mut self) -> GarnishLangRuntimeResult {
+    pub fn make_pair(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Make Pair");
 
         let (right_addr, left_addr) = self.next_two_raw_ref()?;

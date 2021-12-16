@@ -1,6 +1,6 @@
 // use log::trace;
 
-use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeData, GarnishLangRuntimeResult, RuntimeResult};
+use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto};
 
 impl<Data> GarnishLangRuntime<Data>
 where
@@ -10,14 +10,17 @@ where
         &self.data
     }
 
-    pub fn add_data(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<usize> {
+    pub fn add_data(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<Data::Error, usize> {
         // Check if give a reference of reference
         // flatten reference to point to non-Reference data
         let data = match data.get_type() {
             ExpressionDataType::Reference => {
-                let ref_addr = data.as_reference().as_runtime_result()?;
-                match self.data.get_data_type(ref_addr).as_runtime_result()? {
-                    ExpressionDataType::Reference => ExpressionData::reference(self.data.get_reference(ref_addr).as_runtime_result()?),
+                let ref_addr = match data.as_reference() {
+                    Err(e) => Err(error(e))?,
+                    Ok(v) => v,
+                };
+                match self.data.get_data_type(ref_addr).nest_into()? {
+                    ExpressionDataType::Reference => ExpressionData::reference(self.data.get_reference(ref_addr).nest_into()?),
                     _ => data,
                 }
             }
@@ -29,21 +32,21 @@ where
         };
 
         let addr = self.data.get_data_len();
-        self.data.add_data(data.clone()).as_runtime_result()?;
+        self.data.add_data(data.clone()).nest_into()?;
         Ok(addr)
     }
 
-    pub fn end_constant_data(&mut self) -> GarnishLangRuntimeResult {
-        self.data.set_end_of_constant(self.data.get_data_len()).as_runtime_result()
+    pub fn end_constant_data(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
+        self.data.set_end_of_constant(self.data.get_data_len()).nest_into()
     }
 
     pub fn get_end_of_constant_data(&self) -> usize {
         self.data.get_end_of_constant_data()
     }
 
-    pub fn add_data_ref(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<usize> {
+    pub fn add_data_ref(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<Data::Error, usize> {
         let addr = self.add_data(data)?;
-        self.data.push_register(addr).as_runtime_result()?;
+        self.data.push_register(addr).nest_into()?;
         Ok(addr)
     }
 
@@ -51,70 +54,64 @@ where
         self.data.get_data_len()
     }
 
-    pub fn add_reference_data(&mut self, reference: usize) -> GarnishLangRuntimeResult<usize> {
+    pub fn add_reference_data(&mut self, reference: usize) -> GarnishLangRuntimeResult<Data::Error, usize> {
         self.add_data(ExpressionData::reference(reference))
     }
 
-    pub fn remove_non_constant_data(&mut self) -> GarnishLangRuntimeResult {
-        self.data.remove_non_constant_data().as_runtime_result()
+    pub fn remove_non_constant_data(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
+        self.data.remove_non_constant_data().nest_into()
     }
 
-    pub(crate) fn next_ref(&mut self) -> GarnishLangRuntimeResult<usize> {
-        self.data.pop_register().as_runtime_result()
+    pub(crate) fn next_ref(&mut self) -> GarnishLangRuntimeResult<Data::Error, usize> {
+        self.data.pop_register().nest_into()
     }
 
-    pub(crate) fn next_two_raw_ref(&mut self) -> GarnishLangRuntimeResult<(usize, usize)> {
+    pub(crate) fn next_two_raw_ref(&mut self) -> GarnishLangRuntimeResult<Data::Error, (usize, usize)> {
         let first_ref = self.next_ref()?;
         let second_ref = self.next_ref()?;
 
         Ok((self.addr_of_raw_data(first_ref)?, self.addr_of_raw_data(second_ref)?))
     }
 
-    pub(crate) fn addr_of_raw_data(&self, addr: usize) -> GarnishLangRuntimeResult<usize> {
-        Ok(match self.data.get_data_type(addr).as_runtime_result()? {
-            ExpressionDataType::Reference => self.data.get_reference(addr).as_runtime_result()?,
+    pub(crate) fn addr_of_raw_data(&self, addr: usize) -> GarnishLangRuntimeResult<Data::Error, usize> {
+        Ok(match self.data.get_data_type(addr).nest_into()? {
+            ExpressionDataType::Reference => self.data.get_reference(addr).nest_into()?,
             _ => addr,
         })
     }
 
     // push utilities
 
-    pub fn push_unit(&mut self) -> GarnishLangRuntimeResult {
-        self.data.add_unit().and_then(|v| self.data.push_register(v)).as_runtime_result()
+    pub fn push_unit(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
+        self.data.add_unit().and_then(|v| self.data.push_register(v)).nest_into()
     }
 
-    pub fn push_integer(&mut self, value: i64) -> GarnishLangRuntimeResult {
-        self.data.add_integer(value).and_then(|v| self.data.push_register(v)).as_runtime_result()
+    pub fn push_integer(&mut self, value: i64) -> GarnishLangRuntimeResult<Data::Error> {
+        self.data.add_integer(value).and_then(|v| self.data.push_register(v)).nest_into()
     }
 
-    pub fn push_boolean(&mut self, value: bool) -> GarnishLangRuntimeResult {
+    pub fn push_boolean(&mut self, value: bool) -> GarnishLangRuntimeResult<Data::Error> {
         match value {
             true => self.data.add_true(),
             false => self.data.add_false(),
         }
         .and_then(|v| self.data.push_register(v))
-        .as_runtime_result()
+        .nest_into()
     }
 
-    pub fn push_list(&mut self, list: Vec<usize>, associations: Vec<usize>) -> GarnishLangRuntimeResult {
+    pub fn push_list(&mut self, list: Vec<usize>, associations: Vec<usize>) -> GarnishLangRuntimeResult<Data::Error> {
         self.data
             .add_list(list, associations)
             .and_then(|v| self.data.push_register(v))
-            .as_runtime_result()
+            .nest_into()
     }
 
-    pub fn push_reference(&mut self, value: usize) -> GarnishLangRuntimeResult {
-        self.data
-            .add_reference(value)
-            .and_then(|v| self.data.push_register(v))
-            .as_runtime_result()
+    pub fn push_reference(&mut self, value: usize) -> GarnishLangRuntimeResult<Data::Error> {
+        self.data.add_reference(value).and_then(|v| self.data.push_register(v)).nest_into()
     }
 
-    pub fn push_pair(&mut self, left: usize, right: usize) -> GarnishLangRuntimeResult {
-        self.data
-            .add_pair((left, right))
-            .and_then(|v| self.data.push_register(v))
-            .as_runtime_result()
+    pub fn push_pair(&mut self, left: usize, right: usize) -> GarnishLangRuntimeResult<Data::Error> {
+        self.data.add_pair((left, right)).and_then(|v| self.data.push_register(v)).nest_into()
     }
 }
 

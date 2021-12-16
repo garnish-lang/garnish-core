@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
+use crate::{error, GarnishLangRuntime, GarnishLangRuntimeResult, NestInto};
 
 use super::data::GarnishLangRuntimeData;
 
@@ -8,7 +8,7 @@ impl<Data> GarnishLangRuntime<Data>
 where
     Data: GarnishLangRuntimeData,
 {
-    pub fn put(&mut self, i: usize) -> GarnishLangRuntimeResult {
+    pub fn put(&mut self, i: usize) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Put | Data - {:?}", i);
         match i >= self.data.get_end_of_constant_data() {
             true => Err(error(format!(
@@ -16,40 +16,38 @@ where
                 i,
                 self.data.get_end_of_constant_data()
             ))),
-            false => self.data.push_register(i).as_runtime_result(),
+            false => self.data.push_register(i).nest_into(),
         }
     }
 
-    pub fn put_input(&mut self) -> GarnishLangRuntimeResult {
+    pub fn put_input(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Put Input");
 
-        self.data
-            .push_register(self.data.get_current_input().as_runtime_result()?)
-            .as_runtime_result()
+        self.data.push_register(self.data.get_current_input().nest_into()?).nest_into()
     }
 
-    pub fn push_input(&mut self) -> GarnishLangRuntimeResult {
+    pub fn push_input(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Push Input");
         let r = self.next_ref()?;
 
-        self.data.push_input(r).as_runtime_result()?;
-        self.data.set_result(Some(r)).as_runtime_result()
+        self.data.push_input(r).nest_into()?;
+        self.data.set_result(Some(r)).nest_into()
     }
 
-    pub fn put_result(&mut self) -> GarnishLangRuntimeResult {
+    pub fn put_result(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Put Result");
 
         match self.data.get_result() {
             None => Err(error(format!("No result available to put reference."))),
-            Some(i) => self.data.push_register(i).as_runtime_result(),
+            Some(i) => self.data.push_register(i).nest_into(),
         }
     }
 
-    pub fn push_result(&mut self) -> GarnishLangRuntimeResult {
+    pub fn push_result(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Output Result");
 
         let r = self.next_ref()?;
-        self.data.set_result(Some(r)).as_runtime_result()
+        self.data.set_result(Some(r)).nest_into()
     }
 }
 

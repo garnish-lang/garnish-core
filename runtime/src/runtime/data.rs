@@ -1,7 +1,7 @@
 use crate::{ExpressionData, ExpressionDataType, Instruction, InstructionData};
 
 pub trait GarnishLangRuntimeData {
-    type Error: ToString;
+    type Error;
 
     fn new() -> Self;
 

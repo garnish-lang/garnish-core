@@ -2,25 +2,30 @@ use crate::{GarnishLangRuntime, GarnishLangRuntimeResult};
 
 use super::data::GarnishLangRuntimeData;
 
-pub trait GarnishLangRuntimeContext {
-    fn resolve<Data: GarnishLangRuntimeData>(&mut self, symbol_addr: usize, runtime: &mut GarnishLangRuntime<Data>)
-        -> GarnishLangRuntimeResult<bool>;
-    fn apply<Data: GarnishLangRuntimeData>(
+pub trait GarnishLangRuntimeContext<Data>
+where
+    Data: GarnishLangRuntimeData,
+{
+    fn resolve(&mut self, symbol_addr: usize, runtime: &mut GarnishLangRuntime<Data>) -> GarnishLangRuntimeResult<Data::Error, bool>;
+    fn apply(
         &mut self,
         external_value: usize,
         input_addr: usize,
         runtime: &mut GarnishLangRuntime<Data>,
-    ) -> GarnishLangRuntimeResult<bool>;
+    ) -> GarnishLangRuntimeResult<Data::Error, bool>;
 }
 
 pub struct EmptyContext {}
 
-impl GarnishLangRuntimeContext for EmptyContext {
-    fn resolve<Data>(&mut self, _: usize, _: &mut GarnishLangRuntime<Data>) -> GarnishLangRuntimeResult<bool> {
+impl<Data> GarnishLangRuntimeContext<Data> for EmptyContext
+where
+    Data: GarnishLangRuntimeData,
+{
+    fn resolve(&mut self, _: usize, _: &mut GarnishLangRuntime<Data>) -> GarnishLangRuntimeResult<Data::Error, bool> {
         Ok(false)
     }
 
-    fn apply<Data>(&mut self, _: usize, _: usize, _: &mut GarnishLangRuntime<Data>) -> GarnishLangRuntimeResult<bool> {
+    fn apply(&mut self, _: usize, _: usize, _: &mut GarnishLangRuntime<Data>) -> GarnishLangRuntimeResult<Data::Error, bool> {
         Ok(false)
     }
 }

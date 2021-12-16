@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
+use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, NestInto};
 
 use super::data::GarnishLangRuntimeData;
 
@@ -8,7 +8,7 @@ impl<Data> GarnishLangRuntime<Data>
 where
     Data: GarnishLangRuntimeData,
 {
-    pub fn make_list(&mut self, len: usize) -> GarnishLangRuntimeResult {
+    pub fn make_list(&mut self, len: usize) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Make List | Length - {:?}", len);
         let mut list = vec![];
         let mut associative_list = vec![];
@@ -16,11 +16,11 @@ where
         for _ in 0..len {
             let r = self.next_ref()?;
 
-            match self.data.get_data_type(r).as_runtime_result()? {
+            match self.data.get_data_type(r).nest_into()? {
                 ExpressionDataType::Pair => {
-                    let (left, _) = self.data.get_pair(r).as_runtime_result()?;
+                    let (left, _) = self.data.get_pair(r).nest_into()?;
 
-                    match self.data.get_data_type(left).as_runtime_result()? {
+                    match self.data.get_data_type(left).nest_into()? {
                         ExpressionDataType::Symbol => associative_list.push(r),
                         _ => (),
                     }
@@ -57,7 +57,7 @@ where
         self.push_list(list, ordered)
     }
 
-    pub fn access(&mut self) -> GarnishLangRuntimeResult {
+    pub fn access(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Access");
 
         let right_ref = self.next_ref()?;
@@ -69,37 +69,37 @@ where
         }
     }
 
-    pub(crate) fn get_access_addr(&self, sym: usize, list: usize) -> GarnishLangRuntimeResult<Option<usize>> {
+    pub(crate) fn get_access_addr(&self, sym: usize, list: usize) -> GarnishLangRuntimeResult<Data::Error, Option<usize>> {
         let sym_ref = self.addr_of_raw_data(sym)?;
         let list_ref = self.addr_of_raw_data(list)?;
 
         match (
-            self.data.get_data_type(list_ref).as_runtime_result()?,
-            self.data.get_data_type(sym_ref).as_runtime_result()?,
+            self.data.get_data_type(list_ref).nest_into()?,
+            self.data.get_data_type(sym_ref).nest_into()?,
         ) {
             (ExpressionDataType::List, ExpressionDataType::Symbol) => {
-                let sym_val = self.data.get_symbol(sym_ref).as_runtime_result()?;
+                let sym_val = self.data.get_symbol(sym_ref).nest_into()?;
 
-                let assocations_len = self.data.get_list_associations_len(list_ref).as_runtime_result()?;
+                let assocations_len = self.data.get_list_associations_len(list_ref).nest_into()?;
 
                 let mut i = sym_val as usize % assocations_len;
                 let mut count = 0;
 
                 loop {
                     // check to make sure item has same symbol
-                    let association_ref = self.data.get_list_association(list_ref, i).as_runtime_result()?;
+                    let association_ref = self.data.get_list_association(list_ref, i).nest_into()?;
                     let pair_ref = self.addr_of_raw_data(association_ref)?; // this should be a pair
 
                     // should have symbol on left
-                    match self.data.get_data_type(pair_ref).as_runtime_result()? {
+                    match self.data.get_data_type(pair_ref).nest_into()? {
                         ExpressionDataType::Pair => {
-                            let (left, right) = self.data.get_pair(pair_ref).as_runtime_result()?;
+                            let (left, right) = self.data.get_pair(pair_ref).nest_into()?;
 
                             let left_ref = self.addr_of_raw_data(left)?;
 
-                            match self.data.get_data_type(left_ref).as_runtime_result()? {
+                            match self.data.get_data_type(left_ref).nest_into()? {
                                 ExpressionDataType::Symbol => {
-                                    let v = self.data.get_symbol(left_ref).as_runtime_result()?;
+                                    let v = self.data.get_symbol(left_ref).nest_into()?;
 
                                     if v == sym_val {
                                         // found match

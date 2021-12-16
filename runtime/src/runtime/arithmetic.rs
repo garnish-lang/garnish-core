@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
+use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, NestInto};
 
 use super::data::GarnishLangRuntimeData;
 
@@ -8,18 +8,18 @@ impl<Data> GarnishLangRuntime<Data>
 where
     Data: GarnishLangRuntimeData,
 {
-    pub fn perform_addition(&mut self) -> GarnishLangRuntimeResult {
+    pub fn perform_addition(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Addition");
 
         let (right_addr, left_addr) = self.next_two_raw_ref()?;
 
         match (
-            self.data.get_data_type(left_addr).as_runtime_result()?,
-            self.data.get_data_type(right_addr).as_runtime_result()?,
+            self.data.get_data_type(left_addr).nest_into()?,
+            self.data.get_data_type(right_addr).nest_into()?,
         ) {
             (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                let left = self.data.get_integer(left_addr).as_runtime_result()?;
-                let right = self.data.get_integer(right_addr).as_runtime_result()?;
+                let left = self.data.get_integer(left_addr).nest_into()?;
+                let right = self.data.get_integer(right_addr).nest_into()?;
 
                 trace!("Performing {:?} + {:?}", left, right);
 

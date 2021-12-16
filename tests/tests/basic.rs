@@ -14,6 +14,8 @@ mod tests {
 
         instructions_from_ast(parsed.get_root(), parsed.get_nodes().clone(), &mut data).unwrap();
 
+        data.set_end_of_constant(data.get_data_len()).unwrap();
+
         data.set_instruction_cursor(1).unwrap();
 
         let mut runtime = GarnishLangRuntime::new_with_data(data);

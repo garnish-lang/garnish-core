@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, RuntimeResult};
+use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, NestInto};
 
 use super::data::GarnishLangRuntimeData;
 
@@ -8,49 +8,49 @@ impl<Data> GarnishLangRuntime<Data>
 where
     Data: GarnishLangRuntimeData,
 {
-    pub fn jump(&mut self, index: usize) -> GarnishLangRuntimeResult {
+    pub fn jump(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Jump | Data - {:?}", index);
         self.data
-            .set_instruction_cursor(self.data.get_jump_point(index).as_runtime_result()? - 1)
-            .as_runtime_result()
+            .set_instruction_cursor(self.data.get_jump_point(index).nest_into()? - 1)
+            .nest_into()
     }
 
-    pub fn jump_if_true(&mut self, index: usize) -> GarnishLangRuntimeResult {
+    pub fn jump_if_true(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Execute Expression If True | Data - {:?}", index);
-        let point = self.data.get_jump_point(index).as_runtime_result()? - 1;
+        let point = self.data.get_jump_point(index).nest_into()? - 1;
         let d = self.next_ref()?;
 
-        match self.data.get_data_type(d).as_runtime_result()? {
+        match self.data.get_data_type(d).nest_into()? {
             ExpressionDataType::False | ExpressionDataType::Unit => {
                 trace!(
                     "Not jumping from value of type {:?} with addr {:?}",
-                    self.data.get_data_type(d).as_runtime_result()?,
+                    self.data.get_data_type(d).nest_into()?,
                     self.get_data_len() - 1
                 );
             }
             // all other values are considered true
             t => {
                 trace!("Jumping from value of type {:?} with addr {:?}", t, self.get_data_len() - 1);
-                self.data.set_instruction_cursor(point).as_runtime_result()?
+                self.data.set_instruction_cursor(point).nest_into()?
             }
         };
 
         Ok(())
     }
 
-    pub fn jump_if_false(&mut self, index: usize) -> GarnishLangRuntimeResult {
+    pub fn jump_if_false(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Execute Expression If False | Data - {:?}", index);
-        let point = self.data.get_jump_point(index).as_runtime_result()? - 1;
+        let point = self.data.get_jump_point(index).nest_into()? - 1;
         let d = self.next_ref()?;
 
-        match self.data.get_data_type(d).as_runtime_result()? {
+        match self.data.get_data_type(d).nest_into()? {
             ExpressionDataType::False | ExpressionDataType::Unit => {
                 trace!(
                     "Jumping from value of type {:?} with addr {:?}",
-                    self.data.get_data_type(d).as_runtime_result()?,
+                    self.data.get_data_type(d).nest_into()?,
                     self.get_data_len() - 1
                 );
-                self.data.set_instruction_cursor(point).as_runtime_result()?
+                self.data.set_instruction_cursor(point).nest_into()?
             }
             t => {
                 trace!("Not jumping from value of type {:?} with addr {:?}", t, self.get_data_len() - 1);
@@ -60,17 +60,17 @@ where
         Ok(())
     }
 
-    pub fn end_expression(&mut self) -> GarnishLangRuntimeResult {
+    pub fn end_expression(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - End Expression");
         match self.data.pop_jump_path() {
             Err(_) => {
                 // no more jumps, this should be the end of the entire execution
                 let r = self.next_ref()?;
-                self.data.advance_instruction_cursor().as_runtime_result()?;
-                self.data.set_result(Some(self.addr_of_raw_data(r)?)).as_runtime_result()?;
+                self.data.advance_instruction_cursor().nest_into()?;
+                self.data.set_result(Some(self.addr_of_raw_data(r)?)).nest_into()?;
             }
             Ok(jump_point) => {
-                self.data.set_instruction_cursor(jump_point).as_runtime_result()?;
+                self.data.set_instruction_cursor(jump_point).nest_into()?;
             }
         }
 

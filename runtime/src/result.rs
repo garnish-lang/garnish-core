@@ -1,6 +1,6 @@
 use std::result::Result;
 
-pub type GarnishLangRuntimeResult<T = ()> = Result<T, GarnishLangRuntimeError>;
+pub type GarnishLangRuntimeResult<N, T = ()> = Result<T, GarnishLangRuntimeError<N>>;
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum GarnishLangRuntimeState {
@@ -13,11 +13,6 @@ pub struct GarnishLangRuntimeInfo {
     state: GarnishLangRuntimeState,
 }
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct GarnishLangRuntimeError {
-    message: String,
-}
-
 impl GarnishLangRuntimeInfo {
     pub fn new(state: GarnishLangRuntimeState) -> Self {
         return GarnishLangRuntimeInfo { state };
@@ -28,9 +23,27 @@ impl GarnishLangRuntimeInfo {
     }
 }
 
-impl GarnishLangRuntimeError {
+pub type GarnishLangRuntimeError<T> = NestedError<T>;
+
+pub fn error<E>(message: String) -> GarnishLangRuntimeError<E> {
+    GarnishLangRuntimeError::new(message)
+}
+
+pub trait NestInto<T, E> {
+    fn nest_into(self) -> NestableResult<T, E>;
+}
+
+pub type NestableResult<T, E> = Result<T, NestedError<E>>;
+
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub struct NestedError<T> {
+    message: String,
+    caused_by: Option<T>,
+}
+
+impl<T> NestedError<T> {
     pub fn new(message: String) -> Self {
-        return GarnishLangRuntimeError { message };
+        return GarnishLangRuntimeError { message, caused_by: None };
     }
 
     pub fn get_message(&self) -> &String {
@@ -38,41 +51,14 @@ impl GarnishLangRuntimeError {
     }
 }
 
-pub fn error(message: String) -> GarnishLangRuntimeError {
-    GarnishLangRuntimeError::new(message)
-}
-
-pub trait DropResult<T, F> {
-    fn drop(self) -> Result<(), F>;
-}
-
-impl<T, F> DropResult<T, F> for Result<T, F> {
-    fn drop(self) -> Result<(), F> {
-        self.and(Ok(()))
-    }
-}
-
-pub trait RuntimeResult<T> {
-    fn as_runtime_result(self) -> GarnishLangRuntimeResult<T>;
-}
-
-impl<T, F> RuntimeResult<T> for Result<T, F>
-where
-    F: ToString,
-{
-    fn as_runtime_result(self) -> GarnishLangRuntimeResult<T> {
+impl<T, E> NestInto<T, E> for Result<T, E> {
+    fn nest_into(self) -> NestableResult<T, E> {
         match self {
-            Err(e) => Err(error(e.to_string())),
+            Err(e) => Err(NestedError {
+                message: String::new(),
+                caused_by: Some(e),
+            }),
             Ok(v) => Ok(v),
-        }
-    }
-}
-
-impl<T> RuntimeResult<T> for Option<T> {
-    fn as_runtime_result(self) -> GarnishLangRuntimeResult<T> {
-        match self {
-            None => Err(error(format!("No value found"))),
-            Some(v) => Ok(v),
         }
     }
 }

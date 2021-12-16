@@ -8,7 +8,7 @@ impl<Data> GarnishLangRuntime<Data>
 where
     Data: GarnishLangRuntimeData,
 {
-    pub fn resolve<T: GarnishLangRuntimeContext>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult {
+    pub fn resolve<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Resolve");
         let addr = self.next_ref()?;
 
@@ -58,7 +58,7 @@ mod tests {
             context::{EmptyContext, GarnishLangRuntimeContext},
             data::GarnishLangRuntimeData,
         },
-        ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction, RuntimeResult,
+        ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
     };
 
     #[test]
@@ -153,31 +153,22 @@ mod tests {
 
         struct MyContext {}
 
-        impl GarnishLangRuntimeContext for MyContext {
-            fn resolve<Data: GarnishLangRuntimeData>(
-                &mut self,
-                sym_addr: usize,
-                runtime: &mut GarnishLangRuntime<Data>,
-            ) -> GarnishLangRuntimeResult<bool> {
-                match runtime.data.get_data_type(sym_addr).as_runtime_result()? {
+        impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
+            fn resolve(&mut self, sym_addr: usize, runtime: &mut GarnishLangRuntime<SimpleRuntimeData>) -> GarnishLangRuntimeResult<String, bool> {
+                match runtime.data.get_data_type(sym_addr).nest_into()? {
                     ExpressionDataType::Symbol => {
                         let addr = runtime.data.get_data_len();
-                        runtime.data.add_integer(100).as_runtime_result()?;
+                        runtime.data.add_integer(100).nest_into()?;
                         let raddr = runtime.data.get_data_len();
                         runtime.push_reference(addr)?;
-                        runtime.data.push_register(raddr).as_runtime_result()?;
+                        runtime.data.push_register(raddr).nest_into()?;
                         Ok(true)
                     }
                     t => Err(error(format!("Address given to resolve is of type {:?}. Expected symbol type.", t)))?,
                 }
             }
 
-            fn apply<Data: GarnishLangRuntimeData>(
-                &mut self,
-                _: usize,
-                _: usize,
-                _: &mut GarnishLangRuntime<Data>,
-            ) -> GarnishLangRuntimeResult<bool> {
+            fn apply(&mut self, _: usize, _: usize, _: &mut GarnishLangRuntime<SimpleRuntimeData>) -> GarnishLangRuntimeResult<String, bool> {
                 Ok(false)
             }
         }
