@@ -285,6 +285,8 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
     let mut should_create = true;
     let mut state = LexingState::NoToken;
 
+    let mut processor_instruction = None;
+
     for c in input.chars().chain(iter::once('\0')) {
         trace!("Character {:?} at ({:?}, {:?})", c, text_column, text_row);
         trace!("Current state: {:?}", state);
@@ -439,6 +441,12 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
                             LexerAnnotationProcessorInstruction::Drop => {
                                 state = LexingState::NoToken;
                             }
+                            LexerAnnotationProcessorInstruction::UntilToken => {
+                                // processor is given chance to consume token so we drop it here
+                                state = LexingState::NoToken;
+
+                                processor_instruction = Some(v);
+                            }
                             LexerAnnotationProcessorInstruction::NoOp => (),
                         },
                     }
@@ -455,6 +463,12 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
                         Ok(v) => match v.get_instruction() {
                             LexerAnnotationProcessorInstruction::Drop => {
                                 state = LexingState::NoToken;
+                            }
+                            LexerAnnotationProcessorInstruction::UntilToken => {
+                                // processor is given chance to consume token so we drop it here
+                                state = LexingState::NoToken;
+
+                                processor_instruction = Some(v);
                             }
                             LexerAnnotationProcessorInstruction::NoOp => (),
                         },
@@ -473,7 +487,8 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
         if start_new {
             if state != LexingState::NoToken {
                 trace!("Pushing new token: {:?}", current_token_type);
-                tokens.push(LexerToken::new(
+
+                let token = LexerToken::new(
                     current_characters,
                     match current_token_type {
                         Some(t) => t,
@@ -482,7 +497,28 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
                     token_start_row,
                     // actual token is determined after current, minus 1 to make accurate
                     token_start_column,
-                ));
+                );
+
+                // check for annotation processing before pushing token
+                match processor_instruction {
+                    None => {
+                        tokens.push(token);
+                    }
+                    Some(info) => match info.get_instruction() {
+                        // if yielding to processor, its assumed that the processor is taking ownership of the token
+                        LexerAnnotationProcessorInstruction::UntilToken => {
+                            // check now for borrow to happen before move to processor
+                            if token.get_token_type() == info.get_token_type() {
+                                // end yielding
+                                processor_instruction = None;
+                            }
+
+                            processor.yield_token(token).or_else(|e| Err(format!("{:?}", e.to_string())))?;
+                        }
+                        // no other instruction is supported at this point
+                        _ => tokens.push(token),
+                    },
+                }
             }
 
             // set default for new if next token isn't a symbol
