@@ -4,38 +4,6 @@ use log::trace;
 
 use crate::parser::*;
 
-#[derive(Debug, Eq, PartialEq, Clone)]
-pub struct InstructionSet {
-    instructions: Vec<InstructionData>,
-    data: Vec<ExpressionData>,
-    jump_table: Vec<usize>,
-}
-
-impl InstructionSet {
-    pub fn new() -> InstructionSet {
-        let mut data = vec![];
-        data.push(ExpressionData::unit());
-
-        InstructionSet {
-            instructions: vec![],
-            data,
-            jump_table: vec![],
-        }
-    }
-
-    pub fn get_instructions(&self) -> &Vec<InstructionData> {
-        &self.instructions
-    }
-
-    pub fn get_data(&self) -> &Vec<ExpressionData> {
-        &self.data
-    }
-
-    pub fn get_jump_table(&self) -> &Vec<usize> {
-        &self.jump_table
-    }
-}
-
 struct ResolveNodeInfo {
     node_index: Option<usize>,
     first_resolved: bool,
@@ -88,101 +56,126 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
     }
 }
 
-fn resolve_node(
+trait OrStringError<T> {
+    fn or_string(self) -> Result<T, String>;
+}
+
+impl<T, E: ToString> OrStringError<T> for Result<T, E> {
+    fn or_string(self) -> Result<T, String> {
+        match self {
+            Err(e) => Err(e.to_string()),
+            Ok(v) => Ok(v),
+        }
+    }
+}
+
+fn resolve_node<T: GarnishLangRuntimeData>(
     node: &ParseNode,
-    instructions: &mut Vec<InstructionData>,
-    data: &mut Vec<ExpressionData>,
+    data: &mut T,
     list_count: Option<&usize>,
     current_jump_index: usize,
 ) -> Result<(), String> {
     match node.get_definition() {
         Definition::Number => {
-            instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
+            data.push_instruction(InstructionData::new(Instruction::Put, Some(data.get_data_len())))
+                .or_string()?;
 
-            data.push(ExpressionData::integer(match node.get_lex_token().get_text().parse::<i64>() {
+            data.add_integer(match node.get_lex_token().get_text().parse::<i64>() {
                 Err(e) => Err(e.to_string())?,
                 Ok(i) => i,
-            }));
+            })
+            .or_string()?;
         }
         Definition::Identifier => {
-            instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
-            instructions.push(InstructionData::new(Instruction::Resolve, None));
+            data.push_instruction(InstructionData::new(Instruction::Put, Some(data.get_data_len())))
+                .or_string()?;
+            data.push_instruction(InstructionData::new(Instruction::Resolve, None)).or_string()?;
 
-            data.push(ExpressionData::symbol_from_string(node.get_lex_token().get_text()));
+            data.add_symbol(node.get_lex_token().get_text()).or_string()?;
         }
         Definition::Unit => {
             // all unit literals will use unit used in the zero element slot of data
-            instructions.push(InstructionData::new(Instruction::Put, Some(0)));
+            data.push_instruction(InstructionData::new(Instruction::Put, Some(0))).or_string()?;
         }
         Definition::Symbol => {
-            instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
+            data.push_instruction(InstructionData::new(Instruction::Put, Some(data.get_data_len())))
+                .or_string()?;
 
-            data.push(ExpressionData::symbol_from_string(&node.get_lex_token().get_text()[1..].to_string()));
+            data.add_symbol(&node.get_lex_token().get_text()[1..].to_string()).or_string()?;
         }
         Definition::Input => {
             // all unit literals will use unit used in the zero element slot of data
-            instructions.push(InstructionData::new(Instruction::PutInput, None));
+            data.push_instruction(InstructionData::new(Instruction::PutInput, None)).or_string()?;
         }
         Definition::True => {
-            instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
-            data.push(ExpressionData::boolean_true());
+            data.push_instruction(InstructionData::new(Instruction::Put, Some(data.get_data_len())))
+                .or_string()?;
+            data.add_true().or_string()?;
         }
         Definition::False => {
-            instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
-            data.push(ExpressionData::boolean_false());
+            data.push_instruction(InstructionData::new(Instruction::Put, Some(data.get_data_len())))
+                .or_string()?;
+            data.add_false().or_string()?;
         }
         Definition::Result => {
             // all unit literals will use unit used in the zero element slot of data
-            instructions.push(InstructionData::new(Instruction::PutResult, None));
+            data.push_instruction(InstructionData::new(Instruction::PutResult, None)).or_string()?;
         }
         Definition::AbsoluteValue => todo!(), // not currently in runtime
         Definition::EmptyApply => {
-            instructions.push(InstructionData::new(Instruction::EmptyApply, None));
+            data.push_instruction(InstructionData::new(Instruction::EmptyApply, None)).or_string()?;
         }
         Definition::Addition => {
-            instructions.push(InstructionData::new(Instruction::PerformAddition, None));
+            data.push_instruction(InstructionData::new(Instruction::PerformAddition, None))
+                .or_string()?;
         }
         Definition::Equality => {
-            instructions.push(InstructionData::new(Instruction::EqualityComparison, None));
+            data.push_instruction(InstructionData::new(Instruction::EqualityComparison, None))
+                .or_string()?;
         }
         Definition::Pair => {
-            instructions.push(InstructionData::new(Instruction::MakePair, None));
+            data.push_instruction(InstructionData::new(Instruction::MakePair, None)).or_string()?;
         }
         Definition::Access => {
-            instructions.push(InstructionData::new(Instruction::Access, None));
+            data.push_instruction(InstructionData::new(Instruction::Access, None)).or_string()?;
         }
         Definition::List => match list_count {
             None => Err(format!("No list count passed to list node resolve."))?,
             Some(count) => {
-                instructions.push(InstructionData::new(Instruction::MakeList, Some(*count)));
+                data.push_instruction(InstructionData::new(Instruction::MakeList, Some(*count)))
+                    .or_string()?;
             }
         },
         Definition::Subexpression => {
-            instructions.push(InstructionData::new(Instruction::PushResult, None));
+            data.push_instruction(InstructionData::new(Instruction::PushResult, None)).or_string()?;
         }
         Definition::Group => (), // no additional instructions for groups
         Definition::NestedExpression => {
-            instructions.push(InstructionData::new(Instruction::Put, Some(data.len())));
+            data.push_instruction(InstructionData::new(Instruction::Put, Some(data.get_data_len())))
+                .or_string()?;
 
-            data.push(ExpressionData::expression(current_jump_index));
+            data.add_expression(current_jump_index).or_string()?;
         }
         Definition::Apply => {
-            instructions.push(InstructionData::new(Instruction::Apply, None));
+            data.push_instruction(InstructionData::new(Instruction::Apply, None)).or_string()?;
         }
         Definition::ApplyTo => {
-            instructions.push(InstructionData::new(Instruction::Apply, None));
+            data.push_instruction(InstructionData::new(Instruction::Apply, None)).or_string()?;
         }
         Definition::Reapply => {
-            instructions.push(InstructionData::new(Instruction::Reapply, None));
+            data.push_instruction(InstructionData::new(Instruction::Reapply, None)).or_string()?;
         }
         Definition::ApplyIfTrue => {
-            instructions.push(InstructionData::new(Instruction::JumpIfTrue, Some(current_jump_index)));
+            data.push_instruction(InstructionData::new(Instruction::JumpIfTrue, Some(current_jump_index)))
+                .or_string()?;
         }
         Definition::ApplyIfFalse => {
-            instructions.push(InstructionData::new(Instruction::JumpIfFalse, Some(current_jump_index)));
+            data.push_instruction(InstructionData::new(Instruction::JumpIfFalse, Some(current_jump_index)))
+                .or_string()?;
         }
         Definition::DefaultConditional => {
-            instructions.push(InstructionData::new(Instruction::JumpTo, Some(current_jump_index)));
+            data.push_instruction(InstructionData::new(Instruction::JumpTo, Some(current_jump_index)))
+                .or_string()?;
         }
         Definition::ConditionalBranch => (), // no additional instructions
         // no runtime meaning, parser only utility
@@ -192,11 +185,7 @@ fn resolve_node(
     Ok(())
 }
 
-pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<InstructionSet, String> {
-    let mut instruction_set = InstructionSet::new();
-
-    // let mut making_list =
-
+pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<ParseNode>, data: &mut T) -> Result<(), String> {
     let mut root_stack = vec![(root, Instruction::EndExpression, None)];
 
     // since we will be popping and pushing values from root_stack
@@ -215,7 +204,9 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
         let mut stack = vec![ResolveNodeInfo::new(Some(root_index), Definition::Drop)];
 
         // push start of this expression to jump table
-        instruction_set.jump_table.push(instruction_set.instructions.len());
+        let jump_point = data.get_instruction_len();
+        let jump_index = data.get_jump_point_count();
+        data.push_jump_point(0).or_string()?; // updated down below
 
         // limit, maximum times a node is visited is 3
         // so limit to 3 times node count should allow for more than enough
@@ -262,10 +253,11 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                 if we_are_parent_conditional_branch || we_are_non_chained_conditional {
                                     trace!(
                                         "Starting new conditional branch. Return slot in jump table {:?}",
-                                        instruction_set.jump_table.len()
+                                        data.get_jump_point_count()
                                     );
-                                    conditional_stack.push(instruction_set.jump_table.len());
-                                    instruction_set.jump_table.push(0); // this will be updated when conditional branch nod resolves
+                                    let i = data.get_jump_point_count();
+                                    data.push_jump_point(0).or_string()?; // this will be updated when conditional branch nod resolves
+                                    conditional_stack.push(i);
                                     jump_count += 1;
                                 }
 
@@ -285,7 +277,7 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                 if node.get_definition() == Definition::Subexpression {
                                     trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
 
-                                    resolve_node(node, &mut instruction_set.instructions, &mut instruction_set.data, None, 0)?;
+                                    resolve_node(node, data, None, 0)?;
                                     resolve_node_info.resolved = true;
                                 }
 
@@ -321,13 +313,7 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                 if resolve {
                                     trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
 
-                                    resolve_node(
-                                        node,
-                                        &mut instruction_set.instructions,
-                                        &mut instruction_set.data,
-                                        list_counts.last(),
-                                        jump_count,
-                                    )?;
+                                    resolve_node(node, data, list_counts.last(), jump_count)?;
                                 }
 
                                 // after resolving, if a nested expression
@@ -338,6 +324,7 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
                                         None => Err(format!("Conditional stack empty when attempting to resolve conditional."))?,
                                         // apply if true/false resolve fully before the parent conditional branch
                                         // second look up to get accurate value instruction data will happen when this instruction is placed
+                                        // add 1 to account for current base jump
                                         Some(return_index) => (Instruction::JumpTo, Some(*return_index)),
                                     };
                                     trace!(
@@ -349,20 +336,21 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
 
                                 // if conditional branch, need to update jump table and pop from conditional stack
                                 if we_are_parent_conditional_branch || we_are_non_chained_conditional {
+                                    let count = data.get_instruction_len();
                                     match conditional_stack.pop() {
                                         None => Err(format!("End of conditional branch and conditional stack is empty."))?,
-                                        Some(jump_index) => match instruction_set.jump_table.get_mut(jump_index) {
-                                            None => Err(format!(
+                                        Some(jump_index) => match data.get_jump_point_mut(jump_index) {
+                                            Err(_) => Err(format!(
                                                 "No value in jump table at index {:?} to update for conditional branch.",
                                                 jump_index
                                             ))?,
-                                            Some(jump_value) => {
+                                            Ok(jump_value) => {
                                                 trace!(
                                                     "Updating jump table at index {:?} to {:?} for conditional branch.",
                                                     jump_index,
                                                     *jump_value
                                                 );
-                                                *jump_value = instruction_set.instructions.len();
+                                                *jump_value = count;
                                             }
                                         },
                                     }
@@ -420,9 +408,8 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
 
         trace!("Adding return instruction {:?} with data {:?}", return_instruction, instruction_data);
 
-        instruction_set
-            .instructions
-            .push(InstructionData::new(return_instruction, instruction_data));
+        data.push_instruction(InstructionData::new(return_instruction, instruction_data))
+            .or_string()?;
 
         trace!("Finished instructions for tree starting at index {:?}", root_index);
 
@@ -431,9 +418,11 @@ pub fn instructions_from_ast(root: usize, nodes: Vec<ParseNode>) -> Result<Instr
         if root_iter_count > max_roots {
             return Err(format!("Max iterations for roots reached."));
         }
+
+        data.get_jump_point_mut(jump_index).and_then(|i| Ok(*i = jump_point)).or_string()?;
     }
 
-    Ok(instruction_set)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -442,13 +431,15 @@ mod test_utils {
     use garnish_lang_runtime::*;
     use std::iter;
 
+    use super::OrStringError;
+
     pub fn assert_instruction_data(
         root: usize,
         nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
         expected_instructions: Vec<(Instruction, Option<usize>)>,
         expected_data: Vec<ExpressionData>,
     ) {
-        assert_instruction_data_jumps(root, nodes, expected_instructions, expected_data, vec![0]);
+        assert_instruction_data_jumps(root, nodes, expected_instructions, expected_data, vec![1]);
     }
 
     pub fn assert_instruction_data_jumps(
@@ -459,6 +450,9 @@ mod test_utils {
         expected_jumps: Vec<usize>,
     ) {
         let expected_instructions: Vec<InstructionData> = expected_instructions.iter().map(|i| InstructionData::new(i.0, i.1)).collect();
+        let expected_instructions: Vec<InstructionData> = iter::once(InstructionData::new(Instruction::EndExecution, None))
+            .chain(expected_instructions.into_iter())
+            .collect();
 
         let expected_data: Vec<ExpressionData> = iter::once(ExpressionData::unit()).chain(expected_data.into_iter()).collect();
 
@@ -466,19 +460,23 @@ mod test_utils {
 
         assert_eq!(result.get_instructions().clone(), expected_instructions);
         assert_eq!(result.get_data(), &expected_data);
-        assert_eq!(result.get_jump_table(), &expected_jumps);
+        assert_eq!(result.get_jump_points(), &expected_jumps);
     }
 
     pub fn get_instruction_data(
         root: usize,
         nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
-    ) -> Result<InstructionSet, String> {
+    ) -> Result<SimpleRuntimeData, String> {
         let nodes: Vec<ParseNode> = nodes
             .iter()
             .map(|v| ParseNode::new(v.0, v.1, v.2, v.3, LexerToken::new(v.4.to_string(), v.5, 0, 0)))
             .collect();
 
-        instructions_from_ast(root, nodes)
+        let mut data = SimpleRuntimeData::new();
+
+        instructions_from_ast(root, nodes, &mut data).or_string()?;
+
+        Ok(data)
     }
 }
 
@@ -964,7 +962,7 @@ mod nested_expressions {
                 (Instruction::EndExpression, None),
             ],
             vec![ExpressionData::expression(1), ExpressionData::integer(5), ExpressionData::integer(10)],
-            vec![0, 2],
+            vec![1, 3],
         );
     }
 
@@ -995,7 +993,7 @@ mod nested_expressions {
                 ExpressionData::integer(5),
                 ExpressionData::integer(10),
             ],
-            vec![0, 4, 6],
+            vec![1, 5, 7],
         );
     }
 
@@ -1035,7 +1033,7 @@ mod nested_expressions {
                 ExpressionData::expression(3),
                 ExpressionData::integer(15),
             ],
-            vec![0, 2, 6, 10],
+            vec![1, 3, 7, 11],
         );
     }
 }
@@ -1063,7 +1061,7 @@ mod conditionals {
                 (Instruction::JumpTo, Some(1)),
             ],
             vec![ExpressionData::integer(5), ExpressionData::integer(10)],
-            vec![0, 2, 3],
+            vec![1, 3, 4],
         );
     }
 
@@ -1084,7 +1082,7 @@ mod conditionals {
                 (Instruction::JumpTo, Some(1)),
             ],
             vec![ExpressionData::integer(5), ExpressionData::integer(10)],
-            vec![0, 2, 3],
+            vec![1, 3, 4],
         );
     }
 
@@ -1118,7 +1116,7 @@ mod conditionals {
                 ExpressionData::integer(10),
                 ExpressionData::integer(20),
             ],
-            vec![0, 4, 5, 7],
+            vec![1, 5, 6, 8],
         );
     }
 
@@ -1152,7 +1150,7 @@ mod conditionals {
                 (Instruction::JumpTo, Some(1)),
             ],
             vec![ExpressionData::integer(5), ExpressionData::integer(10), ExpressionData::integer(15)],
-            vec![0, 3, 4, 6],
+            vec![1, 4, 5, 7],
         );
     }
 
@@ -1200,7 +1198,7 @@ mod conditionals {
                 ExpressionData::integer(20),
                 ExpressionData::integer(30),
             ],
-            vec![0, 6, 7, 9, 11],
+            vec![1, 7, 8, 10, 12],
         );
     }
 }

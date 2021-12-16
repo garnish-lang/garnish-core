@@ -9,25 +9,10 @@ mod tests {
 
         let lexed = lex(&input.into()).unwrap();
         let parsed = parse(lexed).unwrap();
-        let instructions = instructions_from_ast(parsed.get_root(), parsed.get_nodes().clone()).unwrap();
 
         let mut data = SimpleRuntimeData::new();
 
-        // skip first since instruction set starts with a single unit and so does simple data
-        for d in instructions.get_data().iter().skip(1) {
-            data.add_data(d.clone()).unwrap();
-        }
-
-        data.set_end_of_constant(data.get_data_len()).unwrap();
-
-        for instruction in instructions.get_instructions() {
-            data.push_instruction(instruction.clone()).unwrap();
-        }
-
-        for jump in instructions.get_jump_table() {
-            // offset by 1 since simple data starts with a single instruction already
-            data.push_jump_point(jump + 1).unwrap();
-        }
+        instructions_from_ast(parsed.get_root(), parsed.get_nodes().clone(), &mut data).unwrap();
 
         data.set_instruction_cursor(1).unwrap();
 

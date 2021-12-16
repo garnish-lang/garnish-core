@@ -35,7 +35,7 @@ pub trait GarnishLangRuntimeData {
 
     fn add_integer(&mut self, value: i64) -> Result<usize, Self::Error>;
     fn add_reference(&mut self, value: usize) -> Result<usize, Self::Error>;
-    fn add_symbol(&mut self, value: u64) -> Result<usize, Self::Error>;
+    fn add_symbol(&mut self, value: &String) -> Result<usize, Self::Error>;
     fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error>;
     fn add_external(&mut self, value: usize) -> Result<usize, Self::Error>;
     fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error>;
@@ -56,6 +56,8 @@ pub trait GarnishLangRuntimeData {
 
     fn push_jump_point(&mut self, index: usize) -> Result<(), Self::Error>;
     fn get_jump_point(&self, index: usize) -> Result<usize, Self::Error>;
+    fn get_jump_point_mut(&mut self, index: usize) -> Result<&mut usize, Self::Error>;
+    fn get_jump_point_count(&self) -> usize;
 
     fn push_jump_path(&mut self, index: usize) -> Result<(), Self::Error>;
     fn pop_jump_path(&mut self) -> Result<usize, Self::Error>;
@@ -196,8 +198,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.data.len() - 1)
     }
 
-    fn add_symbol(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::symbol(&"".to_string(), value));
+    fn add_symbol(&mut self, value: &String) -> Result<usize, Self::Error> {
+        self.data.push(ExpressionData::symbol_from_string(value));
         Ok(self.data.len() - 1)
     }
 
@@ -343,6 +345,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.expression_table.get(index).cloned().as_result()
     }
 
+    fn get_jump_point_count(&self) -> usize {
+        self.expression_table.len()
+    }
+
     fn push_jump_path(&mut self, index: usize) -> Result<(), Self::Error> {
         self.jump_path.push(index);
         Ok(())
@@ -354,5 +360,9 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn get_jump_path(&self, index: usize) -> Result<usize, Self::Error> {
         self.jump_path.get(index).cloned().as_result()
+    }
+
+    fn get_jump_point_mut(&mut self, index: usize) -> Result<&mut usize, Self::Error> {
+        self.expression_table.get_mut(index).as_result()
     }
 }
