@@ -26,8 +26,8 @@ where
 
         // check input
         match self.data.get_current_input() {
-            Err(_) => (),
-            Ok(list_ref) => match self.get_access_addr(addr, list_ref)? {
+            None => (),
+            Some(list_ref) => match self.get_access_addr(addr, list_ref)? {
                 None => (),
                 Some(i) => {
                     self.add_reference_data(i)?;

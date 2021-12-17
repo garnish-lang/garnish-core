@@ -63,7 +63,10 @@ where
     }
 
     pub(crate) fn next_ref(&mut self) -> GarnishLangRuntimeResult<Data::Error, usize> {
-        self.data.pop_register().nest_into()
+        match self.data.pop_register() {
+            None => Err(error(format!("No references in register.")))?,
+            Some(i) => Ok(i),
+        }
     }
 
     pub(crate) fn next_two_raw_ref(&mut self) -> GarnishLangRuntimeResult<Data::Error, (usize, usize)> {

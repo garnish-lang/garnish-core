@@ -16,10 +16,10 @@ pub trait GarnishLangRuntimeData {
     fn get_result(&self) -> Option<usize>;
 
     fn push_input(&mut self, addr: usize) -> Result<(), Self::Error>;
-    fn pop_input(&mut self) -> Result<usize, Self::Error>;
-    fn get_input(&self, index: usize) -> Result<usize, Self::Error>;
+    fn pop_input(&mut self) -> Option<usize>;
+    fn get_input(&self, index: usize) -> Option<usize>;
     fn get_input_count(&self) -> usize;
-    fn get_current_input(&self) -> Result<usize, Self::Error>;
+    fn get_current_input(&self) -> Option<usize>;
 
     fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error>;
     fn get_integer(&self, index: usize) -> Result<i64, Self::Error>;
@@ -45,39 +45,26 @@ pub trait GarnishLangRuntimeData {
     fn add_false(&mut self) -> Result<usize, Self::Error>;
 
     fn push_register(&mut self, addr: usize) -> Result<(), Self::Error>;
-    fn pop_register(&mut self) -> Result<usize, Self::Error>;
+    fn pop_register(&mut self) -> Option<usize>;
 
     fn push_instruction(&mut self, instruction: InstructionData) -> Result<(), Self::Error>;
-    fn get_instruction(&self, index: usize) -> Result<&InstructionData, Self::Error>;
+    fn get_instruction(&self, index: usize) -> Option<&InstructionData>;
     fn set_instruction_cursor(&mut self, index: usize) -> Result<(), Self::Error>;
     fn advance_instruction_cursor(&mut self) -> Result<(), Self::Error>;
-    fn get_instruction_cursor(&self) -> Result<usize, Self::Error>;
+    fn get_instruction_cursor(&self) -> usize;
     fn get_instruction_len(&self) -> usize;
 
     fn push_jump_point(&mut self, index: usize) -> Result<(), Self::Error>;
-    fn get_jump_point(&self, index: usize) -> Result<usize, Self::Error>;
-    fn get_jump_point_mut(&mut self, index: usize) -> Result<&mut usize, Self::Error>;
+    fn get_jump_point(&self, index: usize) -> Option<usize>;
+    fn get_jump_point_mut(&mut self, index: usize) -> Option<&mut usize>;
     fn get_jump_point_count(&self) -> usize;
 
     fn push_jump_path(&mut self, index: usize) -> Result<(), Self::Error>;
-    fn pop_jump_path(&mut self) -> Result<usize, Self::Error>;
-    fn get_jump_path(&self, index: usize) -> Result<usize, Self::Error>;
+    fn pop_jump_path(&mut self) -> Option<usize>;
+    fn get_jump_path(&self, index: usize) -> Option<usize>;
 
     // maybe temporary
     fn add_data(&mut self, data: ExpressionData) -> Result<usize, Self::Error>;
-}
-
-trait AsDataResult<T> {
-    fn as_result(self) -> Result<T, String>;
-}
-
-impl<T> AsDataResult<T> for Option<T> {
-    fn as_result(self) -> Result<T, String> {
-        match self {
-            None => Err(format!("No data found.")),
-            Some(v) => Ok(v),
-        }
-    }
 }
 
 pub struct SimpleRuntimeData {
@@ -248,8 +235,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(())
     }
 
-    fn pop_register(&mut self) -> Result<usize, Self::Error> {
-        self.register.pop().as_result()
+    fn pop_register(&mut self) -> Option<usize> {
+        self.register.pop()
     }
 
     fn set_end_of_constant(&mut self, addr: usize) -> Result<(), Self::Error> {
@@ -285,20 +272,20 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(())
     }
 
-    fn pop_input(&mut self) -> Result<usize, Self::Error> {
-        self.inputs.pop().as_result()
+    fn pop_input(&mut self) -> Option<usize> {
+        self.inputs.pop()
     }
 
-    fn get_input(&self, index: usize) -> Result<usize, Self::Error> {
-        self.inputs.get(index).cloned().as_result()
+    fn get_input(&self, index: usize) -> Option<usize> {
+        self.inputs.get(index).cloned()
     }
 
     fn get_input_count(&self) -> usize {
         self.inputs.len()
     }
 
-    fn get_current_input(&self) -> Result<usize, Self::Error> {
-        self.inputs.last().cloned().as_result()
+    fn get_current_input(&self) -> Option<usize> {
+        self.inputs.last().cloned()
     }
 
     fn push_instruction(&mut self, instruction: InstructionData) -> Result<(), Self::Error> {
@@ -306,8 +293,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(())
     }
 
-    fn get_instruction(&self, index: usize) -> Result<&InstructionData, Self::Error> {
-        self.instructions.get(index).as_result()
+    fn get_instruction(&self, index: usize) -> Option<&InstructionData> {
+        self.instructions.get(index)
     }
 
     fn set_instruction_cursor(&mut self, index: usize) -> Result<(), Self::Error> {
@@ -320,8 +307,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(())
     }
 
-    fn get_instruction_cursor(&self) -> Result<usize, Self::Error> {
-        Ok(self.instruction_cursor)
+    fn get_instruction_cursor(&self) -> usize {
+        self.instruction_cursor
     }
 
     fn get_instruction_len(&self) -> usize {
@@ -341,8 +328,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(())
     }
 
-    fn get_jump_point(&self, index: usize) -> Result<usize, Self::Error> {
-        self.expression_table.get(index).cloned().as_result()
+    fn get_jump_point(&self, index: usize) -> Option<usize> {
+        self.expression_table.get(index).cloned()
     }
 
     fn get_jump_point_count(&self) -> usize {
@@ -354,15 +341,15 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(())
     }
 
-    fn pop_jump_path(&mut self) -> Result<usize, Self::Error> {
-        self.jump_path.pop().as_result()
+    fn pop_jump_path(&mut self) -> Option<usize> {
+        self.jump_path.pop()
     }
 
-    fn get_jump_path(&self, index: usize) -> Result<usize, Self::Error> {
-        self.jump_path.get(index).cloned().as_result()
+    fn get_jump_path(&self, index: usize) -> Option<usize> {
+        self.jump_path.get(index).cloned()
     }
 
-    fn get_jump_point_mut(&mut self, index: usize) -> Result<&mut usize, Self::Error> {
-        self.expression_table.get_mut(index).as_result()
+    fn get_jump_point_mut(&mut self, index: usize) -> Option<&mut usize> {
+        self.expression_table.get_mut(index)
     }
 }

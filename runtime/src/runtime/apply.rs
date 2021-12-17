@@ -17,10 +17,15 @@ where
         trace!("Instruction - Reapply | Data - {:?}", index);
 
         let right_addr = self.next_ref()?;
-        let point = self.data.get_jump_point(index).nest_into()?;
+        let point = self
+            .data
+            .get_jump_point(index)
+            .ok_or(error(format!("No jump point at index {:?}", index)))?;
 
         self.data.set_instruction_cursor(point - 1).nest_into()?;
-        self.data.pop_input().nest_into()?;
+        self.data
+            .pop_input()
+            .ok_or(error(format!("Failed to pop input during reapply operation.")))?;
         self.data.push_input(right_addr).nest_into()
     }
 
@@ -39,11 +44,14 @@ where
             ExpressionDataType::Expression => {
                 let expression_index = self.data.get_expression(left_addr).nest_into()?;
 
-                let next_instruction = self.data.get_jump_point(expression_index).nest_into()?;
+                let next_instruction = self
+                    .data
+                    .get_jump_point(expression_index)
+                    .ok_or(error(format!("No jump point at index {:?}", expression_index)))?;
 
                 // Expression stores index of expression table, look up actual instruction index
 
-                self.data.push_jump_path(self.data.get_instruction_cursor().nest_into()?).nest_into()?;
+                self.data.push_jump_path(self.data.get_instruction_cursor()).nest_into()?;
                 self.data.set_instruction_cursor(next_instruction - 1).nest_into()?;
                 self.data.push_input(right_addr).nest_into()
             }
@@ -102,7 +110,7 @@ mod tests {
         runtime.apply::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.data.get_input(0).unwrap(), 3);
-        assert_eq!(runtime.data.get_instruction_cursor().unwrap(), 0);
+        assert_eq!(runtime.data.get_instruction_cursor(), 0);
         assert_eq!(runtime.data.get_jump_path(0).unwrap(), 7);
     }
 
@@ -160,7 +168,7 @@ mod tests {
         runtime.empty_apply::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.data.get_input(0).unwrap(), 3);
-        assert_eq!(runtime.data.get_instruction_cursor().unwrap(), 0);
+        assert_eq!(runtime.data.get_instruction_cursor(), 0);
         assert_eq!(runtime.data.get_jump_path(0).unwrap(), 6);
     }
 
@@ -227,7 +235,7 @@ mod tests {
 
         assert_eq!(runtime.data.get_input_count(), 1);
         assert_eq!(runtime.data.get_input(0).unwrap(), 4);
-        assert_eq!(runtime.data.get_instruction_cursor().unwrap(), 3);
+        assert_eq!(runtime.data.get_instruction_cursor(), 3);
         assert_eq!(runtime.data.get_jump_path(0).unwrap(), 9);
     }
 

@@ -51,12 +51,12 @@ where
         self.data.push_instruction(InstructionData { instruction, data }).nest_into()
     }
 
-    pub fn get_instruction(&self, i: usize) -> GarnishLangRuntimeResult<Data::Error, &InstructionData> {
-        self.data.get_instruction(i).nest_into()
+    pub fn get_instruction(&self, i: usize) -> Option<&InstructionData> {
+        self.data.get_instruction(i)
     }
 
-    pub fn get_current_instruction(&self) -> GarnishLangRuntimeResult<Data::Error, &InstructionData> {
-        self.data.get_instruction(self.data.get_instruction_cursor().nest_into()?).nest_into()
+    pub fn get_current_instruction(&self) -> Option<&InstructionData> {
+        self.data.get_instruction(self.data.get_instruction_cursor())
     }
 
     pub fn set_instruction_cursor(&mut self, i: usize) -> GarnishLangRuntimeResult<Data::Error> {
@@ -89,7 +89,10 @@ where
         &mut self,
         context: Option<&mut T>,
     ) -> GarnishLangRuntimeResult<Data::Error, GarnishLangRuntimeInfo> {
-        let instruction_data = self.data.get_instruction(self.data.get_instruction_cursor().nest_into()?).nest_into()?;
+        let instruction_data = self
+            .data
+            .get_instruction(self.data.get_instruction_cursor())
+            .ok_or(error(format!("Attempted to execute instruction when no instructions remain.")))?;
         match instruction_data.instruction {
             Instruction::PerformAddition => self.perform_addition()?,
             Instruction::PutInput => self.put_input()?,
@@ -134,7 +137,7 @@ where
     }
 
     fn advance_instruction(&mut self) -> GarnishLangRuntimeResult<Data::Error, GarnishLangRuntimeInfo> {
-        match self.data.get_instruction_cursor().nest_into()? + 1 >= self.data.get_instruction_len() {
+        match self.data.get_instruction_cursor() + 1 >= self.data.get_instruction_len() {
             true => Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::End)),
             false => {
                 self.data.advance_instruction_cursor().nest_into()?;
@@ -276,7 +279,7 @@ mod tests {
 
         runtime.end_execution().unwrap();
 
-        assert_eq!(runtime.data.get_instruction_cursor().unwrap(), 4);
+        assert_eq!(runtime.data.get_instruction_cursor(), 4);
     }
 
     #[test]

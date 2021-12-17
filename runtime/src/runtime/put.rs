@@ -23,7 +23,10 @@ where
     pub fn put_input(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Put Input");
 
-        self.data.push_register(self.data.get_current_input().nest_into()?).nest_into()
+        match self.data.get_current_input() {
+            None => self.push_unit(),
+            Some(i) => self.data.push_register(i).nest_into(),
+        }
     }
 
     pub fn push_input(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
@@ -38,7 +41,7 @@ where
         trace!("Instruction - Put Result");
 
         match self.data.get_result() {
-            None => Err(error(format!("No result available to put reference."))),
+            None => self.push_unit(),
             Some(i) => self.data.push_register(i).nest_into(),
         }
     }
@@ -53,7 +56,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::data::GarnishLangRuntimeData, ExpressionData, GarnishLangRuntime, Instruction};
+    use crate::{runtime::data::GarnishLangRuntimeData, ExpressionData, ExpressionDataType, GarnishLangRuntime, Instruction};
 
     #[test]
     fn put() {
@@ -88,6 +91,19 @@ mod tests {
         runtime.put_input().unwrap();
 
         assert_eq!(*runtime.data.get_register().get(0).unwrap(), 2);
+    }
+
+    #[test]
+    fn put_input_is_unit_if_no_input() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.put_input().unwrap();
+
+        assert_eq!(runtime.data.get_data_type(3).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(*runtime.data.get_register().get(0).unwrap(), 3);
     }
 
     #[test]
@@ -152,5 +168,18 @@ mod tests {
         runtime.put_result().unwrap();
 
         assert_eq!(*runtime.data.get_register().get(0).unwrap(), 2);
+    }
+
+    #[test]
+    fn put_result_is_unit_if_no_result() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+
+        runtime.put_result().unwrap();
+
+        assert_eq!(runtime.data.get_data_type(3).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(*runtime.data.get_register().get(0).unwrap(), 3);
     }
 }

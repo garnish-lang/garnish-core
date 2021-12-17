@@ -334,11 +334,11 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                                             "End of conditional branch and conditional stack is empty."
                                         )))?,
                                         Some(jump_index) => match data.get_jump_point_mut(jump_index) {
-                                            Err(_) => Err(GarnishLangCompilerError::new(format!(
+                                            None => Err(GarnishLangCompilerError::new(format!(
                                                 "No value in jump table at index {:?} to update for conditional branch.",
                                                 jump_index
                                             )))?,
-                                            Ok(jump_value) => {
+                                            Some(jump_value) => {
                                                 trace!(
                                                     "Updating jump table at index {:?} to {:?} for conditional branch.",
                                                     jump_index,
@@ -420,7 +420,12 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
             return Err(GarnishLangCompilerError::new(format!("Max iterations for roots reached.")));
         }
 
-        data.get_jump_point_mut(jump_index).and_then(|i| Ok(*i = jump_point)).nest_into()?;
+        data.get_jump_point_mut(jump_index)
+            .and_then(|i| Some(*i = jump_point))
+            .ok_or(GarnishLangCompilerError::new(format!(
+                "Failed to update jump point at index {:?} because None was returned.",
+                jump_index
+            )))?;
     }
 
     Ok(())
