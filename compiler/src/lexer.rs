@@ -151,6 +151,10 @@ pub fn create_operator_tree(symbol_list: Vec<(&str, TokenType)>) -> LexerOperato
     root
 }
 
+fn is_identifier_char(c: char) -> bool {
+    c.is_alphanumeric() || c == '_' || c == ':'
+}
+
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 enum LexingState {
     NoToken,
@@ -195,12 +199,10 @@ fn start_token<'a>(
                 *current_operator = node;
             }
         }
-        trace!("Operator started");
     } else if c == ' ' || c == '\t' {
         current_characters.push(c);
         *state = LexingState::Spaces;
         *current_token_type = Some(TokenType::Whitespace);
-        trace!("Horizontal spaces started");
     } else if c.is_ascii_whitespace() {
         // any other white space, all some form of new line
         current_characters.push(c);
@@ -209,35 +211,38 @@ fn start_token<'a>(
 
         *text_column = 0;
         *text_row += 1;
-
-        trace!("Subexpression started");
     } else if c.is_numeric() {
         current_characters.push(c);
         *state = LexingState::Number;
         *current_token_type = Some(TokenType::Number);
-        trace!("Number started");
     } else if c == '\0' {
         *state = LexingState::NoToken;
         *current_token_type = None;
         trace!("Null character found, skipping.");
         return;
-    } else if c.is_alphanumeric() || c == '_' {
+    } else if is_identifier_char(c) {
         // catch all to create identifiers
         // any disallowed characters will have a blacklist made for them
 
         current_characters.push(c);
         *state = LexingState::Indentifier;
         *current_token_type = Some(TokenType::Identifier);
-        trace!("Identifier started");
     } else if c == '@' {
         current_characters.push(c);
         *state = LexingState::Annotation;
         *current_token_type = Some(TokenType::Annotation);
-    } else if c == ':' {
+    } else if c == ';' {
         current_characters.push(c);
         *state = LexingState::Symbol;
         *current_token_type = Some(TokenType::Symbol);
     }
+
+    trace!(
+        "Starting token with character {:?} token type '{:?}' state '{:?}'",
+        &c,
+        current_token_type,
+        state
+    );
 }
 
 pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
@@ -307,11 +312,26 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
                         current_token_type = node.token_type;
                         current_operator = node;
 
+                        trace!("Switched to operator token '{:?}'", current_token_type);
+
                         false
                     }
                     None => {
-                        trace!("Ending operator");
-                        true
+                        // One token (LeftInternal) starts with an underscore
+                        // which can also be start of an identifier
+                        // if on this token and current character can be identifier
+                        // switch to lexing identifier
+                        if current_characters == "_" && is_identifier_char(c) {
+                            trace!("Switching to lexing identifier after starting with an underscore.");
+                            current_characters.push(c);
+                            current_token_type = Some(TokenType::Identifier);
+                            state = LexingState::Indentifier;
+
+                            false
+                        } else {
+                            trace!("Ending operator");
+                            true
+                        }
                     }
                 }
             }
@@ -320,7 +340,7 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
                 if current_characters.len() == 1 {
                     // just the colon character
                     // need to make sure the first character is only alpha or underscore
-                    if c.is_alphabetic() || c == '_' {
+                    if is_identifier_char(c) {
                         current_characters.push(c);
                         false
                     } else {
@@ -328,7 +348,7 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
                         true
                     }
                 } else {
-                    if c.is_alphanumeric() || c == '_' {
+                    if is_identifier_char(c) {
                         current_characters.push(c);
                         false
                     } else {
@@ -347,11 +367,17 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
                 }
             }
             LexingState::Indentifier => {
-                if c.is_alphanumeric() || c == '_' {
+                if is_identifier_char(c) {
                     current_characters.push(c);
                     false
                 } else {
                     trace!("Ending identifier");
+
+                    // check for invalid identifiers
+                    // currently only need to check for single colon character ':'
+                    if current_characters == ":" {
+                        current_token_type = None;
+                    }
                     true
                 }
             }
@@ -895,12 +921,42 @@ mod tests {
 
     #[test]
     fn symbol() {
-        let result = lex(&":my_symbol".to_string()).unwrap();
+        let result = lex(&";my_symbol".to_string()).unwrap();
 
         assert_eq!(
             result,
             vec![LexerToken {
-                text: ":my_symbol".to_string(),
+                text: ";my_symbol".to_string(),
+                token_type: TokenType::Symbol,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn empty_symbol() {
+        let result = lex(&";".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ";".to_string(),
+                token_type: TokenType::Symbol,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn symbol_with_more_colons() {
+        let result = lex(&";my_symbol:my_sub_symbol".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ";my_symbol:my_sub_symbol".to_string(),
                 token_type: TokenType::Symbol,
                 column: 0,
                 row: 0
@@ -1268,8 +1324,52 @@ mod tests {
     }
 
     #[test]
+    fn lex_identifier_starting_with_underscore() {
+        let result = lex(&"_value".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "_value".to_string(),
+                token_type: TokenType::Identifier,
+                column: 0,
+                row: 0
+            }]
+        );
+    }
+
+    #[test]
+    fn lex_identifier_only_underscore_is_err() {
+        let result = lex(&"_".to_string());
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn lex_identifier_start_with_colon() {
+        let result = lex(&":value".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ":value".to_string(),
+                token_type: TokenType::Identifier,
+                column: 0,
+                row: 0
+            }]
+        );
+    }
+
+    #[test]
+    fn lex_identifier_with_only_colon_is_error() {
+        let result = lex(&":".to_string());
+
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn lex_identifiers() {
-        let result = lex(&"value_1 Value_2".to_string()).unwrap();
+        let result = lex(&"value_1 Value_2 namespace::value::property".to_string()).unwrap();
 
         assert_eq!(
             result,
@@ -1290,6 +1390,18 @@ mod tests {
                     text: "Value_2".to_string(),
                     token_type: TokenType::Identifier,
                     column: 8,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::Whitespace,
+                    column: 15,
+                    row: 0
+                },
+                LexerToken {
+                    text: "namespace::value::property".to_string(),
+                    token_type: TokenType::Identifier,
+                    column: 16,
                     row: 0
                 },
             ]
