@@ -13,6 +13,9 @@ pub enum Definition {
     Equality,
     Pair,
     Access,
+    AccessLeftInternal,
+    AccessRightInternal,
+    AccessLengthInternal,
     List,
     Drop,
     Symbol,
@@ -99,17 +102,19 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::Equality => (Definition::Equality, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Period => (Definition::Access, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Pair => (Definition::Pair, SecondaryDefinition::BinaryLeftToRight),
-        // TokenType::MultiplicationSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
-        // TokenType::ExponentialSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::MultiplicationSign => todo!(),
+        TokenType::ExponentialSign => todo!(),
         TokenType::Apply => (Definition::Apply, SecondaryDefinition::BinaryLeftToRight),
         TokenType::ApplyTo => (Definition::ApplyTo, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Reapply => (Definition::Reapply, SecondaryDefinition::UnaryPrefix),
+        TokenType::LeftInternal => (Definition::AccessLeftInternal, SecondaryDefinition::UnaryPrefix),
+        TokenType::RightInternal => (Definition::AccessRightInternal, SecondaryDefinition::UnarySuffix),
+        TokenType::LengthInternal => (Definition::AccessLengthInternal, SecondaryDefinition::UnarySuffix),
 
         // Conditionals
         TokenType::ApplyIfFalse => (Definition::ApplyIfFalse, SecondaryDefinition::Conditional),
         TokenType::ApplyIfTrue => (Definition::ApplyIfTrue, SecondaryDefinition::Conditional),
         TokenType::DefaultConditional => (Definition::DefaultConditional, SecondaryDefinition::Conditional),
-        _ => todo!(),
     }
 }
 
@@ -188,19 +193,35 @@ fn make_priority_map() -> HashMap<Definition, usize> {
 
     map.insert(Definition::Group, 2);
     map.insert(Definition::NestedExpression, 2);
+
     map.insert(Definition::Access, 3);
+
     map.insert(Definition::EmptyApply, 4);
+
     map.insert(Definition::AbsoluteValue, 5);
+    map.insert(Definition::AccessLeftInternal, 5);
+
+    map.insert(Definition::AccessRightInternal, 6);
+    map.insert(Definition::AccessLengthInternal, 6);
+
     map.insert(Definition::Addition, 10);
+
     map.insert(Definition::Equality, 14);
+
     map.insert(Definition::Pair, 21);
+
     map.insert(Definition::List, 23);
+
     map.insert(Definition::Apply, 25);
     map.insert(Definition::ApplyTo, 25);
+
     map.insert(Definition::Reapply, 26);
+
     map.insert(Definition::ApplyIfTrue, 27);
     map.insert(Definition::ApplyIfFalse, 27);
+
     map.insert(Definition::ConditionalBranch, 28);
+
     map.insert(Definition::Subexpression, 100);
 
     map
@@ -1023,6 +1044,63 @@ mod tests {
                 (0, Definition::Identifier, Some(1), None, None),
                 (1, Definition::Access, None, Some(0), Some(2)),
                 (2, Definition::Identifier, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn access_left_internal() {
+        let tokens = vec![
+            LexerToken::new("_.".to_string(), TokenType::LeftInternal, 0, 0),
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::AccessLeftInternal, None, None, Some(1)),
+                (1, Definition::Identifier, Some(0), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn access_right_internal() {
+        let tokens = vec![
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("._".to_string(), TokenType::RightInternal, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::AccessRightInternal, None, Some(0), None),
+            ],
+        );
+    }
+
+    #[test]
+    fn access_length_internal() {
+        let tokens = vec![
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(".|".to_string(), TokenType::LengthInternal, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::AccessLengthInternal, None, Some(0), None),
             ],
         );
     }

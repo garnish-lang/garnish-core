@@ -36,9 +36,9 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         Definition::Number | Definition::Identifier | Definition::Symbol | Definition::Input | Definition::Result | Definition::Unit | Definition::False | Definition::True => {
             ((false, None), (false, None))
         }
-        Definition::Reapply => ((true, node.get_right()), (false, None)),
+        Definition::Reapply | Definition::AccessLeftInternal => ((true, node.get_right()), (false, None)),
         Definition::AbsoluteValue => todo!(),
-        Definition::EmptyApply => ((true, node.get_left()), (false, None)),
+        Definition::EmptyApply | Definition::AccessLengthInternal | Definition::AccessRightInternal => ((true, node.get_left()), (false, None)),
         Definition::Addition
         | Definition::Equality
         | Definition::Pair
@@ -128,6 +128,18 @@ fn resolve_node<T: GarnishLangRuntimeData>(
         }
         Definition::Access => {
             data.push_instruction(InstructionData::new(Instruction::Access, None)).nest_into()?;
+        }
+        Definition::AccessLeftInternal => {
+            data.push_instruction(InstructionData::new(Instruction::AccessLeftInternal, None))
+                .nest_into()?;
+        }
+        Definition::AccessRightInternal => {
+            data.push_instruction(InstructionData::new(Instruction::AccessRightInternal, None))
+                .nest_into()?;
+        }
+        Definition::AccessLengthInternal => {
+            data.push_instruction(InstructionData::new(Instruction::AccessLengthInternal, None))
+                .nest_into()?;
         }
         Definition::List => match list_count {
             None => Err(GarnishLangCompilerError::new(format!("No list count passed to list node resolve.")))?,
@@ -738,6 +750,57 @@ mod operations {
                 (Instruction::EndExpression, None),
             ],
             vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+        );
+    }
+
+    #[test]
+    fn access_left_internal() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::AccessLeftInternal, None, None, Some(1), "_.", TokenType::LeftInternal),
+                (Definition::Number, Some(0), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::AccessLeftInternal, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::integer(10)],
+        );
+    }
+
+    #[test]
+    fn access_right_internal() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::AccessRightInternal, None, Some(0), None, "._", TokenType::RightInternal),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::AccessRightInternal, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::integer(10)],
+        );
+    }
+
+    #[test]
+    fn access_length_internal() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::AccessLengthInternal, None, Some(0), None, ".|", TokenType::LengthInternal),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::AccessLengthInternal, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![ExpressionData::integer(10)],
         );
     }
 

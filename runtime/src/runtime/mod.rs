@@ -131,6 +131,9 @@ where
             },
             Instruction::Access => self.access()?,
             Instruction::Resolve => self.resolve(context)?,
+            Instruction::AccessLeftInternal => todo!(),
+            Instruction::AccessRightInternal => todo!(),
+            Instruction::AccessLengthInternal => todo!(),
         };
 
         self.advance_instruction()

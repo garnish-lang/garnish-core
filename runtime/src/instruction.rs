@@ -19,6 +19,9 @@ pub enum Instruction {
     EmptyApply,
     Reapply,
     Access,
+    AccessLeftInternal,
+    AccessRightInternal,
+    AccessLengthInternal,
     Resolve,
 }
 

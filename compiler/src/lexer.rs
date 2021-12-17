@@ -34,6 +34,9 @@ pub enum TokenType {
     EmptyApply,
     Equality,
     Period,
+    LeftInternal,
+    RightInternal,
+    LengthInternal,
     Pair,
     False,
     True,
@@ -272,7 +275,9 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
         ("==", TokenType::Equality),
         ("=", TokenType::Pair),
         (".", TokenType::Period),
-        // ("\n\n", TokenType::Subexpression),
+        ("._", TokenType::RightInternal),
+        ("_.", TokenType::LeftInternal),
+        (".|", TokenType::LengthInternal),
     ]);
     let mut current_operator = &operator_tree;
     let mut current_token_type = None;
@@ -642,6 +647,51 @@ mod tests {
             vec![LexerToken {
                 text: ".".to_string(),
                 token_type: TokenType::Period,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn access_left_internal() {
+        let result = lex(&"_.".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "_.".to_string(),
+                token_type: TokenType::LeftInternal,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn access_right_internal() {
+        let result = lex(&"._".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "._".to_string(),
+                token_type: TokenType::RightInternal,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn access_length_internal() {
+        let result = lex(&".|".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ".|".to_string(),
+                token_type: TokenType::LengthInternal,
                 column: 0,
                 row: 0
             }]
