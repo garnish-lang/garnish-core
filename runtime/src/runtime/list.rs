@@ -124,10 +124,7 @@ where
                     }
                 }
             }
-            (l, r) => Err(error(format!(
-                "Access operation with {:?} on the left and {:?} on the right is not supported.",
-                l, r
-            )))?,
+            _ => Ok(None),
         }
     }
 }
@@ -225,6 +222,43 @@ mod tests {
         runtime.access().unwrap();
 
         assert_eq!(runtime.data.get_reference(6).unwrap(), 2);
+    }
+
+    #[test]
+    fn access_non_list_on_left_is_unit() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+
+        runtime.add_instruction(Instruction::Access, None).unwrap();
+
+        runtime.data.push_register(1).unwrap();
+        runtime.data.push_register(2).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.data.get_data_type(3).unwrap(), ExpressionDataType::Unit);
+    }
+
+    #[test]
+    fn access_non_symbol_on_right_is_unit() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+
+        runtime.add_instruction(Instruction::Access, None).unwrap();
+
+        runtime.data.push_register(4).unwrap();
+        runtime.data.push_register(5).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.data.get_data_type(6).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
