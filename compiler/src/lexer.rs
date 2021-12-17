@@ -1368,6 +1368,29 @@ mod tests {
     }
 
     #[test]
+    fn identifiers_cannot_start_with_number() {
+        let result = lex(&"3value".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "3".to_string(),
+                    token_type: TokenType::Number,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "value".to_string(),
+                    token_type: TokenType::Identifier,
+                    column: 1,
+                    row: 0
+                }
+            ]
+        );
+    }
+
+    #[test]
     fn lex_identifiers() {
         let result = lex(&"value_1 Value_2 namespace::value::property".to_string()).unwrap();
 
