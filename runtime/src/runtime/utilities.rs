@@ -34,12 +34,6 @@ where
         self.data.get_end_of_constant_data()
     }
 
-    pub fn add_data_ref(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<Data::Error, usize> {
-        let addr = self.add_data(data)?;
-        self.data.push_register(addr).nest_into()?;
-        Ok(addr)
-    }
-
     pub fn get_data_len(&self) -> usize {
         self.data.get_data_len()
     }
@@ -107,16 +101,6 @@ mod tests {
 
         runtime.add_data(ExpressionData::integer(100)).unwrap();
 
-        assert_eq!(runtime.get_data_len(), 2);
-    }
-
-    #[test]
-    fn add_data_ref() {
-        let mut runtime = GarnishLangRuntime::simple();
-
-        runtime.add_data_ref(ExpressionData::integer(100)).unwrap();
-
-        assert_eq!(runtime.data.get_register(), &vec![1]);
         assert_eq!(runtime.get_data_len(), 2);
     }
 
