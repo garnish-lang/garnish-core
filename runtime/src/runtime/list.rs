@@ -69,6 +69,34 @@ where
         }
     }
 
+    pub fn access_left_internal(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
+        trace!("Instruction - Access Left Internal");
+        self.next_ref().and_then(|r| match self.data.get_data_type(r).nest_into()? {
+            ExpressionDataType::Pair => self.data.get_pair(r).and_then(|(left, _)| self.data.push_register(left)).nest_into(),
+            _ => self.push_unit(),
+        })
+    }
+
+    pub fn access_right_internal(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
+        trace!("Instruction - Access Right Internal");
+        self.next_ref().and_then(|r| match self.data.get_data_type(r).nest_into()? {
+            ExpressionDataType::Pair => self.data.get_pair(r).and_then(|(_, right)| self.data.push_register(right)).nest_into(),
+            _ => self.push_unit(),
+        })
+    }
+
+    pub fn access_length_internal(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
+        trace!("Instruction - Access Left Internal");
+        self.next_ref().and_then(|r| match self.data.get_data_type(r).nest_into()? {
+            ExpressionDataType::List => self
+                .data
+                .get_list_len(r)
+                .and_then(|len| self.data.add_integer(len as i64).and_then(|r| self.data.push_register(r)))
+                .nest_into(),
+            _ => self.push_unit(),
+        })
+    }
+
     pub(crate) fn get_access_addr(&self, sym: usize, list: usize) -> GarnishLangRuntimeResult<Data::Error, Option<usize>> {
         let sym_ref = self.addr_of_raw_data(sym)?;
         let list_ref = self.addr_of_raw_data(list)?;
@@ -221,6 +249,107 @@ mod tests {
 
         runtime.access().unwrap();
 
+        assert_eq!(runtime.data.get_register().get(0).unwrap(), &2);
+    }
+
+    #[test]
+    fn access_pair_left() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+
+        runtime.add_instruction(Instruction::AccessLeftInternal, None).unwrap();
+
+        runtime.data.push_register(3).unwrap();
+
+        runtime.access_left_internal().unwrap();
+
+        assert_eq!(runtime.data.get_register().get(0).unwrap(), &1);
+    }
+
+    #[test]
+    fn access_left_internal_incompatible_type_is_unit() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+
+        runtime.add_instruction(Instruction::AccessLeftInternal, None).unwrap();
+
+        runtime.data.push_register(1).unwrap();
+
+        runtime.access_left_internal().unwrap();
+
+        assert_eq!(runtime.data.get_data_type(2).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.data.get_register().get(0).unwrap(), &2);
+    }
+
+    #[test]
+    fn access_pair_right() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+
+        runtime.add_instruction(Instruction::AccessRightInternal, None).unwrap();
+
+        runtime.data.push_register(3).unwrap();
+
+        runtime.access_right_internal().unwrap();
+
+        assert_eq!(runtime.data.get_register().get(0).unwrap(), &2);
+    }
+
+    #[test]
+    fn access_right_internal_incompatible_type_is_unit() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+
+        runtime.add_instruction(Instruction::AccessRightInternal, None).unwrap();
+
+        runtime.data.push_register(1).unwrap();
+
+        runtime.access_right_internal().unwrap();
+
+        assert_eq!(runtime.data.get_data_type(2).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.data.get_register().get(0).unwrap(), &2);
+    }
+
+    #[test]
+    fn access_list_length() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
+
+        runtime.add_instruction(Instruction::AccessLengthInternal, None).unwrap();
+
+        runtime.data.push_register(4).unwrap();
+
+        runtime.access_length_internal().unwrap();
+
+        assert_eq!(runtime.data.get_integer(5).unwrap(), 1);
+        assert_eq!(runtime.data.get_register().get(0).unwrap(), &5);
+    }
+
+    #[test]
+    fn access_length_internal_incompatible_type_is_unit() {
+        let mut runtime = GarnishLangRuntime::simple();
+
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+
+        runtime.add_instruction(Instruction::AccessLengthInternal, None).unwrap();
+
+        runtime.data.push_register(1).unwrap();
+
+        runtime.access_length_internal().unwrap();
+
+        assert_eq!(runtime.data.get_data_type(2).unwrap(), ExpressionDataType::Unit);
         assert_eq!(runtime.data.get_register().get(0).unwrap(), &2);
     }
 
