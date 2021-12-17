@@ -86,7 +86,7 @@ where
     }
 
     pub fn access_length_internal(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Access Left Internal");
+        trace!("Instruction - Access Length Internal");
         self.next_ref().and_then(|r| match self.data.get_data_type(r).nest_into()? {
             ExpressionDataType::List => self
                 .data
