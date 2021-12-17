@@ -34,7 +34,6 @@ pub trait GarnishLangRuntimeData {
     fn get_list_association(&self, list_index: usize, item_index: usize) -> Result<usize, Self::Error>;
 
     fn add_integer(&mut self, value: i64) -> Result<usize, Self::Error>;
-    fn add_reference(&mut self, value: usize) -> Result<usize, Self::Error>;
     fn add_symbol(&mut self, value: &String) -> Result<usize, Self::Error>;
     fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error>;
     fn add_external(&mut self, value: usize) -> Result<usize, Self::Error>;
@@ -177,11 +176,6 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn add_integer(&mut self, value: i64) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::integer(value));
-        Ok(self.data.len() - 1)
-    }
-
-    fn add_reference(&mut self, value: usize) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::reference(value));
         Ok(self.data.len() - 1)
     }
 

@@ -65,7 +65,7 @@ where
 
         match self.get_access_addr(right_ref, left_ref)? {
             None => self.push_unit(),
-            Some(i) => self.push_reference(i),
+            Some(i) => self.data.push_register(i).nest_into(),
         }
     }
 
@@ -221,7 +221,7 @@ mod tests {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.data.get_reference(6).unwrap(), 2);
+        assert_eq!(runtime.data.get_register().get(0).unwrap(), &2);
     }
 
     #[test]

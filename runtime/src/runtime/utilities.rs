@@ -14,16 +14,6 @@ where
         // Check if give a reference of reference
         // flatten reference to point to non-Reference data
         let data = match data.get_type() {
-            ExpressionDataType::Reference => {
-                let ref_addr = match data.as_reference() {
-                    Err(e) => Err(error(e))?,
-                    Ok(v) => v,
-                };
-                match self.data.get_data_type(ref_addr).nest_into()? {
-                    ExpressionDataType::Reference => ExpressionData::reference(self.data.get_reference(ref_addr).nest_into()?),
-                    _ => data,
-                }
-            }
             ExpressionDataType::Symbol => {
                 // self.symbols.extend(data.symbols.clone());
                 data
@@ -54,10 +44,6 @@ where
         self.data.get_data_len()
     }
 
-    pub fn add_reference_data(&mut self, reference: usize) -> GarnishLangRuntimeResult<Data::Error, usize> {
-        self.add_data(ExpressionData::reference(reference))
-    }
-
     pub fn remove_non_constant_data(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
         self.data.remove_non_constant_data().nest_into()
     }
@@ -77,10 +63,7 @@ where
     }
 
     pub(crate) fn addr_of_raw_data(&self, addr: usize) -> GarnishLangRuntimeResult<Data::Error, usize> {
-        Ok(match self.data.get_data_type(addr).nest_into()? {
-            ExpressionDataType::Reference => self.data.get_reference(addr).nest_into()?,
-            _ => addr,
-        })
+        Ok(addr)
     }
 
     // push utilities
@@ -107,10 +90,6 @@ where
             .add_list(list, associations)
             .and_then(|v| self.data.push_register(v))
             .nest_into()
-    }
-
-    pub fn push_reference(&mut self, value: usize) -> GarnishLangRuntimeResult<Data::Error> {
-        self.data.add_reference(value).and_then(|v| self.data.push_register(v)).nest_into()
     }
 
     pub fn push_pair(&mut self, left: usize, right: usize) -> GarnishLangRuntimeResult<Data::Error> {
@@ -170,27 +149,6 @@ mod tests {
         assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 2);
         assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 3);
         assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 4);
-    }
-
-    #[test]
-    fn add_reference_of_reference_falls_through() {
-        let mut runtime = GarnishLangRuntime::simple();
-
-        runtime.add_data(ExpressionData::integer(100)).unwrap();
-        runtime.add_data(ExpressionData::reference(1)).unwrap();
-        runtime.add_data(ExpressionData::reference(2)).unwrap();
-
-        assert_eq!(runtime.data.get_reference(3).unwrap(), 1);
-    }
-
-    #[test]
-    fn push_top_reference() {
-        let mut runtime = GarnishLangRuntime::simple();
-
-        runtime.add_data(ExpressionData::integer(100)).unwrap();
-        runtime.add_reference_data(0).unwrap();
-
-        assert_eq!(runtime.get_data_len(), 3);
     }
 
     #[test]

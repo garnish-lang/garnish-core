@@ -63,24 +63,6 @@ mod tests {
     }
 
     #[test]
-    fn perform_addition_through_references() {
-        let mut runtime = GarnishLangRuntime::simple();
-
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_reference_data(1).unwrap();
-        runtime.add_reference_data(2).unwrap();
-
-        runtime.data.push_register(1).unwrap();
-        runtime.data.push_register(2).unwrap();
-
-        runtime.perform_addition().unwrap();
-
-        assert_eq!(runtime.data.get_register(), &vec![5]);
-        assert_eq!(runtime.data.get_integer(5).unwrap(), 30);
-    }
-
-    #[test]
     fn perform_addition_with_non_integers() {
         let mut runtime = GarnishLangRuntime::simple();
 

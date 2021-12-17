@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{GarnishLangRuntime, GarnishLangRuntimeResult};
+use crate::{GarnishLangRuntime, GarnishLangRuntimeResult, NestInto};
 
 use super::{context::GarnishLangRuntimeContext, data::GarnishLangRuntimeData};
 
@@ -18,7 +18,7 @@ where
             Some(result_ref) => match self.get_access_addr(addr, result_ref)? {
                 None => (),
                 Some(i) => {
-                    self.add_reference_data(i)?;
+                    self.data.push_register(i).nest_into()?;
                     return Ok(());
                 }
             },
@@ -30,7 +30,7 @@ where
             Some(list_ref) => match self.get_access_addr(addr, list_ref)? {
                 None => (),
                 Some(i) => {
-                    self.add_reference_data(i)?;
+                    self.data.push_register(i).nest_into()?;
                     return Ok(());
                 }
             },
@@ -98,7 +98,7 @@ mod tests {
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.data.get_reference(6).unwrap(), 2);
+        assert_eq!(runtime.data.get_register().get(0).unwrap(), &2);
     }
 
     #[test]
@@ -119,7 +119,7 @@ mod tests {
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.data.get_reference(6).unwrap(), 2);
+        assert_eq!(runtime.data.get_register().get(0).unwrap(), &2);
     }
 
     #[test]
@@ -157,11 +157,7 @@ mod tests {
             fn resolve(&mut self, sym_addr: usize, runtime: &mut GarnishLangRuntime<SimpleRuntimeData>) -> GarnishLangRuntimeResult<String, bool> {
                 match runtime.data.get_data_type(sym_addr).nest_into()? {
                     ExpressionDataType::Symbol => {
-                        let addr = runtime.data.get_data_len();
-                        runtime.data.add_integer(100).nest_into()?;
-                        let raddr = runtime.data.get_data_len();
-                        runtime.push_reference(addr)?;
-                        runtime.data.push_register(raddr).nest_into()?;
+                        runtime.push_integer(100)?;
                         Ok(true)
                     }
                     t => Err(error(format!("Address given to resolve is of type {:?}. Expected symbol type.", t)))?,
@@ -177,8 +173,6 @@ mod tests {
 
         runtime.resolve(Some(&mut context)).unwrap();
 
-        assert_eq!(runtime.data.get_integer(2).unwrap(), 100);
-        assert_eq!(runtime.data.get_register().get(0).unwrap(), &3);
-        assert_eq!(runtime.data.get_reference(3).unwrap(), 2);
+        assert_eq!(runtime.data.get_register().get(0).unwrap(), &2);
     }
 }

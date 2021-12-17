@@ -5,7 +5,6 @@ use std::{collections::HashMap, convert::TryInto, hash::Hasher};
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ExpressionDataType {
     Unit = 1,
-    Reference,
     Integer,
     Symbol,
     Pair,
@@ -46,10 +45,6 @@ impl ExpressionData {
 
     pub fn integer(i: i64) -> ExpressionData {
         ExpressionData::new(ExpressionDataType::Integer, i.to_le_bytes().to_vec())
-    }
-
-    pub fn reference(r: usize) -> ExpressionData {
-        ExpressionData::new(ExpressionDataType::Reference, r.to_le_bytes().to_vec())
     }
 
     pub fn symbol(name: &String, value: u64) -> ExpressionData {
@@ -260,14 +255,6 @@ mod tests {
 
         let d = ExpressionData::boolean_false();
         assert!(!d.as_boolean().unwrap());
-    }
-
-    #[test]
-    fn reference_expression_data() {
-        let d = ExpressionData::reference(1234567890);
-
-        assert_eq!(d.data_type, ExpressionDataType::Reference);
-        assert_eq!(d.bytes, 1234567890usize.to_le_bytes());
     }
 
     #[test]
