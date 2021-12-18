@@ -48,7 +48,7 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
             ((true, node.get_left()), (true, node.get_right()))
         }
         Definition::ApplyTo => ((true, node.get_right()), (true, node.get_left())),
-        Definition::List => ((true, node.get_left()), (true, node.get_right())),
+        Definition::List | Definition::CommaList => ((true, node.get_left()), (true, node.get_right())),
         Definition::Group => ((true, node.get_right()), (false, None)),
         Definition::NestedExpression => ((false, None), (false, None)),
         Definition::ApplyIfTrue => ((true, node.get_left()), (false, None)),
@@ -141,7 +141,7 @@ fn resolve_node<T: GarnishLangRuntimeData>(
             data.push_instruction(InstructionData::new(Instruction::AccessLengthInternal, None))
                 .nest_into()?;
         }
-        Definition::List => match list_count {
+        Definition::List | Definition::CommaList => match list_count {
             None => Err(GarnishLangCompilerError::new(format!("No list count passed to list node resolve.")))?,
             Some(count) => {
                 data.push_instruction(InstructionData::new(Instruction::MakeList, Some(*count)))
@@ -237,15 +237,36 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                             let we_are_conditional = node.get_definition() == Definition::ApplyIfFalse
                                 || node.get_definition() == Definition::ApplyIfTrue
                                 || node.get_definition() == Definition::DefaultConditional;
+
                             let we_are_parent_conditional_branch = node.get_definition() == Definition::ConditionalBranch
                                 && resolve_node_info.parent_definition != Definition::ConditionalBranch;
+
                             let we_are_non_chained_conditional =
                                 we_are_conditional && resolve_node_info.parent_definition != Definition::ConditionalBranch;
+
+                            let we_are_list = node.get_definition() == Definition::List;
+                            let we_are_comma_list = node.get_definition() == Definition::CommaList;
+                            let we_are_list_type = we_are_list || we_are_comma_list;
+
+                            let parent_is_list_type = resolve_node_info.parent_definition == Definition::List
+                                || resolve_node_info.parent_definition == Definition::CommaList;
+
+                            let we_are_sub_list =
+                                we_are_list_type && parent_is_list_type && node.get_definition() == resolve_node_info.parent_definition;
+
+                            let we_are_list_root = we_are_list_type && node.get_definition() != resolve_node_info.parent_definition;
+
+                            // we are list item if either
+                            // we are not a list and our parent is
+                            // or we are a list and our parent is the other type of list (i.e. we are List and parent is CommaList or we are CommaList and our parent is List)
+                            let we_are_list_item = !we_are_list_type && parent_is_list_type
+                                || we_are_list && resolve_node_info.parent_definition == Definition::CommaList
+                                || we_are_comma_list && resolve_node_info.parent_definition == Definition::List;
 
                             let pop = if first_expected && !resolve_node_info.first_resolved {
                                 // on first visit to a list node
                                 // if parent isn't a list, we start a new list count
-                                if node.get_definition() == Definition::List && resolve_node_info.parent_definition != Definition::List {
+                                if we_are_list_root {
                                     trace!("Starting new list count");
                                     list_counts.push(0);
                                 }
@@ -305,17 +326,18 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                             } else {
                                 // all children resolved, now resolve this node
                                 let we_are_subexpression = node.get_definition() == Definition::Subexpression;
-                                let we_are_list = node.get_definition() == Definition::List;
-                                let parent_is_list = resolve_node_info.parent_definition == Definition::List;
-                                let we_are_sublist = parent_is_list && we_are_list;
 
-                                let resolve = !we_are_subexpression && !we_are_sublist;
+                                let resolve = !we_are_subexpression && !we_are_sub_list;
 
                                 // subexpression already resolved before second child
                                 if resolve {
                                     trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
 
                                     resolve_node(node, data, list_counts.last(), jump_count)?;
+
+                                    if we_are_list_root {
+                                        list_counts.pop();
+                                    }
                                 }
 
                                 // after resolving, if a nested expression
@@ -381,7 +403,7 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
 
                                 // If this node's parent is a list
                                 // add to its count, unless we are a list
-                                if parent_is_list && !we_are_list {
+                                if we_are_list_item {
                                     match list_counts.last_mut() {
                                         None => Err(GarnishLangCompilerError::new(format!("Child of list node has no count add to.")))?,
                                         Some(count) => {
@@ -963,6 +985,47 @@ mod lists {
                 (Instruction::Put, Some(5)),
                 (Instruction::Put, Some(6)),
                 (Instruction::MakeList, Some(5)),
+                (Instruction::EndExpression, None),
+            ],
+            vec![
+                ExpressionData::integer(5),
+                ExpressionData::integer(10),
+                ExpressionData::integer(15),
+                ExpressionData::integer(20),
+                ExpressionData::integer(25),
+                ExpressionData::integer(30),
+            ],
+        );
+    }
+
+    #[test]
+    fn space_list_in_comma_list() {
+        assert_instruction_data(
+            9,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::CommaList, Some(9), Some(0), Some(7), ",", TokenType::Comma),
+                //
+                (Definition::Number, Some(3), None, None, "10", TokenType::Number),
+                (Definition::List, Some(5), Some(2), Some(4), ",", TokenType::Comma),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+                (Definition::List, Some(7), Some(3), Some(6), ",", TokenType::Comma),
+                (Definition::Number, Some(5), None, None, "20", TokenType::Number),
+                (Definition::List, Some(1), Some(5), Some(8), ",", TokenType::Comma),
+                (Definition::Number, Some(7), None, None, "25", TokenType::Number),
+                //
+                (Definition::CommaList, None, Some(1), Some(10), ",", TokenType::Comma),
+                (Definition::Number, Some(9), None, None, "30", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Put, Some(5)),
+                (Instruction::MakeList, Some(4)),
+                (Instruction::Put, Some(6)),
+                (Instruction::MakeList, Some(3)),
                 (Instruction::EndExpression, None),
             ],
             vec![

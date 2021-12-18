@@ -17,6 +17,7 @@ pub enum Definition {
     AccessRightInternal,
     AccessLengthInternal,
     List,
+    CommaList,
     Drop,
     Symbol,
     Input,
@@ -182,47 +183,48 @@ impl ParseResult {
 fn make_priority_map() -> HashMap<Definition, usize> {
     let mut map = HashMap::new();
 
-    map.insert(Definition::Number, 1);
-    map.insert(Definition::Identifier, 1);
-    map.insert(Definition::Symbol, 1);
-    map.insert(Definition::Unit, 1);
-    map.insert(Definition::Input, 1);
-    map.insert(Definition::True, 1);
-    map.insert(Definition::False, 1);
-    map.insert(Definition::Result, 1);
+    map.insert(Definition::Number, 10);
+    map.insert(Definition::Identifier, 10);
+    map.insert(Definition::Symbol, 10);
+    map.insert(Definition::Unit, 10);
+    map.insert(Definition::Input, 10);
+    map.insert(Definition::True, 10);
+    map.insert(Definition::False, 10);
+    map.insert(Definition::Result, 10);
 
-    map.insert(Definition::Group, 2);
-    map.insert(Definition::NestedExpression, 2);
+    map.insert(Definition::Group, 20);
+    map.insert(Definition::NestedExpression, 20);
 
-    map.insert(Definition::Access, 3);
+    map.insert(Definition::Access, 30);
 
-    map.insert(Definition::EmptyApply, 4);
+    map.insert(Definition::EmptyApply, 40);
 
-    map.insert(Definition::AbsoluteValue, 5);
-    map.insert(Definition::AccessLeftInternal, 5);
+    map.insert(Definition::AbsoluteValue, 50);
+    map.insert(Definition::AccessLeftInternal, 50);
 
-    map.insert(Definition::AccessRightInternal, 6);
-    map.insert(Definition::AccessLengthInternal, 6);
+    map.insert(Definition::AccessRightInternal, 60);
+    map.insert(Definition::AccessLengthInternal, 60);
 
-    map.insert(Definition::Addition, 10);
+    map.insert(Definition::Addition, 100);
 
-    map.insert(Definition::Equality, 14);
+    map.insert(Definition::Equality, 140);
 
-    map.insert(Definition::Pair, 21);
+    map.insert(Definition::Pair, 210);
 
-    map.insert(Definition::List, 23);
+    map.insert(Definition::List, 229);
+    map.insert(Definition::CommaList, 230);
 
-    map.insert(Definition::Apply, 25);
-    map.insert(Definition::ApplyTo, 25);
+    map.insert(Definition::Apply, 250);
+    map.insert(Definition::ApplyTo, 250);
 
-    map.insert(Definition::Reapply, 26);
+    map.insert(Definition::Reapply, 260);
 
-    map.insert(Definition::ApplyIfTrue, 27);
-    map.insert(Definition::ApplyIfFalse, 27);
+    map.insert(Definition::ApplyIfTrue, 270);
+    map.insert(Definition::ApplyIfFalse, 270);
 
-    map.insert(Definition::ConditionalBranch, 28);
+    map.insert(Definition::ConditionalBranch, 280);
 
-    map.insert(Definition::Subexpression, 100);
+    map.insert(Definition::Subexpression, 1000);
 
     map
 }
@@ -607,7 +609,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
                     trace!("Not in conditional grouping, will create list node.");
                     parse_token(
                         id,
-                        Definition::List,
+                        Definition::CommaList,
                         last_left,
                         assumed_right,
                         &mut nodes,
@@ -1646,8 +1648,47 @@ mod lists {
             1,
             &[
                 (0, Definition::Number, Some(1), None, None),
-                (1, Definition::List, None, Some(0), Some(2)),
+                (1, Definition::CommaList, None, Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn comma_list_nested_in_space_list() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            9,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::CommaList, Some(9), Some(0), Some(7)),
+                //
+                (2, Definition::Number, Some(3), None, None),
+                (3, Definition::List, Some(5), Some(2), Some(4)),
+                (4, Definition::Number, Some(3), None, None),
+                (5, Definition::List, Some(7), Some(3), Some(6)),
+                (6, Definition::Number, Some(5), None, None),
+                (7, Definition::List, Some(1), Some(5), Some(8)),
+                (8, Definition::Number, Some(7), None, None),
+                //
+                (9, Definition::CommaList, None, Some(1), Some(10)),
+                (10, Definition::Number, Some(9), None, None),
             ],
         );
     }
