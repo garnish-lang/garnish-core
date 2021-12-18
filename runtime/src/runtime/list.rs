@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{error, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, NestInto};
+use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, NestInto};
 
 use super::data::GarnishLangRuntimeData;
 
@@ -10,51 +10,28 @@ where
 {
     pub fn make_list(&mut self, len: usize) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Make List | Length - {:?}", len);
-        let mut list = vec![];
-        let mut associative_list = vec![];
+
+        self.data.start_list(len).nest_into()?;
 
         for _ in 0..len {
-            let r = self.next_ref()?;
-
-            match self.data.get_data_type(r).nest_into()? {
-                ExpressionDataType::Pair => {
-                    let (left, _) = self.data.get_pair(r).nest_into()?;
-
-                    match self.data.get_data_type(left).nest_into()? {
-                        ExpressionDataType::Symbol => associative_list.push(r),
-                        _ => (),
-                    }
-                }
-                _ => (), // Other values are just simple items
-            }
-
-            list.push(r);
+            self.next_ref().and_then(|r| {
+                self.data
+                    .get_data_type(r)
+                    .and_then(|t| match t {
+                        ExpressionDataType::Pair => self.data.get_pair(r).and_then(|(left, _)| {
+                            self.data.get_data_type(left).and_then(|t| match t {
+                                ExpressionDataType::Symbol => Ok(true),
+                                _ => Ok(false),
+                            })
+                        }),
+                        _ => Ok(false), // Other values are just simple items
+                    })
+                    .and_then(|is_associative| self.data.add_to_list(r, is_associative))
+                    .nest_into()
+            })?
         }
 
-        list.reverse();
-
-        // reorder associative values by modulo value
-        let mut ordered = vec![0usize; associative_list.len()];
-        for index in 0..associative_list.len() {
-            let item = associative_list[index];
-            let mut i = item % associative_list.len();
-            let mut count = 0;
-            while ordered[i] != 0 {
-                i += 1;
-                if i >= associative_list.len() {
-                    i = 0;
-                }
-
-                count += 1;
-                if count > associative_list.len() {
-                    return Err(error(format!("Could not place associative value")));
-                }
-            }
-
-            ordered[i] = item;
-        }
-
-        self.push_list(list, ordered)
+        self.data.end_list().and_then(|r| self.data.push_register(r)).nest_into()
     }
 
     pub fn access(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
@@ -108,49 +85,7 @@ where
             (ExpressionDataType::List, ExpressionDataType::Symbol) => {
                 let sym_val = self.data.get_symbol(sym_ref).nest_into()?;
 
-                let assocations_len = self.data.get_list_associations_len(list_ref).nest_into()?;
-
-                let mut i = sym_val as usize % assocations_len;
-                let mut count = 0;
-
-                loop {
-                    // check to make sure item has same symbol
-                    let association_ref = self.data.get_list_association(list_ref, i).nest_into()?;
-                    let pair_ref = self.addr_of_raw_data(association_ref)?; // this should be a pair
-
-                    // should have symbol on left
-                    match self.data.get_data_type(pair_ref).nest_into()? {
-                        ExpressionDataType::Pair => {
-                            let (left, right) = self.data.get_pair(pair_ref).nest_into()?;
-
-                            let left_ref = self.addr_of_raw_data(left)?;
-
-                            match self.data.get_data_type(left_ref).nest_into()? {
-                                ExpressionDataType::Symbol => {
-                                    let v = self.data.get_symbol(left_ref).nest_into()?;
-
-                                    if v == sym_val {
-                                        // found match
-                                        // insert pair right as value
-                                        return Ok(Some(right));
-                                    }
-                                }
-                                t => Err(error(format!("Association created with non-symbol type {:?} on pair left.", t)))?,
-                            }
-                        }
-                        t => Err(error(format!("Association created with non-pair type {:?}.", t)))?,
-                    }
-
-                    i += 1;
-                    if i >= assocations_len {
-                        i = 0;
-                    }
-
-                    count += 1;
-                    if count > assocations_len {
-                        return Ok(None);
-                    }
-                }
+                Ok(self.data.get_list_item_with_symbol(list_ref, sym_val).nest_into()?)
             }
             _ => Ok(None),
         }

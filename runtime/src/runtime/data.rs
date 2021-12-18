@@ -45,10 +45,15 @@ pub trait GarnishLangRuntimeData {
     fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error>;
     fn add_external(&mut self, value: usize) -> Result<usize, Self::Error>;
     fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error>;
-    fn add_list(&mut self, value: Vec<usize>, associations: Vec<usize>) -> Result<usize, Self::Error>;
     fn add_unit(&mut self) -> Result<usize, Self::Error>;
     fn add_true(&mut self) -> Result<usize, Self::Error>;
     fn add_false(&mut self) -> Result<usize, Self::Error>;
+
+    fn add_list(&mut self, value: Vec<usize>, associations: Vec<usize>) -> Result<usize, Self::Error>;
+    fn start_list(&mut self, len: usize) -> Result<(), Self::Error>;
+    fn add_to_list(&mut self, addr: usize, is_associative: bool) -> Result<(), Self::Error>;
+    fn end_list(&mut self) -> Result<usize, Self::Error>;
+    fn get_list_item_with_symbol(&self, list_addr: usize, sym: u64) -> Result<Option<usize>, Self::Error>;
 
     fn push_register(&mut self, addr: usize) -> Result<(), Self::Error>;
     fn pop_register(&mut self) -> Option<usize>;
@@ -73,6 +78,7 @@ pub trait GarnishLangRuntimeData {
     fn add_data(&mut self, data: ExpressionData) -> Result<usize, Self::Error>;
 }
 
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub struct SimpleRuntimeData {
     register: Vec<usize>,
     data: Vec<ExpressionData>,
@@ -83,6 +89,7 @@ pub struct SimpleRuntimeData {
     instruction_cursor: usize,
     expression_table: Vec<usize>,
     jump_path: Vec<usize>,
+    current_list: Option<(Vec<usize>, Vec<usize>)>,
 }
 
 impl SimpleRuntimeData {
@@ -128,6 +135,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
             instructions: vec![InstructionData::new(Instruction::EndExecution, None)],
             expression_table: vec![],
             jump_path: vec![],
+            current_list: None,
         }
     }
 
@@ -214,11 +222,6 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.data.len() - 1)
     }
 
-    fn add_list(&mut self, value: Vec<usize>, associations: Vec<usize>) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::list(value, associations));
-        Ok(self.data.len() - 1)
-    }
-
     fn add_data(&mut self, data: ExpressionData) -> Result<usize, Self::Error> {
         self.data.push(data);
         Ok(self.data.len() - 1)
@@ -237,6 +240,109 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn add_false(&mut self) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::boolean_false());
         Ok(self.data.len() - 1)
+    }
+
+    fn add_list(&mut self, value: Vec<usize>, associations: Vec<usize>) -> Result<usize, Self::Error> {
+        self.data.push(ExpressionData::list(value, associations));
+        Ok(self.data.len() - 1)
+    }
+
+    fn start_list(&mut self, _: usize) -> Result<(), Self::Error> {
+        self.current_list = Some((vec![], vec![]));
+        Ok(())
+    }
+
+    fn add_to_list(&mut self, addr: usize, is_associative: bool) -> Result<(), Self::Error> {
+        match &mut self.current_list {
+            None => Err(format!("Not currently creating a list.")),
+            Some((items, associations)) => {
+                items.push(addr);
+
+                if is_associative {
+                    associations.push(addr);
+                }
+
+                Ok(())
+            }
+        }
+    }
+
+    fn end_list(&mut self) -> Result<usize, Self::Error> {
+        match &mut self.current_list {
+            None => Err(format!("Not currently creating a list.")),
+            Some((items, associations)) => {
+                // reorder associative values by modulo value
+                let mut ordered = vec![0usize; associations.len()];
+                for index in 0..associations.len() {
+                    let item = associations[index];
+                    let mut i = item % associations.len();
+                    let mut count = 0;
+                    while ordered[i] != 0 {
+                        i += 1;
+                        if i >= associations.len() {
+                            i = 0;
+                        }
+
+                        count += 1;
+                        if count > associations.len() {
+                            return Err(format!("Could not place associative value"));
+                        }
+                    }
+
+                    ordered[i] = item;
+                }
+
+                items.reverse();
+
+                self.data.push(ExpressionData::list(items.to_vec(), ordered));
+                Ok(self.data.len() - 1)
+            }
+        }
+    }
+
+    fn get_list_item_with_symbol(&self, list_addr: usize, sym: u64) -> Result<Option<usize>, Self::Error> {
+        let assocations_len = self.get_list_associations_len(list_addr)?;
+
+        let mut i = sym as usize % assocations_len;
+        let mut count = 0;
+
+        loop {
+            // check to make sure item has same symbol
+            let association_ref = self.get_list_association(list_addr, i)?;
+
+            // should have symbol on left
+            match self.get_data_type(association_ref)? {
+                ExpressionDataType::Pair => {
+                    let (left, right) = self.get_pair(association_ref)?;
+
+                    let left_ref = left;
+
+                    match self.get_data_type(left_ref)? {
+                        ExpressionDataType::Symbol => {
+                            let v = self.get_symbol(left_ref)?;
+
+                            if v == sym {
+                                // found match
+                                // insert pair right as value
+                                return Ok(Some(right));
+                            }
+                        }
+                        t => Err(format!("Association created with non-symbol type {:?} on pair left.", t))?,
+                    }
+                }
+                t => Err(format!("Association created with non-pair type {:?}.", t))?,
+            }
+
+            i += 1;
+            if i >= assocations_len {
+                i = 0;
+            }
+
+            count += 1;
+            if count > assocations_len {
+                return Ok(None);
+            }
+        }
     }
 
     fn push_register(&mut self, addr: usize) -> Result<(), Self::Error> {
