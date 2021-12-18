@@ -1007,11 +1007,11 @@ mod lists {
                 (Definition::CommaList, Some(9), Some(0), Some(7), ",", TokenType::Comma),
                 //
                 (Definition::Number, Some(3), None, None, "10", TokenType::Number),
-                (Definition::List, Some(5), Some(2), Some(4), ",", TokenType::Comma),
+                (Definition::List, Some(5), Some(2), Some(4), " ", TokenType::Whitespace),
                 (Definition::Number, Some(3), None, None, "15", TokenType::Number),
-                (Definition::List, Some(7), Some(3), Some(6), ",", TokenType::Comma),
+                (Definition::List, Some(7), Some(3), Some(6), " ", TokenType::Whitespace),
                 (Definition::Number, Some(5), None, None, "20", TokenType::Number),
-                (Definition::List, Some(1), Some(5), Some(8), ",", TokenType::Comma),
+                (Definition::List, Some(1), Some(5), Some(8), " ", TokenType::Whitespace),
                 (Definition::Number, Some(7), None, None, "25", TokenType::Number),
                 //
                 (Definition::CommaList, None, Some(1), Some(10), ",", TokenType::Comma),
