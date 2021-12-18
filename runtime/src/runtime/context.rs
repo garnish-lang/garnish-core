@@ -1,6 +1,4 @@
-use crate::GarnishLangRuntimeResult;
-
-use super::data::GarnishLangRuntimeData;
+use crate::{GarnishLangRuntimeData, GarnishLangRuntimeResult};
 
 pub trait GarnishLangRuntimeContext<Data>
 where

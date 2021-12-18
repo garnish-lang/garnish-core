@@ -1,9 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::{
-        runtime::{data::GarnishLangRuntimeData, GarnishRuntime},
-        ExpressionData, ExpressionDataType, Instruction, SimpleRuntimeData,
-    };
+    use crate::{runtime::GarnishRuntime, ExpressionData, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
 
     #[test]
     fn equality_true() {

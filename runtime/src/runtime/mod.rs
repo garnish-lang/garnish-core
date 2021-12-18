@@ -8,11 +8,13 @@ mod list;
 mod pair;
 mod put;
 mod resolve;
+mod runtime_data;
 mod utilities;
 
 pub use crate::runtime::utilities::*;
 pub use context::*;
-pub use data::{GarnishLangRuntimeData, SimpleRuntimeData};
+pub use data::SimpleRuntimeData;
+pub use runtime_data::GarnishLangRuntimeData;
 
 use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
 use crate::runtime::apply::*;

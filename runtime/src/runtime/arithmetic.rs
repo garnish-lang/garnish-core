@@ -1,9 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::{
-        runtime::{data::GarnishLangRuntimeData, GarnishRuntime},
-        ExpressionData, ExpressionDataType, SimpleRuntimeData,
-    };
+    use crate::{runtime::GarnishRuntime, ExpressionData, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn perform_addition() {

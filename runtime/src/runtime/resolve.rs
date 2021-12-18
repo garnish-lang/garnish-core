@@ -4,11 +4,10 @@ mod tests {
         error,
         runtime::{
             context::{EmptyContext, GarnishLangRuntimeContext},
-            data::GarnishLangRuntimeData,
             utilities::push_integer,
             GarnishRuntime,
         },
-        ExpressionData, ExpressionDataType, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
+        ExpressionData, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
     };
 
     #[test]

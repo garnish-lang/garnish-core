@@ -1,6 +1,4 @@
-use crate::{ExpressionDataType, GarnishLangRuntimeResult, NestInto};
-
-use super::data::GarnishLangRuntimeData;
+use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto};
 
 pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
     this: &mut Data,
@@ -22,10 +20,7 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        runtime::{data::GarnishLangRuntimeData, GarnishRuntime},
-        ExpressionData, ExpressionDataType, Instruction, SimpleRuntimeData,
-    };
+    use crate::{runtime::GarnishRuntime, ExpressionData, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
 
     #[test]
     fn make_list() {

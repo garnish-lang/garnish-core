@@ -45,7 +45,7 @@ pub fn push_pair<Data: GarnishLangRuntimeData>(this: &mut Data, left: usize, rig
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::data::GarnishLangRuntimeData, ExpressionData, SimpleRuntimeData};
+    use crate::{ExpressionData, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn add_data() {

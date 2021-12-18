@@ -1,7 +1,7 @@
 use crate::runtime::utilities::*;
-use crate::{error, ExpressionDataType, GarnishLangRuntimeResult, NestInto};
+use crate::{error, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto};
 
-use super::{context::GarnishLangRuntimeContext, data::GarnishLangRuntimeData};
+use super::context::GarnishLangRuntimeContext;
 
 pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
@@ -44,11 +44,10 @@ mod tests {
     use crate::{
         runtime::{
             context::{EmptyContext, GarnishLangRuntimeContext},
-            data::GarnishLangRuntimeData,
             utilities::push_integer,
             GarnishRuntime,
         },
-        ExpressionData, ExpressionDataType, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
+        ExpressionData, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
     };
 
     #[test]

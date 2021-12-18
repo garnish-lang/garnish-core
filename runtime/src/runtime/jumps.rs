@@ -1,9 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::{
-        runtime::{data::GarnishLangRuntimeData, GarnishRuntime},
-        ExpressionData, Instruction, SimpleRuntimeData,
-    };
+    use crate::{runtime::GarnishRuntime, ExpressionData, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
 
     #[test]
     fn end_expression() {
