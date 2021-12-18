@@ -1,9 +1,16 @@
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+};
+
 use crate::{ExpressionData, ExpressionDataType, Instruction, InstructionData};
 
 pub trait GarnishLangRuntimeData {
     type Error;
 
     fn new() -> Self;
+
+    fn create_symbol(&self, sym: &str) -> u64;
 
     fn set_end_of_constant(&mut self, addr: usize) -> Result<(), Self::Error>;
     fn get_end_of_constant_data(&self) -> usize;
@@ -34,7 +41,7 @@ pub trait GarnishLangRuntimeData {
     fn get_list_association(&self, list_index: usize, item_index: usize) -> Result<usize, Self::Error>;
 
     fn add_integer(&mut self, value: i64) -> Result<usize, Self::Error>;
-    fn add_symbol(&mut self, value: &String) -> Result<usize, Self::Error>;
+    fn add_symbol(&mut self, value: u64) -> Result<usize, Self::Error>;
     fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error>;
     fn add_external(&mut self, value: usize) -> Result<usize, Self::Error>;
     fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error>;
@@ -124,6 +131,14 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         }
     }
 
+    fn create_symbol(&self, sym: &str) -> u64 {
+        let mut h = DefaultHasher::new();
+        sym.hash(&mut h);
+        let hv = h.finish();
+
+        hv
+    }
+
     fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error> {
         Ok(self.get(index)?.get_type())
     }
@@ -179,8 +194,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.data.len() - 1)
     }
 
-    fn add_symbol(&mut self, value: &String) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::symbol_from_string(value));
+    fn add_symbol(&mut self, value: u64) -> Result<usize, Self::Error> {
+        self.data.push(ExpressionData::symbol(&"".to_string(), value));
         Ok(self.data.len() - 1)
     }
 
