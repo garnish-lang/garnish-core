@@ -1,4 +1,3 @@
-use garnish_lang_runtime::InstructionData;
 use garnish_lang_runtime::*;
 use log::trace;
 
@@ -67,8 +66,7 @@ fn resolve_node<T: GarnishLangRuntimeData>(
 ) -> GarnishLangCompilerResult<(), T::Error> {
     match node.get_definition() {
         Definition::Number => {
-            data.push_instruction(InstructionData::new(Instruction::Put, Some(data.get_data_len())))
-                .nest_into()?;
+            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
 
             data.add_integer(match node.get_lex_token().get_text().parse::<i64>() {
                 Err(e) => Err(GarnishLangCompilerError::new(e.to_string()))?,
@@ -77,109 +75,95 @@ fn resolve_node<T: GarnishLangRuntimeData>(
             .nest_into()?;
         }
         Definition::Identifier => {
-            data.push_instruction(InstructionData::new(Instruction::Put, Some(data.get_data_len())))
-                .nest_into()?;
-            data.push_instruction(InstructionData::new(Instruction::Resolve, None)).nest_into()?;
+            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
+            data.push_instruction(Instruction::Resolve, None).nest_into()?;
 
             let sym = data.create_symbol(&node.get_lex_token().get_text());
             data.add_symbol(sym).nest_into()?;
         }
         Definition::Unit => {
             // all unit literals will use unit used in the zero element slot of data
-            data.push_instruction(InstructionData::new(Instruction::Put, Some(0))).nest_into()?;
+            data.push_instruction(Instruction::Put, Some(0)).nest_into()?;
         }
         Definition::Symbol => {
-            data.push_instruction(InstructionData::new(Instruction::Put, Some(data.get_data_len())))
-                .nest_into()?;
+            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
 
             let sym = data.create_symbol(&node.get_lex_token().get_text()[1..]);
             data.add_symbol(sym).nest_into()?;
         }
         Definition::Input => {
             // all unit literals will use unit used in the zero element slot of data
-            data.push_instruction(InstructionData::new(Instruction::PutInput, None)).nest_into()?;
+            data.push_instruction(Instruction::PutInput, None).nest_into()?;
         }
         Definition::True => {
-            data.push_instruction(InstructionData::new(Instruction::Put, Some(data.get_data_len())))
-                .nest_into()?;
+            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
             data.add_true().nest_into()?;
         }
         Definition::False => {
-            data.push_instruction(InstructionData::new(Instruction::Put, Some(data.get_data_len())))
-                .nest_into()?;
+            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
             data.add_false().nest_into()?;
         }
         Definition::Result => {
             // all unit literals will use unit used in the zero element slot of data
-            data.push_instruction(InstructionData::new(Instruction::PutResult, None)).nest_into()?;
+            data.push_instruction(Instruction::PutResult, None).nest_into()?;
         }
         Definition::AbsoluteValue => todo!(), // not currently in runtime
         Definition::EmptyApply => {
-            data.push_instruction(InstructionData::new(Instruction::EmptyApply, None)).nest_into()?;
+            data.push_instruction(Instruction::EmptyApply, None).nest_into()?;
         }
         Definition::Addition => {
-            data.push_instruction(InstructionData::new(Instruction::PerformAddition, None))
-                .nest_into()?;
+            data.push_instruction(Instruction::PerformAddition, None).nest_into()?;
         }
         Definition::Equality => {
-            data.push_instruction(InstructionData::new(Instruction::EqualityComparison, None))
-                .nest_into()?;
+            data.push_instruction(Instruction::EqualityComparison, None).nest_into()?;
         }
         Definition::Pair => {
-            data.push_instruction(InstructionData::new(Instruction::MakePair, None)).nest_into()?;
+            data.push_instruction(Instruction::MakePair, None).nest_into()?;
         }
         Definition::Access => {
-            data.push_instruction(InstructionData::new(Instruction::Access, None)).nest_into()?;
+            data.push_instruction(Instruction::Access, None).nest_into()?;
         }
         Definition::AccessLeftInternal => {
-            data.push_instruction(InstructionData::new(Instruction::AccessLeftInternal, None))
-                .nest_into()?;
+            data.push_instruction(Instruction::AccessLeftInternal, None).nest_into()?;
         }
         Definition::AccessRightInternal => {
-            data.push_instruction(InstructionData::new(Instruction::AccessRightInternal, None))
-                .nest_into()?;
+            data.push_instruction(Instruction::AccessRightInternal, None).nest_into()?;
         }
         Definition::AccessLengthInternal => {
-            data.push_instruction(InstructionData::new(Instruction::AccessLengthInternal, None))
-                .nest_into()?;
+            data.push_instruction(Instruction::AccessLengthInternal, None).nest_into()?;
         }
         Definition::List | Definition::CommaList => match list_count {
             None => Err(GarnishLangCompilerError::new(format!("No list count passed to list node resolve.")))?,
             Some(count) => {
-                data.push_instruction(InstructionData::new(Instruction::MakeList, Some(*count)))
-                    .nest_into()?;
+                data.push_instruction(Instruction::MakeList, Some(*count)).nest_into()?;
             }
         },
         Definition::Subexpression => {
-            data.push_instruction(InstructionData::new(Instruction::PushResult, None)).nest_into()?;
+            data.push_instruction(Instruction::PushResult, None).nest_into()?;
         }
         Definition::Group => (), // no additional instructions for groups
         Definition::NestedExpression => {
-            data.push_instruction(InstructionData::new(Instruction::Put, Some(data.get_data_len())))
-                .nest_into()?;
+            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
 
             data.add_expression(current_jump_index).nest_into()?;
         }
         Definition::Apply => {
-            data.push_instruction(InstructionData::new(Instruction::Apply, None)).nest_into()?;
+            data.push_instruction(Instruction::Apply, None).nest_into()?;
         }
         Definition::ApplyTo => {
-            data.push_instruction(InstructionData::new(Instruction::Apply, None)).nest_into()?;
+            data.push_instruction(Instruction::Apply, None).nest_into()?;
         }
         Definition::Reapply => {
-            data.push_instruction(InstructionData::new(Instruction::Reapply, None)).nest_into()?;
+            data.push_instruction(Instruction::Reapply, None).nest_into()?;
         }
         Definition::ApplyIfTrue => {
-            data.push_instruction(InstructionData::new(Instruction::JumpIfTrue, Some(current_jump_index)))
-                .nest_into()?;
+            data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index)).nest_into()?;
         }
         Definition::ApplyIfFalse => {
-            data.push_instruction(InstructionData::new(Instruction::JumpIfFalse, Some(current_jump_index)))
-                .nest_into()?;
+            data.push_instruction(Instruction::JumpIfFalse, Some(current_jump_index)).nest_into()?;
         }
         Definition::DefaultConditional => {
-            data.push_instruction(InstructionData::new(Instruction::JumpTo, Some(current_jump_index)))
-                .nest_into()?;
+            data.push_instruction(Instruction::JumpTo, Some(current_jump_index)).nest_into()?;
         }
         Definition::ConditionalBranch => (), // no additional instructions
         // no runtime meaning, parser only utility
@@ -445,8 +429,7 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
 
         trace!("Adding return instruction {:?} with data {:?}", return_instruction, instruction_data);
 
-        data.push_instruction(InstructionData::new(return_instruction, instruction_data))
-            .nest_into()?;
+        data.push_instruction(return_instruction, instruction_data).nest_into()?;
 
         trace!("Finished instructions for tree starting at index {:?}", root_index);
 

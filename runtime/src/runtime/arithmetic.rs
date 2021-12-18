@@ -1,58 +1,29 @@
-use log::trace;
-
-use crate::{ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeResult, NestInto};
-
-use super::data::GarnishLangRuntimeData;
-
-impl<Data> GarnishLangRuntime<Data>
-where
-    Data: GarnishLangRuntimeData,
-{
-    pub fn perform_addition(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Addition");
-
-        let (right_addr, left_addr) = self.next_two_raw_ref()?;
-
-        match (
-            self.data.get_data_type(left_addr).nest_into()?,
-            self.data.get_data_type(right_addr).nest_into()?,
-        ) {
-            (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                let left = self.data.get_integer(left_addr).nest_into()?;
-                let right = self.data.get_integer(right_addr).nest_into()?;
-
-                trace!("Performing {:?} + {:?}", left, right);
-
-                self.push_integer(left + right)
-            }
-            _ => self.push_unit(),
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::data::GarnishLangRuntimeData, ExpressionData, ExpressionDataType, GarnishLangRuntime};
+    use crate::{
+        runtime::{data::GarnishLangRuntimeData, GarnishRuntime},
+        ExpressionData, ExpressionDataType, SimpleRuntimeData,
+    };
 
     #[test]
     fn perform_addition() {
-        let mut runtime = GarnishLangRuntime::simple();
+        let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.data.push_register(1).unwrap();
-        runtime.data.push_register(2).unwrap();
+        runtime.push_register(1).unwrap();
+        runtime.push_register(2).unwrap();
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.data.get_register(), &vec![3]);
-        assert_eq!(runtime.data.get_integer(3).unwrap(), 30);
+        assert_eq!(runtime.get_register(), &vec![3]);
+        assert_eq!(runtime.get_integer(3).unwrap(), 30);
     }
 
     #[test]
     fn perform_addition_no_refs_is_err() {
-        let mut runtime = GarnishLangRuntime::simple();
+        let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
@@ -64,17 +35,17 @@ mod tests {
 
     #[test]
     fn perform_addition_with_non_integers() {
-        let mut runtime = GarnishLangRuntime::simple();
+        let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_data(ExpressionData::symbol(&"sym1".to_string(), 1)).unwrap();
         runtime.add_data(ExpressionData::symbol(&"sym2".to_string(), 2)).unwrap();
 
-        runtime.data.push_register(1).unwrap();
-        runtime.data.push_register(2).unwrap();
+        runtime.push_register(1).unwrap();
+        runtime.push_register(2).unwrap();
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.data.get_register(), &vec![3]);
-        assert_eq!(runtime.data.get_data_type(3).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_register(), &vec![3]);
+        assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Unit);
     }
 }

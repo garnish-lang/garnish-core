@@ -1,103 +1,55 @@
 // use log::trace;
 
-use crate::{error, ExpressionData, ExpressionDataType, GarnishLangRuntime, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto};
+use crate::{error, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto};
 
-impl<Data> GarnishLangRuntime<Data>
-where
-    Data: GarnishLangRuntimeData,
-{
-    pub fn get_data_pool(&self) -> &Data {
-        &self.data
+pub(crate) fn next_ref<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error, usize> {
+    match this.pop_register() {
+        None => Err(error(format!("No references in register.")))?,
+        Some(i) => Ok(i),
     }
+}
 
-    pub fn add_data(&mut self, data: ExpressionData) -> GarnishLangRuntimeResult<Data::Error, usize> {
-        // Check if give a reference of reference
-        // flatten reference to point to non-Reference data
-        let data = match data.get_type() {
-            ExpressionDataType::Symbol => {
-                // self.symbols.extend(data.symbols.clone());
-                data
-            }
-            _ => data,
-        };
+pub(crate) fn next_two_raw_ref<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error, (usize, usize)> {
+    let first_ref = next_ref(this)?;
+    let second_ref = next_ref(this)?;
 
-        let addr = self.data.get_data_len();
-        self.data.add_data(data.clone()).nest_into()?;
-        Ok(addr)
+    Ok((first_ref, second_ref))
+}
+
+// push utilities
+
+pub fn push_unit<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+    this.add_unit().and_then(|v| this.push_register(v)).nest_into()
+}
+
+pub fn push_integer<Data: GarnishLangRuntimeData>(this: &mut Data, value: i64) -> GarnishLangRuntimeResult<Data::Error> {
+    this.add_integer(value).and_then(|v| this.push_register(v)).nest_into()
+}
+
+pub fn push_boolean<Data: GarnishLangRuntimeData>(this: &mut Data, value: bool) -> GarnishLangRuntimeResult<Data::Error> {
+    match value {
+        true => this.add_true(),
+        false => this.add_false(),
     }
+    .and_then(|v| this.push_register(v))
+    .nest_into()
+}
 
-    pub fn end_constant_data(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        self.data.set_end_of_constant(self.data.get_data_len()).nest_into()
-    }
+pub fn push_list<Data: GarnishLangRuntimeData>(this: &mut Data, list: Vec<usize>, associations: Vec<usize>) -> GarnishLangRuntimeResult<Data::Error> {
+    this.add_list(list, associations).and_then(|v| this.push_register(v)).nest_into()
+}
 
-    pub fn get_end_of_constant_data(&self) -> usize {
-        self.data.get_end_of_constant_data()
-    }
-
-    pub fn get_data_len(&self) -> usize {
-        self.data.get_data_len()
-    }
-
-    pub fn remove_non_constant_data(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        self.data.remove_non_constant_data().nest_into()
-    }
-
-    pub(crate) fn next_ref(&mut self) -> GarnishLangRuntimeResult<Data::Error, usize> {
-        match self.data.pop_register() {
-            None => Err(error(format!("No references in register.")))?,
-            Some(i) => Ok(i),
-        }
-    }
-
-    pub(crate) fn next_two_raw_ref(&mut self) -> GarnishLangRuntimeResult<Data::Error, (usize, usize)> {
-        let first_ref = self.next_ref()?;
-        let second_ref = self.next_ref()?;
-
-        Ok((self.addr_of_raw_data(first_ref)?, self.addr_of_raw_data(second_ref)?))
-    }
-
-    pub(crate) fn addr_of_raw_data(&self, addr: usize) -> GarnishLangRuntimeResult<Data::Error, usize> {
-        Ok(addr)
-    }
-
-    // push utilities
-
-    pub fn push_unit(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        self.data.add_unit().and_then(|v| self.data.push_register(v)).nest_into()
-    }
-
-    pub fn push_integer(&mut self, value: i64) -> GarnishLangRuntimeResult<Data::Error> {
-        self.data.add_integer(value).and_then(|v| self.data.push_register(v)).nest_into()
-    }
-
-    pub fn push_boolean(&mut self, value: bool) -> GarnishLangRuntimeResult<Data::Error> {
-        match value {
-            true => self.data.add_true(),
-            false => self.data.add_false(),
-        }
-        .and_then(|v| self.data.push_register(v))
-        .nest_into()
-    }
-
-    pub fn push_list(&mut self, list: Vec<usize>, associations: Vec<usize>) -> GarnishLangRuntimeResult<Data::Error> {
-        self.data
-            .add_list(list, associations)
-            .and_then(|v| self.data.push_register(v))
-            .nest_into()
-    }
-
-    pub fn push_pair(&mut self, left: usize, right: usize) -> GarnishLangRuntimeResult<Data::Error> {
-        self.data.add_pair((left, right)).and_then(|v| self.data.push_register(v)).nest_into()
-    }
+pub fn push_pair<Data: GarnishLangRuntimeData>(this: &mut Data, left: usize, right: usize) -> GarnishLangRuntimeResult<Data::Error> {
+    this.add_pair((left, right)).and_then(|v| this.push_register(v)).nest_into()
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::data::GarnishLangRuntimeData, ExpressionData, GarnishLangRuntime, Instruction};
+    use crate::{runtime::data::GarnishLangRuntimeData, ExpressionData, SimpleRuntimeData};
 
     #[test]
     fn add_data() {
-        let mut runtime = GarnishLangRuntime::simple();
+        let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_data(ExpressionData::integer(100)).unwrap();
 
@@ -106,28 +58,28 @@ mod tests {
 
     #[test]
     fn get_data() {
-        let mut runtime = GarnishLangRuntime::simple();
+        let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_data(ExpressionData::integer(100)).unwrap();
         runtime.add_data(ExpressionData::integer(200)).unwrap();
 
-        assert_eq!(runtime.data.get_integer(2).unwrap(), 200);
+        assert_eq!(runtime.get_integer(2).unwrap(), 200);
     }
 
     #[test]
     fn end_constant_data() {
-        let mut runtime = GarnishLangRuntime::simple();
+        let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_data(ExpressionData::integer(100)).unwrap();
         runtime.add_data(ExpressionData::integer(200)).unwrap();
-        runtime.end_constant_data().unwrap();
+        runtime.set_end_of_constant(runtime.get_data_len()).unwrap();
 
         assert_eq!(runtime.get_end_of_constant_data(), 3);
     }
 
     #[test]
     fn add_data_returns_addr() {
-        let mut runtime = GarnishLangRuntime::simple();
+        let mut runtime = SimpleRuntimeData::new();
 
         assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 1);
         assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 2);
@@ -137,19 +89,19 @@ mod tests {
 
     #[test]
     fn remove_data() {
-        let mut runtime = GarnishLangRuntime::simple();
+        let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.end_constant_data().unwrap();
+        runtime.set_end_of_constant(runtime.get_data_len()).unwrap();
 
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
+        // runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
 
         runtime.remove_non_constant_data().unwrap();
 
@@ -159,42 +111,45 @@ mod tests {
 
 #[cfg(test)]
 mod internal {
-    use crate::{ExpressionData, GarnishLangRuntime, GarnishLangRuntimeData};
+    use crate::{
+        runtime::utilities::{next_ref, next_two_raw_ref},
+        ExpressionData, GarnishLangRuntimeData, SimpleRuntimeData,
+    };
 
     #[test]
-    fn next_ref() {
-        let mut runtime = GarnishLangRuntime::simple();
+    fn next_ref_test() {
+        let mut runtime = SimpleRuntimeData::new();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.data.push_register(2).unwrap();
+        runtime.push_register(2).unwrap();
 
-        let result = runtime.next_ref().unwrap();
+        let result = next_ref(&mut runtime).unwrap();
 
         assert_eq!(result, 2);
     }
 
     #[test]
     fn next_ref_data_no_ref_is_error() {
-        let mut runtime = GarnishLangRuntime::simple();
+        let mut runtime = SimpleRuntimeData::new();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        let result = runtime.next_ref();
+        let result = next_ref(&mut runtime);
 
         assert!(result.is_err());
     }
 
     #[test]
     fn next_two_ref_data() {
-        let mut runtime = GarnishLangRuntime::simple();
+        let mut runtime = SimpleRuntimeData::new();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.data.push_register(1).unwrap();
-        runtime.data.push_register(2).unwrap();
+        runtime.push_register(1).unwrap();
+        runtime.push_register(2).unwrap();
 
-        let (first, second) = runtime.next_two_raw_ref().unwrap();
+        let (first, second) = next_two_raw_ref(&mut runtime).unwrap();
 
         assert_eq!(first, 2);
         assert_eq!(second, 1);
@@ -202,24 +157,24 @@ mod internal {
 
     #[test]
     fn next_two_ref_data_one_ref_is_error() {
-        let mut runtime = GarnishLangRuntime::simple();
+        let mut runtime = SimpleRuntimeData::new();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.data.push_register(1).unwrap();
+        runtime.push_register(1).unwrap();
 
-        let result = runtime.next_two_raw_ref();
+        let result = next_two_raw_ref(&mut runtime);
 
         assert!(result.is_err());
     }
 
     #[test]
     fn next_two_ref_data_zero_refs_is_error() {
-        let mut runtime = GarnishLangRuntime::simple();
+        let mut runtime = SimpleRuntimeData::new();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        let result = runtime.next_two_raw_ref();
+        let result = next_two_raw_ref(&mut runtime);
 
         assert!(result.is_err());
     }

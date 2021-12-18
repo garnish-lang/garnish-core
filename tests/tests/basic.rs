@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use garnish_lang_compiler::{instructions_from_ast, lex, parse};
-    use garnish_lang_runtime::{EmptyContext, GarnishLangRuntime, GarnishLangRuntimeData, GarnishLangRuntimeState, SimpleRuntimeData};
+    use garnish_lang_runtime::{EmptyContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, SimpleRuntimeData};
 
     #[test]
     fn basic_addition() {
@@ -18,10 +18,8 @@ mod tests {
 
         data.set_instruction_cursor(1).unwrap();
 
-        let mut runtime = GarnishLangRuntime::new_with_data(data);
-
         loop {
-            match runtime.execute_current_instruction::<EmptyContext>(None) {
+            match data.execute_current_instruction::<EmptyContext>(None) {
                 Err(e) => {
                     println!("{:?}", e);
                     break;
@@ -33,12 +31,6 @@ mod tests {
             }
         }
 
-        assert_eq!(
-            runtime
-                .get_data_pool()
-                .get_integer(runtime.get_data_pool().get_result().unwrap())
-                .unwrap(),
-            10
-        )
+        assert_eq!(data.get_integer(data.get_result().unwrap()).unwrap(), 10)
     }
 }

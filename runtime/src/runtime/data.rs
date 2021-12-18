@@ -8,8 +8,6 @@ use crate::{ExpressionData, ExpressionDataType, Instruction, InstructionData};
 pub trait GarnishLangRuntimeData {
     type Error;
 
-    fn new() -> Self;
-
     fn create_symbol(&self, sym: &str) -> u64;
 
     fn set_end_of_constant(&mut self, addr: usize) -> Result<(), Self::Error>;
@@ -22,8 +20,8 @@ pub trait GarnishLangRuntimeData {
     fn set_result(&mut self, result: Option<usize>) -> Result<(), Self::Error>;
     fn get_result(&self) -> Option<usize>;
 
-    fn push_input(&mut self, addr: usize) -> Result<(), Self::Error>;
-    fn pop_input(&mut self) -> Option<usize>;
+    fn push_input_stack(&mut self, addr: usize) -> Result<(), Self::Error>;
+    fn pop_input_stack(&mut self) -> Option<usize>;
     fn get_input(&self, index: usize) -> Option<usize>;
     fn get_input_count(&self) -> usize;
     fn get_current_input(&self) -> Option<usize>;
@@ -58,10 +56,11 @@ pub trait GarnishLangRuntimeData {
     fn push_register(&mut self, addr: usize) -> Result<(), Self::Error>;
     fn pop_register(&mut self) -> Option<usize>;
 
-    fn push_instruction(&mut self, instruction: InstructionData) -> Result<(), Self::Error>;
+    fn push_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> Result<(), Self::Error>;
     fn get_instruction(&self, index: usize) -> Option<&InstructionData>;
     fn set_instruction_cursor(&mut self, index: usize) -> Result<(), Self::Error>;
     fn advance_instruction_cursor(&mut self) -> Result<(), Self::Error>;
+    fn get_current_instruction(&self) -> Option<&InstructionData>;
     fn get_instruction_cursor(&self) -> usize;
     fn get_instruction_len(&self) -> usize;
 
@@ -93,6 +92,21 @@ pub struct SimpleRuntimeData {
 }
 
 impl SimpleRuntimeData {
+    pub fn new() -> Self {
+        SimpleRuntimeData {
+            register: vec![],
+            data: vec![ExpressionData::unit()],
+            end_of_constant_data: 0,
+            current_result: None,
+            inputs: vec![],
+            instruction_cursor: 0,
+            instructions: vec![InstructionData::new(Instruction::EndExecution, None)],
+            expression_table: vec![],
+            jump_path: vec![],
+            current_list: None,
+        }
+    }
+
     pub fn get(&self, index: usize) -> Result<&ExpressionData, String> {
         match self.data.get(index) {
             None => Err(format!("No data at addr {:?}", index)),
@@ -123,21 +137,6 @@ impl SimpleRuntimeData {
 
 impl GarnishLangRuntimeData for SimpleRuntimeData {
     type Error = String;
-
-    fn new() -> Self {
-        SimpleRuntimeData {
-            register: vec![],
-            data: vec![ExpressionData::unit()],
-            end_of_constant_data: 0,
-            current_result: None,
-            inputs: vec![],
-            instruction_cursor: 0,
-            instructions: vec![InstructionData::new(Instruction::EndExecution, None)],
-            expression_table: vec![],
-            jump_path: vec![],
-            current_list: None,
-        }
-    }
 
     fn create_symbol(&self, sym: &str) -> u64 {
         let mut h = DefaultHasher::new();
@@ -382,12 +381,12 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.current_result
     }
 
-    fn push_input(&mut self, addr: usize) -> Result<(), Self::Error> {
+    fn push_input_stack(&mut self, addr: usize) -> Result<(), Self::Error> {
         self.inputs.push(addr);
         Ok(())
     }
 
-    fn pop_input(&mut self) -> Option<usize> {
+    fn pop_input_stack(&mut self) -> Option<usize> {
         self.inputs.pop()
     }
 
@@ -403,8 +402,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.inputs.last().cloned()
     }
 
-    fn push_instruction(&mut self, instruction: InstructionData) -> Result<(), Self::Error> {
-        self.instructions.push(instruction);
+    fn push_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> Result<(), Self::Error> {
+        self.instructions.push(InstructionData::new(instruction, data));
         Ok(())
     }
 
@@ -420,6 +419,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn advance_instruction_cursor(&mut self) -> Result<(), Self::Error> {
         self.instruction_cursor += 1;
         Ok(())
+    }
+
+    fn get_current_instruction(&self) -> Option<&InstructionData> {
+        self.get_instruction(self.get_instruction_cursor())
     }
 
     fn get_instruction_cursor(&self) -> usize {
