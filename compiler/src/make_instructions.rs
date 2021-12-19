@@ -453,7 +453,6 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
 #[cfg(test)]
 mod test_utils {
     use crate::*;
-    use garnish_lang_runtime::SimpleRuntimeData;
     use garnish_lang_runtime::*;
     use std::iter;
 
