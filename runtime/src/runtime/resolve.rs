@@ -1,3 +1,53 @@
+use log::trace;
+
+use crate::{
+    next_ref, push_unit, runtime::list::get_access_addr, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto,
+};
+
+pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut T>,
+) -> GarnishLangRuntimeResult<Data::Error> {
+    trace!("Instruction - Resolve");
+    let addr = next_ref(this)?;
+
+    // check result
+    match this.get_result() {
+        None => (),
+        Some(result_ref) => match get_access_addr(this, addr, result_ref)? {
+            None => (),
+            Some(i) => {
+                this.push_register(i).nest_into()?;
+                return Ok(());
+            }
+        },
+    }
+
+    // check input
+    match this.get_current_input() {
+        None => (),
+        Some(list_ref) => match get_access_addr(this, addr, list_ref)? {
+            None => (),
+            Some(i) => {
+                this.push_register(i).nest_into()?;
+                return Ok(());
+            }
+        },
+    }
+
+    // check context
+    match context {
+        None => (),
+        Some(c) => match c.resolve(addr, this)? {
+            true => return Ok(()), // context resovled end look up
+            false => (),           // not resolved fall through
+        },
+    }
+
+    // default to unit
+    push_unit(this)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
@@ -48,6 +98,26 @@ mod tests {
         runtime.resolve::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_register().get(0).unwrap(), &2);
+    }
+
+    #[test]
+    fn resolve_from_result_no_associations() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::list(vec![1, 2], vec![])).unwrap();
+        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+
+        runtime.push_instruction(Instruction::Resolve, None).unwrap();
+
+        runtime.push_register(4).unwrap();
+
+        runtime.set_result(Some(3)).unwrap();
+
+        runtime.resolve::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_data_type(5).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]

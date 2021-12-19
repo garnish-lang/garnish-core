@@ -260,6 +260,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn get_list_item_with_symbol(&self, list_addr: usize, sym: u64) -> Result<Option<usize>, Self::Error> {
         let assocations_len = self.get_list_associations_len(list_addr)?;
 
+        if assocations_len == 0 {
+            return Ok(None);
+        }
+
         let mut i = sym as usize % assocations_len;
         let mut count = 0;
 

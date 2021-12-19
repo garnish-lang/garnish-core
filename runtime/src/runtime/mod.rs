@@ -346,44 +346,7 @@ where
     //
 
     fn resolve<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Resolve");
-        let addr = next_ref(self)?;
-
-        // check result
-        match self.get_result() {
-            None => (),
-            Some(result_ref) => match get_access_addr(self, addr, result_ref)? {
-                None => (),
-                Some(i) => {
-                    self.push_register(i).nest_into()?;
-                    return Ok(());
-                }
-            },
-        }
-
-        // check input
-        match self.get_current_input() {
-            None => (),
-            Some(list_ref) => match get_access_addr(self, addr, list_ref)? {
-                None => (),
-                Some(i) => {
-                    self.push_register(i).nest_into()?;
-                    return Ok(());
-                }
-            },
-        }
-
-        // check context
-        match context {
-            None => (),
-            Some(c) => match c.resolve(addr, self)? {
-                true => return Ok(()), // context resovled end look up
-                false => (),           // not resolved fall through
-            },
-        }
-
-        // default to unit
-        push_unit(self)
+        resolve::resolve(self, context)
     }
 }
 
