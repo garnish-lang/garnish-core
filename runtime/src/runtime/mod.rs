@@ -16,6 +16,7 @@ pub use data::GarnishLangRuntimeData;
 
 use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
 use crate::runtime::apply::*;
+use crate::runtime::comparisons::equality_comparison;
 use crate::runtime::list::*;
 use crate::{instruction::*, ExpressionDataType};
 use crate::{GarnishLangRuntimeInfo, NestInto};
@@ -179,23 +180,7 @@ where
     //
 
     fn equality_comparison(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Equality Comparison");
-
-        let (right_addr, left_addr) = next_two_raw_ref(self)?;
-
-        let result = match (self.get_data_type(left_addr).nest_into()?, self.get_data_type(right_addr).nest_into()?) {
-            (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                let left = self.get_integer(left_addr).nest_into()?;
-                let right = self.get_integer(right_addr).nest_into()?;
-
-                trace!("Comparing {:?} == {:?}", left, right);
-
-                left == right
-            }
-            (l, r) => Err(error(format!("Comparison between types not implemented {:?} and {:?}", l, r)))?,
-        };
-
-        push_boolean(self, result)
+        equality_comparison(self)
     }
 
     //
