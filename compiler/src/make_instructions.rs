@@ -63,6 +63,7 @@ fn resolve_node<T: GarnishLangRuntimeData>(
     data: &mut T,
     list_count: Option<&usize>,
     current_jump_index: usize,
+    nearest_expression_point: usize,
 ) -> GarnishLangCompilerResult<(), T::Error> {
     match node.get_definition() {
         Definition::Number => {
@@ -154,7 +155,7 @@ fn resolve_node<T: GarnishLangRuntimeData>(
             data.push_instruction(Instruction::Apply, None).nest_into()?;
         }
         Definition::Reapply => {
-            data.push_instruction(Instruction::Reapply, None).nest_into()?;
+            data.push_instruction(Instruction::Reapply, Some(nearest_expression_point)).nest_into()?;
         }
         Definition::ApplyIfTrue => {
             data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index)).nest_into()?;
@@ -174,17 +175,18 @@ fn resolve_node<T: GarnishLangRuntimeData>(
 }
 
 pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<ParseNode>, data: &mut T) -> GarnishLangCompilerResult<(), T::Error> {
-    let mut root_stack = vec![(root, Instruction::EndExpression, None)];
-
     // since we will be popping and pushing values from root_stack
     // need to keep separate count of total so expression values put in data are accurate
-    let mut jump_count = 1;
+    let mut jump_count = data.get_jump_point_count() + 1;
+
+    // tuple of (root node, last instruction of this node, nearest expression jump point)
+    let mut root_stack = vec![(root, Instruction::EndExpression, None, data.get_jump_point_count())];
 
     // arbitrary max iterations for roots
     let max_roots = 100;
     let mut root_iter_count = 0;
 
-    while let Some((root_index, return_instruction, instruction_data)) = root_stack.pop() {
+    while let Some((root_index, return_instruction, instruction_data, nearest_expression_point)) = root_stack.pop() {
         trace!("Makeing instructions for tree starting at index {:?}", root_index);
 
         let mut conditional_stack = vec![];
@@ -286,7 +288,7 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                                 if node.get_definition() == Definition::Subexpression {
                                     trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
 
-                                    resolve_node(node, data, None, 0)?;
+                                    resolve_node(node, data, None, 0, nearest_expression_point)?;
                                     resolve_node_info.resolved = true;
                                 }
 
@@ -319,7 +321,7 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                                 if resolve {
                                     trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
 
-                                    resolve_node(node, data, list_counts.last(), jump_count)?;
+                                    resolve_node(node, data, list_counts.last(), jump_count, nearest_expression_point)?;
 
                                     if we_are_list_root {
                                         list_counts.pop();
@@ -371,6 +373,11 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                                 }
 
                                 if node.get_definition() == Definition::NestedExpression || we_are_conditional {
+                                    let nearest_expression = if node.get_definition() == Definition::NestedExpression {
+                                        jump_count
+                                    } else {
+                                        nearest_expression_point
+                                    };
                                     match node.get_right() {
                                         None => Err(GarnishLangCompilerError::new(format!(
                                             "No child value on {:?} node at {:?}",
@@ -379,7 +386,7 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                                         )))?,
                                         Some(node_index) => {
                                             trace!("Adding index {:?} to root stack", node_index);
-                                            root_stack.insert(0, (node_index, return_instruction.0, return_instruction.1))
+                                            root_stack.insert(0, (node_index, return_instruction.0, return_instruction.1, nearest_expression))
                                         }
                                     }
 
@@ -878,7 +885,7 @@ mod operations {
             ],
             vec![
                 (Instruction::Put, Some(1)),
-                (Instruction::Reapply, None),
+                (Instruction::Reapply, Some(0)),
                 (Instruction::EndExpression, None),
             ],
             vec![ExpressionData::integer(10)],
