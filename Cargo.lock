@@ -24,20 +24,11 @@ dependencies = [
 ]
 
 [[package]]
-name = "garnish_lang_simple_impl"
-version = "0.1.0"
-dependencies = [
- "garnish_lang_runtime",
- "log",
-]
-
-[[package]]
 name = "garnish_lang_tests"
 version = "0.0.1-alpha"
 dependencies = [
  "garnish_lang_compiler",
  "garnish_lang_runtime",
- "garnish_lang_simple_impl",
  "log",
 ]
 

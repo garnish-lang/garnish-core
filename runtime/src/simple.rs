@@ -1,8 +1,9 @@
-use garnish_lang_runtime::{ExpressionData, ExpressionDataType, GarnishLangRuntimeData, Instruction, InstructionData};
 use std::{
     collections::hash_map::DefaultHasher,
     hash::{Hash, Hasher},
 };
+
+use crate::{ExpressionData, ExpressionDataType, GarnishLangRuntimeData, Instruction, InstructionData};
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct SimpleRuntimeData {

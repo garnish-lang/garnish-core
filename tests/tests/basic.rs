@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
     use garnish_lang_compiler::{instructions_from_ast, lex, parse};
-    use garnish_lang_runtime::{EmptyContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime};
-    use garnish_lang_simple_impl::SimpleRuntimeData;
+    use garnish_lang_runtime::{EmptyContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, SimpleRuntimeData};
 
     #[test]
     fn basic_addition() {
