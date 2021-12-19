@@ -4,8 +4,8 @@ use std::{
 };
 
 use crate::{
-    EmptyContext, ExpressionData, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeError, GarnishLangRuntimeState, GarnishRuntime,
-    Instruction, InstructionData,
+    EmptyContext, ExpressionData, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeError,
+    GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData,
 };
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -68,6 +68,21 @@ impl SimpleRuntimeData {
     pub fn execute_all_instructions(&mut self) -> Result<(), GarnishLangRuntimeError<String>> {
         loop {
             match self.execute_current_instruction::<EmptyContext>(None) {
+                Err(e) => return Err(e),
+                Ok(data) => match data.get_state() {
+                    GarnishLangRuntimeState::Running => (),
+                    GarnishLangRuntimeState::End => return Ok(()),
+                },
+            }
+        }
+    }
+
+    pub fn execute_all_instructions_with_context<Context: GarnishLangRuntimeContext<Self>>(
+        &mut self,
+        context: &mut Context,
+    ) -> Result<(), GarnishLangRuntimeError<String>> {
+        loop {
+            match self.execute_current_instruction(Some(context)) {
                 Err(e) => return Err(e),
                 Ok(data) => match data.get_state() {
                     GarnishLangRuntimeState::Running => (),

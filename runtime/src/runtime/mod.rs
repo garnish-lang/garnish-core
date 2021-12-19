@@ -11,7 +11,7 @@ mod resolve;
 mod utilities;
 
 pub use crate::runtime::utilities::*;
-pub use context::*;
+pub use context::{EmptyContext, GarnishLangRuntimeContext};
 pub use data::GarnishLangRuntimeData;
 
 use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
@@ -20,8 +20,6 @@ use crate::runtime::list::*;
 use crate::{instruction::*, ExpressionDataType};
 use crate::{GarnishLangRuntimeInfo, NestInto};
 use log::trace;
-
-use self::context::GarnishLangRuntimeContext;
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn end_execution(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
