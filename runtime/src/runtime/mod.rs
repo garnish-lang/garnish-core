@@ -261,67 +261,23 @@ where
     //
 
     fn make_list(&mut self, len: usize) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Make List | Length - {:?}", len);
-
-        self.start_list(len).nest_into()?;
-
-        for _ in 0..len {
-            next_ref(self).and_then(|r| {
-                self.get_data_type(r)
-                    .and_then(|t| match t {
-                        ExpressionDataType::Pair => self.get_pair(r).and_then(|(left, _)| {
-                            self.get_data_type(left).and_then(|t| match t {
-                                ExpressionDataType::Symbol => Ok(true),
-                                _ => Ok(false),
-                            })
-                        }),
-                        _ => Ok(false), // Other values are just simple items
-                    })
-                    .and_then(|is_associative| self.add_to_list(r, is_associative))
-                    .nest_into()
-            })?
-        }
-
-        self.end_list().and_then(|r| self.push_register(r)).nest_into()
+        make_list(self, len)
     }
 
     fn access(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Access");
-
-        let right_ref = next_ref(self)?;
-        let left_ref = next_ref(self)?;
-
-        match get_access_addr(self, right_ref, left_ref)? {
-            None => push_unit(self),
-            Some(i) => self.push_register(i).nest_into(),
-        }
+        access(self)
     }
 
     fn access_left_internal(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Access Left Internal");
-        next_ref(self).and_then(|r| match self.get_data_type(r).nest_into()? {
-            ExpressionDataType::Pair => self.get_pair(r).and_then(|(left, _)| self.push_register(left)).nest_into(),
-            _ => push_unit(self),
-        })
+        access_left_internal(self)
     }
 
     fn access_right_internal(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Access Right Internal");
-        next_ref(self).and_then(|r| match self.get_data_type(r).nest_into()? {
-            ExpressionDataType::Pair => self.get_pair(r).and_then(|(_, right)| self.push_register(right)).nest_into(),
-            _ => push_unit(self),
-        })
+        access_right_internal(self)
     }
 
     fn access_length_internal(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Access Length Internal");
-        next_ref(self).and_then(|r| match self.get_data_type(r).nest_into()? {
-            ExpressionDataType::List => self
-                .get_list_len(r)
-                .and_then(|len| self.add_integer(len as i64).and_then(|r| self.push_register(r)))
-                .nest_into(),
-            _ => push_unit(self),
-        })
+        access_length_internal(self)
     }
 
     //
