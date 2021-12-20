@@ -79,8 +79,7 @@ fn resolve_node<T: GarnishLangRuntimeData>(
             data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
             data.push_instruction(Instruction::Resolve, None).nest_into()?;
 
-            let sym = data.create_symbol(&node.get_lex_token().get_text());
-            data.add_symbol(sym).nest_into()?;
+            data.add_symbol(node.get_lex_token().get_text()).nest_into()?;
         }
         Definition::Unit => {
             // all unit literals will use unit used in the zero element slot of data
@@ -89,8 +88,7 @@ fn resolve_node<T: GarnishLangRuntimeData>(
         Definition::Symbol => {
             data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
 
-            let sym = data.create_symbol(&node.get_lex_token().get_text()[1..]);
-            data.add_symbol(sym).nest_into()?;
+            data.add_symbol(&node.get_lex_token().get_text()[1..]).nest_into()?;
         }
         Definition::Input => {
             // all unit literals will use unit used in the zero element slot of data

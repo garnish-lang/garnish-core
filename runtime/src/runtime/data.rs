@@ -3,8 +3,6 @@ use crate::{ExpressionData, ExpressionDataType, Instruction, InstructionData};
 pub trait GarnishLangRuntimeData {
     type Error;
 
-    fn create_symbol(&self, sym: &str) -> u64;
-
     fn set_end_of_constant(&mut self, addr: usize) -> Result<(), Self::Error>;
     fn get_end_of_constant_data(&self) -> usize;
 
@@ -34,7 +32,7 @@ pub trait GarnishLangRuntimeData {
     fn get_list_association(&self, list_index: usize, item_index: usize) -> Result<usize, Self::Error>;
 
     fn add_integer(&mut self, value: i64) -> Result<usize, Self::Error>;
-    fn add_symbol(&mut self, value: u64) -> Result<usize, Self::Error>;
+    fn add_symbol(&mut self, value: &str) -> Result<usize, Self::Error>;
     fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error>;
     fn add_external(&mut self, value: usize) -> Result<usize, Self::Error>;
     fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error>;

@@ -1,7 +1,4 @@
-use std::{
-    collections::hash_map::DefaultHasher,
-    hash::{Hash, Hasher},
-};
+use std::collections::HashMap;
 
 use crate::{
     EmptyContext, ExpressionData, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeError,
@@ -20,6 +17,7 @@ pub struct SimpleRuntimeData {
     expression_table: Vec<usize>,
     jump_path: Vec<usize>,
     current_list: Option<(Vec<usize>, Vec<usize>)>,
+    symbols: HashMap<String, u64>,
 }
 
 impl SimpleRuntimeData {
@@ -35,6 +33,7 @@ impl SimpleRuntimeData {
             expression_table: vec![],
             jump_path: vec![],
             current_list: None,
+            symbols: HashMap::new(),
         }
     }
 
@@ -43,6 +42,10 @@ impl SimpleRuntimeData {
             None => Err(format!("No data at addr {:?}", index)),
             Some(d) => Ok(d),
         }
+    }
+
+    pub fn get_symbols(&self) -> &HashMap<String, u64> {
+        &self.symbols
     }
 
     pub fn get_register(&self) -> &Vec<usize> {
@@ -95,14 +98,6 @@ impl SimpleRuntimeData {
 
 impl GarnishLangRuntimeData for SimpleRuntimeData {
     type Error = String;
-
-    fn create_symbol(&self, sym: &str) -> u64 {
-        let mut h = DefaultHasher::new();
-        sym.hash(&mut h);
-        let hv = h.finish();
-
-        hv
-    }
 
     fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error> {
         Ok(self.get(index)?.get_type())
@@ -159,8 +154,13 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.data.len() - 1)
     }
 
-    fn add_symbol(&mut self, value: u64) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::symbol(&"".to_string(), value));
+    fn add_symbol(&mut self, value: &str) -> Result<usize, Self::Error> {
+        let sym = ExpressionData::symbol_from_string(value);
+        for (key, value) in sym.get_symbols() {
+            self.symbols.insert(key.clone(), value.clone());
+        }
+
+        self.data.push(sym);
         Ok(self.data.len() - 1)
     }
 

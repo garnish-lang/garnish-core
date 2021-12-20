@@ -82,18 +82,22 @@ impl ExpressionData {
         ExpressionData::new(ExpressionDataType::External, i.to_le_bytes().to_vec())
     }
 
-    pub fn symbol_from_string(s: &String) -> ExpressionData {
+    pub fn symbol_from_string(s: &str) -> ExpressionData {
         let mut h = DefaultHasher::new();
         s.hash(&mut h);
         let hv = h.finish();
 
-        let d = ExpressionData::new(ExpressionDataType::Symbol, hv.to_le_bytes().to_vec());
-        // d.symbols.insert(s.clone(), hv);
+        let mut d = ExpressionData::new(ExpressionDataType::Symbol, hv.to_le_bytes().to_vec());
+        d.symbols.insert(s.to_string(), hv);
         d
     }
 
     pub fn get_type(&self) -> ExpressionDataType {
         self.data_type
+    }
+
+    pub fn get_symbols(&self) -> &HashMap<String, u64> {
+        &self.symbols
     }
 
     pub fn as_boolean(&self) -> Result<bool, String> {
@@ -278,6 +282,8 @@ mod tests {
         "my_symbol".hash(&mut h);
         let hv = h.finish();
 
+        assert!(d.symbols.contains_key("my_symbol"));
+        assert_eq!(d.symbols.get("my_symbol").unwrap(), &hv);
         assert_eq!(d.data_type, ExpressionDataType::Symbol);
         assert_eq!(d.bytes, hv.to_le_bytes());
     }
