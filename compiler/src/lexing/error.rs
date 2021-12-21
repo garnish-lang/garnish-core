@@ -18,3 +18,9 @@ impl From<String> for LexingError {
         LexingError::new(s)
     }
 }
+
+impl From<&String> for LexingError {
+    fn from(s: &String) -> Self {
+        LexingError::new(s.clone())
+    }
+}

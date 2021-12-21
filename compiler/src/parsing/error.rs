@@ -18,3 +18,9 @@ impl From<String> for ParsingError {
         ParsingError::new(s)
     }
 }
+
+impl From<&String> for ParsingError {
+    fn from(s: &String) -> Self {
+        ParsingError::new(s.clone())
+    }
+}
