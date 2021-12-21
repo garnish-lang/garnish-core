@@ -1,7 +1,7 @@
 use log::trace;
 use std::{collections::HashMap, hash::Hash, vec};
 
-use crate::lexer::*;
+use crate::{lexer::*, ParsingError};
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
 pub enum Definition {
@@ -238,7 +238,7 @@ fn parse_token(
     priority_map: &HashMap<Definition, usize>,
     check_for_list: &mut bool,
     under_group: Option<usize>,
-) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), String> {
+) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), ParsingError> {
     let my_priority = match priority_map.get(&definition) {
         None => Err(format!("Definition '{:?}' not registered in priority map.", definition))?,
         Some(priority) => *priority,
@@ -303,7 +303,7 @@ fn parse_token(
         // safty net, max iterations to len of nodes
         count += 1;
         if count > nodes.len() {
-            return Err(format!("Max iterations reached when searching for last parent."));
+            Err(format!("Max iterations reached when searching for last parent."))?;
         }
     }
 
@@ -339,7 +339,7 @@ fn parse_value_like(
     priority_map: &HashMap<Definition, usize>,
     last_token: LexerToken,
     under_group: Option<usize>,
-) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), String> {
+) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), ParsingError> {
     let mut new_parent = parent;
 
     if *check_for_list {
@@ -372,7 +372,7 @@ fn setup_space_list_check(
     nodes: &mut Vec<ParseNode>,
     check_for_list: &mut bool,
     next_last_left: &mut Option<usize>,
-) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), String> {
+) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), ParsingError> {
     match last_left {
         None => (), // ignore, spaces at begining of input can't create a list
         Some(left) => match nodes.get(left) {
@@ -395,7 +395,7 @@ fn setup_space_list_check(
     Ok((Definition::Drop, None, None, None))
 }
 
-pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
+pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
     trace!("Starting parse");
     let priority_map = make_priority_map();
 
@@ -741,7 +741,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, String> {
         // safty net, max iterations to len of nodes
         count += 1;
         if count > nodes.len() {
-            return Err(format!("Max iterations reached when searching for root node."));
+            Err(format!("Max iterations reached when searching for root node."))?;
         }
     }
 

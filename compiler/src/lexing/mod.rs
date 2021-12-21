@@ -1,4 +1,7 @@
+mod error;
+
 use crate::{LexerToken, TokenType};
+pub use error::*;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum LexerAnnotationProcessorInstruction {

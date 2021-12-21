@@ -1,7 +1,7 @@
 use log::trace;
 use std::{collections::HashMap, iter, vec};
 
-use crate::{LexerAnnotationProcessor, LexerAnnotationProcessorInstruction, NoOpProcessor};
+use crate::{LexerAnnotationProcessor, LexerAnnotationProcessorInstruction, LexingError, NoOpProcessor};
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum TokenType {
@@ -245,11 +245,11 @@ fn start_token<'a>(
     );
 }
 
-pub fn lex(input: &String) -> Result<Vec<LexerToken>, String> {
+pub fn lex(input: &String) -> Result<Vec<LexerToken>, LexingError> {
     lex_with_processor(input, &mut NoOpProcessor::new())
 }
 
-pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor: &mut T) -> Result<Vec<LexerToken>, String> {
+pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor: &mut T) -> Result<Vec<LexerToken>, LexingError> {
     trace!("Beginning lexing");
 
     let mut tokens = vec![];
