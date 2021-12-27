@@ -1505,8 +1505,6 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        println!("{:#?}", result);
-
         assert_result(
             &result,
             13,
