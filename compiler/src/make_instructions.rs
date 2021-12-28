@@ -32,7 +32,7 @@ type DefinitionResolveInfo = (bool, Option<usize>);
 
 fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
-        Definition::Number | Definition::Identifier | Definition::Symbol | Definition::Input | Definition::Result | Definition::Unit | Definition::False | Definition::True => {
+        Definition::Number | Definition::Identifier | Definition::Property | Definition::Symbol | Definition::Input | Definition::Result | Definition::Unit | Definition::False | Definition::True => {
             ((false, None), (false, None))
         }
         Definition::Reapply | Definition::AccessLeftInternal => ((true, node.get_right()), (false, None)),
@@ -78,6 +78,11 @@ fn resolve_node<T: GarnishLangRuntimeData>(
         Definition::Identifier => {
             data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
             data.push_instruction(Instruction::Resolve, None).nest_into()?;
+
+            data.add_symbol(node.get_lex_token().get_text()).nest_into()?;
+        }
+        Definition::Property => {
+            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
 
             data.add_symbol(node.get_lex_token().get_text()).nest_into()?;
         }
@@ -898,6 +903,29 @@ mod lists {
     use super::test_utils::*;
     use crate::*;
     use garnish_lang_runtime::*;
+
+    #[test]
+    fn access() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Identifier, Some(1), None, None, "list", TokenType::Identifier),
+                (Definition::Access, None, Some(0), Some(2), ".", TokenType::Period),
+                (Definition::Property, Some(1), None, None, "property", TokenType::Identifier),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Resolve, None),
+                (Instruction::Put, Some(2)),
+                (Instruction::Access, None),
+                (Instruction::EndExpression, None),
+            ],
+            vec![
+                ExpressionData::symbol_from_string(&"list".to_string()),
+                ExpressionData::symbol_from_string(&"property".to_string()),
+            ],
+        );
+    }
 
     #[test]
     fn list() {

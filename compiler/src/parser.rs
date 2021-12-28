@@ -7,6 +7,7 @@ use crate::{lexer::*, ParsingError};
 pub enum Definition {
     Number,
     Identifier,
+    Property,
     AbsoluteValue,
     EmptyApply,
     Addition,
@@ -68,6 +69,7 @@ enum SecondaryDefinition {
     Whitespace,
     Conditional,
     Comma,
+    Identifier,
 }
 
 fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
@@ -81,7 +83,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::Input => (Definition::Input, SecondaryDefinition::Value),
         TokenType::True => (Definition::True, SecondaryDefinition::Value),
         TokenType::False => (Definition::False, SecondaryDefinition::Value),
-        TokenType::Identifier => (Definition::Identifier, SecondaryDefinition::Value),
+        TokenType::Identifier => (Definition::Identifier, SecondaryDefinition::Identifier),
 
         // Groupings
         TokenType::StartExpression => (Definition::NestedExpression, SecondaryDefinition::StartGrouping),
@@ -185,6 +187,7 @@ fn make_priority_map() -> HashMap<Definition, usize> {
 
     map.insert(Definition::Number, 10);
     map.insert(Definition::Identifier, 10);
+    map.insert(Definition::Property, 10);
     map.insert(Definition::Symbol, 10);
     map.insert(Definition::Unit, 10);
     map.insert(Definition::Input, 10);
@@ -453,6 +456,36 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                 last_token,
                 under_group,
             )?,
+            SecondaryDefinition::Identifier => {
+
+                // having a parent of access means its on the left
+                // and this identifier a property in the access operation
+                // otherwise its a normal identifier that needs to be resolved
+                let definition = match next_parent {
+                    None => Definition::Identifier,
+                    Some(parent) => match nodes.get(parent) {
+                        None => Err(format!("No node found at next parent index {:?}", parent))?,
+                        Some(p) => if p.definition == Definition::Access {
+                            Definition::Property
+                        } else {
+                            Definition::Identifier
+                        }
+                    }
+                };
+
+                parse_value_like(
+                    id,
+                    definition,
+                    &mut check_for_list,
+                    next_parent,
+                    &mut next_last_left,
+                    &mut nodes,
+                    last_left,
+                    &priority_map,
+                    last_token,
+                    under_group,
+                )?
+            },
             SecondaryDefinition::BinaryLeftToRight => {
                 next_parent = Some(id);
                 parse_token(
@@ -1045,7 +1078,7 @@ mod tests {
             &[
                 (0, Definition::Identifier, Some(1), None, None),
                 (1, Definition::Access, None, Some(0), Some(2)),
-                (2, Definition::Identifier, Some(1), None, None),
+                (2, Definition::Property, Some(1), None, None),
             ],
         );
     }
