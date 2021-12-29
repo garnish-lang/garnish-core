@@ -66,7 +66,6 @@ enum SecondaryDefinition {
     EndGrouping,
     Subexpression,
     Whitespace,
-    Conditional,
     Identifier,
 }
 
@@ -112,9 +111,9 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::Comma => (Definition::CommaList, SecondaryDefinition::BinaryLeftToRight),
 
         // Conditionals
-        TokenType::JumpIfFalse => (Definition::JumpIfFalse, SecondaryDefinition::Conditional),
-        TokenType::JumpIfTrue => (Definition::JumpIfTrue, SecondaryDefinition::Conditional),
-        TokenType::ElseJump => (Definition::ElseJump, SecondaryDefinition::Conditional),
+        TokenType::JumpIfFalse => (Definition::JumpIfFalse, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::JumpIfTrue => (Definition::JumpIfTrue, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::ElseJump => (Definition::ElseJump, SecondaryDefinition::BinaryLeftToRight),
     }
 }
 
@@ -579,26 +578,6 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
             SecondaryDefinition::EndGrouping => {
                 // if current grouping is a conditional group
                 // end that group and our normal grouping
-                let in_conditional = match current_group {
-                    None => false,
-                    Some(group) => match group_stack.get(group) {
-                        None => Err(format!("Current group set to non-existant group in stack."))?,
-                        Some(group_index) => match nodes.get(*group_index) {
-                            None => Err(format!("Index assigned to node has no value in node list. {:?}", group))?,
-                            Some(group_node) => {
-                                trace!("Current group node definition is {:?}", group_node.definition);
-                                group_node.definition.is_conditional()
-                            }
-                        },
-                    },
-                };
-
-                if in_conditional {
-                    // conditional node should have already been parented to contianing group
-                    // current group will be corrected below
-                    group_stack.pop();
-                }
-
                 next_last_left = group_stack.pop();
                 current_group = match group_stack.len() == 0 {
                     true => None,
@@ -607,49 +586,16 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
 
                 (Definition::Drop, None, None, None)
             }
-            SecondaryDefinition::Conditional => {
-                next_parent = Some(id);
-
-                trace!("Adding grouping with definition {:?}", definition);
-
-                // if previous node was a conditional branch
-                // we can create this conditional without a left
-                let last_was_branch = match last_left {
-                    None => false,
-                    Some(left) => match nodes.get(left) {
-                        None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
-                        Some(left_node) => left_node.definition == Definition::ElseJump,
-                    },
-                };
-
-                if last_was_branch {
-                    (definition, last_left, None, assumed_right)
-                } else {
-                    current_group = Some(group_stack.len());
-                    group_stack.push(id);
-
-                    parse_token(
-                        id,
-                        definition,
-                        last_left,
-                        assumed_right,
-                        &mut nodes,
-                        &priority_map,
-                        &mut check_for_list,
-                        under_group,
-                    )?
-                }
-            }
             SecondaryDefinition::Subexpression => {
-                let (in_group, in_conditional) = match current_group {
-                    None => (false, false),
+                let in_group= match current_group {
+                    None => false,
                     Some(group) => match group_stack.get(group) {
                         None => Err(format!("Current group set to non-existant group in stack."))?,
                         Some(group_index) => match nodes.get(*group_index) {
                             None => Err(format!("Index assigned to node has no value in node list. {:?}", group))?,
                             Some(group_node) => {
                                 trace!("Current group node definition is {:?}", group_node.definition);
-                                (group_node.definition == Definition::Group, group_node.definition.is_conditional())
+                                group_node.definition == Definition::Group
                             }
                         },
                     },
@@ -675,15 +621,6 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                             Some(left_node) => left_node.definition == Definition::Subexpression,
                         },
                     };
-
-                    // if in a conditional group, drop it now so it doesn't continue to next subexpression
-                    if in_conditional {
-                        // NEEDS A TEST
-
-                        // conditional node should have already been parented to contianing group
-                        // current group will be corrected below
-                        group_stack.pop();
-                    }
 
                     if drop {
                         trace!("Previous parser node was a subexpression, dropping this one.");
