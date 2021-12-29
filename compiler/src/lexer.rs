@@ -25,9 +25,9 @@ pub enum TokenType {
     Annotation,
     LineAnnotation,
     Apply,
-    ApplyIfFalse,
-    ApplyIfTrue,
-    DefaultConditional,
+    JumpIfFalse,
+    JumpIfTrue,
+    ElseJump,
     ApplyTo,
     Reapply,
     EmptyApply,
@@ -269,9 +269,9 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
         ("$!", TokenType::False),
         (",", TokenType::Comma),
         ("~", TokenType::Apply),
-        ("!>", TokenType::ApplyIfFalse),
-        ("?>", TokenType::ApplyIfTrue),
-        ("|>", TokenType::DefaultConditional),
+        ("!>", TokenType::JumpIfFalse),
+        ("?>", TokenType::JumpIfTrue),
+        ("|>", TokenType::ElseJump),
         ("~>", TokenType::ApplyTo),
         ("^~", TokenType::Reapply),
         ("~~", TokenType::EmptyApply),
@@ -745,7 +745,7 @@ mod tests {
             result,
             vec![LexerToken {
                 text: "?>".to_string(),
-                token_type: TokenType::ApplyIfTrue,
+                token_type: TokenType::JumpIfTrue,
                 column: 0,
                 row: 0
             }]
@@ -760,7 +760,7 @@ mod tests {
             result,
             vec![LexerToken {
                 text: "!>".to_string(),
-                token_type: TokenType::ApplyIfFalse,
+                token_type: TokenType::JumpIfFalse,
                 column: 0,
                 row: 0
             }]
@@ -775,7 +775,7 @@ mod tests {
             result,
             vec![LexerToken {
                 text: "|>".to_string(),
-                token_type: TokenType::DefaultConditional,
+                token_type: TokenType::ElseJump,
                 column: 0,
                 row: 0
             }]

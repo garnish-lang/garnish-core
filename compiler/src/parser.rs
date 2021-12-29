@@ -29,10 +29,9 @@ pub enum Definition {
     Apply,
     ApplyTo,
     Reapply,
-    ApplyIfTrue,
-    ApplyIfFalse,
-    DefaultConditional,
-    ConditionalBranch,
+    JumpIfTrue,
+    JumpIfFalse,
+    ElseJump,
     True,
     False,
 }
@@ -53,7 +52,7 @@ impl Definition {
     }
 
     pub fn is_conditional(self) -> bool {
-        self == Definition::ApplyIfFalse || self == Definition::ApplyIfTrue
+        self == Definition::JumpIfFalse || self == Definition::JumpIfTrue
     }
 }
 
@@ -114,9 +113,9 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::LengthInternal => (Definition::AccessLengthInternal, SecondaryDefinition::UnarySuffix),
 
         // Conditionals
-        TokenType::ApplyIfFalse => (Definition::ApplyIfFalse, SecondaryDefinition::Conditional),
-        TokenType::ApplyIfTrue => (Definition::ApplyIfTrue, SecondaryDefinition::Conditional),
-        TokenType::DefaultConditional => (Definition::DefaultConditional, SecondaryDefinition::Conditional),
+        TokenType::JumpIfFalse => (Definition::JumpIfFalse, SecondaryDefinition::Conditional),
+        TokenType::JumpIfTrue => (Definition::JumpIfTrue, SecondaryDefinition::Conditional),
+        TokenType::ElseJump => (Definition::ElseJump, SecondaryDefinition::Conditional),
     }
 }
 
@@ -220,10 +219,10 @@ fn make_priority_map() -> HashMap<Definition, usize> {
 
     map.insert(Definition::Reapply, 260);
 
-    map.insert(Definition::ApplyIfTrue, 270);
-    map.insert(Definition::ApplyIfFalse, 270);
+    map.insert(Definition::JumpIfTrue, 270);
+    map.insert(Definition::JumpIfFalse, 270);
 
-    map.insert(Definition::ConditionalBranch, 280);
+    map.insert(Definition::ElseJump, 280);
 
     map.insert(Definition::Subexpression, 1000);
 
@@ -620,7 +619,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                     None => false,
                     Some(left) => match nodes.get(left) {
                         None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
-                        Some(left_node) => left_node.definition == Definition::ConditionalBranch,
+                        Some(left_node) => left_node.definition == Definition::ElseJump,
                     },
                 };
 
@@ -682,7 +681,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
 
                     parse_token(
                         id,
-                        Definition::ConditionalBranch,
+                        Definition::ElseJump,
                         left,
                         assumed_right,
                         &mut nodes,
@@ -918,7 +917,7 @@ mod tests {
 
     #[test]
     fn conditional_definitions() {
-        let value_like = [Definition::ApplyIfTrue, Definition::ApplyIfFalse];
+        let value_like = [Definition::JumpIfTrue, Definition::JumpIfFalse];
 
         for def in value_like {
             assert!(def.is_conditional());
@@ -2305,7 +2304,7 @@ mod conditionals {
     fn conditional_if() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
@@ -2316,7 +2315,7 @@ mod conditionals {
             1,
             &[
                 (0, Definition::Number, Some(1), None, None),
-                (1, Definition::ApplyIfTrue, None, Some(0), Some(2)),
+                (1, Definition::JumpIfTrue, None, Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
             ],
         );
@@ -2326,7 +2325,7 @@ mod conditionals {
     fn conditional_else() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("!>".to_string(), TokenType::ApplyIfFalse, 0, 0),
+            LexerToken::new("!>".to_string(), TokenType::JumpIfFalse, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
@@ -2337,7 +2336,7 @@ mod conditionals {
             1,
             &[
                 (0, Definition::Number, Some(1), None, None),
-                (1, Definition::ApplyIfFalse, None, Some(0), Some(2)),
+                (1, Definition::JumpIfFalse, None, Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
             ],
         );
@@ -2347,11 +2346,11 @@ mod conditionals {
     fn conditional_chain_of_two() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
@@ -2362,11 +2361,11 @@ mod conditionals {
             3,
             &[
                 (0, Definition::Number, Some(1), None, None),
-                (1, Definition::ApplyIfTrue, Some(3), Some(0), Some(2)),
+                (1, Definition::JumpIfTrue, Some(3), Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
-                (3, Definition::ConditionalBranch, None, Some(1), Some(5)),
+                (3, Definition::ElseJump, None, Some(1), Some(5)),
                 (4, Definition::Number, Some(5), None, None),
-                (5, Definition::ApplyIfTrue, Some(3), Some(4), Some(6)),
+                (5, Definition::JumpIfTrue, Some(3), Some(4), Some(6)),
                 (6, Definition::Number, Some(5), None, None),
             ],
         );
@@ -2376,15 +2375,15 @@ mod conditionals {
     fn conditional_chain_of_three() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
@@ -2395,17 +2394,17 @@ mod conditionals {
             7,
             &[
                 (0, Definition::Number, Some(1), None, None),
-                (1, Definition::ApplyIfTrue, Some(3), Some(0), Some(2)),
+                (1, Definition::JumpIfTrue, Some(3), Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
                 // second
-                (3, Definition::ConditionalBranch, Some(7), Some(1), Some(5)),
+                (3, Definition::ElseJump, Some(7), Some(1), Some(5)),
                 (4, Definition::Number, Some(5), None, None),
-                (5, Definition::ApplyIfTrue, Some(3), Some(4), Some(6)),
+                (5, Definition::JumpIfTrue, Some(3), Some(4), Some(6)),
                 (6, Definition::Number, Some(5), None, None),
                 // third
-                (7, Definition::ConditionalBranch, None, Some(3), Some(9)),
+                (7, Definition::ElseJump, None, Some(3), Some(9)),
                 (8, Definition::Number, Some(9), None, None),
-                (9, Definition::ApplyIfTrue, Some(7), Some(8), Some(10)),
+                (9, Definition::JumpIfTrue, Some(7), Some(8), Some(10)),
                 (10, Definition::Number, Some(9), None, None),
             ],
         );
@@ -2415,15 +2414,15 @@ mod conditionals {
     fn conditional_chain_with_both_conditional_definitions() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("!>".to_string(), TokenType::ApplyIfFalse, 0, 0),
+            LexerToken::new("!>".to_string(), TokenType::JumpIfFalse, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("!>".to_string(), TokenType::ApplyIfFalse, 0, 0),
+            LexerToken::new("!>".to_string(), TokenType::JumpIfFalse, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
@@ -2434,17 +2433,17 @@ mod conditionals {
             7,
             &[
                 (0, Definition::Number, Some(1), None, None),
-                (1, Definition::ApplyIfFalse, Some(3), Some(0), Some(2)),
+                (1, Definition::JumpIfFalse, Some(3), Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
                 // second
-                (3, Definition::ConditionalBranch, Some(7), Some(1), Some(5)),
+                (3, Definition::ElseJump, Some(7), Some(1), Some(5)),
                 (4, Definition::Number, Some(5), None, None),
-                (5, Definition::ApplyIfTrue, Some(3), Some(4), Some(6)),
+                (5, Definition::JumpIfTrue, Some(3), Some(4), Some(6)),
                 (6, Definition::Number, Some(5), None, None),
                 // third
-                (7, Definition::ConditionalBranch, None, Some(3), Some(9)),
+                (7, Definition::ElseJump, None, Some(3), Some(9)),
                 (8, Definition::Number, Some(9), None, None),
-                (9, Definition::ApplyIfFalse, Some(7), Some(8), Some(10)),
+                (9, Definition::JumpIfFalse, Some(7), Some(8), Some(10)),
                 (10, Definition::Number, Some(9), None, None),
             ],
         );
@@ -2454,10 +2453,9 @@ mod conditionals {
     fn conditional_chain_last_conditional_having_no_condition() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
-            LexerToken::new("|>".to_string(), TokenType::DefaultConditional, 0, 0),
+            LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
@@ -2468,11 +2466,10 @@ mod conditionals {
             3,
             &[
                 (0, Definition::Number, Some(1), None, None),
-                (1, Definition::ApplyIfTrue, Some(3), Some(0), Some(2)),
+                (1, Definition::JumpIfTrue, Some(3), Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
-                (3, Definition::ConditionalBranch, None, Some(1), Some(4)),
-                (4, Definition::DefaultConditional, Some(3), None, Some(5)),
-                (5, Definition::Number, Some(4), None, None),
+                (3, Definition::ElseJump, None, Some(1), Some(4)),
+                (4, Definition::Number, Some(3), None, None),
             ],
         );
     }
@@ -2484,7 +2481,7 @@ mod conditionals {
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("?>".to_string(), TokenType::ApplyIfTrue, 0, 0),
+            LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
@@ -2501,7 +2498,7 @@ mod conditionals {
                 (1, Definition::Addition, Some(6), Some(0), Some(2)),
                 (2, Definition::Group, Some(1), None, Some(4)),
                 (3, Definition::Number, Some(4), None, None),
-                (4, Definition::ApplyIfTrue, Some(2), Some(3), Some(5)),
+                (4, Definition::JumpIfTrue, Some(2), Some(3), Some(5)),
                 (5, Definition::Number, Some(4), None, None),
                 (6, Definition::Addition, None, Some(1), Some(7)),
                 (7, Definition::Number, Some(6), None, None),
