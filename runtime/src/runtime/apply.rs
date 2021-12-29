@@ -1,7 +1,43 @@
 use crate::runtime::utilities::*;
 use crate::{error, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto};
+use log::trace;
 
 use super::context::GarnishLangRuntimeContext;
+
+pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
+    trace!("Instruction - Apply");
+    apply_internal(this, context)
+}
+
+pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: usize) -> GarnishLangRuntimeResult<Data::Error> {
+    trace!("Instruction - Reapply | Data - {:?}", index);
+
+    let (right_addr, left_addr) = next_two_raw_ref(this)?;
+
+    // only execute if left side is a true like value
+    match this.get_data_type(left_addr).nest_into()? {
+        ExpressionDataType::Unit | ExpressionDataType::False => Ok(()),
+        _ => {
+            let point = this.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}", index)))?;
+
+            this.set_instruction_cursor(point - 1).nest_into()?;
+            this.pop_value_stack()
+                .ok_or(error(format!("Failed to pop input during reapply operation.")))?;
+            this.push_value_stack(right_addr).nest_into()
+        }
+    }
+}
+
+pub(crate) fn empty_apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
+    trace!("Instruction - Empty Apply");
+    push_unit(this)?;
+
+    apply_internal(this, context)
+}
 
 pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
@@ -168,10 +204,10 @@ mod tests {
     }
 
     #[test]
-    fn reapply() {
+    fn reapply_if_true() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_data(ExpressionData::boolean_true()).unwrap();
         runtime.add_data(ExpressionData::expression(0)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
         runtime.add_data(ExpressionData::integer(30)).unwrap();
@@ -192,6 +228,7 @@ mod tests {
 
         runtime.push_jump_point(4).unwrap();
 
+        runtime.push_register(1).unwrap();
         runtime.push_register(4).unwrap();
 
         runtime.push_value_stack(2).unwrap();
@@ -204,6 +241,47 @@ mod tests {
         assert_eq!(runtime.get_value_count(), 1);
         assert_eq!(runtime.get_value(0).unwrap(), 4);
         assert_eq!(runtime.get_instruction_cursor(), 3);
+        assert_eq!(runtime.get_jump_path(0).unwrap(), 9);
+    }
+
+    #[test]
+    fn reapply_if_false() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.add_data(ExpressionData::boolean_false()).unwrap();
+        runtime.add_data(ExpressionData::expression(0)).unwrap();
+        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_data(ExpressionData::integer(30)).unwrap();
+        runtime.add_data(ExpressionData::integer(40)).unwrap();
+
+        // 1
+        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(2)).unwrap();
+        runtime.push_instruction(Instruction::Apply, None).unwrap();
+
+        // 4
+        runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.push_instruction(Instruction::PutValue, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PutValue, None).unwrap();
+        runtime.push_instruction(Instruction::Reapply, Some(0)).unwrap();
+        runtime.push_instruction(Instruction::EndExpression, None).unwrap();
+
+        runtime.push_jump_point(4).unwrap();
+
+        runtime.push_register(1).unwrap();
+        runtime.push_register(4).unwrap();
+
+        runtime.push_value_stack(2).unwrap();
+        runtime.push_jump_path(9).unwrap();
+
+        runtime.set_instruction_cursor(8).unwrap();
+
+        runtime.reapply(0).unwrap();
+
+        assert_eq!(runtime.get_value_count(), 1);
+        assert_eq!(runtime.get_value(0).unwrap(), 2);
+        assert_eq!(runtime.get_instruction_cursor(), 8);
         assert_eq!(runtime.get_jump_path(0).unwrap(), 9);
     }
 

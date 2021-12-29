@@ -104,11 +104,12 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::ExponentialSign => todo!(),
         TokenType::Apply => (Definition::Apply, SecondaryDefinition::BinaryLeftToRight),
         TokenType::ApplyTo => (Definition::ApplyTo, SecondaryDefinition::BinaryLeftToRight),
-        TokenType::Reapply => (Definition::Reapply, SecondaryDefinition::UnaryPrefix),
         TokenType::LeftInternal => (Definition::AccessLeftInternal, SecondaryDefinition::UnaryPrefix),
         TokenType::RightInternal => (Definition::AccessRightInternal, SecondaryDefinition::UnarySuffix),
         TokenType::LengthInternal => (Definition::AccessLengthInternal, SecondaryDefinition::UnarySuffix),
         TokenType::Comma => (Definition::CommaList, SecondaryDefinition::BinaryLeftToRight),
+
+        TokenType::Reapply => (Definition::Reapply, SecondaryDefinition::BinaryLeftToRight),
 
         // Conditionals
         TokenType::JumpIfFalse => (Definition::JumpIfFalse, SecondaryDefinition::BinaryLeftToRight),
@@ -587,7 +588,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                 (Definition::Drop, None, None, None)
             }
             SecondaryDefinition::Subexpression => {
-                let in_group= match current_group {
+                let in_group = match current_group {
                     None => false,
                     Some(group) => match group_stack.get(group) {
                         None => Err(format!("Current group set to non-existant group in stack."))?,
@@ -948,6 +949,7 @@ mod tests {
     #[test]
     fn reapply() {
         let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("^~".to_string(), TokenType::Reapply, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
@@ -956,10 +958,11 @@ mod tests {
 
         assert_result(
             &result,
-            0,
+            1,
             &[
-                (0, Definition::Reapply, None, None, Some(1)),
-                (1, Definition::Number, Some(0), None, None),
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Reapply, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
             ],
         );
     }
@@ -2341,6 +2344,31 @@ mod conditionals {
             &[
                 (0, Definition::Number, Some(1), None, None),
                 (1, Definition::JumpIfTrue, Some(3), Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+                (3, Definition::ElseJump, None, Some(1), Some(4)),
+                (4, Definition::Number, Some(3), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn reapply_with_else() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("^~".to_string(), TokenType::Reapply, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            3,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Reapply, Some(3), Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
                 (3, Definition::ElseJump, None, Some(1), Some(4)),
                 (4, Definition::Number, Some(3), None, None),

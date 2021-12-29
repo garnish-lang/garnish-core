@@ -129,27 +129,15 @@ where
     // Apply
 
     fn apply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Apply");
-        apply_internal(self, context)
+        apply(self, context)
     }
 
     fn reapply(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Reapply | Data - {:?}", index);
-
-        let right_addr = next_ref(self)?;
-        let point = self.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}", index)))?;
-
-        self.set_instruction_cursor(point - 1).nest_into()?;
-        self.pop_value_stack()
-            .ok_or(error(format!("Failed to pop input during reapply operation.")))?;
-        self.push_value_stack(right_addr).nest_into()
+        reapply(self, index)
     }
 
     fn empty_apply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Empty Apply");
-        push_unit(self)?;
-
-        apply_internal(self, context)
+        empty_apply(self, context)
     }
 
     //

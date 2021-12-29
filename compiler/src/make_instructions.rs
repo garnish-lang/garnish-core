@@ -32,10 +32,17 @@ type DefinitionResolveInfo = (bool, Option<usize>);
 
 fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
-        Definition::Number | Definition::Identifier | Definition::Property | Definition::Symbol | Definition::Value | Definition::Unit | Definition::False | Definition::True => {
+        Definition::Number
+        | Definition::Identifier
+        | Definition::Property
+        | Definition::Symbol
+        | Definition::Value
+        | Definition::Unit
+        | Definition::False
+        | Definition::True => {
             ((false, None), (false, None))
         }
-        Definition::Reapply | Definition::AccessLeftInternal => ((true, node.get_right()), (false, None)),
+        Definition::AccessLeftInternal => ((true, node.get_right()), (false, None)),
         Definition::AbsoluteValue => todo!(),
         Definition::EmptyApply | Definition::AccessLengthInternal | Definition::AccessRightInternal => ((true, node.get_left()), (false, None)),
         Definition::Addition
@@ -43,6 +50,7 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         | Definition::Pair
         | Definition::Access
         | Definition::Subexpression // Same order for child resolution but has special check, might need to move out of here eventually
+        | Definition::Reapply
         | Definition::Apply => {
             ((true, node.get_left()), (true, node.get_right()))
         }
@@ -217,14 +225,13 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
 
                             let ((first_expected, first_index), (second_expected, second_index)) = get_resolve_info(node);
 
-                            let we_are_conditional = node.get_definition() == Definition::JumpIfFalse
-                                || node.get_definition() == Definition::JumpIfTrue;
+                            let we_are_conditional =
+                                node.get_definition() == Definition::JumpIfFalse || node.get_definition() == Definition::JumpIfTrue;
 
-                            let we_are_parent_conditional_branch = node.get_definition() == Definition::ElseJump
-                                && resolve_node_info.parent_definition != Definition::ElseJump;
+                            let we_are_parent_conditional_branch =
+                                node.get_definition() == Definition::ElseJump && resolve_node_info.parent_definition != Definition::ElseJump;
 
-                            let we_are_non_chained_conditional =
-                                we_are_conditional && resolve_node_info.parent_definition != Definition::ElseJump;
+                            let we_are_non_chained_conditional = we_are_conditional && resolve_node_info.parent_definition != Definition::ElseJump;
 
                             let we_are_list = node.get_definition() == Definition::List;
                             let we_are_comma_list = node.get_definition() == Definition::CommaList;
@@ -294,9 +301,7 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                                 // if we are the root of a conditional branch (parent isn't also a conditional branch)
                                 // our second child (right) is allowed to ignore their first child
                                 // need to pass this information
-                                if node.get_definition() == Definition::ElseJump
-                                    && resolve_node_info.parent_definition != Definition::ElseJump
-                                {
+                                if node.get_definition() == Definition::ElseJump && resolve_node_info.parent_definition != Definition::ElseJump {
                                     trace!("Allowing second child of root conditional branch to ignore its first child.");
                                     new.can_ignore_first = true;
                                 }
@@ -862,17 +867,19 @@ mod operations {
     #[test]
     fn reapply() {
         assert_instruction_data(
-            0,
+            1,
             vec![
-                (Definition::Reapply, None, None, Some(1), "^~", TokenType::Reapply),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Reapply, None, Some(0), Some(2), "^~", TokenType::Reapply),
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
                 (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
                 (Instruction::Reapply, Some(0)),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(10)],
+            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
         );
     }
 }
@@ -1257,14 +1264,7 @@ mod conditionals {
                 (Definition::Number, Some(1), None, None, "5", TokenType::Number),
                 (Definition::JumpIfTrue, Some(3), Some(0), Some(2), "?>", TokenType::JumpIfTrue),
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
-                (
-                    Definition::ElseJump,
-                    None,
-                    Some(1),
-                    Some(4),
-                    "|>",
-                    TokenType::ElseJump,
-                ),
+                (Definition::ElseJump, None, Some(1), Some(4), "|>", TokenType::ElseJump),
                 (Definition::Number, Some(3), None, None, "15", TokenType::Number),
             ],
             vec![
@@ -1277,6 +1277,29 @@ mod conditionals {
             ],
             vec![ExpressionData::integer(5), ExpressionData::integer(15), ExpressionData::integer(10)],
             vec![1, 4, 5],
+        );
+    }
+
+    #[test]
+    fn reapply_with_else() {
+        assert_instruction_data_jumps(
+            3,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Reapply, Some(3), Some(0), Some(2), "^~", TokenType::Reapply),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::ElseJump, None, Some(1), Some(4), "|>", TokenType::ElseJump),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(2)),
+                (Instruction::Reapply, Some(0)),
+                (Instruction::Put, Some(3)),
+                (Instruction::EndExpression, None), // 5
+            ],
+            vec![ExpressionData::integer(5), ExpressionData::integer(10), ExpressionData::integer(15)],
+            vec![1, 5], // TODO: Either more tests to verify if extra jump is needed or find way to remove it
         );
     }
 
@@ -1303,17 +1326,17 @@ mod conditionals {
             ],
             vec![
                 (Instruction::Put, Some(1)),
-                (Instruction::JumpIfTrue, Some(2)), // 1
+                (Instruction::JumpIfTrue, Some(2)), // 2
                 (Instruction::Put, Some(2)),
-                (Instruction::JumpIfTrue, Some(3)), // 3
+                (Instruction::JumpIfTrue, Some(3)), // 4
                 (Instruction::Put, Some(3)),
-                (Instruction::JumpIfTrue, Some(4)), // 5
+                (Instruction::JumpIfTrue, Some(4)), // 6
                 (Instruction::EndExpression, None),
-                (Instruction::Put, Some(4)), // 7
+                (Instruction::Put, Some(4)), // 8
                 (Instruction::JumpTo, Some(1)),
-                (Instruction::Put, Some(5)), // 9
+                (Instruction::Put, Some(5)), // 10
                 (Instruction::JumpTo, Some(1)),
-                (Instruction::Put, Some(6)), // 11
+                (Instruction::Put, Some(6)), // 12
                 (Instruction::JumpTo, Some(1)),
             ],
             vec![
