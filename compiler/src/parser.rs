@@ -46,6 +46,8 @@ impl Definition {
             || self == Definition::Unit
             || self == Definition::Input
             || self == Definition::Result
+            || self == Definition::True
+            || self == Definition::False
     }
 
     pub fn is_group_like(self) -> bool {
@@ -552,7 +554,6 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                     // update parent to point to list node just created
                     parent = Some(id);
 
-
                     // update right since we just added to node list
                     right = Some(our_id + 1);
 
@@ -880,6 +881,8 @@ mod tests {
             Definition::Unit,
             Definition::Input,
             Definition::Result,
+            Definition::True,
+            Definition::False,
         ];
 
         for def in value_like {
