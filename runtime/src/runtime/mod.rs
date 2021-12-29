@@ -9,18 +9,23 @@ mod pair;
 mod put;
 mod resolve;
 mod utilities;
+pub mod instruction;
+pub mod result;
+pub mod types;
 
 pub use crate::runtime::utilities::*;
 pub use context::{EmptyContext, GarnishLangRuntimeContext};
 pub use data::GarnishLangRuntimeData;
 
-use crate::result::{error, GarnishLangRuntimeResult, GarnishLangRuntimeState};
-use crate::runtime::apply::*;
-use crate::runtime::comparisons::equality_comparison;
-use crate::runtime::list::*;
-use crate::{instruction::*, ExpressionDataType};
-use crate::{GarnishLangRuntimeInfo, NestInto};
 use log::trace;
+
+use result::*;
+use instruction::*;
+use apply::*;
+use comparisons::equality_comparison;
+use list::*;
+use types::ExpressionDataType;
+use crate::{GarnishLangRuntimeInfo, NestInto};
 use crate::runtime::put::{push_input, push_result, put, put_input};
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
@@ -311,8 +316,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        runtime::{context::EmptyContext, GarnishRuntime},
-        ExpressionData, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData,
+        ExpressionData,
+        ExpressionDataType, GarnishLangRuntimeData, Instruction, runtime::{context::EmptyContext, GarnishRuntime}, SimpleRuntimeData,
     };
 
     #[test]

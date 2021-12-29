@@ -2,18 +2,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::{collections::HashMap, convert::TryInto, hash::Hasher};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum ExpressionDataType {
-    Unit = 1,
-    Integer,
-    Symbol,
-    Pair,
-    List,
-    Expression,
-    External,
-    True,
-    False,
-}
+use crate::runtime::types::ExpressionDataType;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ExpressionData {

@@ -5,6 +5,8 @@ use crate::{
     GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData,
 };
 
+pub mod expression_data;
+
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct SimpleRuntimeData {
     register: Vec<usize>,

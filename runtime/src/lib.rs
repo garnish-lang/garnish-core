@@ -1,11 +1,9 @@
-mod expression_data;
-mod instruction;
-mod result;
 mod runtime;
 mod simple;
 
-pub use expression_data::*;
-pub use instruction::*;
-pub use result::*;
+pub use runtime::result::*;
+pub use runtime::instruction::*;
+pub use runtime::types::*;
 pub use runtime::*;
+pub use simple::expression_data::*;
 pub use simple::SimpleRuntimeData;
