@@ -457,7 +457,6 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                 under_group,
             )?,
             SecondaryDefinition::Identifier => {
-
                 // having a parent of access means its on the left
                 // and this identifier a property in the access operation
                 // otherwise its a normal identifier that needs to be resolved
@@ -465,12 +464,14 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                     None => Definition::Identifier,
                     Some(parent) => match nodes.get(parent) {
                         None => Err(format!("No node found at next parent index {:?}", parent))?,
-                        Some(p) => if p.definition == Definition::Access {
-                            Definition::Property
-                        } else {
-                            Definition::Identifier
+                        Some(p) => {
+                            if p.definition == Definition::Access {
+                                Definition::Property
+                            } else {
+                                Definition::Identifier
+                            }
                         }
-                    }
+                    },
                 };
 
                 parse_value_like(
@@ -485,7 +486,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                     last_token,
                     under_group,
                 )?
-            },
+            }
             SecondaryDefinition::BinaryLeftToRight => {
                 next_parent = Some(id);
                 parse_token(
@@ -519,12 +520,50 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                 )?
             }
             SecondaryDefinition::StartGrouping => {
-                current_group = Some(group_stack.len());
-                group_stack.push(id);
+                let mut parent = next_parent;
+                let mut right = assumed_right;
 
-                let parent = next_parent;
-                next_parent = Some(id);
-                (definition, parent, None, assumed_right)
+                let mut our_id = id;
+
+                current_group = Some(group_stack.len());
+
+                // both groupings are considered to be value like
+                // groups will result in a single value after evaluation
+                // nested expressions are replaced with an expression value placeholder
+                if check_for_list {
+                    trace!("List flag is set, creating list node before current node.");
+
+                    // our new id will be +1, since list node will use current id
+                    our_id += 1;
+
+                    // use current id for list token
+                    let list_info = parse_token(
+                        id,
+                        Definition::List,
+                        last_left,
+                        Some(our_id),
+                        &mut nodes,
+                        &priority_map,
+                        &mut check_for_list,
+                        under_group,
+                    )?;
+                    nodes.push(ParseNode::new(list_info.0, list_info.1, list_info.2, list_info.3, last_token.clone()));
+
+                    // update parent to point to list node just created
+                    parent = Some(id);
+
+
+                    // update right since we just added to node list
+                    right = Some(our_id + 1);
+
+                    // last left  is the node we are about to create
+                    next_last_left = Some(our_id);
+                }
+
+                group_stack.push(our_id);
+                next_parent = Some(our_id);
+
+                (definition, parent, None, right)
             }
             SecondaryDefinition::EndGrouping => {
                 // if current grouping is a conditional group
@@ -1579,7 +1618,7 @@ mod tests {
                 (0, Definition::AbsoluteValue, None, None, Some(2)),
                 (1, Definition::Identifier, Some(2), None, None),
                 (2, Definition::Access, Some(0), Some(1), Some(3)),
-                (3, Definition::Identifier, Some(2), None, None),
+                (3, Definition::Property, Some(2), None, None),
             ],
         );
     }
@@ -1601,7 +1640,7 @@ mod tests {
             &[
                 (0, Definition::Identifier, Some(1), None, None),
                 (1, Definition::Access, Some(3), Some(0), Some(2)),
-                (2, Definition::Identifier, Some(1), None, None),
+                (2, Definition::Property, Some(1), None, None),
                 (3, Definition::EmptyApply, None, Some(1), None),
             ],
         );
@@ -1651,7 +1690,7 @@ mod tests {
                 (1, Definition::Addition, None, Some(0), Some(5)),
                 (2, Definition::Identifier, Some(3), None, None),
                 (3, Definition::Access, Some(5), Some(2), Some(4)),
-                (4, Definition::Identifier, Some(3), None, None),
+                (4, Definition::Property, Some(3), None, None),
                 (5, Definition::EmptyApply, Some(1), Some(3), None),
             ],
         );
@@ -1862,6 +1901,54 @@ mod groups {
             0,
             tokens,
             &[(0, Definition::Group, None, None, Some(1)), (1, Definition::Number, Some(0), None, None)],
+        )
+    }
+
+    #[test]
+    fn in_list() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        assert_group_nested_results(
+            1,
+            tokens,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::List, None, Some(0), Some(2)),
+                (2, Definition::Group, Some(1), None, Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+            ],
+        )
+    }
+
+    #[test]
+    fn in_list_with_list() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("15".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        assert_group_nested_results(
+            1,
+            tokens,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::List, None, Some(0), Some(2)),
+                (2, Definition::Group, Some(1), None, Some(4)),
+                (3, Definition::Number, Some(4), None, None),
+                (4, Definition::List, Some(2), Some(3), Some(5)),
+                (5, Definition::Number, Some(4), None, None),
+            ],
         )
     }
 
