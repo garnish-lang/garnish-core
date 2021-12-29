@@ -67,7 +67,6 @@ enum SecondaryDefinition {
     Subexpression,
     Whitespace,
     Conditional,
-    Comma,
     Identifier,
 }
 
@@ -94,7 +93,6 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::LineAnnotation => (Definition::Drop, SecondaryDefinition::Annotation),
         TokenType::Whitespace => (Definition::Drop, SecondaryDefinition::Whitespace),
         TokenType::Subexpression => (Definition::Subexpression, SecondaryDefinition::Subexpression),
-        TokenType::Comma => (Definition::List, SecondaryDefinition::Comma),
 
         // Operations
         TokenType::EmptyApply => (Definition::EmptyApply, SecondaryDefinition::UnarySuffix),
@@ -111,6 +109,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::LeftInternal => (Definition::AccessLeftInternal, SecondaryDefinition::UnaryPrefix),
         TokenType::RightInternal => (Definition::AccessRightInternal, SecondaryDefinition::UnarySuffix),
         TokenType::LengthInternal => (Definition::AccessLengthInternal, SecondaryDefinition::UnarySuffix),
+        TokenType::Comma => (Definition::CommaList, SecondaryDefinition::BinaryLeftToRight),
 
         // Conditionals
         TokenType::JumpIfFalse => (Definition::JumpIfFalse, SecondaryDefinition::Conditional),
@@ -632,68 +631,6 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                     parse_token(
                         id,
                         definition,
-                        last_left,
-                        assumed_right,
-                        &mut nodes,
-                        &priority_map,
-                        &mut check_for_list,
-                        under_group,
-                    )?
-                }
-            }
-            SecondaryDefinition::Comma => {
-                // standard binary operation with List definition, unless in a conditional grouping
-
-                trace!("Checking current group {:?}", current_group);
-                let in_conditional = match current_group {
-                    None => false,
-                    Some(group) => match group_stack.get(group) {
-                        None => Err(format!("Current group set to non-existant group in stack."))?,
-                        Some(group_index) => match nodes.get(*group_index) {
-                            None => Err(format!("Index assigned to node has no value in node list. {:?}", group))?,
-                            Some(group_node) => {
-                                trace!("Current group node definition is {:?}", group_node.definition);
-                                group_node.definition.is_conditional()
-                            }
-                        },
-                    },
-                };
-
-                next_parent = Some(id);
-
-                if in_conditional {
-                    trace!("In conditional grouping, will create conditional branch node.");
-                    // end grouping and create new node with group as left
-                    let left = group_stack.pop();
-                    current_group = match group_stack.len() == 0 {
-                        true => None,
-                        false => Some(group_stack.len() - 1),
-                    };
-
-                    // redo under group, since we just moddified it
-                    let under_group = match current_group {
-                        None => None,
-                        Some(current) => match group_stack.get(current) {
-                            None => Err(format!("Current group set to non-existant group in stack."))?,
-                            Some(group) => Some(*group),
-                        },
-                    };
-
-                    parse_token(
-                        id,
-                        Definition::ElseJump,
-                        left,
-                        assumed_right,
-                        &mut nodes,
-                        &priority_map,
-                        &mut check_for_list,
-                        under_group,
-                    )?
-                } else {
-                    trace!("Not in conditional grouping, will create list node.");
-                    parse_token(
-                        id,
-                        Definition::CommaList,
                         last_left,
                         assumed_right,
                         &mut nodes,
