@@ -21,8 +21,7 @@ pub enum Definition {
     CommaList,
     Drop,
     Symbol,
-    Input,
-    Result,
+    Value,
     Unit,
     Subexpression,
     Group,
@@ -44,8 +43,7 @@ impl Definition {
             || self == Definition::Identifier
             || self == Definition::Symbol
             || self == Definition::Unit
-            || self == Definition::Input
-            || self == Definition::Result
+            || self == Definition::Value
             || self == Definition::True
             || self == Definition::False
     }
@@ -81,8 +79,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
         TokenType::Symbol => (Definition::Symbol, SecondaryDefinition::Value),
         TokenType::Number => (Definition::Number, SecondaryDefinition::Value),
-        TokenType::Result => (Definition::Result, SecondaryDefinition::Value),
-        TokenType::Input => (Definition::Input, SecondaryDefinition::Value),
+        TokenType::Value => (Definition::Value, SecondaryDefinition::Value),
         TokenType::True => (Definition::True, SecondaryDefinition::Value),
         TokenType::False => (Definition::False, SecondaryDefinition::Value),
         TokenType::Identifier => (Definition::Identifier, SecondaryDefinition::Identifier),
@@ -192,10 +189,9 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::Property, 10);
     map.insert(Definition::Symbol, 10);
     map.insert(Definition::Unit, 10);
-    map.insert(Definition::Input, 10);
+    map.insert(Definition::Value, 10);
     map.insert(Definition::True, 10);
     map.insert(Definition::False, 10);
-    map.insert(Definition::Result, 10);
 
     map.insert(Definition::Group, 20);
     map.insert(Definition::NestedExpression, 20);
@@ -901,8 +897,7 @@ mod tests {
             Definition::Identifier,
             Definition::Symbol,
             Definition::Unit,
-            Definition::Input,
-            Definition::Result,
+            Definition::Value,
             Definition::True,
             Definition::False,
         ];
@@ -959,11 +954,11 @@ mod tests {
 
     #[test]
     fn single_input() {
-        let tokens = vec![LexerToken::new("$".to_string(), TokenType::Input, 0, 0)];
+        let tokens = vec![LexerToken::new("$".to_string(), TokenType::Value, 0, 0)];
 
         let result = parse(tokens).unwrap();
 
-        assert_result(&result, 0, &[(0, Definition::Input, None, None, None)]);
+        assert_result(&result, 0, &[(0, Definition::Value, None, None, None)]);
     }
 
     #[test]
@@ -982,15 +977,6 @@ mod tests {
         let result = parse(tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::False, None, None, None)]);
-    }
-
-    #[test]
-    fn single_result() {
-        let tokens = vec![LexerToken::new("$?".to_string(), TokenType::Result, 0, 0)];
-
-        let result = parse(tokens).unwrap();
-
-        assert_result(&result, 0, &[(0, Definition::Result, None, None, None)]);
     }
 
     #[test]
@@ -1820,9 +1806,9 @@ mod lists {
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("()".to_string(), TokenType::UnitLiteral, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("$".to_string(), TokenType::Input, 0, 0),
+            LexerToken::new("$".to_string(), TokenType::Value, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("$?".to_string(), TokenType::Result, 0, 0),
+            LexerToken::new("$?".to_string(), TokenType::True, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -1839,9 +1825,9 @@ mod lists {
                 (5, Definition::List, Some(7), Some(3), Some(6)),
                 (6, Definition::Unit, Some(5), None, None),
                 (7, Definition::List, Some(9), Some(5), Some(8)),
-                (8, Definition::Input, Some(7), None, None),
+                (8, Definition::Value, Some(7), None, None),
                 (9, Definition::List, None, Some(7), Some(10)),
-                (10, Definition::Result, Some(9), None, None),
+                (10, Definition::True, Some(9), None, None),
             ],
         );
     }

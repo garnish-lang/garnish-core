@@ -32,7 +32,7 @@ type DefinitionResolveInfo = (bool, Option<usize>);
 
 fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
-        Definition::Number | Definition::Identifier | Definition::Property | Definition::Symbol | Definition::Input | Definition::Result | Definition::Unit | Definition::False | Definition::True => {
+        Definition::Number | Definition::Identifier | Definition::Property | Definition::Symbol | Definition::Value | Definition::Unit | Definition::False | Definition::True => {
             ((false, None), (false, None))
         }
         Definition::Reapply | Definition::AccessLeftInternal => ((true, node.get_right()), (false, None)),
@@ -95,9 +95,9 @@ fn resolve_node<T: GarnishLangRuntimeData>(
 
             data.add_symbol(&node.get_lex_token().get_text()[1..]).nest_into()?;
         }
-        Definition::Input => {
+        Definition::Value => {
             // all unit literals will use unit used in the zero element slot of data
-            data.push_instruction(Instruction::PutInput, None).nest_into()?;
+            data.push_instruction(Instruction::PutValue, None).nest_into()?;
         }
         Definition::True => {
             data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
@@ -106,10 +106,6 @@ fn resolve_node<T: GarnishLangRuntimeData>(
         Definition::False => {
             data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
             data.add_false().nest_into()?;
-        }
-        Definition::Result => {
-            // all unit literals will use unit used in the zero element slot of data
-            data.push_instruction(Instruction::PutResult, None).nest_into()?;
         }
         Definition::AbsoluteValue => todo!(), // not currently in runtime
         Definition::EmptyApply => {
@@ -143,7 +139,7 @@ fn resolve_node<T: GarnishLangRuntimeData>(
             }
         },
         Definition::Subexpression => {
-            data.push_instruction(Instruction::PushResult, None).nest_into()?;
+            data.push_instruction(Instruction::UpdateValue, None).nest_into()?;
         }
         Definition::Group => (), // no additional instructions for groups
         Definition::NestedExpression => {
@@ -599,18 +595,8 @@ mod values {
     fn put_input() {
         assert_instruction_data(
             0,
-            vec![(Definition::Input, None, None, None, "$", TokenType::Input)],
-            vec![(Instruction::PutInput, None), (Instruction::EndExpression, None)],
-            vec![],
-        );
-    }
-
-    #[test]
-    fn put_result() {
-        assert_instruction_data(
-            0,
-            vec![(Definition::Result, None, None, None, "$?", TokenType::Result)],
-            vec![(Instruction::PutResult, None), (Instruction::EndExpression, None)],
+            vec![(Definition::Value, None, None, None, "$", TokenType::Value)],
+            vec![(Instruction::PutValue, None), (Instruction::EndExpression, None)],
             vec![],
         );
     }
@@ -832,7 +818,7 @@ mod operations {
             ],
             vec![
                 (Instruction::Put, Some(1)),
-                (Instruction::PushResult, None),
+                (Instruction::UpdateValue, None),
                 (Instruction::Put, Some(2)),
                 (Instruction::EndExpression, None),
             ],

@@ -1,3 +1,47 @@
+use crate::{next_ref, push_unit, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto, error};
+use log::trace;
+
+pub(crate) fn put<Data: GarnishLangRuntimeData>(this: &mut Data, i: usize) -> GarnishLangRuntimeResult<Data::Error> {
+    trace!("Instruction - Put | Data - {:?}", i);
+    match i >= this.get_end_of_constant_data() {
+        true => Err(error(format!(
+            "Attempting to put reference to {:?} which is out of bounds of constant data that ends at {:?}.",
+            i,
+            this.get_end_of_constant_data()
+        ))),
+        false => this.push_register(i).nest_into(),
+    }
+}
+
+pub(crate) fn put_input<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+    trace!("Instruction - Put Input");
+
+    match this.get_current_value() {
+        None => push_unit(this),
+        Some(i) => this.push_register(i).nest_into(),
+    }
+}
+
+pub(crate) fn push_input<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+    trace!("Instruction - Push Input");
+    let r = next_ref(this)?;
+
+    this.push_value_stack(r).nest_into()?;
+    this.push_value_stack(r).nest_into()
+}
+
+pub(crate) fn push_result<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+    trace!("Instruction - Output Result");
+
+    let r = next_ref(this)?;
+    match this.get_current_value_mut() {
+        None => Err(error(format!("No inputs availble to update for update value operation.")))?,
+        Some(v) => *v = r
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{runtime::GarnishRuntime, ExpressionData, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
@@ -30,9 +74,9 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.push_input_stack(2).unwrap();
+        runtime.push_value_stack(2).unwrap();
 
-        runtime.put_input().unwrap();
+        runtime.put_value().unwrap();
 
         assert_eq!(*runtime.get_register().get(0).unwrap(), 2);
     }
@@ -44,7 +88,7 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        runtime.put_input().unwrap();
+        runtime.put_value().unwrap();
 
         assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Unit);
         assert_eq!(*runtime.get_register().get(0).unwrap(), 3);
@@ -59,10 +103,10 @@ mod tests {
 
         runtime.push_register(2).unwrap();
 
-        runtime.push_input().unwrap();
+        runtime.push_value().unwrap();
 
-        assert_eq!(runtime.get_input(0).unwrap(), 2usize);
-        assert_eq!(runtime.get_result().unwrap(), 2usize);
+        assert_eq!(runtime.get_value(0).unwrap(), 2usize);
+        assert_eq!(runtime.get_current_value().unwrap(), 2usize);
     }
 
     #[test]
@@ -72,7 +116,7 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         runtime.add_data(ExpressionData::integer(20)).unwrap();
 
-        assert!(runtime.push_input().is_err());
+        assert!(runtime.push_value().is_err());
     }
 
     #[test]
@@ -80,14 +124,17 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.push_instruction(Instruction::PushResult, None).unwrap();
+        runtime.push_instruction(Instruction::UpdateValue, None).unwrap();
 
         runtime.push_register(1).unwrap();
 
-        runtime.push_result().unwrap();
+        runtime.push_value_stack(1).unwrap();
 
-        assert_eq!(runtime.get_result().unwrap(), 1usize);
-        assert_eq!(runtime.get_integer(runtime.get_result().unwrap()).unwrap(), 10i64);
+        runtime.update_value().unwrap();
+
+        assert_eq!(runtime.get_value_count(), 1);
+        assert_eq!(runtime.get_current_value().unwrap(), 1usize);
+        assert_eq!(runtime.get_integer(runtime.get_current_value().unwrap()).unwrap(), 10i64);
     }
 
     #[test]
@@ -95,35 +142,8 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.push_instruction(Instruction::PushResult, None).unwrap();
+        runtime.push_instruction(Instruction::UpdateValue, None).unwrap();
 
-        assert!(runtime.push_result().is_err());
-    }
-
-    #[test]
-    fn put_result() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-
-        runtime.set_result(Some(2)).unwrap();
-
-        runtime.put_result().unwrap();
-
-        assert_eq!(*runtime.get_register().get(0).unwrap(), 2);
-    }
-
-    #[test]
-    fn put_result_is_unit_if_no_result() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-
-        runtime.put_result().unwrap();
-
-        assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Unit);
-        assert_eq!(*runtime.get_register().get(0).unwrap(), 3);
+        assert!(runtime.update_value().is_err());
     }
 }

@@ -10,8 +10,7 @@ pub struct SimpleRuntimeData {
     register: Vec<usize>,
     data: Vec<ExpressionData>,
     end_of_constant_data: usize,
-    current_result: Option<usize>,
-    inputs: Vec<usize>,
+    values: Vec<usize>,
     instructions: Vec<InstructionData>,
     instruction_cursor: usize,
     expression_table: Vec<usize>,
@@ -26,8 +25,7 @@ impl SimpleRuntimeData {
             register: vec![],
             data: vec![ExpressionData::unit()],
             end_of_constant_data: 0,
-            current_result: None,
-            inputs: vec![],
+            values: vec![],
             instruction_cursor: 0,
             instructions: vec![InstructionData::new(Instruction::EndExecution, None)],
             expression_table: vec![],
@@ -334,34 +332,33 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.data.len()
     }
 
-    fn set_result(&mut self, result: Option<usize>) -> Result<(), Self::Error> {
-        self.current_result = result;
+    fn push_value_stack(&mut self, addr: usize) -> Result<(), Self::Error> {
+        self.values.push(addr);
         Ok(())
     }
 
-    fn get_result(&self) -> Option<usize> {
-        self.current_result
+    fn pop_value_stack(&mut self) -> Option<usize> {
+        self.values.pop()
     }
 
-    fn push_input_stack(&mut self, addr: usize) -> Result<(), Self::Error> {
-        self.inputs.push(addr);
-        Ok(())
+    fn get_value(&self, index: usize) -> Option<usize> {
+        self.values.get(index).cloned()
     }
 
-    fn pop_input_stack(&mut self) -> Option<usize> {
-        self.inputs.pop()
+    fn get_value_mut(&mut self, index: usize) -> Option<&mut usize> {
+        self.values.get_mut(index)
     }
 
-    fn get_input(&self, index: usize) -> Option<usize> {
-        self.inputs.get(index).cloned()
+    fn get_value_count(&self) -> usize {
+        self.values.len()
     }
 
-    fn get_input_count(&self) -> usize {
-        self.inputs.len()
+    fn get_current_value(&self) -> Option<usize> {
+        self.values.last().cloned()
     }
 
-    fn get_current_input(&self) -> Option<usize> {
-        self.inputs.last().cloned()
+    fn get_current_value_mut(&mut self) -> Option<&mut usize> {
+        self.values.last_mut()
     }
 
     fn push_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> Result<(), Self::Error> {

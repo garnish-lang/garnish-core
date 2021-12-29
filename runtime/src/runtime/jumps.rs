@@ -11,12 +11,11 @@ mod tests {
 
         runtime.set_instruction_cursor(1).unwrap();
         runtime.push_register(1).unwrap();
-        runtime.set_result(Some(1)).unwrap();
 
         runtime.end_expression().unwrap();
 
         assert_eq!(runtime.get_instruction_cursor(), 2);
-        assert_eq!(runtime.get_integer(runtime.get_result().unwrap()).unwrap(), 10);
+        assert_eq!(runtime.get_integer(runtime.get_current_value().unwrap()).unwrap(), 10);
     }
 
     #[test]
@@ -30,12 +29,11 @@ mod tests {
 
         runtime.set_instruction_cursor(1).unwrap();
         runtime.push_register(2).unwrap();
-        runtime.set_result(Some(1)).unwrap();
 
         runtime.end_expression().unwrap();
 
         assert_eq!(runtime.get_instruction_cursor(), 2);
-        assert_eq!(runtime.get_integer(runtime.get_result().unwrap()).unwrap(), 20);
+        assert_eq!(runtime.get_integer(runtime.get_current_value().unwrap()).unwrap(), 20);
     }
 
     #[test]
@@ -50,7 +48,6 @@ mod tests {
         runtime.push_instruction(Instruction::EmptyApply, None).unwrap();
 
         runtime.push_register(1).unwrap();
-        runtime.set_result(Some(1)).unwrap();
         runtime.push_jump_path(4).unwrap();
         runtime.set_instruction_cursor(2).unwrap();
 

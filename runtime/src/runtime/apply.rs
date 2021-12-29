@@ -22,7 +22,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
 
             this.push_jump_path(this.get_instruction_cursor()).nest_into()?;
             this.set_instruction_cursor(next_instruction - 1).nest_into()?;
-            this.push_input_stack(right_addr).nest_into()
+            this.push_value_stack(right_addr).nest_into()
         }
         ExpressionDataType::External => {
             let external_value = this.get_expression(left_addr).nest_into()?;
@@ -60,7 +60,7 @@ mod tests {
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
-        runtime.push_instruction(Instruction::PutInput, None).unwrap();
+        runtime.push_instruction(Instruction::PutValue, None).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
@@ -78,7 +78,7 @@ mod tests {
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_input(0).unwrap(), 3);
+        assert_eq!(runtime.get_value(0).unwrap(), 3);
         assert_eq!(runtime.get_instruction_cursor(), 0);
         assert_eq!(runtime.get_jump_path(0).unwrap(), 7);
     }
@@ -93,7 +93,7 @@ mod tests {
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
-        runtime.push_instruction(Instruction::PutInput, None).unwrap();
+        runtime.push_instruction(Instruction::PutValue, None).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
@@ -120,7 +120,7 @@ mod tests {
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
-        runtime.push_instruction(Instruction::PutInput, None).unwrap();
+        runtime.push_instruction(Instruction::PutValue, None).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
@@ -136,7 +136,7 @@ mod tests {
 
         runtime.empty_apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_input(0).unwrap(), 3);
+        assert_eq!(runtime.get_value(0).unwrap(), 3);
         assert_eq!(runtime.get_instruction_cursor(), 0);
         assert_eq!(runtime.get_jump_path(0).unwrap(), 6);
     }
@@ -150,7 +150,7 @@ mod tests {
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
-        runtime.push_instruction(Instruction::PutInput, None).unwrap();
+        runtime.push_instruction(Instruction::PutValue, None).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
@@ -184,9 +184,9 @@ mod tests {
 
         // 4
         runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::PutInput, None).unwrap();
+        runtime.push_instruction(Instruction::PutValue, None).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PutResult, None).unwrap();
+        runtime.push_instruction(Instruction::PutValue, None).unwrap();
         runtime.push_instruction(Instruction::Reapply, Some(0)).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
@@ -194,16 +194,15 @@ mod tests {
 
         runtime.push_register(4).unwrap();
 
-        runtime.push_input_stack(2).unwrap();
-        runtime.set_result(Some(4)).unwrap();
+        runtime.push_value_stack(2).unwrap();
         runtime.push_jump_path(9).unwrap();
 
         runtime.set_instruction_cursor(8).unwrap();
 
         runtime.reapply(0).unwrap();
 
-        assert_eq!(runtime.get_input_count(), 1);
-        assert_eq!(runtime.get_input(0).unwrap(), 4);
+        assert_eq!(runtime.get_value_count(), 1);
+        assert_eq!(runtime.get_value(0).unwrap(), 4);
         assert_eq!(runtime.get_instruction_cursor(), 3);
         assert_eq!(runtime.get_jump_path(0).unwrap(), 9);
     }

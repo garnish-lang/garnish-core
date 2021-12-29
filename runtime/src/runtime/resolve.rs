@@ -11,20 +11,8 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
     trace!("Instruction - Resolve");
     let addr = next_ref(this)?;
 
-    // check result
-    match this.get_result() {
-        None => (),
-        Some(result_ref) => match get_access_addr(this, addr, result_ref)? {
-            None => (),
-            Some(i) => {
-                this.push_register(i).nest_into()?;
-                return Ok(());
-            }
-        },
-    }
-
     // check input
-    match this.get_current_input() {
+    match this.get_current_value() {
         None => (),
         Some(list_ref) => match get_access_addr(this, addr, list_ref)? {
             None => (),
@@ -72,52 +60,9 @@ mod tests {
 
         runtime.push_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.set_result(Some(4)).unwrap();
-
         let result = runtime.resolve::<EmptyContext>(None);
 
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn resolve_from_result() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-
-        runtime.push_instruction(Instruction::Resolve, None).unwrap();
-
-        runtime.push_register(5).unwrap();
-
-        runtime.set_result(Some(4)).unwrap();
-
-        runtime.resolve::<EmptyContext>(None).unwrap();
-
-        assert_eq!(runtime.get_register().get(0).unwrap(), &2);
-    }
-
-    #[test]
-    fn resolve_from_result_no_associations() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![1, 2], vec![])).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-
-        runtime.push_instruction(Instruction::Resolve, None).unwrap();
-
-        runtime.push_register(4).unwrap();
-
-        runtime.set_result(Some(3)).unwrap();
-
-        runtime.resolve::<EmptyContext>(None).unwrap();
-
-        assert_eq!(runtime.get_data_type(5).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
@@ -134,7 +79,7 @@ mod tests {
 
         runtime.push_register(5).unwrap();
 
-        runtime.push_input_stack(4).unwrap();
+        runtime.push_value_stack(4).unwrap();
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 

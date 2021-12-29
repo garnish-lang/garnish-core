@@ -10,14 +10,13 @@ pub trait GarnishLangRuntimeData {
 
     fn get_data_len(&self) -> usize;
 
-    fn set_result(&mut self, result: Option<usize>) -> Result<(), Self::Error>;
-    fn get_result(&self) -> Option<usize>;
-
-    fn push_input_stack(&mut self, addr: usize) -> Result<(), Self::Error>;
-    fn pop_input_stack(&mut self) -> Option<usize>;
-    fn get_input(&self, index: usize) -> Option<usize>;
-    fn get_input_count(&self) -> usize;
-    fn get_current_input(&self) -> Option<usize>;
+    fn push_value_stack(&mut self, addr: usize) -> Result<(), Self::Error>;
+    fn pop_value_stack(&mut self) -> Option<usize>;
+    fn get_value(&self, index: usize) -> Option<usize>;
+    fn get_value_mut(&mut self, index: usize) -> Option<&mut usize>;
+    fn get_value_count(&self) -> usize;
+    fn get_current_value(&self) -> Option<usize>;
+    fn get_current_value_mut(&mut self) -> Option<&mut usize>;
 
     fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error>;
     fn get_integer(&self, index: usize) -> Result<i64, Self::Error>;

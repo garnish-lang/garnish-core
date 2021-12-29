@@ -21,6 +21,7 @@ use crate::runtime::list::*;
 use crate::{instruction::*, ExpressionDataType};
 use crate::{GarnishLangRuntimeInfo, NestInto};
 use log::trace;
+use crate::runtime::put::{push_input, push_result, put, put_input};
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn end_execution(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
@@ -51,10 +52,9 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn make_pair(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
 
     fn put(&mut self, i: usize) -> GarnishLangRuntimeResult<Data::Error>;
-    fn put_input(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
-    fn push_input(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
-    fn put_result(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
-    fn push_result(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
+    fn put_value(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
+    fn push_value(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
+    fn update_value(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
 
     fn resolve<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error>;
 }
@@ -77,10 +77,9 @@ where
             .ok_or(error(format!("Attempted to execute instruction when no instructions remain.")))?;
         match instruction_data.instruction {
             Instruction::PerformAddition => self.perform_addition()?,
-            Instruction::PutInput => self.put_input()?,
-            Instruction::PutResult => self.put_result()?,
-            Instruction::PushInput => self.push_input()?,
-            Instruction::PushResult => self.push_result()?,
+            Instruction::PutValue => self.put_value()?,
+            Instruction::PushValue => self.push_value()?,
+            Instruction::UpdateValue => self.update_value()?,
             Instruction::EndExpression => self.end_expression()?,
             Instruction::EqualityComparison => self.equality_comparison()?,
             Instruction::JumpIfTrue => match instruction_data.data {
@@ -141,9 +140,9 @@ where
         let point = self.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}", index)))?;
 
         self.set_instruction_cursor(point - 1).nest_into()?;
-        self.pop_input_stack()
+        self.pop_value_stack()
             .ok_or(error(format!("Failed to pop input during reapply operation.")))?;
-        self.push_input_stack(right_addr).nest_into()
+        self.push_value_stack(right_addr).nest_into()
     }
 
     fn empty_apply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
@@ -246,7 +245,7 @@ where
                 // no more jumps, this should be the end of the entire execution
                 let r = next_ref(self)?;
                 self.advance_instruction_cursor().nest_into()?;
-                self.set_result(Some(r)).nest_into()?;
+                self.push_value_stack(r).nest_into()?;
             }
             Some(jump_point) => {
                 self.set_instruction_cursor(jump_point).nest_into()?;
@@ -297,48 +296,19 @@ where
     //
 
     fn put(&mut self, i: usize) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Put | Data - {:?}", i);
-        match i >= self.get_end_of_constant_data() {
-            true => Err(error(format!(
-                "Attempting to put reference to {:?} which is out of bounds of constant data that ends at {:?}.",
-                i,
-                self.get_end_of_constant_data()
-            ))),
-            false => self.push_register(i).nest_into(),
-        }
+        put(self, i)
     }
 
-    fn put_input(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Put Input");
-
-        match self.get_current_input() {
-            None => push_unit(self),
-            Some(i) => self.push_register(i).nest_into(),
-        }
+    fn put_value(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
+        put_input(self)
     }
 
-    fn push_input(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Push Input");
-        let r = next_ref(self)?;
-
-        self.push_input_stack(r).nest_into()?;
-        self.set_result(Some(r)).nest_into()
+    fn push_value(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
+        push_input(self)
     }
 
-    fn put_result(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Put Result");
-
-        match self.get_result() {
-            None => push_unit(self),
-            Some(i) => self.push_register(i).nest_into(),
-        }
-    }
-
-    fn push_result(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Output Result");
-
-        let r = next_ref(self)?;
-        self.set_result(Some(r)).nest_into()
+    fn update_value(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
+        push_result(self)
     }
 
     //
@@ -406,9 +376,9 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.push_input_stack(0).unwrap();
+        runtime.push_value_stack(0).unwrap();
 
-        assert_eq!(runtime.get_input(0).unwrap().to_owned(), 0);
+        assert_eq!(runtime.get_value(0).unwrap().to_owned(), 0);
     }
 
     #[test]
@@ -418,9 +388,9 @@ mod tests {
         runtime.add_data(ExpressionData::integer(10)).unwrap();
         let addr = runtime.add_data(ExpressionData::integer(10)).unwrap();
 
-        runtime.push_input_stack(addr).unwrap();
+        runtime.push_value_stack(addr).unwrap();
 
-        assert_eq!(runtime.get_input(0).unwrap().to_owned(), 2);
+        assert_eq!(runtime.get_value(0).unwrap().to_owned(), 2);
     }
 
     #[test]

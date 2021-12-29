@@ -15,8 +15,7 @@ pub enum TokenType {
     EndExpression,
     StartGroup,
     EndGroup,
-    Result,
-    Input,
+    Value,
     Comma,
     Symbol,
     Number,
@@ -265,10 +264,9 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
         ("}", TokenType::EndExpression),
         ("(", TokenType::StartGroup),
         (")", TokenType::EndGroup),
-        ("$", TokenType::Input),
+        ("$", TokenType::Value),
         ("$?", TokenType::True),
         ("$!", TokenType::False),
-        ("$$", TokenType::Result),
         (",", TokenType::Comma),
         ("~", TokenType::Apply),
         ("!>", TokenType::ApplyIfFalse),
@@ -807,7 +805,7 @@ mod tests {
             result,
             vec![LexerToken {
                 text: "$".to_string(),
-                token_type: TokenType::Input,
+                token_type: TokenType::Value,
                 column: 0,
                 row: 0
             }]
@@ -838,21 +836,6 @@ mod tests {
             vec![LexerToken {
                 text: "$!".to_string(),
                 token_type: TokenType::False,
-                column: 0,
-                row: 0
-            }]
-        )
-    }
-
-    #[test]
-    fn result_symbol() {
-        let result = lex(&"$$".to_string()).unwrap();
-
-        assert_eq!(
-            result,
-            vec![LexerToken {
-                text: "$$".to_string(),
-                token_type: TokenType::Result,
                 column: 0,
                 row: 0
             }]
