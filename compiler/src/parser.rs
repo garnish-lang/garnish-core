@@ -374,6 +374,7 @@ fn parse_value_like(
 
 fn setup_space_list_check(
     last_left: Option<usize>,
+    current_group: Option<usize>,
     nodes: &mut Vec<ParseNode>,
     check_for_list: &mut bool,
     next_last_left: &mut Option<usize>,
@@ -383,7 +384,16 @@ fn setup_space_list_check(
         Some(left) => match nodes.get(left) {
             None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
             Some(left_node) => {
-                if left_node.definition.is_value_like() {
+                trace!(
+                    "Checking for space list. Left {:?} {:?}. Current group {:?}.",
+                    left,
+                    left_node.get_definition(),
+                    current_group
+                );
+
+                let is_value = left_node.definition.is_value_like();
+                let is_group_value = left_node.definition.is_group_like() && last_left != current_group;
+                if is_value || is_group_value {
                     trace!(
                         "Value-like definition {:?} found. Will check next token for value-like to make list",
                         left_node.definition
@@ -441,7 +451,13 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
         let (definition, secondary_definition) = get_definition(token.get_token_type());
 
         let (definition, parent, left, right) = match secondary_definition {
-            SecondaryDefinition::Whitespace => setup_space_list_check(last_left, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?,
+            SecondaryDefinition::Whitespace => setup_space_list_check(
+                last_left,
+                current_group.and_then(|i| group_stack.get(i)).cloned(),
+                &mut nodes,
+                &mut check_for_list,
+                &mut &mut next_last_left,
+            )?,
             SecondaryDefinition::Annotation => {
                 next_last_left = last_left;
                 (definition, None, None, None)
@@ -709,7 +725,13 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
 
                 if in_group {
                     trace!("Inside of a group, treating as white space");
-                    setup_space_list_check(last_left, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?
+                    setup_space_list_check(
+                        last_left,
+                        current_group.and_then(|i| group_stack.get(i)).cloned(),
+                        &mut nodes,
+                        &mut check_for_list,
+                        &mut &mut next_last_left,
+                    )?
                 } else {
                     // only one in a row
                     // check if last parser node is a subexpression
@@ -1908,12 +1930,53 @@ mod groups {
     }
 
     #[test]
+    fn single_value_with_spaces() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        assert_group_nested_results(
+            0,
+            tokens,
+            &[(0, Definition::Group, None, None, Some(1)), (1, Definition::Number, Some(0), None, None)],
+        )
+    }
+
+    #[test]
     fn in_list() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        assert_group_nested_results(
+            1,
+            tokens,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::List, None, Some(0), Some(2)),
+                (2, Definition::Group, Some(1), None, Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+            ],
+        )
+    }
+
+    #[test]
+    fn in_list_with_spaces() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
@@ -1951,6 +2014,39 @@ mod groups {
                 (3, Definition::Number, Some(4), None, None),
                 (4, Definition::List, Some(2), Some(3), Some(5)),
                 (5, Definition::Number, Some(4), None, None),
+            ],
+        )
+    }
+
+    #[test]
+    fn list_of_groups() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("15".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("15".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        assert_group_nested_results(
+            4,
+            tokens,
+            &[
+                (0, Definition::Group, Some(4), None, Some(2)),
+                (1, Definition::Number, Some(2), None, None),
+                (2, Definition::List, Some(0), Some(1), Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+                (4, Definition::List, None, Some(0), Some(5)),
+                (5, Definition::Group, Some(4), None, Some(7)),
+                (6, Definition::Number, Some(7), None, None),
+                (7, Definition::List, Some(5), Some(6), Some(8)),
+                (8, Definition::Number, Some(7), None, None),
             ],
         )
     }
