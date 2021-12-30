@@ -8,10 +8,14 @@ pub trait TypeConstants {
     fn one() -> Self;
 }
 
+pub trait Overflowable {
+    fn overflowable_addition(self, rhs: Self) -> (Self, bool) where Self: Sized;
+}
+
 pub trait GarnishLangRuntimeData {
     type Error;
     type Symbol: Display + Debug;
-    type Integer: Display + Debug + Add<Output = Self::Integer> + PartialEq + PartialOrd + TypeConstants + Copy + FromStr;
+    type Integer: Display + Debug + Overflowable + PartialEq + PartialOrd + TypeConstants + Copy + FromStr;
     type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
 
     fn get_data_len(&self) -> Self::Size;
@@ -75,6 +79,11 @@ pub trait GarnishLangRuntimeData {
     fn size_to_integer(from: Self::Size) -> Self::Integer;
 }
 
+impl Overflowable for i32 {
+    fn overflowable_addition(self, rhs: Self) -> (Self, bool) where Self: Sized {
+        self.overflowing_add(rhs)
+    }
+}
 
 impl TypeConstants for i8 {
     fn zero() -> Self {

@@ -26,6 +26,7 @@ use comparisons::equality_comparison;
 use list::*;
 use types::ExpressionDataType;
 use crate::{GarnishLangRuntimeInfo, NestInto};
+use crate::runtime::arithmetic::perform_addition;
 use crate::runtime::put::{push_input, push_result, put, put_input};
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
@@ -150,21 +151,7 @@ where
     //
 
     fn perform_addition(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Addition");
-
-        let (right_addr, left_addr) = next_two_raw_ref(self)?;
-
-        match (self.get_data_type(left_addr).nest_into()?, self.get_data_type(right_addr).nest_into()?) {
-            (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                let left = self.get_integer(left_addr).nest_into()?;
-                let right = self.get_integer(right_addr).nest_into()?;
-
-                trace!("Performing {:?} + {:?}", left, right);
-
-                push_integer(self, left + right)
-            }
-            _ => push_unit(self),
-        }
+        perform_addition(self)
     }
 
     //
