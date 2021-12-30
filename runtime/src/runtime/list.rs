@@ -104,15 +104,15 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, ExpressionData, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
 
     #[test]
     fn make_list() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(20).unwrap();
+        runtime.add_integer(20).unwrap();
 
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
@@ -132,9 +132,9 @@ mod tests {
     fn make_list_no_refs_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(20).unwrap();
+        runtime.add_integer(20).unwrap();
 
         runtime.push_instruction(Instruction::MakeList, Some(3)).unwrap();
 
@@ -147,16 +147,16 @@ mod tests {
     fn make_list_with_associations() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"two".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"three".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(30)).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_symbol("two").unwrap();
+        runtime.add_integer(20).unwrap();
+        runtime.add_symbol("three").unwrap();
+        runtime.add_integer(30).unwrap();
         // 6
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::pair(3, 4)).unwrap();
-        runtime.add_data(ExpressionData::pair(5, 6)).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
+        runtime.add_pair((3, 4)).unwrap();
+        runtime.add_pair((5, 6)).unwrap();
 
         runtime.push_register(7).unwrap();
         runtime.push_register(8).unwrap();
@@ -181,11 +181,13 @@ mod tests {
     fn access() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
+        runtime.start_list(1).unwrap();
+        runtime.add_to_list(3, true).unwrap();
+        runtime.end_list().unwrap();
+        runtime.add_symbol("one").unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -201,11 +203,13 @@ mod tests {
     fn access_with_number() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
-        runtime.add_data(ExpressionData::integer(0)).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
+        runtime.start_list(1).unwrap();
+        runtime.add_to_list(3, true).unwrap();
+        runtime.end_list().unwrap();
+        runtime.add_integer(0).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -221,11 +225,13 @@ mod tests {
     fn access_with_number_out_of_bounds_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
+        runtime.start_list(1).unwrap();
+        runtime.add_to_list(3, true).unwrap();
+        runtime.end_list().unwrap();
+        runtime.add_integer(10).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -242,11 +248,15 @@ mod tests {
     fn access_with_number_negative_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![1, 2, 3], vec![1, 2, 3])).unwrap();
-        runtime.add_data(ExpressionData::integer(-1)).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(1, true).unwrap();
+        runtime.add_to_list(2, true).unwrap();
+        runtime.add_to_list(3, true).unwrap();
+        runtime.end_list().unwrap();
+        runtime.add_integer(-1).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -263,9 +273,9 @@ mod tests {
     fn access_pair_left() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
 
         runtime.push_instruction(Instruction::AccessLeftInternal, None).unwrap();
 
@@ -280,7 +290,7 @@ mod tests {
     fn access_left_internal_incompatible_type_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_integer(10).unwrap();
 
         runtime.push_instruction(Instruction::AccessLeftInternal, None).unwrap();
 
@@ -296,9 +306,9 @@ mod tests {
     fn access_pair_right() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
 
         runtime.push_instruction(Instruction::AccessRightInternal, None).unwrap();
 
@@ -313,7 +323,7 @@ mod tests {
     fn access_right_internal_incompatible_type_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_integer(10).unwrap();
 
         runtime.push_instruction(Instruction::AccessRightInternal, None).unwrap();
 
@@ -329,10 +339,12 @@ mod tests {
     fn access_list_length() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
+        runtime.start_list(1).unwrap();
+        runtime.add_to_list(3, true).unwrap();
+        runtime.end_list().unwrap();
 
         runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
 
@@ -348,7 +360,7 @@ mod tests {
     fn access_length_internal_incompatible_type_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_integer(10).unwrap();
 
         runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
 
@@ -364,8 +376,8 @@ mod tests {
     fn access_non_list_on_left_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_symbol("one").unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -381,11 +393,13 @@ mod tests {
     fn access_non_symbol_on_right_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
-        runtime.add_data(ExpressionData::expression(10)).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
+        runtime.start_list(1).unwrap();
+        runtime.add_to_list(3, true).unwrap();
+        runtime.end_list().unwrap();
+        runtime.add_expression(10).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -401,11 +415,13 @@ mod tests {
     fn access_no_refs_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
+        runtime.start_list(1).unwrap();
+        runtime.add_to_list(3, true).unwrap();
+        runtime.end_list().unwrap();
+        runtime.add_symbol("one").unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -418,11 +434,13 @@ mod tests {
     fn access_with_non_existent_key() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"two".to_string())).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
+        runtime.start_list(1).unwrap();
+        runtime.add_to_list(3, true).unwrap();
+        runtime.end_list().unwrap();
+        runtime.add_symbol("two").unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 

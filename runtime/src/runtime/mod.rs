@@ -303,7 +303,6 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        ExpressionData,
         ExpressionDataType, GarnishLangRuntimeData, Instruction, runtime::{context::EmptyContext, GarnishRuntime}, SimpleRuntimeData,
     };
 
@@ -355,7 +354,7 @@ mod tests {
     fn add_input_reference() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_integer(10).unwrap();
         runtime.push_value_stack(0).unwrap();
 
         assert_eq!(runtime.get_value(0).unwrap().to_owned(), 0);
@@ -365,8 +364,8 @@ mod tests {
     fn add_input_reference_with_data_addr() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        let addr = runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_integer(10).unwrap();
+        let addr = runtime.add_integer(10).unwrap();
 
         runtime.push_value_stack(addr).unwrap();
 
@@ -425,8 +424,8 @@ mod tests {
     fn execute_current_instruction() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(20).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
 
         runtime.push_register(1).unwrap();

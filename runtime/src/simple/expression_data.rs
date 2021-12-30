@@ -1,385 +1,683 @@
-use std::collections::hash_map::DefaultHasher;
-use std::hash::Hash;
-use std::{collections::HashMap, convert::TryInto, hash::Hasher};
-
 use crate::runtime::types::ExpressionDataType;
+use std::any::Any;
+use std::fmt::Debug;
+use std::slice::Iter;
+
+pub type DataCoersionResult<T> = Result<T, String>;
+
+pub trait SimpleData: Any + Debug {
+    fn get_type(&self) -> ExpressionDataType;
+}
+
+pub(crate) type AnyData = Box<dyn Any>;
+
+pub(crate) trait AsAnyData {
+    fn as_any_data(self) -> AnyData;
+}
+
+#[derive(Debug)]
+pub struct SimpleDataList {
+    list: Vec<AnyData>,
+}
+
+impl Default for SimpleDataList {
+    fn default() -> Self {
+        SimpleDataList::new().append(UnitData::new())
+    }
+}
+
+impl SimpleDataList {
+    pub fn new() -> Self {
+        SimpleDataList { list: vec![] }
+    }
+
+    pub fn append<T: SimpleData>(mut self, item: T) -> Self {
+        self.list.push(item.as_any_data());
+        self
+    }
+
+    pub fn push<T: SimpleData>(&mut self, item: T) {
+        self.list.push(item.as_any_data());
+    }
+
+    pub fn get(&self, index: usize) -> Option<&AnyData> {
+        self.list.get(index)
+    }
+
+    pub fn len(&self) -> usize {
+        self.list.len()
+    }
+
+    pub fn iter(&self) -> Iter<'_, AnyData>{
+        self.list.iter()
+    }
+}
+
+impl PartialEq<SimpleDataList> for SimpleDataList {
+    fn eq(&self, other: &SimpleDataList) -> bool {
+        if self.list.len() != other.list.len() {
+            return false;
+        }
+
+        let mut equal = true;
+        for i in 0..self.list.len() {
+            match (self.list.get(i), other.list.get(i)) {
+                (Some(left), Some(right)) => {
+                    if !data_equal(left, right) {
+                        equal = false;
+                        break;
+                    }
+                }
+                _ => {
+                    equal = false;
+                    break;
+                }
+            }
+        }
+
+        equal
+    }
+}
+
+impl<T: SimpleData> AsAnyData for T {
+    fn as_any_data(self) -> AnyData {
+        Box::new(self)
+    }
+}
+
+pub trait DataCoersion {
+    fn as_unit(&self) -> DataCoersionResult<UnitData>;
+    fn as_true(&self) -> DataCoersionResult<TrueData>;
+    fn as_false(&self) -> DataCoersionResult<FalseData>;
+    fn as_integer(&self) -> DataCoersionResult<IntegerData>;
+    fn as_symbol(&self) -> DataCoersionResult<SymbolData>;
+    fn as_expression(&self) -> DataCoersionResult<ExpressionData>;
+    fn as_external(&self) -> DataCoersionResult<ExternalData>;
+    fn as_pair(&self) -> DataCoersionResult<PairData>;
+    fn as_list(&self) -> DataCoersionResult<ListData>;
+}
+
+fn downcast_result<T: SimpleData + Clone>(b: &AnyData) -> DataCoersionResult<T> {
+    match b.downcast_ref::<T>() {
+        Some(value) => Ok(value.clone()),
+        None => Err(format!("Could not cast from {:?}.", b)),
+    }
+}
+
+impl DataCoersion for AnyData {
+    fn as_unit(&self) -> DataCoersionResult<UnitData> {
+        downcast_result(self)
+    }
+
+    fn as_true(&self) -> DataCoersionResult<TrueData> {
+        downcast_result(self)
+    }
+
+    fn as_false(&self) -> DataCoersionResult<FalseData> {
+        downcast_result(self)
+    }
+
+    fn as_integer(&self) -> DataCoersionResult<IntegerData> {
+        downcast_result(self)
+    }
+
+    fn as_symbol(&self) -> DataCoersionResult<SymbolData> {
+        downcast_result(self)
+    }
+
+    fn as_expression(&self) -> DataCoersionResult<ExpressionData> {
+        downcast_result(self)
+    }
+
+    fn as_external(&self) -> DataCoersionResult<ExternalData> {
+        downcast_result(self)
+    }
+
+    fn as_pair(&self) -> DataCoersionResult<PairData> {
+        downcast_result(self)
+    }
+
+    fn as_list(&self) -> DataCoersionResult<ListData> {
+        downcast_result(self)
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct UnitData {
+    t: ExpressionDataType,
+}
+
+impl UnitData {
+    pub fn new() -> Self {
+        UnitData { t: ExpressionDataType::Unit }
+    }
+}
+
+impl SimpleData for UnitData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::Unit
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct TrueData {}
+
+impl TrueData {
+    pub fn new() -> Self {
+        TrueData {}
+    }
+}
+
+impl SimpleData for TrueData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::True
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct FalseData {}
+
+impl FalseData {
+    pub fn new() -> Self {
+        FalseData {}
+    }
+}
+
+impl SimpleData for FalseData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::False
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct IntegerData {
+    value: i32,
+}
+
+impl IntegerData {
+    pub fn value(&self) -> i32 {
+        self.value
+    }
+}
+
+impl From<i32> for IntegerData {
+    fn from(value: i32) -> Self {
+        IntegerData { value }
+    }
+}
+
+impl SimpleData for IntegerData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::Integer
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct SymbolData {
+    value: u64,
+}
+
+impl SymbolData {
+    pub fn value(&self) -> u64 {
+        self.value
+    }
+}
+
+impl From<u64> for SymbolData {
+    fn from(value: u64) -> Self {
+        SymbolData { value }
+    }
+}
+
+impl SimpleData for SymbolData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::Symbol
+    }
+}
 
 #[derive(Clone, PartialEq, Eq, Debug)]
 pub struct ExpressionData {
-    pub(crate) data_type: ExpressionDataType,
-    pub(crate) bytes: Vec<u8>,
-    pub(crate) symbols: HashMap<String, u64>,
+    value: usize,
 }
 
 impl ExpressionData {
-    fn new(data_type: ExpressionDataType, bytes: Vec<u8>) -> ExpressionData {
-        ExpressionData {
-            data_type,
-            bytes,
-            symbols: HashMap::new(),
-        }
-    }
-
-    pub fn unit() -> ExpressionData {
-        ExpressionData::new(ExpressionDataType::Unit, vec![])
-    }
-
-    pub fn boolean_true() -> ExpressionData {
-        ExpressionData::new(ExpressionDataType::True, vec![])
-    }
-
-    pub fn boolean_false() -> ExpressionData {
-        ExpressionData::new(ExpressionDataType::False, vec![])
-    }
-
-    pub fn integer(i: i32) -> ExpressionData {
-        ExpressionData::new(ExpressionDataType::Integer, i.to_le_bytes().to_vec())
-    }
-
-    pub fn symbol(_: &String, value: u64) -> ExpressionData {
-        let d = ExpressionData::new(ExpressionDataType::Symbol, value.to_le_bytes().to_vec());
-        // d.symbols.insert(name.clone(), value);
-        d
-    }
-
-    pub fn pair(left: usize, right: usize) -> ExpressionData {
-        ExpressionData::new(ExpressionDataType::Pair, [left.to_le_bytes(), right.to_le_bytes()].concat())
-    }
-
-    pub fn list(refs: Vec<usize>, association_refs: Vec<usize>) -> ExpressionData {
-        let mut vec_of_bytes: Vec<[u8; std::mem::size_of::<usize>()]> = vec![];
-        vec_of_bytes.push(refs.len().to_le_bytes());
-
-        for r in refs {
-            vec_of_bytes.push(r.to_le_bytes());
-        }
-
-        vec_of_bytes.push(association_refs.len().to_le_bytes());
-
-        for r in association_refs {
-            vec_of_bytes.push(r.to_le_bytes());
-        }
-
-        ExpressionData::new(ExpressionDataType::List, vec_of_bytes.concat())
-    }
-
-    pub fn expression(i: usize) -> ExpressionData {
-        ExpressionData::new(ExpressionDataType::Expression, i.to_le_bytes().to_vec())
-    }
-
-    pub fn external(i: usize) -> ExpressionData {
-        ExpressionData::new(ExpressionDataType::External, i.to_le_bytes().to_vec())
-    }
-
-    pub fn symbol_from_string(s: &str) -> ExpressionData {
-        let mut h = DefaultHasher::new();
-        s.hash(&mut h);
-        let hv = h.finish();
-
-        let mut d = ExpressionData::new(ExpressionDataType::Symbol, hv.to_le_bytes().to_vec());
-        d.symbols.insert(s.to_string(), hv);
-        d
-    }
-
-    pub fn get_type(&self) -> ExpressionDataType {
-        self.data_type
-    }
-
-    pub fn get_symbols(&self) -> &HashMap<String, u64> {
-        &self.symbols
-    }
-
-    pub fn as_boolean(&self) -> Result<bool, String> {
-        match self.get_type() {
-            ExpressionDataType::True => Ok(true),
-            ExpressionDataType::False => Ok(false),
-            _ => Err(format!("Not of boolean type.")),
-        }
-    }
-
-    pub fn as_integer(&self) -> Result<i32, String> {
-        let (bytes, _) = self.bytes.split_at(std::mem::size_of::<i32>());
-        Ok(i32::from_le_bytes(match bytes.try_into() {
-            Ok(v) => v,
-            Err(e) => Result::Err(e.to_string())?,
-        }))
-    }
-
-    pub fn as_reference(&self) -> Result<usize, String> {
-        let (bytes, _) = self.bytes.split_at(std::mem::size_of::<usize>());
-        Ok(usize::from_le_bytes(match bytes.try_into() {
-            Ok(v) => v,
-            Err(e) => Result::Err(e.to_string())?,
-        }))
-    }
-
-    pub fn as_symbol_value(&self) -> Result<u64, String> {
-        let (bytes, _) = self.bytes.split_at(std::mem::size_of::<u64>());
-        Ok(u64::from_le_bytes(match bytes.try_into() {
-            Ok(v) => v,
-            Err(e) => Result::Err(e.to_string())?,
-        }))
-    }
-
-    pub fn as_symbol_name(&self) -> Result<String, String> {
-        // calling this method assumes only one symbol available
-        match self.symbols.keys().next() {
-            None => Err("No symbols in expression data".to_string()),
-            Some(v) => Ok(v.clone()),
-        }
-    }
-
-    pub fn as_pair(&self) -> Result<(usize, usize), String> {
-        let (left_bytes, remaining) = self.bytes.split_at(std::mem::size_of::<usize>());
-        let (right_bytes, _) = remaining.split_at(std::mem::size_of::<usize>());
-        Ok((
-            usize::from_le_bytes(match left_bytes.try_into() {
-                Ok(v) => v,
-                Err(e) => Result::Err(e.to_string())?,
-            }),
-            usize::from_le_bytes(match right_bytes.try_into() {
-                Ok(v) => v,
-                Err(e) => Result::Err(e.to_string())?,
-            }),
-        ))
-    }
-
-    pub fn as_list(&self) -> Result<(Vec<usize>, Vec<usize>), String> {
-        let (len_bytes, mut remaining) = self.bytes.split_at(std::mem::size_of::<usize>());
-        let mut list = vec![];
-        let mut associative_list = vec![];
-
-        let len = usize::from_le_bytes(match len_bytes.try_into() {
-            Ok(v) => v,
-            Err(e) => Result::Err(e.to_string())?,
-        });
-
-        for _ in 0..len {
-            let (value, next) = remaining.split_at(std::mem::size_of::<usize>());
-
-            list.push(usize::from_le_bytes(match value.try_into() {
-                Ok(v) => v,
-                Err(e) => Result::Err(e.to_string())?,
-            }));
-
-            remaining = next
-        }
-
-        // associative refs
-        let (len_bytes, mut remaining) = remaining.split_at(std::mem::size_of::<usize>());
-
-        let len = usize::from_le_bytes(match len_bytes.try_into() {
-            Ok(v) => v,
-            Err(e) => Result::Err(e.to_string())?,
-        });
-
-        for _ in 0..len {
-            let (value, next) = remaining.split_at(std::mem::size_of::<usize>());
-
-            associative_list.push(usize::from_le_bytes(match value.try_into() {
-                Ok(v) => v,
-                Err(e) => Result::Err(e.to_string())?,
-            }));
-
-            remaining = next
-        }
-
-        Ok((list, associative_list))
-    }
-
-    pub fn as_expression(&self) -> Result<usize, String> {
-        let (bytes, _) = self.bytes.split_at(std::mem::size_of::<usize>());
-        Ok(usize::from_le_bytes(match bytes.try_into() {
-            Ok(v) => v,
-            Err(e) => Result::Err(e.to_string())?,
-        }))
-    }
-
-    pub fn as_external(&self) -> Result<usize, String> {
-        let (bytes, _) = self.bytes.split_at(std::mem::size_of::<usize>());
-        Ok(usize::from_le_bytes(match bytes.try_into() {
-            Ok(v) => v,
-            Err(e) => Result::Err(e.to_string())?,
-        }))
+    pub fn value(&self) -> usize {
+        self.value
     }
 }
 
+impl From<usize> for ExpressionData {
+    fn from(value: usize) -> Self {
+        ExpressionData { value }
+    }
+}
+
+impl SimpleData for ExpressionData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::Expression
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ExternalData {
+    value: usize,
+}
+
+impl ExternalData {
+    pub fn value(&self) -> usize {
+        self.value
+    }
+}
+
+impl From<usize> for ExternalData {
+    fn from(value: usize) -> Self {
+        ExternalData { value }
+    }
+}
+
+impl SimpleData for ExternalData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::External
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct PairData {
+    left: usize,
+    right: usize,
+}
+
+impl PairData {
+    pub fn left(&self) -> usize {
+        self.left
+    }
+
+    pub fn right(&self) -> usize {
+        self.right
+    }
+}
+
+impl From<(usize, usize)> for PairData {
+    fn from((left, right): (usize, usize)) -> Self {
+        PairData { left, right }
+    }
+}
+
+impl SimpleData for PairData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::Pair
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct ListData {
+    items: Vec<usize>,
+    associations: Vec<usize>,
+}
+
+impl ListData {
+    pub fn items(&self) -> &Vec<usize> {
+        &self.items
+    }
+
+    pub fn associations(&self) -> &Vec<usize> {
+        &self.associations
+    }
+}
+
+impl ListData {
+    pub fn from_items(items: Vec<usize>, associations: Vec<usize>) -> Self {
+        ListData { items, associations }
+    }
+}
+
+impl SimpleData for ListData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::List
+    }
+}
+
+// Comparison utilities
+
+fn cmp_any<T: 'static + PartialEq + Eq>(left: &Box<dyn Any>, right: &Box<dyn Any>) -> bool {
+    match (left.downcast_ref::<T>(), right.downcast_ref::<T>()) {
+        (Some(left), Some(right)) => left == right,
+        _ => false,
+    }
+}
+
+pub fn data_equal(left: &Box<dyn Any>, right: &Box<dyn Any>) -> bool {
+    cmp_any::<UnitData>(left, right)
+        || cmp_any::<TrueData>(left, right)
+        || cmp_any::<FalseData>(left, right)
+        || cmp_any::<IntegerData>(left, right)
+        || cmp_any::<SymbolData>(left, right)
+        || cmp_any::<ExpressionData>(left, right)
+        || cmp_any::<ExternalData>(left, right)
+        || cmp_any::<PairData>(left, right)
+        || cmp_any::<ListData>(left, right)
+}
+
 #[cfg(test)]
-mod tests {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
-    use std::vec;
+mod simple_tests {
+    use crate::{
+        AnyData, AsAnyData, DataCoersion, ExpressionData, ExpressionDataType, ExternalData, FalseData, IntegerData, ListData, PairData, SimpleData,
+        SymbolData, TrueData, UnitData,
+    };
 
-    use crate::{ExpressionData, ExpressionDataType};
+    fn all_data_list(remove: usize) -> Vec<AnyData> {
+        let mut data: Vec<AnyData> = vec![
+            UnitData::new().as_any_data(),
+            TrueData::new().as_any_data(), // 1
+            FalseData::new().as_any_data(),
+            IntegerData::from(10).as_any_data(), // 3
+            SymbolData::from(1).as_any_data(),
+            ExternalData::from(1).as_any_data(), // 5
+            ExpressionData::from(1).as_any_data(),
+            PairData::from((1, 2)).as_any_data(), // 7
+            ListData::from_items(vec![1, 2, 3], vec![1, 2, 3]).as_any_data(),
+        ];
 
-    #[test]
-    fn get_data_type_expression_data() {
-        let d = ExpressionData::unit();
+        data.remove(remove);
 
-        assert_eq!(d.get_type(), ExpressionDataType::Unit);
+        data
     }
 
     #[test]
-    fn integer_expression_data() {
-        let d = ExpressionData::integer(1234567890);
+    fn unit() {
+        let data = UnitData::new();
 
-        assert_eq!(d.data_type, ExpressionDataType::Integer);
-        assert_eq!(d.bytes, 1234567890i32.to_le_bytes());
+        assert_eq!(data.get_type(), ExpressionDataType::Unit);
     }
 
     #[test]
-    fn boolean_true() {
-        let d = ExpressionData::boolean_true();
-
-        assert_eq!(d.data_type, ExpressionDataType::True);
+    fn unit_coersion() {
+        let data = UnitData::new().as_any_data().as_unit();
+        assert!(data.is_ok(), "{:?}", data);
     }
 
     #[test]
-    fn boolean_false() {
-        let d = ExpressionData::boolean_false();
+    fn not_unit_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(0);
 
-        assert_eq!(d.data_type, ExpressionDataType::False);
+        for d in data {
+            assert!(d.as_unit().is_err());
+        }
     }
 
     #[test]
-    fn as_boolean() {
-        let d = ExpressionData::boolean_true();
-        assert!(d.as_boolean().unwrap());
+    fn true_boolean() {
+        let data = TrueData::new();
 
-        let d = ExpressionData::boolean_false();
-        assert!(!d.as_boolean().unwrap());
+        assert_eq!(data.get_type(), ExpressionDataType::True);
     }
 
     #[test]
-    fn expression_data_as_integer() {
-        assert_eq!(ExpressionData::integer(1234567890).as_integer().unwrap(), 1234567890)
+    fn true_boolean_coersion() {
+        let data = TrueData::new().as_any_data().as_true();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_true_boolean_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(1);
+
+        for d in data {
+            assert!(d.as_true().is_err());
+        }
+    }
+
+    #[test]
+    fn false_boolean() {
+        let data = FalseData::new();
+
+        assert_eq!(data.get_type(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn false_boolean_coersion() {
+        let data = FalseData::new().as_any_data().as_false();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_false_boolean_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(2);
+
+        for d in data {
+            assert!(d.as_false().is_err());
+        }
+    }
+
+    #[test]
+    fn integer() {
+        assert_eq!(IntegerData::from(10).get_type(), ExpressionDataType::Integer);
+    }
+
+    #[test]
+    fn integer_value() {
+        assert_eq!(IntegerData::from(10).value(), 10);
+    }
+
+    #[test]
+    fn integer_coersion() {
+        let data = IntegerData::from(10).as_any_data().as_integer();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_integer_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(3);
+
+        for d in data {
+            assert!(d.as_integer().is_err());
+        }
     }
 
     #[test]
     fn symbol() {
-        let d = ExpressionData::symbol(&"false".to_string(), 0);
-
-        assert_eq!(d.data_type, ExpressionDataType::Symbol);
-        assert_eq!(d.bytes, 0u64.to_le_bytes());
+        assert_eq!(SymbolData::from(10).get_type(), ExpressionDataType::Symbol);
     }
 
     #[test]
-    fn symbol_from_string() {
-        let d = ExpressionData::symbol_from_string(&"my_symbol".to_string());
-
-        let mut h = DefaultHasher::new();
-        "my_symbol".hash(&mut h);
-        let hv = h.finish();
-
-        assert!(d.symbols.contains_key("my_symbol"));
-        assert_eq!(d.symbols.get("my_symbol").unwrap(), &hv);
-        assert_eq!(d.data_type, ExpressionDataType::Symbol);
-        assert_eq!(d.bytes, hv.to_le_bytes());
+    fn symbol_value() {
+        assert_eq!(SymbolData::from(10).value(), 10);
     }
 
     #[test]
-    fn as_symbol_value() {
-        let d = ExpressionData::symbol_from_string(&"my_symbol".to_string());
-
-        let mut h = DefaultHasher::new();
-        "my_symbol".hash(&mut h);
-        let hv = h.finish();
-
-        assert_eq!(d.as_symbol_value().unwrap(), hv);
+    fn symbol_coersion() {
+        let data = SymbolData::from(10).as_any_data().as_symbol();
+        assert!(data.is_ok(), "{:?}", data);
     }
 
     #[test]
-    fn pair() {
-        let d = ExpressionData::pair(2, 5);
+    fn not_symbol_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(4);
 
-        let two = 2usize.to_le_bytes();
-        let five = 5usize.to_le_bytes();
-        let expected = [two, five].concat();
-
-        assert_eq!(d.get_type(), ExpressionDataType::Pair);
-        assert_eq!(d.bytes[..], expected[..]);
-    }
-
-    #[test]
-    fn as_pair() {
-        let d = ExpressionData::pair(2, 5);
-
-        let (left, right) = d.as_pair().unwrap();
-
-        assert_eq!(left, 2);
-        assert_eq!(right, 5);
-    }
-
-    #[test]
-    fn list() {
-        let d = ExpressionData::list(vec![1, 2, 3], vec![]);
-
-        let one = 1usize.to_le_bytes();
-        let two = 2usize.to_le_bytes();
-        let three = 3usize.to_le_bytes();
-        let zero = 0usize.to_le_bytes();
-        let expected = [three, one, two, three, zero].concat();
-
-        assert_eq!(d.get_type(), ExpressionDataType::List);
-        assert_eq!(d.bytes[..], expected[..]);
-    }
-
-    #[test]
-    fn as_list() {
-        let d = ExpressionData::list(vec![1, 2, 3], vec![]);
-
-        let (list, associations) = d.as_list().unwrap();
-
-        assert_eq!(list.len(), 3);
-        assert_eq!(list[0], 1);
-        assert_eq!(list[1], 2);
-        assert_eq!(list[2], 3);
-        assert_eq!(associations.len(), 0);
-    }
-
-    #[test]
-    fn list_with_associations() {
-        let d = ExpressionData::list(vec![1, 2, 3], vec![4, 5, 6]);
-
-        let one = 1usize.to_le_bytes();
-        let two = 2usize.to_le_bytes();
-        let three = 3usize.to_le_bytes();
-        let four = 4usize.to_le_bytes();
-        let five = 5usize.to_le_bytes();
-        let six = 6usize.to_le_bytes();
-        let expected = [three, one, two, three, three, four, five, six].concat();
-
-        assert_eq!(d.get_type(), ExpressionDataType::List);
-        assert_eq!(d.bytes[..], expected[..]);
+        for d in data {
+            assert!(d.as_symbol().is_err());
+        }
     }
 
     #[test]
     fn expression() {
-        let d = ExpressionData::expression(1);
-
-        assert_eq!(d.data_type, ExpressionDataType::Expression);
-        assert_eq!(d.bytes, 1usize.to_le_bytes());
+        assert_eq!(ExpressionData::from(10).get_type(), ExpressionDataType::Expression);
     }
 
     #[test]
-    fn as_expression() {
-        let d = ExpressionData::expression(1);
+    fn expression_value() {
+        assert_eq!(ExpressionData::from(10).value(), 10);
+    }
 
-        assert_eq!(d.as_expression().unwrap(), 1usize)
+    #[test]
+    fn expression_coersion() {
+        let data = ExpressionData::from(10).as_any_data().as_expression();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_expression_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(6);
+
+        for d in data {
+            assert!(d.as_expression().is_err());
+        }
     }
 
     #[test]
     fn external() {
-        let d = ExpressionData::external(1);
-
-        assert_eq!(d.data_type, ExpressionDataType::External);
-        assert_eq!(d.bytes, 1usize.to_le_bytes());
+        assert_eq!(ExternalData::from(10).get_type(), ExpressionDataType::External);
     }
 
     #[test]
-    fn as_external() {
-        let d = ExpressionData::external(1);
+    fn external_value() {
+        assert_eq!(ExternalData::from(10).value(), 10);
+    }
 
-        assert_eq!(d.as_external().unwrap(), 1usize)
+    #[test]
+    fn external_coersion() {
+        let data = ExternalData::from(10).as_any_data().as_external();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_external_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(5);
+
+        for d in data {
+            assert!(d.as_external().is_err());
+        }
+    }
+
+    #[test]
+    fn pair() {
+        assert_eq!(PairData::from((5, 10)).get_type(), ExpressionDataType::Pair);
+    }
+
+    #[test]
+    fn pair_left() {
+        assert_eq!(PairData::from((5, 10)).left(), 5);
+    }
+
+    #[test]
+    fn pair_right() {
+        assert_eq!(PairData::from((5, 10)).right(), 10);
+    }
+
+    #[test]
+    fn pair_coersion() {
+        let data = PairData::from((5, 10)).as_any_data().as_pair();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_pair_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(7);
+
+        for d in data {
+            assert!(d.as_pair().is_err());
+        }
+    }
+
+    #[test]
+    fn list() {
+        assert_eq!(ListData::from_items(vec![1, 2, 3], vec![4, 5, 6]).get_type(), ExpressionDataType::List);
+    }
+
+    #[test]
+    fn list_items() {
+        assert_eq!(ListData::from_items(vec![1, 2, 3], vec![4, 5, 6]).items(), &vec![1, 2, 3]);
+    }
+
+    #[test]
+    fn list_associations() {
+        assert_eq!(ListData::from_items(vec![1, 2, 3], vec![4, 5, 6]).associations(), &vec![4, 5, 6]);
+    }
+
+    #[test]
+    fn list_coersion() {
+        let data = ListData::from_items(vec![1, 2, 3], vec![4, 5, 6]).as_any_data().as_list();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_list_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(8);
+
+        for d in data {
+            assert!(d.as_list().is_err());
+        }
+    }
+}
+
+#[cfg(test)]
+mod comparisons {
+    use crate::simple::expression_data::cmp_any;
+    use crate::{data_equal, AsAnyData, ExpressionData, ExternalData, FalseData, IntegerData, ListData, PairData, SymbolData, TrueData, UnitData};
+
+    #[test]
+    fn same_type_equal() {
+        let left = IntegerData::from(10).as_any_data();
+        let right = IntegerData::from(10).as_any_data();
+
+        assert!(cmp_any::<IntegerData>(&left, &right));
+    }
+
+    #[test]
+    fn same_type_not_equal() {
+        let left = IntegerData::from(10).as_any_data();
+        let right = IntegerData::from(20).as_any_data();
+
+        assert!(!cmp_any::<IntegerData>(&left, &right));
+    }
+
+    #[test]
+    fn different_type_not_equal() {
+        let left = IntegerData::from(10).as_any_data();
+        let right = UnitData::new().as_any_data();
+
+        assert!(!cmp_any::<IntegerData>(&left, &right));
+    }
+
+    #[test]
+    fn data_equal_all_supported_types() {
+        let cases = vec![
+            (UnitData::new().as_any_data(), UnitData::new().as_any_data(), true),
+            (TrueData::new().as_any_data(), TrueData::new().as_any_data(), true),
+            (FalseData::new().as_any_data(), FalseData::new().as_any_data(), true),
+            (UnitData::new().as_any_data(), FalseData::new().as_any_data(), false),
+            (TrueData::new().as_any_data(), UnitData::new().as_any_data(), false),
+            (TrueData::new().as_any_data(), FalseData::new().as_any_data(), false),
+            // Integer
+            (IntegerData::from(10).as_any_data(), IntegerData::from(10).as_any_data(), true),
+            (IntegerData::from(10).as_any_data(), IntegerData::from(20).as_any_data(), false),
+            // Symbol
+            (SymbolData::from(10).as_any_data(), SymbolData::from(10).as_any_data(), true),
+            (SymbolData::from(10).as_any_data(), SymbolData::from(20).as_any_data(), false),
+            // Expression
+            (ExpressionData::from(10).as_any_data(), ExpressionData::from(10).as_any_data(), true),
+            (ExpressionData::from(10).as_any_data(), ExpressionData::from(20).as_any_data(), false),
+            // External
+            (ExternalData::from(10).as_any_data(), ExternalData::from(10).as_any_data(), true),
+            (ExternalData::from(10).as_any_data(), ExternalData::from(20).as_any_data(), false),
+            // Pair
+            (PairData::from((10, 20)).as_any_data(), PairData::from((10, 20)).as_any_data(), true),
+            (PairData::from((10, 20)).as_any_data(), PairData::from((10, 10)).as_any_data(), false),
+            // List
+            (
+                ListData::from_items(vec![1, 2, 3], vec![4, 5, 6]).as_any_data(),
+                ListData::from_items(vec![1, 2, 3], vec![4, 5, 6]).as_any_data(),
+                true,
+            ),
+            (
+                ListData::from_items(vec![1, 2, 3], vec![4, 5, 6]).as_any_data(),
+                ListData::from_items(vec![1, 2], vec![4, 5]).as_any_data(),
+                false,
+            ),
+        ];
+
+        for (left, right, expected_result) in cases {
+            assert_eq!(data_equal(&left, &right), expected_result);
+        }
     }
 }

@@ -24,14 +24,14 @@ pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data)
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, ExpressionData, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
 
     #[test]
     fn equality_true() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(10).unwrap();
 
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
@@ -48,8 +48,8 @@ mod tests {
     fn equality_false() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(20).unwrap();
 
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
@@ -66,8 +66,8 @@ mod tests {
     fn equality_no_references_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(10).unwrap();
 
         runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
 
@@ -80,8 +80,8 @@ mod tests {
     fn equality_of_unsupported_comparison_is_false() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::expression(10)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_expression(10).unwrap();
 
         runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
 

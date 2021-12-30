@@ -31,14 +31,14 @@ pub fn perform_addition<Data: GarnishLangRuntimeData>(this: &mut Data) -> Garnis
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, ExpressionData, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn perform_addition() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(20).unwrap();
 
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
@@ -53,8 +53,8 @@ mod tests {
     fn addition_with_overflow_is_pair() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(11)).unwrap();
-        runtime.add_data(ExpressionData::integer(i32::MAX)).unwrap();
+        runtime.add_integer(11).unwrap();
+        runtime.add_integer(i32::MAX).unwrap();
 
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
@@ -73,8 +73,8 @@ mod tests {
     fn addition_with_underflow_is_pair() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(-11)).unwrap();
-        runtime.add_data(ExpressionData::integer(i32::MIN)).unwrap();
+        runtime.add_integer(-11).unwrap();
+        runtime.add_integer(i32::MIN).unwrap();
 
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
@@ -93,8 +93,8 @@ mod tests {
     fn perform_addition_no_refs_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(20).unwrap();
 
         let result = runtime.perform_addition();
 
@@ -105,8 +105,8 @@ mod tests {
     fn perform_addition_with_non_integers() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol(&"sym1".to_string(), 1)).unwrap();
-        runtime.add_data(ExpressionData::symbol(&"sym2".to_string(), 2)).unwrap();
+        runtime.add_symbol("sym1").unwrap();
+        runtime.add_symbol("sym2").unwrap();
 
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();

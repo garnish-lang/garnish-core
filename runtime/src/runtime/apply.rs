@@ -61,7 +61,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             this.push_value_stack(right_addr).nest_into()
         }
         ExpressionDataType::External => {
-            let external_value = this.get_expression(left_addr).nest_into()?;
+            let external_value = this.get_external(left_addr).nest_into()?;
 
             match context {
                 None => push_unit(this),
@@ -82,17 +82,16 @@ mod tests {
             context::{EmptyContext, GarnishLangRuntimeContext},
             utilities::push_integer,
             GarnishRuntime,
-        },
-        ExpressionData, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
+        }, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
     };
 
     #[test]
     fn apply() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::expression(0)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_expression(0).unwrap();
+        runtime.add_integer(20).unwrap();
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
@@ -123,9 +122,9 @@ mod tests {
     fn apply_no_references_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::expression(0)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_expression(0).unwrap();
+        runtime.add_integer(20).unwrap();
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
@@ -151,8 +150,8 @@ mod tests {
     fn empty_apply() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::expression(0)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_expression(0).unwrap();
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
@@ -181,8 +180,8 @@ mod tests {
     fn empty_apply_no_references_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::expression(0)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_expression(0).unwrap();
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
@@ -207,11 +206,11 @@ mod tests {
     fn reapply_if_true() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::boolean_true()).unwrap();
-        runtime.add_data(ExpressionData::expression(0)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::integer(30)).unwrap();
-        runtime.add_data(ExpressionData::integer(40)).unwrap();
+        runtime.add_true().unwrap();
+        runtime.add_expression(0).unwrap();
+        runtime.add_integer(20).unwrap();
+        runtime.add_integer(30).unwrap();
+        runtime.add_integer(40).unwrap();
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
@@ -248,11 +247,11 @@ mod tests {
     fn reapply_if_false() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::boolean_false()).unwrap();
-        runtime.add_data(ExpressionData::expression(0)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::integer(30)).unwrap();
-        runtime.add_data(ExpressionData::integer(40)).unwrap();
+        runtime.add_false().unwrap();
+        runtime.add_expression(0).unwrap();
+        runtime.add_integer(20).unwrap();
+        runtime.add_integer(30).unwrap();
+        runtime.add_integer(40).unwrap();
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
@@ -289,13 +288,15 @@ mod tests {
     fn apply_from_context() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::external(3)).unwrap();
-        runtime.add_data(ExpressionData::integer(100)).unwrap();
+        runtime.add_external(3).unwrap();
+        runtime.add_integer(100).unwrap();
 
         runtime.push_instruction(Instruction::Resolve, None).unwrap();
 
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
+
+        println!("check check");
 
         struct MyContext {}
 
@@ -307,8 +308,12 @@ mod tests {
             fn apply(&mut self, external_value: usize, input_addr: usize, runtime: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<String, bool> {
                 assert_eq!(external_value, 3);
 
+                println!("checking input {:?} {:?}", external_value, input_addr);
                 let value = match runtime.get_data_type(input_addr).nest_into()? {
-                    ExpressionDataType::Integer => runtime.get_integer(input_addr).nest_into()?,
+                    ExpressionDataType::Integer => {
+                        println!("is integer {:?}", input_addr);
+                        runtime.get_integer(input_addr).nest_into()?
+                    },
                     _ => return Ok(false),
                 };
 

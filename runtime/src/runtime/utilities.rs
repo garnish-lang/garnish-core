@@ -41,13 +41,13 @@ pub(crate) fn push_pair<Data: GarnishLangRuntimeData>(this: &mut Data, left: Dat
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionData, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn add_data() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(100)).unwrap();
+        runtime.add_integer(100).unwrap();
 
         assert_eq!(runtime.get_data_len(), 2);
     }
@@ -56,8 +56,8 @@ mod tests {
     fn get_data() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(100)).unwrap();
-        runtime.add_data(ExpressionData::integer(200)).unwrap();
+        runtime.add_integer(100).unwrap();
+        runtime.add_integer(200).unwrap();
 
         assert_eq!(runtime.get_integer(2).unwrap(), 200);
     }
@@ -66,8 +66,8 @@ mod tests {
     fn end_constant_data() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(100)).unwrap();
-        runtime.add_data(ExpressionData::integer(200)).unwrap();
+        runtime.add_integer(100).unwrap();
+        runtime.add_integer(200).unwrap();
         runtime.set_end_of_constant(runtime.get_data_len()).unwrap();
 
         assert_eq!(runtime.get_end_of_constant_data(), 3);
@@ -77,46 +77,24 @@ mod tests {
     fn add_data_returns_addr() {
         let mut runtime = SimpleRuntimeData::new();
 
-        assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 1);
-        assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 2);
-        assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 3);
-        assert_eq!(runtime.add_data(ExpressionData::integer(100)).unwrap(), 4);
-    }
-
-    #[test]
-    fn remove_data() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.add_data(ExpressionData::symbol(&"false".to_string(), 0)).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-
-        runtime.set_end_of_constant(runtime.get_data_len()).unwrap();
-
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
-
-        // runtime.add_instruction(Instruction::PerformAddition, None).unwrap();
-
-        runtime.remove_non_constant_data().unwrap();
-
-        assert_eq!(runtime.get_data_len(), 5);
+        assert_eq!(runtime.add_integer(100).unwrap(), 1);
+        assert_eq!(runtime.add_integer(100).unwrap(), 2);
+        assert_eq!(runtime.add_integer(100).unwrap(), 3);
+        assert_eq!(runtime.add_integer(100).unwrap(), 4);
     }
 }
 
 #[cfg(test)]
 mod internal {
     use crate::{
-        runtime::utilities::{next_ref, next_two_raw_ref},
-        ExpressionData, GarnishLangRuntimeData, SimpleRuntimeData,
+        runtime::utilities::{next_ref, next_two_raw_ref}, GarnishLangRuntimeData, SimpleRuntimeData,
     };
 
     #[test]
     fn next_ref_test() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(20).unwrap();
 
         runtime.push_register(2).unwrap();
 
@@ -128,8 +106,8 @@ mod internal {
     #[test]
     fn next_ref_data_no_ref_is_error() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(20).unwrap();
 
         let result = next_ref(&mut runtime);
 
@@ -139,8 +117,8 @@ mod internal {
     #[test]
     fn next_two_ref_data() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(20).unwrap();
 
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
@@ -154,8 +132,8 @@ mod internal {
     #[test]
     fn next_two_ref_data_one_ref_is_error() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(20).unwrap();
 
         runtime.push_register(1).unwrap();
 
@@ -167,8 +145,8 @@ mod internal {
     #[test]
     fn next_two_ref_data_zero_refs_is_error() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::integer(20)).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_integer(20).unwrap();
 
         let result = next_two_raw_ref(&mut runtime);
 

@@ -180,7 +180,11 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
     Ok(())
 }
 
-pub fn instructions_from_ast<Data: GarnishLangRuntimeData>(root: usize, nodes: Vec<ParseNode>, data: &mut Data) -> GarnishLangCompilerResult<(), Data::Error> {
+pub fn instructions_from_ast<Data: GarnishLangRuntimeData>(
+    root: usize,
+    nodes: Vec<ParseNode>,
+    data: &mut Data,
+) -> GarnishLangCompilerResult<(), Data::Error> {
     // since we will be popping and pushing values from root_stack
     // need to keep separate count of total so expression values put in data are accurate
     let mut jump_count = data.get_jump_table_len() + Data::Size::one();
@@ -469,7 +473,7 @@ mod test_utils {
         root: usize,
         nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
         expected_instructions: Vec<(Instruction, Option<usize>)>,
-        expected_data: Vec<ExpressionData>,
+        expected_data: SimpleDataList,
     ) {
         assert_instruction_data_jumps(root, nodes, expected_instructions, expected_data, vec![1]);
     }
@@ -478,15 +482,13 @@ mod test_utils {
         root: usize,
         nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
         expected_instructions: Vec<(Instruction, Option<usize>)>,
-        expected_data: Vec<ExpressionData>,
+        expected_data: SimpleDataList,
         expected_jumps: Vec<usize>,
     ) {
         let expected_instructions: Vec<InstructionData> = expected_instructions.iter().map(|i| InstructionData::new(i.0, i.1)).collect();
         let expected_instructions: Vec<InstructionData> = iter::once(InstructionData::new(Instruction::EndExecution, None))
             .chain(expected_instructions.into_iter())
             .collect();
-
-        let expected_data: Vec<ExpressionData> = iter::once(ExpressionData::unit()).chain(expected_data.into_iter()).collect();
 
         let result = get_instruction_data(root, nodes).unwrap();
 
@@ -510,6 +512,12 @@ mod test_utils {
 
         Ok(data)
     }
+
+    pub fn symbol_value(s: &str) -> u64 {
+        let mut data = SimpleRuntimeData::new();
+        let addr = data.add_symbol(s).unwrap();
+        data.get_symbol(addr).unwrap()
+    }
 }
 
 #[cfg(test)]
@@ -526,7 +534,7 @@ mod values {
             0,
             vec![(Definition::Number, None, None, None, "5", TokenType::Number)],
             vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
-            vec![ExpressionData::integer(5)],
+            SimpleDataList::default().append(IntegerData::from(5)),
         );
     }
 
@@ -536,7 +544,7 @@ mod values {
             0,
             vec![(Definition::True, None, None, None, "$?", TokenType::True)],
             vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
-            vec![ExpressionData::boolean_true()],
+            SimpleDataList::default().append(TrueData::new()),
         );
     }
 
@@ -546,7 +554,7 @@ mod values {
             0,
             vec![(Definition::False, None, None, None, "$!", TokenType::False)],
             vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
-            vec![ExpressionData::boolean_false()],
+            SimpleDataList::default().append(FalseData::new()),
         );
     }
 
@@ -560,7 +568,7 @@ mod values {
                 (Instruction::Resolve, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::symbol_from_string(&"value".to_string())],
+            SimpleDataList::default().append(SymbolData::from(symbol_value("value"))),
         );
     }
 
@@ -570,7 +578,7 @@ mod values {
             0,
             vec![(Definition::Unit, None, None, None, "()", TokenType::UnitLiteral)],
             vec![(Instruction::Put, Some(0)), (Instruction::EndExpression, None)],
-            vec![],
+            SimpleDataList::default(),
         );
     }
 
@@ -580,7 +588,7 @@ mod values {
             0,
             vec![(Definition::Symbol, None, None, None, ":symbol", TokenType::Symbol)],
             vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
-            vec![ExpressionData::symbol_from_string(&"symbol".to_string())],
+            SimpleDataList::default().append(SymbolData::from(symbol_value("symbol"))),
         );
     }
 
@@ -590,7 +598,7 @@ mod values {
             0,
             vec![(Definition::Symbol, None, None, None, ":", TokenType::Symbol)],
             vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
-            vec![ExpressionData::symbol_from_string(&"".to_string())],
+            SimpleDataList::default().append(SymbolData::from(symbol_value(""))),
         );
     }
 
@@ -600,7 +608,7 @@ mod values {
             0,
             vec![(Definition::Value, None, None, None, "$", TokenType::Value)],
             vec![(Instruction::PutValue, None), (Instruction::EndExpression, None)],
-            vec![],
+            SimpleDataList::default(),
         );
     }
 }
@@ -627,7 +635,7 @@ mod operations {
                 (Instruction::EmptyApply, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::symbol_from_string(&"value".to_string())],
+            SimpleDataList::default().append(SymbolData::from(symbol_value("value"))),
         );
     }
 
@@ -666,7 +674,7 @@ mod operations {
                 (Instruction::PerformAddition, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
         );
     }
 
@@ -693,12 +701,11 @@ mod operations {
                 (Instruction::PerformAddition, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![
-                ExpressionData::integer(5),
-                ExpressionData::integer(10),
-                ExpressionData::integer(15),
-                ExpressionData::integer(20),
-            ],
+            SimpleDataList::default()
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(10))
+                .append(IntegerData::from(15))
+                .append(IntegerData::from(20)),
         );
     }
 
@@ -717,7 +724,7 @@ mod operations {
                 (Instruction::EqualityComparison, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
         );
     }
 
@@ -736,7 +743,7 @@ mod operations {
                 (Instruction::MakePair, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
         );
     }
 
@@ -755,7 +762,7 @@ mod operations {
                 (Instruction::Access, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
         );
     }
 
@@ -772,7 +779,7 @@ mod operations {
                 (Instruction::AccessLeftInternal, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(10)),
         );
     }
 
@@ -789,7 +796,7 @@ mod operations {
                 (Instruction::AccessRightInternal, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(10)),
         );
     }
 
@@ -806,7 +813,7 @@ mod operations {
                 (Instruction::AccessLengthInternal, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(10)),
         );
     }
 
@@ -825,7 +832,7 @@ mod operations {
                 (Instruction::Put, Some(2)),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
         );
     }
 
@@ -844,7 +851,7 @@ mod operations {
                 (Instruction::Apply, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
         );
     }
 
@@ -863,7 +870,7 @@ mod operations {
                 (Instruction::Apply, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(10), ExpressionData::integer(5)],
+            SimpleDataList::default().append(IntegerData::from(10)).append(IntegerData::from(5)),
         );
     }
 
@@ -882,7 +889,7 @@ mod operations {
                 (Instruction::Reapply, Some(0)),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
         );
     }
 }
@@ -911,10 +918,9 @@ mod lists {
                 (Instruction::Access, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![
-                ExpressionData::symbol_from_string(&"list".to_string()),
-                ExpressionData::symbol_from_string(&"property".to_string()),
-            ],
+            SimpleDataList::default()
+                .append(SymbolData::from(symbol_value("list")))
+                .append(SymbolData::from(symbol_value("property"))),
         );
     }
 
@@ -933,7 +939,7 @@ mod lists {
                 (Instruction::MakeList, Some(2)),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
         );
     }
 
@@ -958,12 +964,11 @@ mod lists {
                 (Instruction::MakeList, Some(4)),
                 (Instruction::EndExpression, None),
             ],
-            vec![
-                ExpressionData::integer(5),
-                ExpressionData::integer(10),
-                ExpressionData::integer(15),
-                ExpressionData::integer(20),
-            ],
+            SimpleDataList::default()
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(10))
+                .append(IntegerData::from(15))
+                .append(IntegerData::from(20)),
         );
     }
 
@@ -996,14 +1001,13 @@ mod lists {
                 (Instruction::MakeList, Some(5)),
                 (Instruction::EndExpression, None),
             ],
-            vec![
-                ExpressionData::integer(5),
-                ExpressionData::integer(10),
-                ExpressionData::integer(15),
-                ExpressionData::integer(20),
-                ExpressionData::integer(25),
-                ExpressionData::integer(30),
-            ],
+            SimpleDataList::default()
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(10))
+                .append(IntegerData::from(15))
+                .append(IntegerData::from(20))
+                .append(IntegerData::from(25))
+                .append(IntegerData::from(30)),
         );
     }
 
@@ -1037,14 +1041,13 @@ mod lists {
                 (Instruction::MakeList, Some(3)),
                 (Instruction::EndExpression, None),
             ],
-            vec![
-                ExpressionData::integer(5),
-                ExpressionData::integer(10),
-                ExpressionData::integer(15),
-                ExpressionData::integer(20),
-                ExpressionData::integer(25),
-                ExpressionData::integer(30),
-            ],
+            SimpleDataList::default()
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(10))
+                .append(IntegerData::from(15))
+                .append(IntegerData::from(20))
+                .append(IntegerData::from(25))
+                .append(IntegerData::from(30)),
         );
     }
 }
@@ -1071,7 +1074,7 @@ mod groups {
                 (Instruction::PerformAddition, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
         );
     }
 }
@@ -1100,7 +1103,10 @@ mod nested_expressions {
                 (Instruction::PerformAddition, None),
                 (Instruction::EndExpression, None),
             ],
-            vec![ExpressionData::expression(1), ExpressionData::integer(5), ExpressionData::integer(10)],
+            SimpleDataList::default()
+                .append(ExpressionData::from(1))
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(10)),
             vec![1, 3],
         );
     }
@@ -1126,12 +1132,11 @@ mod nested_expressions {
                 (Instruction::Put, Some(4)),
                 (Instruction::EndExpression, None),
             ],
-            vec![
-                ExpressionData::expression(1),
-                ExpressionData::expression(2),
-                ExpressionData::integer(5),
-                ExpressionData::integer(10),
-            ],
+            SimpleDataList::default()
+                .append(ExpressionData::from(1))
+                .append(ExpressionData::from(2))
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(10)),
             vec![1, 5, 7],
         );
     }
@@ -1164,14 +1169,13 @@ mod nested_expressions {
                 (Instruction::Put, Some(6)),
                 (Instruction::EndExpression, None),
             ],
-            vec![
-                ExpressionData::expression(1),
-                ExpressionData::integer(5),
-                ExpressionData::expression(2),
-                ExpressionData::integer(10),
-                ExpressionData::expression(3),
-                ExpressionData::integer(15),
-            ],
+            SimpleDataList::default()
+                .append(ExpressionData::from(1))
+                .append(IntegerData::from(5))
+                .append(ExpressionData::from(2))
+                .append(IntegerData::from(10))
+                .append(ExpressionData::from(3))
+                .append(IntegerData::from(15)),
             vec![1, 3, 7, 11],
         );
     }
@@ -1199,7 +1203,7 @@ mod conditionals {
                 (Instruction::Put, Some(2)),
                 (Instruction::JumpTo, Some(1)),
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
             vec![1, 3, 4],
         );
     }
@@ -1220,7 +1224,7 @@ mod conditionals {
                 (Instruction::Put, Some(2)),
                 (Instruction::JumpTo, Some(1)),
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(10)],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
             vec![1, 3, 4],
         );
     }
@@ -1249,12 +1253,11 @@ mod conditionals {
                 (Instruction::Put, Some(4)), // 8
                 (Instruction::JumpTo, Some(1)),
             ],
-            vec![
-                ExpressionData::integer(5),
-                ExpressionData::integer(15),
-                ExpressionData::integer(10),
-                ExpressionData::integer(20),
-            ],
+            SimpleDataList::default()
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(15))
+                .append(IntegerData::from(10))
+                .append(IntegerData::from(20)),
             vec![1, 5, 6, 8],
         );
     }
@@ -1278,7 +1281,10 @@ mod conditionals {
                 (Instruction::Put, Some(3)),
                 (Instruction::JumpTo, Some(1)),
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(15), ExpressionData::integer(10)],
+            SimpleDataList::default()
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(15))
+                .append(IntegerData::from(10)),
             vec![1, 4, 5],
         );
     }
@@ -1301,7 +1307,10 @@ mod conditionals {
                 (Instruction::Put, Some(3)),
                 (Instruction::EndExpression, None), // 5
             ],
-            vec![ExpressionData::integer(5), ExpressionData::integer(10), ExpressionData::integer(15)],
+            SimpleDataList::default()
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(10))
+                .append(IntegerData::from(15)),
             vec![1, 5], // TODO: Either more tests to verify if extra jump is needed or find way to remove it
         );
     }
@@ -1342,14 +1351,13 @@ mod conditionals {
                 (Instruction::Put, Some(6)), // 12
                 (Instruction::JumpTo, Some(1)),
             ],
-            vec![
-                ExpressionData::integer(5),
-                ExpressionData::integer(15),
-                ExpressionData::integer(25),
-                ExpressionData::integer(10),
-                ExpressionData::integer(20),
-                ExpressionData::integer(30),
-            ],
+            SimpleDataList::default()
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(15))
+                .append(IntegerData::from(25))
+                .append(IntegerData::from(10))
+                .append(IntegerData::from(20))
+                .append(IntegerData::from(30)),
             vec![1, 7, 8, 10, 12],
         );
     }

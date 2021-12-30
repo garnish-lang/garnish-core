@@ -1,13 +1,13 @@
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, ExpressionData, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
 
     #[test]
     fn make_pair() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"my_symbol".to_string())).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_symbol("my_symbol").unwrap();
 
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
@@ -27,8 +27,8 @@ mod tests {
     fn make_pair_no_refs_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"my_symbol".to_string())).unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_symbol("my_symbol").unwrap();
 
         runtime.push_instruction(Instruction::MakePair, None).unwrap();
 

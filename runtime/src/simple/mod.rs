@@ -1,16 +1,15 @@
-use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hash;
+use std::{collections::HashMap, hash::Hasher};
 
-use crate::{
-    EmptyContext, ExpressionData, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeError,
-    GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData,
-};
+use crate::{AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, FalseData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeError, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, SimpleDataList, SymbolData, TrueData, UnitData};
 
 pub mod expression_data;
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Debug)]
 pub struct SimpleRuntimeData {
     register: Vec<usize>,
-    data: Vec<ExpressionData>,
+    simple_data: SimpleDataList,
     end_of_constant_data: usize,
     values: Vec<usize>,
     instructions: Vec<InstructionData>,
@@ -25,7 +24,7 @@ impl SimpleRuntimeData {
     pub fn new() -> Self {
         SimpleRuntimeData {
             register: vec![],
-            data: vec![ExpressionData::unit()],
+            simple_data: SimpleDataList::default(),
             end_of_constant_data: 0,
             values: vec![],
             instruction_cursor: 0,
@@ -37,8 +36,8 @@ impl SimpleRuntimeData {
         }
     }
 
-    pub fn get(&self, index: usize) -> Result<&ExpressionData, String> {
-        match self.data.get(index) {
+    pub fn get(&self, index: usize) -> Result<&AnyData, String> {
+        match self.simple_data.get(index) {
             None => Err(format!("No data at addr {:?}", index)),
             Some(d) => Ok(d),
         }
@@ -64,8 +63,8 @@ impl SimpleRuntimeData {
         &self.instructions
     }
 
-    pub fn get_data(&self) -> &Vec<ExpressionData> {
-        &self.data
+    pub fn get_data(&self) -> &SimpleDataList {
+        &self.simple_data
     }
 
     pub fn execute_all_instructions(&mut self) -> Result<(), GarnishLangRuntimeError<String>> {
@@ -104,16 +103,10 @@ impl SimpleRuntimeData {
         self.end_of_constant_data
     }
 
-    pub fn remove_non_constant_data(&mut self) -> Result<(), String> {
-        self.data = Vec::from(&self.data[..self.end_of_constant_data]);
-
-        Ok(())
-    }
-
-    pub fn add_data(&mut self, data: ExpressionData) -> Result<usize, String> {
-        self.data.push(data);
-        Ok(self.data.len() - 1)
-    }
+    // pub fn add_data(&mut self, data: ExpressionData) -> Result<usize, String> {
+    //     self.data.push(data);
+    //     Ok(self.simple_data.len() - 1)
+    // }
 
     pub fn get_jump_path(&self, index: usize) -> Option<usize> {
         self.jump_path.get(index).cloned()
@@ -136,98 +129,120 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     type Size = usize;
 
     fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error> {
-        Ok(self.get(index)?.get_type())
+        let i = self.get(index)?;
+        let t = if i.is::<UnitData>() {
+            ExpressionDataType::Unit
+        } else if i.is::<TrueData>() {
+            ExpressionDataType::True
+        } else if i.is::<FalseData>() {
+            ExpressionDataType::False
+        } else if i.is::<IntegerData>() {
+            ExpressionDataType::Integer
+        } else if i.is::<SymbolData>() {
+            ExpressionDataType::Symbol
+        } else if i.is::<ExternalData>() {
+            ExpressionDataType::External
+        } else if i.is::<ExpressionData>() {
+            ExpressionDataType::Expression
+        } else if i.is::<PairData>() {
+            ExpressionDataType::Pair
+        } else if i.is::<ListData>() {
+            ExpressionDataType::List
+        } else {
+            Err(format!("No data type for object at index {:?}.", index))?
+        };
+
+        Ok(t)
     }
 
     fn get_integer(&self, index: usize) -> Result<i32, Self::Error> {
-        self.get(index)?.as_integer()
-    }
-
-    fn get_reference(&self, index: usize) -> Result<usize, Self::Error> {
-        self.get(index)?.as_reference()
+        Ok(self.get(index)?.as_integer()?.value())
     }
 
     fn get_symbol(&self, index: usize) -> Result<u64, Self::Error> {
-        self.get(index)?.as_symbol_value()
+        Ok(self.get(index)?.as_symbol()?.value())
     }
 
     fn get_expression(&self, index: usize) -> Result<usize, Self::Error> {
-        self.get(index)?.as_expression()
+        Ok(self.get(index)?.as_expression()?.value())
     }
 
     fn get_external(&self, index: usize) -> Result<usize, Self::Error> {
-        self.get(index)?.as_external()
+        Ok(self.get(index)?.as_external()?.value())
     }
 
     fn get_pair(&self, index: usize) -> Result<(usize, usize), Self::Error> {
-        self.get(index)?.as_pair()
+        let pair = self.get(index)?.as_pair()?;
+        Ok((pair.left(), pair.right()))
     }
 
     fn get_list_len(&self, index: usize) -> Result<usize, Self::Error> {
-        Ok(self.get(index)?.as_list()?.0.len())
+        Ok(self.get(index)?.as_list()?.items().len())
     }
 
     fn get_list_item(&self, list_index: usize, item_index: i32) -> Result<usize, Self::Error> {
-        match self.get(list_index)?.as_list()?.0.get(item_index as usize) {
+        match self.get(list_index)?.as_list()?.items().get(item_index as usize) {
             None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index)),
             Some(v) => Ok(*v),
         }
     }
 
     fn get_list_associations_len(&self, index: usize) -> Result<usize, Self::Error> {
-        Ok(self.get(index)?.as_list()?.1.len())
+        Ok(self.get(index)?.as_list()?.associations().len())
     }
 
     fn get_list_association(&self, list_index: usize, item_index: i32) -> Result<usize, Self::Error> {
-        match self.get(list_index)?.as_list()?.1.get(item_index as usize) {
+        match self.get(list_index)?.as_list()?.associations().get(item_index as usize) {
             None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index)),
             Some(v) => Ok(*v),
         }
     }
 
     fn add_integer(&mut self, value: i32) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::integer(value));
-        Ok(self.data.len() - 1)
+        self.simple_data.push(IntegerData::from(value));
+        // self.data.push(ExpressionData::integer(value));
+        Ok(self.simple_data.len() - 1)
     }
 
     fn add_symbol(&mut self, value: &str) -> Result<usize, Self::Error> {
-        let sym = ExpressionData::symbol_from_string(value);
-        for (key, value) in sym.get_symbols() {
-            self.symbols.insert(key.clone(), value.clone());
-        }
+        let mut h = DefaultHasher::new();
+        value.hash(&mut h);
+        let hv = h.finish();
 
-        self.data.push(sym);
-        Ok(self.data.len() - 1)
+        self.symbols.insert(value.to_string(), hv);
+
+        self.simple_data.push(SymbolData::from(hv));
+        Ok(self.simple_data.len() - 1)
     }
 
     fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::expression(value));
-        Ok(self.data.len() - 1)
+        self.simple_data.push(ExpressionData::from(value));
+        Ok(self.simple_data.len() - 1)
     }
 
     fn add_external(&mut self, value: usize) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::external(value));
-        Ok(self.data.len() - 1)
+        self.simple_data.push(ExternalData::from(value));
+        Ok(self.simple_data.len() - 1)
     }
 
     fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::pair(value.0, value.1));
-        Ok(self.data.len() - 1)
+        self.simple_data.push(PairData::from(value));
+        Ok(self.simple_data.len() - 1)
     }
 
     fn add_unit(&mut self) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::unit());
-        Ok(self.data.len() - 1)
+        self.simple_data.push(UnitData::new());
+        Ok(self.simple_data.len() - 1)
     }
 
     fn add_true(&mut self) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::boolean_true());
-        Ok(self.data.len() - 1)
+        self.simple_data.push(TrueData::new());
+        Ok(self.simple_data.len() - 1)
     }
 
     fn add_false(&mut self) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::boolean_false());
-        Ok(self.data.len() - 1)
+        self.simple_data.push(FalseData::new());
+        Ok(self.simple_data.len() - 1)
     }
 
     fn start_list(&mut self, _: usize) -> Result<(), Self::Error> {
@@ -277,8 +292,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
                 items.reverse();
 
-                self.data.push(ExpressionData::list(items.to_vec(), ordered));
-                Ok(self.data.len() - 1)
+                self.simple_data.push(ListData::from_items(items.to_vec(), ordered));
+                Ok(self.simple_data.len() - 1)
             }
         }
     }
@@ -342,7 +357,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn get_data_len(&self) -> usize {
-        self.data.len()
+        self.simple_data.len()
     }
 
     fn push_value_stack(&mut self, addr: usize) -> Result<(), Self::Error> {
@@ -432,5 +447,18 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn size_to_integer(from: Self::Size) -> Self::Integer {
         from as Self::Integer
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn type_of() {
+        let mut runtime = SimpleRuntimeData::new();
+        runtime.add_integer(10).unwrap();
+
+        assert_eq!(runtime.get_data_type(1).unwrap(), ExpressionDataType::Integer);
     }
 }

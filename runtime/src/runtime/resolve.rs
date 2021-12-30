@@ -44,19 +44,20 @@ mod tests {
             context::{EmptyContext, GarnishLangRuntimeContext},
             utilities::push_integer,
             GarnishRuntime,
-        },
-        ExpressionData, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
+        }, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
     };
 
     #[test]
     fn resolve_no_ref_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
+        runtime.start_list(1).unwrap();
+        runtime.add_to_list(3, true).unwrap();
+        runtime.end_list().unwrap();
+        runtime.add_symbol("one").unwrap();
 
         runtime.push_instruction(Instruction::Resolve, None).unwrap();
 
@@ -69,11 +70,13 @@ mod tests {
     fn resolve_from_input() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
+        runtime.start_list(1).unwrap();
+        runtime.add_to_list(3, true).unwrap();
+        runtime.end_list().unwrap();
+        runtime.add_symbol("one").unwrap();
 
         runtime.push_instruction(Instruction::Resolve, None).unwrap();
 
@@ -90,11 +93,13 @@ mod tests {
     fn resolve_not_found_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
-        runtime.add_data(ExpressionData::integer(10)).unwrap();
-        runtime.add_data(ExpressionData::pair(1, 2)).unwrap();
-        runtime.add_data(ExpressionData::list(vec![3], vec![3])).unwrap();
-        runtime.add_data(ExpressionData::symbol_from_string(&"two".to_string())).unwrap();
+        runtime.add_symbol("one").unwrap();
+        runtime.add_integer(10).unwrap();
+        runtime.add_pair((1, 2)).unwrap();
+        runtime.start_list(1).unwrap();
+        runtime.add_to_list(3, true).unwrap();
+        runtime.end_list().unwrap();
+        runtime.add_symbol("two").unwrap();
 
         runtime.push_instruction(Instruction::Resolve, None).unwrap();
 
@@ -109,7 +114,7 @@ mod tests {
     fn resolve_from_context() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_data(ExpressionData::symbol_from_string(&"one".to_string())).unwrap();
+        runtime.add_symbol("one").unwrap();
 
         runtime.push_instruction(Instruction::Resolve, None).unwrap();
 
