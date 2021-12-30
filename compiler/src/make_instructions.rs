@@ -183,10 +183,10 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
 pub fn instructions_from_ast<Data: GarnishLangRuntimeData>(root: usize, nodes: Vec<ParseNode>, data: &mut Data) -> GarnishLangCompilerResult<(), Data::Error> {
     // since we will be popping and pushing values from root_stack
     // need to keep separate count of total so expression values put in data are accurate
-    let mut jump_count = data.get_jump_point_count() + Data::Size::one();
+    let mut jump_count = data.get_jump_table_len() + Data::Size::one();
 
     // tuple of (root node, last instruction of this node, nearest expression jump point)
-    let mut root_stack = vec![(root, Instruction::EndExpression, None, data.get_jump_point_count())];
+    let mut root_stack = vec![(root, Instruction::EndExpression, None, data.get_jump_table_len())];
 
     // arbitrary max iterations for roots
     let max_roots = 100;
@@ -201,7 +201,7 @@ pub fn instructions_from_ast<Data: GarnishLangRuntimeData>(root: usize, nodes: V
 
         // push start of this expression to jump table
         let jump_point = data.get_instruction_len();
-        let jump_index = data.get_jump_point_count();
+        let jump_index = data.get_jump_table_len();
         data.push_jump_point(Data::Size::zero()).nest_into()?; // updated down below
 
         // limit, maximum times a node is visited is 3
@@ -268,9 +268,9 @@ pub fn instructions_from_ast<Data: GarnishLangRuntimeData>(root: usize, nodes: V
                                 if we_are_parent_conditional_branch || we_are_non_chained_conditional {
                                     trace!(
                                         "Starting new conditional branch. Return slot in jump table {:?}",
-                                        data.get_jump_point_count()
+                                        data.get_jump_table_len()
                                     );
-                                    let i = data.get_jump_point_count();
+                                    let i = data.get_jump_table_len();
                                     data.push_jump_point(Data::Size::zero()).nest_into()?; // this will be updated when conditional branch nod resolves
                                     conditional_stack.push(i);
                                     jump_count += Data::Size::one();

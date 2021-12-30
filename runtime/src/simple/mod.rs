@@ -94,6 +94,39 @@ impl SimpleRuntimeData {
             }
         }
     }
+
+    pub fn set_end_of_constant(&mut self, addr: usize) -> Result<(), String> {
+        self.end_of_constant_data = addr;
+        Ok(())
+    }
+
+    pub fn get_end_of_constant_data(&self) -> usize {
+        self.end_of_constant_data
+    }
+
+    pub fn remove_non_constant_data(&mut self) -> Result<(), String> {
+        self.data = Vec::from(&self.data[..self.end_of_constant_data]);
+
+        Ok(())
+    }
+
+    pub fn add_data(&mut self, data: ExpressionData) -> Result<usize, String> {
+        self.data.push(data);
+        Ok(self.data.len() - 1)
+    }
+
+    pub fn get_jump_path(&self, index: usize) -> Option<usize> {
+        self.jump_path.get(index).cloned()
+    }
+
+    pub fn get_current_instruction(&self) -> Option<(Instruction, Option<usize>)> {
+        self.get_instruction(self.get_instruction_cursor())
+    }
+
+    pub fn advance_instruction_cursor(&mut self) -> Result<(), String> {
+        self.instruction_cursor += 1;
+        Ok(())
+    }
 }
 
 impl GarnishLangRuntimeData for SimpleRuntimeData {
@@ -182,11 +215,6 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.data.len() - 1)
     }
 
-    fn add_data(&mut self, data: ExpressionData) -> Result<usize, Self::Error> {
-        self.data.push(data);
-        Ok(self.data.len() - 1)
-    }
-
     fn add_unit(&mut self) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::unit());
         Ok(self.data.len() - 1)
@@ -199,11 +227,6 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn add_false(&mut self) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::boolean_false());
-        Ok(self.data.len() - 1)
-    }
-
-    fn add_list(&mut self, value: Vec<usize>, associations: Vec<usize>) -> Result<usize, Self::Error> {
-        self.data.push(ExpressionData::list(value, associations));
         Ok(self.data.len() - 1)
     }
 
@@ -318,21 +341,6 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.register.pop()
     }
 
-    fn set_end_of_constant(&mut self, addr: usize) -> Result<(), Self::Error> {
-        self.end_of_constant_data = addr;
-        Ok(())
-    }
-
-    fn get_end_of_constant_data(&self) -> usize {
-        self.end_of_constant_data
-    }
-
-    fn remove_non_constant_data(&mut self) -> Result<(), Self::Error> {
-        self.data = Vec::from(&self.data[..self.end_of_constant_data]);
-
-        Ok(())
-    }
-
     fn get_data_len(&self) -> usize {
         self.data.len()
     }
@@ -354,7 +362,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.values.get_mut(index)
     }
 
-    fn get_value_count(&self) -> usize {
+    fn get_value_stack_len(&self) -> usize {
         self.values.len()
     }
 
@@ -378,15 +386,6 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn set_instruction_cursor(&mut self, index: usize) -> Result<(), Self::Error> {
         self.instruction_cursor = index;
         Ok(())
-    }
-
-    fn advance_instruction_cursor(&mut self) -> Result<(), Self::Error> {
-        self.instruction_cursor += 1;
-        Ok(())
-    }
-
-    fn get_current_instruction(&self) -> Option<(Instruction, Option<Self::Size>)> {
-        self.get_instruction(self.get_instruction_cursor())
     }
 
     fn get_instruction_cursor(&self) -> usize {
@@ -414,7 +413,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.expression_table.get(index).cloned()
     }
 
-    fn get_jump_point_count(&self) -> usize {
+    fn get_jump_table_len(&self) -> usize {
         self.expression_table.len()
     }
 
@@ -425,10 +424,6 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn pop_jump_path(&mut self) -> Option<usize> {
         self.jump_path.pop()
-    }
-
-    fn get_jump_path(&self, index: usize) -> Option<usize> {
-        self.jump_path.get(index).cloned()
     }
 
     fn get_jump_point_mut(&mut self, index: usize) -> Option<&mut usize> {

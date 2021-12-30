@@ -1,4 +1,4 @@
-use crate::{ExpressionData, ExpressionDataType, Instruction};
+use crate::{ExpressionDataType, Instruction};
 use std::fmt::{Debug, Display};
 use std::ops::{Add, AddAssign, Sub};
 use std::str::FromStr;
@@ -14,43 +14,40 @@ pub trait GarnishLangRuntimeData {
     type Integer: Display + Debug + Add<Output = Self::Integer> + PartialEq + PartialOrd + TypeConstants + Copy + FromStr;
     type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
 
-    fn set_end_of_constant(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
-    fn get_end_of_constant_data(&self) -> Self::Size;
-
-    fn remove_non_constant_data(&mut self) -> Result<(), Self::Error>;
-
     fn get_data_len(&self) -> Self::Size;
 
+    fn get_value_stack_len(&self) -> Self::Size;
     fn push_value_stack(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
     fn pop_value_stack(&mut self) -> Option<Self::Size>;
     fn get_value(&self, addr: Self::Size) -> Option<Self::Size>;
     fn get_value_mut(&mut self, addr: Self::Size) -> Option<&mut Self::Size>;
-    fn get_value_count(&self) -> Self::Size;
     fn get_current_value(&self) -> Option<Self::Size>;
     fn get_current_value_mut(&mut self) -> Option<&mut Self::Size>;
 
     fn get_data_type(&self, addr: Self::Size) -> Result<ExpressionDataType, Self::Error>;
+
     fn get_integer(&self, addr: Self::Size) -> Result<Self::Integer, Self::Error>;
     fn get_reference(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_symbol(&self, addr: Self::Size) -> Result<Self::Symbol, Self::Error>;
     fn get_expression(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_external(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_pair(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
+
     fn get_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Integer) -> Result<Self::Size, Self::Error>;
     fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Integer) -> Result<Self::Size, Self::Error>;
+
+    fn add_unit(&mut self) -> Result<Self::Size, Self::Error>;
+    fn add_true(&mut self) -> Result<Self::Size, Self::Error>;
+    fn add_false(&mut self) -> Result<Self::Size, Self::Error>;
 
     fn add_integer(&mut self, value: Self::Integer) -> Result<Self::Size, Self::Error>;
     fn add_symbol(&mut self, value: &str) -> Result<Self::Size, Self::Error>;
     fn add_expression(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_external(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_pair(&mut self, value: (Self::Size, Self::Size)) -> Result<Self::Size, Self::Error>;
-    fn add_unit(&mut self) -> Result<Self::Size, Self::Error>;
-    fn add_true(&mut self) -> Result<Self::Size, Self::Error>;
-    fn add_false(&mut self) -> Result<Self::Size, Self::Error>;
 
-    fn add_list(&mut self, value: Vec<Self::Size>, associations: Vec<Self::Size>) -> Result<Self::Size, Self::Error>;
     fn start_list(&mut self, len: Self::Size) -> Result<(), Self::Error>;
     fn add_to_list(&mut self, addr: Self::Size, is_associative: bool) -> Result<(), Self::Error>;
     fn end_list(&mut self) -> Result<Self::Size, Self::Error>;
@@ -59,28 +56,23 @@ pub trait GarnishLangRuntimeData {
     fn push_register(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
     fn pop_register(&mut self) -> Option<Self::Size>;
 
+    fn get_instruction_len(&self) -> Self::Size;
     fn push_instruction(&mut self, instruction: Instruction, data: Option<Self::Size>) -> Result<(), Self::Error>;
     fn get_instruction(&self, addr: Self::Size) -> Option<(Instruction, Option<Self::Size>)>;
-    fn set_instruction_cursor(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
-    fn advance_instruction_cursor(&mut self) -> Result<(), Self::Error>;
-    fn get_current_instruction(&self) -> Option<(Instruction, Option<Self::Size>)>;
-    fn get_instruction_cursor(&self) -> Self::Size;
-    fn get_instruction_len(&self) -> Self::Size;
 
+    fn get_instruction_cursor(&self) -> Self::Size;
+    fn set_instruction_cursor(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
+
+    fn get_jump_table_len(&self) -> Self::Size;
     fn push_jump_point(&mut self, index: Self::Size) -> Result<(), Self::Error>;
     fn get_jump_point(&self, index: Self::Size) -> Option<Self::Size>;
     fn get_jump_point_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size>;
-    fn get_jump_point_count(&self) -> Self::Size;
 
     fn push_jump_path(&mut self, index: Self::Size) -> Result<(), Self::Error>;
     fn pop_jump_path(&mut self) -> Option<Self::Size>;
-    fn get_jump_path(&self, index: Self::Size) -> Option<Self::Size>;
 
     // deferred conversions
     fn size_to_integer(from: Self::Size) -> Self::Integer;
-
-    // maybe temporary
-    fn add_data(&mut self, data: ExpressionData) -> Result<Self::Size, Self::Error>;
 }
 
 

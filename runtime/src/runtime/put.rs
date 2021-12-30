@@ -3,11 +3,11 @@ use log::trace;
 
 pub(crate) fn put<Data: GarnishLangRuntimeData>(this: &mut Data, i: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
     trace!("Instruction - Put | Data - {:?}", i);
-    match i >= this.get_end_of_constant_data() {
+    match i >= this.get_data_len() {
         true => Err(error(format!(
-            "Attempting to put reference to {:?} which is out of bounds of constant data that ends at {:?}.",
+            "Attempting to put reference to {:?} which is outside of data bounds {:?}.",
             i,
-            this.get_end_of_constant_data()
+            this.get_data_len()
         ))),
         false => this.push_register(i).nest_into(),
     }
@@ -62,7 +62,7 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
         runtime.add_data(ExpressionData::integer(10)).unwrap();
 
-        let result = runtime.put(0);
+        let result = runtime.put(10);
 
         assert!(result.is_err());
     }
@@ -132,7 +132,7 @@ mod tests {
 
         runtime.update_value().unwrap();
 
-        assert_eq!(runtime.get_value_count(), 1);
+        assert_eq!(runtime.get_value_stack_len(), 1);
         assert_eq!(runtime.get_current_value().unwrap(), 1usize);
         assert_eq!(runtime.get_integer(runtime.get_current_value().unwrap()).unwrap(), 10i32);
     }

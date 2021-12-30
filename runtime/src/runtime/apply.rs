@@ -238,7 +238,7 @@ mod tests {
 
         runtime.reapply(0).unwrap();
 
-        assert_eq!(runtime.get_value_count(), 1);
+        assert_eq!(runtime.get_value_stack_len(), 1);
         assert_eq!(runtime.get_value(0).unwrap(), 4);
         assert_eq!(runtime.get_instruction_cursor(), 3);
         assert_eq!(runtime.get_jump_path(0).unwrap(), 9);
@@ -279,7 +279,7 @@ mod tests {
 
         runtime.reapply(0).unwrap();
 
-        assert_eq!(runtime.get_value_count(), 1);
+        assert_eq!(runtime.get_value_stack_len(), 1);
         assert_eq!(runtime.get_value(0).unwrap(), 2);
         assert_eq!(runtime.get_instruction_cursor(), 8);
         assert_eq!(runtime.get_jump_path(0).unwrap(), 9);

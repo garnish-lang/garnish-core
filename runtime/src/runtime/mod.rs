@@ -125,7 +125,7 @@ where
         match self.get_instruction_cursor() + Data::Size::one() >= self.get_instruction_len() {
             true => Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::End)),
             false => {
-                self.advance_instruction_cursor().nest_into()?;
+                self.set_instruction_cursor(self.get_instruction_cursor() + Data::Size::one()).nest_into()?;
                 Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::Running))
             }
         }
@@ -237,7 +237,7 @@ where
             None => {
                 // no more jumps, this should be the end of the entire execution
                 let r = next_ref(self)?;
-                self.advance_instruction_cursor().nest_into()?;
+                self.set_instruction_cursor(self.get_instruction_cursor() + Data::Size::one()).nest_into()?;
                 self.push_value_stack(r).nest_into()?;
             }
             Some(jump_point) => {
