@@ -1,13 +1,15 @@
 use log::trace;
 
-use crate::{next_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto};
+use crate::{next_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto, TypeConstants};
 
-pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: usize) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
     trace!("Instruction - Make List | Length - {:?}", len);
 
     this.start_list(len).nest_into()?;
 
-    for _ in 0..len {
+    // look into getting this to work with a range value
+    let mut count = Data::Size::zero();
+    while count < len {
         next_ref(this).and_then(|r| {
             this.get_data_type(r)
                 .and_then(|t| match t {
@@ -21,7 +23,9 @@ pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: usiz
                 })
                 .and_then(|is_associative| this.add_to_list(r, is_associative))
                 .nest_into()
-        })?
+        })?;
+
+        count += Data::Size::one();
     }
 
     this.end_list().and_then(|r| this.push_register(r)).nest_into()
@@ -60,7 +64,7 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
     next_ref(this).and_then(|r| match this.get_data_type(r).nest_into()? {
         ExpressionDataType::List => this
             .get_list_len(r)
-            .and_then(|len| this.add_integer(len as i64).and_then(|r| this.push_register(r)))
+            .and_then(|len| this.add_integer(Data::size_to_integer(len)).and_then(|r| this.push_register(r)))
             .nest_into(),
         _ => push_unit(this),
     })
@@ -68,9 +72,9 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
 
 pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
     this: &mut Data,
-    sym: usize,
-    list: usize,
-) -> GarnishLangRuntimeResult<Data::Error, Option<usize>> {
+    sym: Data::Size,
+    list: Data::Size,
+) -> GarnishLangRuntimeResult<Data::Error, Option<Data::Size>> {
     let sym_ref = sym;
     let list_ref = list;
 
@@ -83,11 +87,11 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
         (ExpressionDataType::List, ExpressionDataType::Integer) => {
             let i = this.get_integer(sym).nest_into()?;
 
-            if i < 0 {
+            if i < Data::Integer::zero() {
                 Ok(None)
             } else {
-                let i = i as usize;
-                if i >= this.get_list_len(list).nest_into()? {
+                let i = i;
+                if i >= Data::size_to_integer(this.get_list_len(list).nest_into()?) {
                     Ok(None)
                 } else {
                     Ok(Some(this.get_list_item(list, i).nest_into()?))

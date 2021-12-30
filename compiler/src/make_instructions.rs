@@ -65,19 +65,22 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
     }
 }
 
-fn resolve_node<T: GarnishLangRuntimeData>(
+fn resolve_node<Data: GarnishLangRuntimeData>(
     node: &ParseNode,
-    data: &mut T,
-    list_count: Option<&usize>,
-    current_jump_index: usize,
-    nearest_expression_point: usize,
-) -> GarnishLangCompilerResult<(), T::Error> {
+    data: &mut Data,
+    list_count: Option<&Data::Size>,
+    current_jump_index: Data::Size,
+    nearest_expression_point: Data::Size,
+) -> GarnishLangCompilerResult<(), Data::Error> {
     match node.get_definition() {
         Definition::Number => {
             data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
 
-            data.add_integer(match node.get_lex_token().get_text().parse::<i64>() {
-                Err(e) => Err(GarnishLangCompilerError::new(e.to_string()))?,
+            data.add_integer(match node.get_lex_token().get_text().parse::<Data::Integer>() {
+                Err(_) => Err(GarnishLangCompilerError::new(format!(
+                    "Could not parse value from integer string {:?}",
+                    node.get_lex_token().get_text()
+                )))?,
                 Ok(i) => i,
             })
             .nest_into()?;
@@ -95,7 +98,7 @@ fn resolve_node<T: GarnishLangRuntimeData>(
         }
         Definition::Unit => {
             // all unit literals will use unit used in the zero element slot of data
-            data.push_instruction(Instruction::Put, Some(0)).nest_into()?;
+            data.push_instruction(Instruction::Put, Some(Data::Size::zero())).nest_into()?;
         }
         Definition::Symbol => {
             data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
@@ -177,10 +180,10 @@ fn resolve_node<T: GarnishLangRuntimeData>(
     Ok(())
 }
 
-pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<ParseNode>, data: &mut T) -> GarnishLangCompilerResult<(), T::Error> {
+pub fn instructions_from_ast<Data: GarnishLangRuntimeData>(root: usize, nodes: Vec<ParseNode>, data: &mut Data) -> GarnishLangCompilerResult<(), Data::Error> {
     // since we will be popping and pushing values from root_stack
     // need to keep separate count of total so expression values put in data are accurate
-    let mut jump_count = data.get_jump_point_count() + 1;
+    let mut jump_count = data.get_jump_point_count() + Data::Size::one();
 
     // tuple of (root node, last instruction of this node, nearest expression jump point)
     let mut root_stack = vec![(root, Instruction::EndExpression, None, data.get_jump_point_count())];
@@ -193,13 +196,13 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
         trace!("Makeing instructions for tree starting at index {:?}", root_index);
 
         let mut conditional_stack = vec![];
-        let mut list_counts: Vec<usize> = vec![];
+        let mut list_counts: Vec<Data::Size> = vec![];
         let mut stack = vec![ResolveNodeInfo::new(Some(root_index), Definition::Drop)];
 
         // push start of this expression to jump table
         let jump_point = data.get_instruction_len();
         let jump_index = data.get_jump_point_count();
-        data.push_jump_point(0).nest_into()?; // updated down below
+        data.push_jump_point(Data::Size::zero()).nest_into()?; // updated down below
 
         // limit, maximum times a node is visited is 3
         // so limit to 3 times node count should allow for more than enough
@@ -257,7 +260,7 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                                 // if parent isn't a list, we start a new list count
                                 if we_are_list_root {
                                     trace!("Starting new list count");
-                                    list_counts.push(0);
+                                    list_counts.push(Data::Size::zero());
                                 }
 
                                 // on first visit to a conditional branch node
@@ -268,9 +271,9 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                                         data.get_jump_point_count()
                                     );
                                     let i = data.get_jump_point_count();
-                                    data.push_jump_point(0).nest_into()?; // this will be updated when conditional branch nod resolves
+                                    data.push_jump_point(Data::Size::zero()).nest_into()?; // this will be updated when conditional branch nod resolves
                                     conditional_stack.push(i);
-                                    jump_count += 1;
+                                    jump_count += Data::Size::one();
                                 }
 
                                 trace!("Pushing first child {:?}", first_index);
@@ -289,7 +292,7 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                                 if node.get_definition() == Definition::Subexpression {
                                     trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
 
-                                    resolve_node(node, data, None, 0, nearest_expression_point)?;
+                                    resolve_node(node, data, None, Data::Size::zero(), nearest_expression_point)?;
                                     resolve_node_info.resolved = true;
                                 }
 
@@ -390,7 +393,7 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                                     }
 
                                     // up root count as well
-                                    jump_count += 1;
+                                    jump_count += Data::Size::one();
                                 }
 
                                 // If this node's parent is a list
@@ -399,7 +402,7 @@ pub fn instructions_from_ast<T: GarnishLangRuntimeData>(root: usize, nodes: Vec<
                                     match list_counts.last_mut() {
                                         None => Err(GarnishLangCompilerError::new(format!("Child of list node has no count add to.")))?,
                                         Some(count) => {
-                                            *count += 1;
+                                            *count += Data::Size::one();
                                             trace!("Added to current list count. Current count is at {:?}", count);
                                         }
                                     }

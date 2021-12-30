@@ -32,7 +32,7 @@ impl ExpressionData {
         ExpressionData::new(ExpressionDataType::False, vec![])
     }
 
-    pub fn integer(i: i64) -> ExpressionData {
+    pub fn integer(i: i32) -> ExpressionData {
         ExpressionData::new(ExpressionDataType::Integer, i.to_le_bytes().to_vec())
     }
 
@@ -97,9 +97,9 @@ impl ExpressionData {
         }
     }
 
-    pub fn as_integer(&self) -> Result<i64, String> {
-        let (bytes, _) = self.bytes.split_at(std::mem::size_of::<i64>());
-        Ok(i64::from_le_bytes(match bytes.try_into() {
+    pub fn as_integer(&self) -> Result<i32, String> {
+        let (bytes, _) = self.bytes.split_at(std::mem::size_of::<i32>());
+        Ok(i32::from_le_bytes(match bytes.try_into() {
             Ok(v) => v,
             Err(e) => Result::Err(e.to_string())?,
         }))
@@ -224,7 +224,7 @@ mod tests {
         let d = ExpressionData::integer(1234567890);
 
         assert_eq!(d.data_type, ExpressionDataType::Integer);
-        assert_eq!(d.bytes, 1234567890i64.to_le_bytes());
+        assert_eq!(d.bytes, 1234567890i32.to_le_bytes());
     }
 
     #[test]

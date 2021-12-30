@@ -1,5 +1,5 @@
 use crate::runtime::utilities::*;
-use crate::{error, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto};
+use crate::{error, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto, TypeConstants};
 use log::trace;
 
 use super::context::GarnishLangRuntimeContext;
@@ -11,7 +11,7 @@ pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<D
     apply_internal(this, context)
 }
 
-pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: usize) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
     trace!("Instruction - Reapply | Data - {:?}", index);
 
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
@@ -22,7 +22,7 @@ pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: usiz
         _ => {
             let point = this.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}", index)))?;
 
-            this.set_instruction_cursor(point - 1).nest_into()?;
+            this.set_instruction_cursor(point - Data::Size::one()).nest_into()?;
             this.pop_value_stack()
                 .ok_or(error(format!("Failed to pop input during reapply operation.")))?;
             this.push_value_stack(right_addr).nest_into()
@@ -57,7 +57,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             // Expression stores index of expression table, look up actual instruction index
 
             this.push_jump_path(this.get_instruction_cursor()).nest_into()?;
-            this.set_instruction_cursor(next_instruction - 1).nest_into()?;
+            this.set_instruction_cursor(next_instruction - Data::Size::one()).nest_into()?;
             this.push_value_stack(right_addr).nest_into()
         }
         ExpressionDataType::External => {

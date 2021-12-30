@@ -13,9 +13,9 @@ pub mod instruction;
 pub mod result;
 pub mod types;
 
-pub use crate::runtime::utilities::*;
+pub(crate) use utilities::*;
 pub use context::{EmptyContext, GarnishLangRuntimeContext};
-pub use data::GarnishLangRuntimeData;
+pub use data::{GarnishLangRuntimeData, TypeConstants};
 
 use log::trace;
 
@@ -36,19 +36,19 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     ) -> GarnishLangRuntimeResult<Data::Error, GarnishLangRuntimeInfo>;
 
     fn apply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error>;
-    fn reapply(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error>;
+    fn reapply(&mut self, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error>;
     fn empty_apply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error>;
 
     fn perform_addition(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
 
     fn equality_comparison(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
 
-    fn jump(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error>;
-    fn jump_if_true(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error>;
-    fn jump_if_false(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error>;
+    fn jump(&mut self, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error>;
+    fn jump_if_true(&mut self, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error>;
+    fn jump_if_false(&mut self, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error>;
     fn end_expression(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
 
-    fn make_list(&mut self, len: usize) -> GarnishLangRuntimeResult<Data::Error>;
+    fn make_list(&mut self, len: Data::Size) -> GarnishLangRuntimeResult<Data::Error>;
     fn access(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
     fn access_left_internal(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
     fn access_right_internal(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
@@ -56,7 +56,7 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
 
     fn make_pair(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
 
-    fn put(&mut self, i: usize) -> GarnishLangRuntimeResult<Data::Error>;
+    fn put(&mut self, i: Data::Size) -> GarnishLangRuntimeResult<Data::Error>;
     fn put_value(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
     fn push_value(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
     fn update_value(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
@@ -77,41 +77,41 @@ where
         &mut self,
         context: Option<&mut T>,
     ) -> GarnishLangRuntimeResult<Data::Error, GarnishLangRuntimeInfo> {
-        let instruction_data = self
+        let (instruction, data) = self
             .get_instruction(self.get_instruction_cursor())
             .ok_or(error(format!("Attempted to execute instruction when no instructions remain.")))?;
-        match instruction_data.instruction {
+        match instruction {
             Instruction::PerformAddition => self.perform_addition()?,
             Instruction::PutValue => self.put_value()?,
             Instruction::PushValue => self.push_value()?,
             Instruction::UpdateValue => self.update_value()?,
             Instruction::EndExpression => self.end_expression()?,
             Instruction::EqualityComparison => self.equality_comparison()?,
-            Instruction::JumpIfTrue => match instruction_data.data {
+            Instruction::JumpIfTrue => match data {
                 None => Err(error(format!("No address given with jump if true instruction.")))?,
                 Some(i) => self.jump_if_true(i)?,
             },
-            Instruction::JumpIfFalse => match instruction_data.data {
+            Instruction::JumpIfFalse => match data {
                 None => Err(error(format!("No address given with jump if false instruction.")))?,
                 Some(i) => self.jump_if_false(i)?,
             },
-            Instruction::Put => match instruction_data.data {
+            Instruction::Put => match data {
                 None => Err(error(format!("No address given with put instruction.")))?,
                 Some(i) => self.put(i)?,
             },
             Instruction::EndExecution => self.end_execution()?,
-            Instruction::JumpTo => match instruction_data.data {
+            Instruction::JumpTo => match data {
                 None => Err(error(format!("No address given with jump instruction.")))?,
                 Some(i) => self.jump(i)?,
             },
             Instruction::MakePair => self.make_pair()?,
-            Instruction::MakeList => match instruction_data.data {
+            Instruction::MakeList => match data {
                 None => Err(error(format!("No address given with make list instruction.")))?,
                 Some(i) => self.make_list(i)?,
             },
             Instruction::Apply => self.apply(context)?,
             Instruction::EmptyApply => self.empty_apply(context)?,
-            Instruction::Reapply => match instruction_data.data {
+            Instruction::Reapply => match data {
                 None => Err(error(format!("No address given with reapply instruction.")))?,
                 Some(i) => self.reapply(i)?,
             },
@@ -122,7 +122,7 @@ where
             Instruction::AccessLengthInternal => self.access_length_internal()?,
         };
 
-        match self.get_instruction_cursor() + 1 >= self.get_instruction_len() {
+        match self.get_instruction_cursor() + Data::Size::one() >= self.get_instruction_len() {
             true => Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::End)),
             false => {
                 self.advance_instruction_cursor().nest_into()?;
@@ -137,7 +137,7 @@ where
         apply(self, context)
     }
 
-    fn reapply(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error> {
+    fn reapply(&mut self, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
         reapply(self, index)
     }
 
@@ -179,16 +179,16 @@ where
     // Jumps
     //
 
-    fn jump(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error> {
+    fn jump(&mut self, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Jump | Data - {:?}", index);
 
-        self.set_instruction_cursor(self.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}", index)))? - 1)
+        self.set_instruction_cursor(self.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}", index)))? - Data::Size::one())
             .nest_into()
     }
 
-    fn jump_if_true(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error> {
+    fn jump_if_true(&mut self, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Execute Expression If True | Data - {:?}", index);
-        let point = self.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}.", index)))? - 1;
+        let point = self.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}.", index)))? - Data::Size::one();
         let d = next_ref(self)?;
 
         match self.get_data_type(d).nest_into()? {
@@ -196,12 +196,12 @@ where
                 trace!(
                     "Not jumping from value of type {:?} with addr {:?}",
                     self.get_data_type(d).nest_into()?,
-                    self.get_data_len() - 1
+                    self.get_data_len() - Data::Size::one()
                 );
             }
             // all other values are considered true
             t => {
-                trace!("Jumping from value of type {:?} with addr {:?}", t, self.get_data_len() - 1);
+                trace!("Jumping from value of type {:?} with addr {:?}", t, self.get_data_len() - Data::Size::one());
                 self.set_instruction_cursor(point).nest_into()?
             }
         };
@@ -209,9 +209,9 @@ where
         Ok(())
     }
 
-    fn jump_if_false(&mut self, index: usize) -> GarnishLangRuntimeResult<Data::Error> {
+    fn jump_if_false(&mut self, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
         trace!("Instruction - Execute Expression If False | Data - {:?}", index);
-        let point = self.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}.", index)))? - 1;
+        let point = self.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}.", index)))? - Data::Size::one();
         let d = next_ref(self)?;
 
         match self.get_data_type(d).nest_into()? {
@@ -219,12 +219,12 @@ where
                 trace!(
                     "Jumping from value of type {:?} with addr {:?}",
                     self.get_data_type(d).nest_into()?,
-                    self.get_data_len() - 1
+                    self.get_data_len() - Data::Size::one()
                 );
                 self.set_instruction_cursor(point).nest_into()?
             }
             t => {
-                trace!("Not jumping from value of type {:?} with addr {:?}", t, self.get_data_len() - 1);
+                trace!("Not jumping from value of type {:?} with addr {:?}", t, self.get_data_len() - Data::Size::one());
             }
         };
 
@@ -252,7 +252,7 @@ where
     // List
     //
 
-    fn make_list(&mut self, len: usize) -> GarnishLangRuntimeResult<Data::Error> {
+    fn make_list(&mut self, len: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
         make_list(self, len)
     }
 
@@ -288,7 +288,7 @@ where
     // Put
     //
 
-    fn put(&mut self, i: usize) -> GarnishLangRuntimeResult<Data::Error> {
+    fn put(&mut self, i: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
         put(self, i)
     }
 
@@ -329,7 +329,7 @@ mod tests {
     fn default_data_for_new() {
         let runtime = SimpleRuntimeData::new();
 
-        assert_eq!(runtime.get_instruction(0).unwrap().instruction, Instruction::EndExecution);
+        assert_eq!(runtime.get_instruction(0).unwrap().0, Instruction::EndExecution);
         assert_eq!(runtime.get_data_len(), 1);
         assert_eq!(runtime.get_data_type(0).unwrap(), ExpressionDataType::Unit);
     }
@@ -392,7 +392,7 @@ mod tests {
 
         runtime.push_instruction(Instruction::Put, None).unwrap();
 
-        assert_eq!(runtime.get_instruction(1).unwrap().get_instruction(), Instruction::Put);
+        assert_eq!(runtime.get_instruction(1).unwrap().0, Instruction::Put);
     }
 
     #[test]
@@ -403,7 +403,7 @@ mod tests {
 
         runtime.set_instruction_cursor(1).unwrap();
 
-        assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::Put);
+        assert_eq!(runtime.get_current_instruction().unwrap().0, Instruction::Put);
     }
 
     #[test]
@@ -416,7 +416,7 @@ mod tests {
 
         runtime.set_instruction_cursor(3).unwrap();
 
-        assert_eq!(runtime.get_current_instruction().unwrap().get_instruction(), Instruction::PerformAddition);
+        assert_eq!(runtime.get_current_instruction().unwrap().0, Instruction::PerformAddition);
     }
 
     #[test]

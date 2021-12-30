@@ -2,14 +2,14 @@
 
 use crate::{error, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto};
 
-pub(crate) fn next_ref<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error, usize> {
+pub(crate) fn next_ref<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error, Data::Size> {
     match this.pop_register() {
         None => Err(error(format!("No references in register.")))?,
         Some(i) => Ok(i),
     }
 }
 
-pub(crate) fn next_two_raw_ref<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error, (usize, usize)> {
+pub(crate) fn next_two_raw_ref<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error, (Data::Size, Data::Size)> {
     let first_ref = next_ref(this)?;
     let second_ref = next_ref(this)?;
 
@@ -18,15 +18,15 @@ pub(crate) fn next_two_raw_ref<Data: GarnishLangRuntimeData>(this: &mut Data) ->
 
 // push utilities
 
-pub fn push_unit<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn push_unit<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
     this.add_unit().and_then(|v| this.push_register(v)).nest_into()
 }
 
-pub fn push_integer<Data: GarnishLangRuntimeData>(this: &mut Data, value: i64) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn push_integer<Data: GarnishLangRuntimeData>(this: &mut Data, value: Data::Integer) -> GarnishLangRuntimeResult<Data::Error> {
     this.add_integer(value).and_then(|v| this.push_register(v)).nest_into()
 }
 
-pub fn push_boolean<Data: GarnishLangRuntimeData>(this: &mut Data, value: bool) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn push_boolean<Data: GarnishLangRuntimeData>(this: &mut Data, value: bool) -> GarnishLangRuntimeResult<Data::Error> {
     match value {
         true => this.add_true(),
         false => this.add_false(),
@@ -35,11 +35,7 @@ pub fn push_boolean<Data: GarnishLangRuntimeData>(this: &mut Data, value: bool) 
     .nest_into()
 }
 
-pub fn push_list<Data: GarnishLangRuntimeData>(this: &mut Data, list: Vec<usize>, associations: Vec<usize>) -> GarnishLangRuntimeResult<Data::Error> {
-    this.add_list(list, associations).and_then(|v| this.push_register(v)).nest_into()
-}
-
-pub fn push_pair<Data: GarnishLangRuntimeData>(this: &mut Data, left: usize, right: usize) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn push_pair<Data: GarnishLangRuntimeData>(this: &mut Data, left: Data::Size, right: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
     this.add_pair((left, right)).and_then(|v| this.push_register(v)).nest_into()
 }
 

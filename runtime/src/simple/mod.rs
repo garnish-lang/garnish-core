@@ -98,12 +98,15 @@ impl SimpleRuntimeData {
 
 impl GarnishLangRuntimeData for SimpleRuntimeData {
     type Error = String;
+    type Integer = i32;
+    type Symbol = u64;
+    type Size = usize;
 
     fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error> {
         Ok(self.get(index)?.get_type())
     }
 
-    fn get_integer(&self, index: usize) -> Result<i64, Self::Error> {
+    fn get_integer(&self, index: usize) -> Result<i32, Self::Error> {
         self.get(index)?.as_integer()
     }
 
@@ -131,8 +134,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.get(index)?.as_list()?.0.len())
     }
 
-    fn get_list_item(&self, list_index: usize, item_index: usize) -> Result<usize, Self::Error> {
-        match self.get(list_index)?.as_list()?.0.get(item_index) {
+    fn get_list_item(&self, list_index: usize, item_index: i32) -> Result<usize, Self::Error> {
+        match self.get(list_index)?.as_list()?.0.get(item_index as usize) {
             None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index)),
             Some(v) => Ok(*v),
         }
@@ -142,14 +145,14 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.get(index)?.as_list()?.1.len())
     }
 
-    fn get_list_association(&self, list_index: usize, item_index: usize) -> Result<usize, Self::Error> {
-        match self.get(list_index)?.as_list()?.1.get(item_index) {
+    fn get_list_association(&self, list_index: usize, item_index: i32) -> Result<usize, Self::Error> {
+        match self.get(list_index)?.as_list()?.1.get(item_index as usize) {
             None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index)),
             Some(v) => Ok(*v),
         }
     }
 
-    fn add_integer(&mut self, value: i64) -> Result<usize, Self::Error> {
+    fn add_integer(&mut self, value: i32) -> Result<usize, Self::Error> {
         self.data.push(ExpressionData::integer(value));
         Ok(self.data.len() - 1)
     }
@@ -269,7 +272,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
         loop {
             // check to make sure item has same symbol
-            let association_ref = self.get_list_association(list_addr, i)?;
+            let association_ref = self.get_list_association(list_addr, i as i32)?;
 
             // should have symbol on left
             match self.get_data_type(association_ref)? {
@@ -368,8 +371,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(())
     }
 
-    fn get_instruction(&self, index: usize) -> Option<&InstructionData> {
-        self.instructions.get(index)
+    fn get_instruction(&self, index: usize) -> Option<(Instruction, Option<usize>)> {
+        self.instructions.get(index).and_then(|i| Some((i.instruction, i.data)))
     }
 
     fn set_instruction_cursor(&mut self, index: usize) -> Result<(), Self::Error> {
@@ -382,7 +385,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(())
     }
 
-    fn get_current_instruction(&self) -> Option<&InstructionData> {
+    fn get_current_instruction(&self) -> Option<(Instruction, Option<Self::Size>)> {
         self.get_instruction(self.get_instruction_cursor())
     }
 
@@ -430,5 +433,9 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn get_jump_point_mut(&mut self, index: usize) -> Option<&mut usize> {
         self.expression_table.get_mut(index)
+    }
+
+    fn size_to_integer(from: Self::Size) -> Self::Integer {
+        from as Self::Integer
     }
 }

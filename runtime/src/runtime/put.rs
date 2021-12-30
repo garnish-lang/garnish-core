@@ -1,7 +1,7 @@
 use crate::{next_ref, push_unit, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto, error};
 use log::trace;
 
-pub(crate) fn put<Data: GarnishLangRuntimeData>(this: &mut Data, i: usize) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn put<Data: GarnishLangRuntimeData>(this: &mut Data, i: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
     trace!("Instruction - Put | Data - {:?}", i);
     match i >= this.get_end_of_constant_data() {
         true => Err(error(format!(
@@ -134,7 +134,7 @@ mod tests {
 
         assert_eq!(runtime.get_value_count(), 1);
         assert_eq!(runtime.get_current_value().unwrap(), 1usize);
-        assert_eq!(runtime.get_integer(runtime.get_current_value().unwrap()).unwrap(), 10i64);
+        assert_eq!(runtime.get_integer(runtime.get_current_value().unwrap()).unwrap(), 10i32);
     }
 
     #[test]
