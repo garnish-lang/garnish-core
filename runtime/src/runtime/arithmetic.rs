@@ -70,6 +70,26 @@ mod tests {
     }
 
     #[test]
+    fn addition_with_underflow_is_pair() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.add_data(ExpressionData::integer(-11)).unwrap();
+        runtime.add_data(ExpressionData::integer(i32::MIN)).unwrap();
+
+        runtime.push_register(1).unwrap();
+        runtime.push_register(2).unwrap();
+
+        runtime.perform_addition().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![5]);
+        let (left, right) = runtime.get_pair(5).unwrap();
+        assert_eq!(left, 3);
+        assert_eq!(right, 4);
+        assert_eq!(runtime.get_integer(left).unwrap(), i32::MAX - 10);
+        assert_eq!(runtime.get_data_type(right).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
     fn perform_addition_no_refs_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
