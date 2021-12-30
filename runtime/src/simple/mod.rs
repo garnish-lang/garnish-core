@@ -4,7 +4,7 @@ use std::{collections::HashMap, hash::Hasher};
 
 use crate::{AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, FalseData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeError, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, SimpleDataList, SymbolData, TrueData, UnitData};
 
-pub mod expression_data;
+pub mod data;
 
 #[derive(Debug)]
 pub struct SimpleRuntimeData {
