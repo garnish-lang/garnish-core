@@ -129,7 +129,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     type Size = usize;
 
     fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error> {
-        let i = self.get(index)?;
+        let d = self.get(index)?;
+        let i = &d.data;
         let t = if i.is::<UnitData>() {
             ExpressionDataType::Unit
         } else if i.is::<TrueData>() {

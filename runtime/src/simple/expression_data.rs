@@ -9,10 +9,25 @@ pub trait SimpleData: Any + Debug {
     fn get_type(&self) -> ExpressionDataType;
 }
 
-pub(crate) type AnyData = Box<dyn Any>;
+#[derive(Debug)]
+pub struct AnyData {
+    pub(crate) data: Box<dyn Any>,
+}
+
+impl AnyData {
+    pub(crate) fn new(data: Box<dyn Any>) -> Self {
+        AnyData { data }
+    }
+}
 
 pub(crate) trait AsAnyData {
     fn as_any_data(self) -> AnyData;
+}
+
+impl<T: SimpleData> AsAnyData for T {
+    fn as_any_data(self) -> AnyData {
+        AnyData::new(Box::new(self))
+    }
 }
 
 #[derive(Debug)]
@@ -48,7 +63,7 @@ impl SimpleDataList {
         self.list.len()
     }
 
-    pub fn iter(&self) -> Iter<'_, AnyData>{
+    pub fn iter(&self) -> Iter<'_, AnyData> {
         self.list.iter()
     }
 }
@@ -63,7 +78,7 @@ impl PartialEq<SimpleDataList> for SimpleDataList {
         for i in 0..self.list.len() {
             match (self.list.get(i), other.list.get(i)) {
                 (Some(left), Some(right)) => {
-                    if !data_equal(left, right) {
+                    if !data_equal(&left.data, &right.data) {
                         equal = false;
                         break;
                     }
@@ -76,12 +91,6 @@ impl PartialEq<SimpleDataList> for SimpleDataList {
         }
 
         equal
-    }
-}
-
-impl<T: SimpleData> AsAnyData for T {
-    fn as_any_data(self) -> AnyData {
-        Box::new(self)
     }
 }
 
@@ -98,7 +107,7 @@ pub trait DataCoersion {
 }
 
 fn downcast_result<T: SimpleData + Clone>(b: &AnyData) -> DataCoersionResult<T> {
-    match b.downcast_ref::<T>() {
+    match b.data.downcast_ref::<T>() {
         Some(value) => Ok(value.clone()),
         None => Err(format!("Could not cast from {:?}.", b)),
     }
@@ -620,7 +629,7 @@ mod comparisons {
         let left = IntegerData::from(10).as_any_data();
         let right = IntegerData::from(10).as_any_data();
 
-        assert!(cmp_any::<IntegerData>(&left, &right));
+        assert!(cmp_any::<IntegerData>(&left.data, &right.data));
     }
 
     #[test]
@@ -628,7 +637,7 @@ mod comparisons {
         let left = IntegerData::from(10).as_any_data();
         let right = IntegerData::from(20).as_any_data();
 
-        assert!(!cmp_any::<IntegerData>(&left, &right));
+        assert!(!cmp_any::<IntegerData>(&left.data, &right.data));
     }
 
     #[test]
@@ -636,7 +645,7 @@ mod comparisons {
         let left = IntegerData::from(10).as_any_data();
         let right = UnitData::new().as_any_data();
 
-        assert!(!cmp_any::<IntegerData>(&left, &right));
+        assert!(!cmp_any::<IntegerData>(&left.data, &right.data));
     }
 
     #[test]
@@ -677,7 +686,7 @@ mod comparisons {
         ];
 
         for (left, right, expected_result) in cases {
-            assert_eq!(data_equal(&left, &right), expected_result);
+            assert_eq!(data_equal(&left.data, &right.data), expected_result);
         }
     }
 }
