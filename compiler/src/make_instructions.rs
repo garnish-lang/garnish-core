@@ -89,8 +89,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         Definition::Identifier => {
             let addr = data.add_symbol(node.get_lex_token().get_text()).nest_into()?;
 
-            data.push_instruction(Instruction::Put, Some(addr)).nest_into()?;
-            data.push_instruction(Instruction::Resolve, None).nest_into()?;
+            data.push_instruction(Instruction::Resolve, Some(addr)).nest_into()?;
         }
         Definition::Property => {
             data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
@@ -558,8 +557,7 @@ mod values {
             0,
             vec![(Definition::Identifier, None, None, None, "value", TokenType::Identifier)],
             vec![
-                (Instruction::Put, Some(3)),
-                (Instruction::Resolve, None),
+                (Instruction::Resolve, Some(3)),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(SymbolData::from(symbol_value("value"))),
@@ -624,8 +622,7 @@ mod operations {
                 (Definition::EmptyApply, None, Some(0), None, "~~", TokenType::EmptyApply),
             ],
             vec![
-                (Instruction::Put, Some(3)),
-                (Instruction::Resolve, None),
+                (Instruction::Resolve, Some(3)),
                 (Instruction::EmptyApply, None),
                 (Instruction::EndExpression, None),
             ],
@@ -722,10 +719,8 @@ mod operations {
                 (Definition::Identifier, Some(1), None, None, "sym", TokenType::Identifier),
             ],
             vec![
-                (Instruction::Put, Some(3)),
-                (Instruction::Resolve, None),
-                (Instruction::Put, Some(3)),
-                (Instruction::Resolve, None),
+                (Instruction::Resolve, Some(3)),
+                (Instruction::Resolve, Some(3)),
                 (Instruction::MakePair, None),
                 (Instruction::EndExpression, None),
             ],
@@ -967,8 +962,7 @@ mod lists {
                 (Definition::Property, Some(1), None, None, "property", TokenType::Identifier),
             ],
             vec![
-                (Instruction::Put, Some(3)),
-                (Instruction::Resolve, None),
+                (Instruction::Resolve, Some(3)),
                 (Instruction::Put, Some(4)),
                 (Instruction::Access, None),
                 (Instruction::EndExpression, None),

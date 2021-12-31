@@ -3,31 +3,31 @@ mod arithmetic;
 mod comparisons;
 mod context;
 mod data;
+pub mod instruction;
 mod jumps;
 mod list;
 mod pair;
 mod put;
 mod resolve;
-mod utilities;
-pub mod instruction;
 pub mod result;
 pub mod types;
+mod utilities;
 
-pub(crate) use utilities::*;
 pub use context::{EmptyContext, GarnishLangRuntimeContext};
 pub use data::{GarnishLangRuntimeData, TypeConstants};
+pub(crate) use utilities::*;
 
 use log::trace;
 
-use result::*;
-use instruction::*;
-use apply::*;
-use comparisons::equality_comparison;
-use list::*;
-use types::ExpressionDataType;
-use crate::{GarnishLangRuntimeInfo, NestInto};
 use crate::runtime::arithmetic::perform_addition;
 use crate::runtime::put::{push_input, push_result, put, put_input};
+use crate::{GarnishLangRuntimeInfo, NestInto};
+use apply::*;
+use comparisons::equality_comparison;
+use instruction::*;
+use list::*;
+use result::*;
+use types::ExpressionDataType;
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn end_execution(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
@@ -62,7 +62,7 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn push_value(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
     fn update_value(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
 
-    fn resolve<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error>;
+    fn resolve<T: GarnishLangRuntimeContext<Data>>(&mut self, data: Data::Size, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error>;
 }
 
 impl<Data> GarnishRuntime<Data> for Data
@@ -117,7 +117,10 @@ where
                 Some(i) => self.reapply(i)?,
             },
             Instruction::Access => self.access()?,
-            Instruction::Resolve => self.resolve(context)?,
+            Instruction::Resolve => match data {
+                None => Err(error(format!("No address given with put instruction.")))?,
+                Some(i) => self.resolve(i, context)?,
+            },
             Instruction::AccessLeftInternal => self.access_left_internal()?,
             Instruction::AccessRightInternal => self.access_right_internal()?,
             Instruction::AccessLengthInternal => self.access_length_internal()?,
@@ -126,7 +129,8 @@ where
         match self.get_instruction_cursor() + Data::Size::one() >= self.get_instruction_len() {
             true => Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::End)),
             false => {
-                self.set_instruction_cursor(self.get_instruction_cursor() + Data::Size::one()).nest_into()?;
+                self.set_instruction_cursor(self.get_instruction_cursor() + Data::Size::one())
+                    .nest_into()?;
                 Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::Running))
             }
         }
@@ -188,7 +192,11 @@ where
             }
             // all other values are considered true
             t => {
-                trace!("Jumping from value of type {:?} with addr {:?}", t, self.get_data_len() - Data::Size::one());
+                trace!(
+                    "Jumping from value of type {:?} with addr {:?}",
+                    t,
+                    self.get_data_len() - Data::Size::one()
+                );
                 self.set_instruction_cursor(point).nest_into()?
             }
         };
@@ -211,7 +219,11 @@ where
                 self.set_instruction_cursor(point).nest_into()?
             }
             t => {
-                trace!("Not jumping from value of type {:?} with addr {:?}", t, self.get_data_len() - Data::Size::one());
+                trace!(
+                    "Not jumping from value of type {:?} with addr {:?}",
+                    t,
+                    self.get_data_len() - Data::Size::one()
+                );
             }
         };
 
@@ -224,7 +236,8 @@ where
             None => {
                 // no more jumps, this should be the end of the entire execution
                 let r = next_ref(self)?;
-                self.set_instruction_cursor(self.get_instruction_cursor() + Data::Size::one()).nest_into()?;
+                self.set_instruction_cursor(self.get_instruction_cursor() + Data::Size::one())
+                    .nest_into()?;
                 self.push_value_stack(r).nest_into()?;
             }
             Some(jump_point) => {
@@ -295,15 +308,16 @@ where
     // Resolve
     //
 
-    fn resolve<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
-        resolve::resolve(self, context)
+    fn resolve<T: GarnishLangRuntimeContext<Data>>(&mut self, data: Data::Size, context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
+        resolve::resolve(self, data, context)
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        GarnishLangRuntimeData, Instruction, runtime::{context::EmptyContext, GarnishRuntime}, SimpleRuntimeData,
+        runtime::{context::EmptyContext, GarnishRuntime},
+        GarnishLangRuntimeData, Instruction, SimpleRuntimeData,
     };
 
     #[test]

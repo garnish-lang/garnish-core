@@ -1,20 +1,20 @@
 use log::trace;
 
 use crate::{
-    next_ref, push_unit, runtime::list::get_access_addr, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto,
+     push_unit, runtime::list::get_access_addr, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto,
 };
 
 pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
+    data: Data::Size,
     context: Option<&mut T>,
 ) -> GarnishLangRuntimeResult<Data::Error> {
     trace!("Instruction - Resolve");
-    let addr = next_ref(this)?;
 
     // check input
     match this.get_current_value() {
         None => (),
-        Some(list_ref) => match get_access_addr(this, addr, list_ref)? {
+        Some(list_ref) => match get_access_addr(this, data, list_ref)? {
             None => (),
             Some(i) => {
                 this.push_register(i).nest_into()?;
@@ -26,7 +26,7 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
     // check context
     match context {
         None => (),
-        Some(c) => match c.resolve(this.get_symbol(addr).nest_into()?, this)? {
+        Some(c) => match c.resolve(this.get_symbol(data).nest_into()?, this)? {
             true => return Ok(()), // context resovled end look up
             false => (),           // not resolved fall through
         },
@@ -48,25 +48,6 @@ mod tests {
     };
 
     #[test]
-    fn resolve_no_ref_is_err() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_pair((1, 2)).unwrap();
-        runtime.start_list(1).unwrap();
-        runtime.add_to_list(3, true).unwrap();
-        runtime.end_list().unwrap();
-        runtime.add_symbol("one").unwrap();
-
-        runtime.push_instruction(Instruction::Resolve, None).unwrap();
-
-        let result = runtime.resolve::<EmptyContext>(None);
-
-        assert!(result.is_err());
-    }
-
-    #[test]
     fn resolve_from_input() {
         let mut runtime = SimpleRuntimeData::new();
 
@@ -80,11 +61,9 @@ mod tests {
 
         runtime.push_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.push_register(i5).unwrap();
-
         runtime.push_value_stack(i4).unwrap();
 
-        runtime.resolve::<EmptyContext>(None).unwrap();
+        runtime.resolve::<EmptyContext>(i5, None).unwrap();
 
         assert_eq!(runtime.get_register().get(0).unwrap(), &i2);
     }
@@ -93,19 +72,17 @@ mod tests {
     fn resolve_not_found_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_pair((1, 2)).unwrap();
+        let i1 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
-        runtime.add_to_list(3, true).unwrap();
-        runtime.end_list().unwrap();
-        runtime.add_symbol("two").unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        let _i4 = runtime.end_list().unwrap();
+        let i5 = runtime.add_symbol("two").unwrap();
 
         runtime.push_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.push_register(5).unwrap();
-
-        runtime.resolve::<EmptyContext>(None).unwrap();
+        runtime.resolve::<EmptyContext>(i5, None).unwrap();
 
         assert_eq!(runtime.get_register().get(0).unwrap(), &0);
     }
@@ -118,8 +95,6 @@ mod tests {
         let start = runtime.get_data_len();
 
         runtime.push_instruction(Instruction::Resolve, None).unwrap();
-
-        runtime.push_register(i1).unwrap();
 
         struct MyContext {}
 
@@ -138,7 +113,7 @@ mod tests {
 
         let mut context = MyContext {};
 
-        runtime.resolve(Some(&mut context)).unwrap();
+        runtime.resolve(i1, Some(&mut context)).unwrap();
 
         assert_eq!(runtime.get_register().get(0).unwrap(), &start);
     }
