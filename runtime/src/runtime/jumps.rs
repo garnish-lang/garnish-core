@@ -1,3 +1,85 @@
+use log::trace;
+
+use crate::{error, next_ref, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto, TypeConstants};
+
+pub(crate) fn jump<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
+    trace!("Instruction - Jump | Data - {:?}", index);
+
+    this.set_instruction_cursor(this.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}", index)))? - Data::Size::one())
+        .nest_into()
+}
+
+pub(crate) fn jump_if_true<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
+    trace!("Instruction - Execute Expression If True | Data - {:?}", index);
+    let point = this.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}.", index)))? - Data::Size::one();
+    let d = next_ref(this)?;
+
+    match this.get_data_type(d).nest_into()? {
+        ExpressionDataType::False | ExpressionDataType::Unit => {
+            trace!(
+                "Not jumping from value of type {:?} with addr {:?}",
+                this.get_data_type(d).nest_into()?,
+                this.get_data_len() - Data::Size::one()
+            );
+        }
+        // all other values are considered true
+        t => {
+            trace!(
+                "Jumping from value of type {:?} with addr {:?}",
+                t,
+                this.get_data_len() - Data::Size::one()
+            );
+            this.set_instruction_cursor(point).nest_into()?
+        }
+    };
+
+    Ok(())
+}
+
+pub(crate) fn jump_if_false<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
+    trace!("Instruction - Execute Expression If False | Data - {:?}", index);
+    let point = this.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}.", index)))? - Data::Size::one();
+    let d = next_ref(this)?;
+
+    match this.get_data_type(d).nest_into()? {
+        ExpressionDataType::False | ExpressionDataType::Unit => {
+            trace!(
+                "Jumping from value of type {:?} with addr {:?}",
+                this.get_data_type(d).nest_into()?,
+                this.get_data_len() - Data::Size::one()
+            );
+            this.set_instruction_cursor(point).nest_into()?
+        }
+        t => {
+            trace!(
+                "Not jumping from value of type {:?} with addr {:?}",
+                t,
+                this.get_data_len() - Data::Size::one()
+            );
+        }
+    };
+
+    Ok(())
+}
+
+pub(crate) fn end_expression<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+    trace!("Instruction - End Expression");
+    match this.pop_jump_path() {
+        None => {
+            // no more jumps, this should be the end of the entire execution
+            let r = next_ref(this)?;
+            this.set_instruction_cursor(this.get_instruction_cursor() + Data::Size::one())
+                .nest_into()?;
+            this.push_value_stack(r).nest_into()?;
+        }
+        Some(jump_point) => {
+            this.set_instruction_cursor(jump_point).nest_into()?;
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};

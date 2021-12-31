@@ -27,7 +27,8 @@ use comparisons::equality_comparison;
 use instruction::*;
 use list::*;
 use result::*;
-use types::ExpressionDataType;
+use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
+use crate::runtime::pair::make_pair;
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn end_execution(&mut self) -> GarnishLangRuntimeResult<Data::Error>;
@@ -171,81 +172,19 @@ where
     //
 
     fn jump(&mut self, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Jump | Data - {:?}", index);
-
-        self.set_instruction_cursor(self.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}", index)))? - Data::Size::one())
-            .nest_into()
+        jump(self, index)
     }
 
     fn jump_if_true(&mut self, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Execute Expression If True | Data - {:?}", index);
-        let point = self.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}.", index)))? - Data::Size::one();
-        let d = next_ref(self)?;
-
-        match self.get_data_type(d).nest_into()? {
-            ExpressionDataType::False | ExpressionDataType::Unit => {
-                trace!(
-                    "Not jumping from value of type {:?} with addr {:?}",
-                    self.get_data_type(d).nest_into()?,
-                    self.get_data_len() - Data::Size::one()
-                );
-            }
-            // all other values are considered true
-            t => {
-                trace!(
-                    "Jumping from value of type {:?} with addr {:?}",
-                    t,
-                    self.get_data_len() - Data::Size::one()
-                );
-                self.set_instruction_cursor(point).nest_into()?
-            }
-        };
-
-        Ok(())
+        jump_if_true(self, index)
     }
 
     fn jump_if_false(&mut self, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Execute Expression If False | Data - {:?}", index);
-        let point = self.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}.", index)))? - Data::Size::one();
-        let d = next_ref(self)?;
-
-        match self.get_data_type(d).nest_into()? {
-            ExpressionDataType::False | ExpressionDataType::Unit => {
-                trace!(
-                    "Jumping from value of type {:?} with addr {:?}",
-                    self.get_data_type(d).nest_into()?,
-                    self.get_data_len() - Data::Size::one()
-                );
-                self.set_instruction_cursor(point).nest_into()?
-            }
-            t => {
-                trace!(
-                    "Not jumping from value of type {:?} with addr {:?}",
-                    t,
-                    self.get_data_len() - Data::Size::one()
-                );
-            }
-        };
-
-        Ok(())
+        jump_if_false(self, index)
     }
 
     fn end_expression(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - End Expression");
-        match self.pop_jump_path() {
-            None => {
-                // no more jumps, this should be the end of the entire execution
-                let r = next_ref(self)?;
-                self.set_instruction_cursor(self.get_instruction_cursor() + Data::Size::one())
-                    .nest_into()?;
-                self.push_value_stack(r).nest_into()?;
-            }
-            Some(jump_point) => {
-                self.set_instruction_cursor(jump_point).nest_into()?;
-            }
-        }
-
-        Ok(())
+        end_expression(self)
     }
 
     //
@@ -277,11 +216,7 @@ where
     //
 
     fn make_pair(&mut self) -> GarnishLangRuntimeResult<Data::Error> {
-        trace!("Instruction - Make Pair");
-
-        let (right_addr, left_addr) = next_two_raw_ref(self)?;
-
-        push_pair(self, left_addr, right_addr)
+        make_pair(self)
     }
 
     //
