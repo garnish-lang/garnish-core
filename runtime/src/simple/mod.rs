@@ -109,11 +109,6 @@ impl SimpleRuntimeData {
         self.end_of_constant_data
     }
 
-    // pub fn add_data(&mut self, data: ExpressionData) -> Result<usize, String> {
-    //     self.data.push(data);
-    //     Ok(self.simple_data.len() - 1)
-    // }
-
     pub fn get_jump_path(&self, index: usize) -> Option<usize> {
         self.jump_path.get(index).cloned()
     }
