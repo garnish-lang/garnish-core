@@ -110,12 +110,12 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
             data.push_instruction(Instruction::PutValue, None).nest_into()?;
         }
         Definition::True => {
-            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
-            data.add_true().nest_into()?;
+            let addr = data.add_true().nest_into()?;
+            data.push_instruction(Instruction::Put, Some(addr)).nest_into()?;
         }
         Definition::False => {
-            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
-            data.add_false().nest_into()?;
+            let addr = data.add_false().nest_into()?;
+            data.push_instruction(Instruction::Put, Some(addr)).nest_into()?;
         }
         Definition::AbsoluteValue => todo!(), // not currently in runtime
         Definition::EmptyApply => {
@@ -533,7 +533,7 @@ mod values {
         assert_instruction_data(
             0,
             vec![(Definition::Number, None, None, None, "5", TokenType::Number)],
-            vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
+            vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
             SimpleDataList::default().append(IntegerData::from(5)),
         );
     }
@@ -543,8 +543,8 @@ mod values {
         assert_instruction_data(
             0,
             vec![(Definition::True, None, None, None, "$?", TokenType::True)],
-            vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
-            SimpleDataList::default().append(TrueData::new()),
+            vec![(Instruction::Put, Some(2)), (Instruction::EndExpression, None)],
+            SimpleDataList::default(),
         );
     }
 
@@ -554,7 +554,7 @@ mod values {
             0,
             vec![(Definition::False, None, None, None, "$!", TokenType::False)],
             vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
-            SimpleDataList::default().append(FalseData::new()),
+            SimpleDataList::default(),
         );
     }
 
@@ -564,7 +564,7 @@ mod values {
             0,
             vec![(Definition::Identifier, None, None, None, "value", TokenType::Identifier)],
             vec![
-                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(3)),
                 (Instruction::Resolve, None),
                 (Instruction::EndExpression, None),
             ],
@@ -587,7 +587,7 @@ mod values {
         assert_instruction_data(
             0,
             vec![(Definition::Symbol, None, None, None, ":symbol", TokenType::Symbol)],
-            vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
+            vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
             SimpleDataList::default().append(SymbolData::from(symbol_value("symbol"))),
         );
     }
@@ -597,7 +597,7 @@ mod values {
         assert_instruction_data(
             0,
             vec![(Definition::Symbol, None, None, None, ":", TokenType::Symbol)],
-            vec![(Instruction::Put, Some(1)), (Instruction::EndExpression, None)],
+            vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
             SimpleDataList::default().append(SymbolData::from(symbol_value(""))),
         );
     }
@@ -630,7 +630,7 @@ mod operations {
                 (Definition::EmptyApply, None, Some(0), None, "~~", TokenType::EmptyApply),
             ],
             vec![
-                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(3)),
                 (Instruction::Resolve, None),
                 (Instruction::EmptyApply, None),
                 (Instruction::EndExpression, None),
@@ -669,8 +669,8 @@ mod operations {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
                 (Instruction::PerformAddition, None),
                 (Instruction::EndExpression, None),
             ],
@@ -692,12 +692,12 @@ mod operations {
                 (Definition::Number, Some(5), None, None, "20", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
-                (Instruction::PerformAddition, None),
                 (Instruction::Put, Some(3)),
-                (Instruction::PerformAddition, None),
                 (Instruction::Put, Some(4)),
+                (Instruction::PerformAddition, None),
+                (Instruction::Put, Some(5)),
+                (Instruction::PerformAddition, None),
+                (Instruction::Put, Some(6)),
                 (Instruction::PerformAddition, None),
                 (Instruction::EndExpression, None),
             ],
@@ -719,8 +719,8 @@ mod operations {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
                 (Instruction::EqualityComparison, None),
                 (Instruction::EndExpression, None),
             ],
@@ -738,8 +738,8 @@ mod operations {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
                 (Instruction::MakePair, None),
                 (Instruction::EndExpression, None),
             ],
@@ -757,8 +757,8 @@ mod operations {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
                 (Instruction::Access, None),
                 (Instruction::EndExpression, None),
             ],
@@ -775,7 +775,7 @@ mod operations {
                 (Definition::Number, Some(0), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(3)),
                 (Instruction::AccessLeftInternal, None),
                 (Instruction::EndExpression, None),
             ],
@@ -792,7 +792,7 @@ mod operations {
                 (Definition::AccessRightInternal, None, Some(0), None, "._", TokenType::RightInternal),
             ],
             vec![
-                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(3)),
                 (Instruction::AccessRightInternal, None),
                 (Instruction::EndExpression, None),
             ],
@@ -809,7 +809,7 @@ mod operations {
                 (Definition::AccessLengthInternal, None, Some(0), None, ".|", TokenType::LengthInternal),
             ],
             vec![
-                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(3)),
                 (Instruction::AccessLengthInternal, None),
                 (Instruction::EndExpression, None),
             ],
@@ -827,9 +827,9 @@ mod operations {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(3)),
                 (Instruction::UpdateValue, None),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(4)),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
@@ -846,8 +846,8 @@ mod operations {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
                 (Instruction::Apply, None),
                 (Instruction::EndExpression, None),
             ],
@@ -865,8 +865,8 @@ mod operations {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
                 (Instruction::Apply, None),
                 (Instruction::EndExpression, None),
             ],
@@ -884,8 +884,8 @@ mod operations {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
                 (Instruction::Reapply, Some(0)),
                 (Instruction::EndExpression, None),
             ],
@@ -912,9 +912,9 @@ mod lists {
                 (Definition::Property, Some(1), None, None, "property", TokenType::Identifier),
             ],
             vec![
-                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(3)),
                 (Instruction::Resolve, None),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(4)),
                 (Instruction::Access, None),
                 (Instruction::EndExpression, None),
             ],
@@ -934,8 +934,8 @@ mod lists {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
                 (Instruction::MakeList, Some(2)),
                 (Instruction::EndExpression, None),
             ],
@@ -957,10 +957,10 @@ mod lists {
                 (Definition::Number, Some(5), None, None, "20", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(4)),
+                (Instruction::Put, Some(5)),
+                (Instruction::Put, Some(6)),
                 (Instruction::MakeList, Some(4)),
                 (Instruction::EndExpression, None),
             ],
@@ -991,13 +991,13 @@ mod lists {
                 (Definition::Number, Some(10), None, None, "30", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(4)),
-                (Instruction::MakeList, Some(2)),
                 (Instruction::Put, Some(5)),
                 (Instruction::Put, Some(6)),
+                (Instruction::MakeList, Some(2)),
+                (Instruction::Put, Some(7)),
+                (Instruction::Put, Some(8)),
                 (Instruction::MakeList, Some(5)),
                 (Instruction::EndExpression, None),
             ],
@@ -1031,13 +1031,13 @@ mod lists {
                 (Definition::Number, Some(9), None, None, "30", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(4)),
                 (Instruction::Put, Some(5)),
-                (Instruction::MakeList, Some(4)),
                 (Instruction::Put, Some(6)),
+                (Instruction::Put, Some(7)),
+                (Instruction::MakeList, Some(4)),
+                (Instruction::Put, Some(8)),
                 (Instruction::MakeList, Some(3)),
                 (Instruction::EndExpression, None),
             ],
@@ -1069,8 +1069,8 @@ mod groups {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
                 (Instruction::PerformAddition, None),
                 (Instruction::EndExpression, None),
             ],
@@ -1096,10 +1096,10 @@ mod nested_expressions {
                 (Definition::Number, Some(2), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::EndExpression, None),
-                (Instruction::Put, Some(2)),
                 (Instruction::Put, Some(3)),
+                (Instruction::EndExpression, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::Put, Some(5)),
                 (Instruction::PerformAddition, None),
                 (Instruction::EndExpression, None),
             ],
@@ -1123,13 +1123,13 @@ mod nested_expressions {
                 (Definition::Number, Some(3), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
                 (Instruction::MakePair, None),
                 (Instruction::EndExpression, None), // 3
-                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(5)),
                 (Instruction::EndExpression, None), //5
-                (Instruction::Put, Some(4)),
+                (Instruction::Put, Some(6)),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default()
@@ -1156,17 +1156,17 @@ mod nested_expressions {
                 (Definition::Number, Some(6), None, None, "15", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::EndExpression, None), // 1
-                (Instruction::Put, Some(2)),
                 (Instruction::Put, Some(3)),
-                (Instruction::Apply, None),
-                (Instruction::EndExpression, None), // 5
+                (Instruction::EndExpression, None), // 1
                 (Instruction::Put, Some(4)),
                 (Instruction::Put, Some(5)),
                 (Instruction::Apply, None),
-                (Instruction::EndExpression, None), // 9
+                (Instruction::EndExpression, None), // 5
                 (Instruction::Put, Some(6)),
+                (Instruction::Put, Some(7)),
+                (Instruction::Apply, None),
+                (Instruction::EndExpression, None), // 9
+                (Instruction::Put, Some(8)),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default()
@@ -1197,10 +1197,10 @@ mod conditionals {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(3)),
                 (Instruction::JumpIfTrue, Some(2)),
                 (Instruction::EndExpression, None),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(4)),
                 (Instruction::JumpTo, Some(1)),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
@@ -1218,10 +1218,10 @@ mod conditionals {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(3)),
                 (Instruction::JumpIfFalse, Some(2)),
                 (Instruction::EndExpression, None),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(4)),
                 (Instruction::JumpTo, Some(1)),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
@@ -1243,14 +1243,14 @@ mod conditionals {
                 (Definition::Number, Some(5), None, None, "20", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
+                (Instruction::Put, Some(3)),
                 (Instruction::JumpIfTrue, Some(2)),
-                (Instruction::Put, Some(2)),
+                (Instruction::Put, Some(4)),
                 (Instruction::JumpIfTrue, Some(3)),
                 (Instruction::EndExpression, None),
-                (Instruction::Put, Some(3)), // 6
+                (Instruction::Put, Some(5)), // 6
                 (Instruction::JumpTo, Some(1)),
-                (Instruction::Put, Some(4)), // 8
+                (Instruction::Put, Some(6)), // 8
                 (Instruction::JumpTo, Some(1)),
             ],
             SimpleDataList::default()
@@ -1274,11 +1274,11 @@ mod conditionals {
                 (Definition::Number, Some(3), None, None, "15", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::JumpIfTrue, Some(2)),
-                (Instruction::Put, Some(2)),
-                (Instruction::EndExpression, None), // 4
                 (Instruction::Put, Some(3)),
+                (Instruction::JumpIfTrue, Some(2)),
+                (Instruction::Put, Some(4)),
+                (Instruction::EndExpression, None), // 4
+                (Instruction::Put, Some(5)),
                 (Instruction::JumpTo, Some(1)),
             ],
             SimpleDataList::default()
@@ -1301,10 +1301,10 @@ mod conditionals {
                 (Definition::Number, Some(3), None, None, "15", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::Put, Some(2)),
-                (Instruction::Reapply, Some(0)),
                 (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Reapply, Some(0)),
+                (Instruction::Put, Some(5)),
                 (Instruction::EndExpression, None), // 5
             ],
             SimpleDataList::default()
@@ -1337,18 +1337,18 @@ mod conditionals {
                 (Definition::Number, Some(9), None, None, "30", TokenType::Number),
             ],
             vec![
-                (Instruction::Put, Some(1)),
-                (Instruction::JumpIfTrue, Some(2)), // 2
-                (Instruction::Put, Some(2)),
-                (Instruction::JumpIfTrue, Some(3)), // 4
                 (Instruction::Put, Some(3)),
+                (Instruction::JumpIfTrue, Some(2)), // 2
+                (Instruction::Put, Some(4)),
+                (Instruction::JumpIfTrue, Some(3)), // 4
+                (Instruction::Put, Some(5)),
                 (Instruction::JumpIfTrue, Some(4)), // 6
                 (Instruction::EndExpression, None),
-                (Instruction::Put, Some(4)), // 8
+                (Instruction::Put, Some(6)), // 8
                 (Instruction::JumpTo, Some(1)),
-                (Instruction::Put, Some(5)), // 10
+                (Instruction::Put, Some(7)), // 10
                 (Instruction::JumpTo, Some(1)),
-                (Instruction::Put, Some(6)), // 12
+                (Instruction::Put, Some(8)), // 12
                 (Instruction::JumpTo, Some(1)),
             ],
             SimpleDataList::default()

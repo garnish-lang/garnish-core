@@ -303,21 +303,12 @@ where
 #[cfg(test)]
 mod tests {
     use crate::{
-        ExpressionDataType, GarnishLangRuntimeData, Instruction, runtime::{context::EmptyContext, GarnishRuntime}, SimpleRuntimeData,
+        GarnishLangRuntimeData, Instruction, runtime::{context::EmptyContext, GarnishRuntime}, SimpleRuntimeData,
     };
 
     #[test]
     fn create_runtime() {
         SimpleRuntimeData::new();
-    }
-
-    #[test]
-    fn default_data_for_new() {
-        let runtime = SimpleRuntimeData::new();
-
-        assert_eq!(runtime.get_instruction(0).unwrap().0, Instruction::EndExecution);
-        assert_eq!(runtime.get_data_len(), 1);
-        assert_eq!(runtime.get_data_type(0).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
@@ -364,12 +355,12 @@ mod tests {
     fn add_input_reference_with_data_addr() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        let addr = runtime.add_integer(10).unwrap();
+        let _i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
 
-        runtime.push_value_stack(addr).unwrap();
+        runtime.push_value_stack(i2).unwrap();
 
-        assert_eq!(runtime.get_value(0).unwrap().to_owned(), 2);
+        assert_eq!(runtime.get_value(0).unwrap().to_owned(), i2);
     }
 
     #[test]
@@ -424,18 +415,20 @@ mod tests {
     fn execute_current_instruction() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_integer(20).unwrap();
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(20).unwrap();
+        let start = runtime.get_data_len();
+
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.push_register(1).unwrap();
-        runtime.push_register(2).unwrap();
+        runtime.push_register(i1).unwrap();
+        runtime.push_register(i2).unwrap();
 
         runtime.set_instruction_cursor(1).unwrap();
 
         runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![3]);
-        assert_eq!(runtime.get_integer(3).unwrap(), 30);
+        assert_eq!(runtime.get_register(), &vec![start]);
+        assert_eq!(runtime.get_integer(start).unwrap(), 30);
     }
 }

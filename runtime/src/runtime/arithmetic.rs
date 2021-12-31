@@ -37,34 +37,36 @@ mod tests {
     fn perform_addition() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_integer(20).unwrap();
+        let int1 = runtime.add_integer(10).unwrap();
+        let int2 = runtime.add_integer(20).unwrap();
+        let new_data_start = runtime.get_data_len();
 
-        runtime.push_register(1).unwrap();
-        runtime.push_register(2).unwrap();
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![3]);
-        assert_eq!(runtime.get_integer(3).unwrap(), 30);
+        assert_eq!(runtime.get_register(), &vec![new_data_start]);
+        assert_eq!(runtime.get_integer(new_data_start).unwrap(), 30);
     }
 
     #[test]
     fn addition_with_overflow_is_pair() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(11).unwrap();
-        runtime.add_integer(i32::MAX).unwrap();
+        let int1 = runtime.add_integer(11).unwrap();
+        let int2 = runtime.add_integer(i32::MAX).unwrap();
+        let new_data_start = runtime.get_data_len();
 
-        runtime.push_register(1).unwrap();
-        runtime.push_register(2).unwrap();
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![5]);
-        let (left, right) = runtime.get_pair(5).unwrap();
-        assert_eq!(left, 3);
-        assert_eq!(right, 4);
+        assert_eq!(runtime.get_register(), &vec![new_data_start + 1]);
+        let (left, right) = runtime.get_pair(new_data_start + 1).unwrap();
+        assert_eq!(left, new_data_start);
+        assert_eq!(right, 2);
         assert_eq!(runtime.get_integer(left).unwrap(), i32::MIN + 10);
         assert_eq!(runtime.get_data_type(right).unwrap(), ExpressionDataType::True);
     }
@@ -73,18 +75,19 @@ mod tests {
     fn addition_with_underflow_is_pair() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(-11).unwrap();
-        runtime.add_integer(i32::MIN).unwrap();
+        let int1 = runtime.add_integer(-11).unwrap();
+        let int2 = runtime.add_integer(i32::MIN).unwrap();
+        let new_data_start = runtime.get_data_len();
 
-        runtime.push_register(1).unwrap();
-        runtime.push_register(2).unwrap();
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![5]);
-        let (left, right) = runtime.get_pair(5).unwrap();
-        assert_eq!(left, 3);
-        assert_eq!(right, 4);
+        assert_eq!(runtime.get_register(), &vec![new_data_start + 1]);
+        let (left, right) = runtime.get_pair(new_data_start + 1).unwrap();
+        assert_eq!(left, new_data_start);
+        assert_eq!(right, 2);
         assert_eq!(runtime.get_integer(left).unwrap(), i32::MAX - 10);
         assert_eq!(runtime.get_data_type(right).unwrap(), ExpressionDataType::True);
     }

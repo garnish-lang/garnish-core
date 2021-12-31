@@ -30,36 +30,34 @@ mod tests {
     fn equality_true() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_integer(10).unwrap();
+        let int1 = runtime.add_integer(10).unwrap();
+        let int2 = runtime.add_integer(10).unwrap();
 
-        runtime.push_register(1).unwrap();
-        runtime.push_register(2).unwrap();
-
-        // runtime.add_instruction(Instruction::EqualityComparison, None).unwrap();
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![3]);
-        assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_data_type(2).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
     fn equality_false() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_integer(20).unwrap();
+        let int1 = runtime.add_integer(10).unwrap();
+        let int2 = runtime.add_integer(20).unwrap();
 
-        runtime.push_register(1).unwrap();
-        runtime.push_register(2).unwrap();
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
 
         runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![3]);
-        assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_data_type(1).unwrap(), ExpressionDataType::False);
     }
 
     #[test]
@@ -80,17 +78,17 @@ mod tests {
     fn equality_of_unsupported_comparison_is_false() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_expression(10).unwrap();
+        let int1 = runtime.add_integer(10).unwrap();
+        let exp1 = runtime.add_expression(10).unwrap();
 
         runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
 
-        runtime.push_register(1).unwrap();
-        runtime.push_register(2).unwrap();
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(exp1).unwrap();
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![3]);
-        assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_data_type(1).unwrap(), ExpressionDataType::False);
     }
 }

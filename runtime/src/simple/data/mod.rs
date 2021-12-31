@@ -41,7 +41,7 @@ pub struct SimpleDataList {
 
 impl Default for SimpleDataList {
     fn default() -> Self {
-        SimpleDataList::new().append(UnitData::new())
+        SimpleDataList::new().append(UnitData::new()).append(FalseData::new()).append(TrueData::new())
     }
 }
 

@@ -110,22 +110,23 @@ mod tests {
     fn make_list() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_integer(20).unwrap();
-        runtime.add_integer(20).unwrap();
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(20).unwrap();
+        let i3 = runtime.add_integer(20).unwrap();
+        let start = runtime.get_data_len();
 
-        runtime.push_register(1).unwrap();
-        runtime.push_register(2).unwrap();
-        runtime.push_register(3).unwrap();
+        runtime.push_register(i1).unwrap();
+        runtime.push_register(i2).unwrap();
+        runtime.push_register(i3).unwrap();
 
         runtime.push_instruction(Instruction::MakeList, Some(3)).unwrap();
 
         runtime.make_list(3).unwrap();
 
-        assert_eq!(runtime.get_list_len(4).unwrap(), 3);
-        assert_eq!(runtime.get_list_item(4, 0).unwrap(), 1);
-        assert_eq!(runtime.get_list_item(4, 1).unwrap(), 2);
-        assert_eq!(runtime.get_list_item(4, 2).unwrap(), 3);
+        assert_eq!(runtime.get_list_len(start).unwrap(), 3);
+        assert_eq!(runtime.get_list_item(start, 0).unwrap(), i1);
+        assert_eq!(runtime.get_list_item(start, 1).unwrap(), i2);
+        assert_eq!(runtime.get_list_item(start, 2).unwrap(), i3);
     }
 
     #[test]
@@ -147,96 +148,98 @@ mod tests {
     fn make_list_with_associations() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_symbol("two").unwrap();
-        runtime.add_integer(20).unwrap();
-        runtime.add_symbol("three").unwrap();
-        runtime.add_integer(30).unwrap();
+        let i1 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_symbol("two").unwrap();
+        let i4 = runtime.add_integer(20).unwrap();
+        let i5 = runtime.add_symbol("three").unwrap();
+        let i6 = runtime.add_integer(30).unwrap();
         // 6
-        runtime.add_pair((1, 2)).unwrap();
-        runtime.add_pair((3, 4)).unwrap();
-        runtime.add_pair((5, 6)).unwrap();
+        let i7 = runtime.add_pair((i1, i2)).unwrap();
+        let i8 = runtime.add_pair((i3, i4)).unwrap();
+        let i9 = runtime.add_pair((i5, i6)).unwrap();
 
-        runtime.push_register(7).unwrap();
-        runtime.push_register(8).unwrap();
-        runtime.push_register(9).unwrap();
+        let start = runtime.get_data_len();
+
+        runtime.push_register(i7).unwrap();
+        runtime.push_register(i8).unwrap();
+        runtime.push_register(i9).unwrap();
 
         runtime.push_instruction(Instruction::MakeList, Some(3)).unwrap();
 
         runtime.make_list(3).unwrap();
 
-        assert_eq!(runtime.get_list_len(10).unwrap(), 3);
-        assert_eq!(runtime.get_list_item(10, 0).unwrap(), 7);
-        assert_eq!(runtime.get_list_item(10, 1).unwrap(), 8);
-        assert_eq!(runtime.get_list_item(10, 2).unwrap(), 9);
+        assert_eq!(runtime.get_list_len(start).unwrap(), 3);
+        assert_eq!(runtime.get_list_item(start, 0).unwrap(), i7);
+        assert_eq!(runtime.get_list_item(start, 1).unwrap(), i8);
+        assert_eq!(runtime.get_list_item(start, 2).unwrap(), i9);
 
-        assert_eq!(runtime.get_list_associations_len(10).unwrap(), 3);
-        assert_eq!(runtime.get_list_association(10, 0).unwrap(), 9);
-        assert_eq!(runtime.get_list_association(10, 1).unwrap(), 7);
-        assert_eq!(runtime.get_list_association(10, 2).unwrap(), 8);
+        assert_eq!(runtime.get_list_associations_len(start).unwrap(), 3);
+        assert_eq!(runtime.get_list_association(start, 0).unwrap(), i7);
+        assert_eq!(runtime.get_list_association(start, 1).unwrap(), i8);
+        assert_eq!(runtime.get_list_association(start, 2).unwrap(), i9);
     }
 
     #[test]
     fn access() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_pair((1, 2)).unwrap();
+        let i1 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
-        runtime.add_to_list(3, true).unwrap();
-        runtime.end_list().unwrap();
-        runtime.add_symbol("one").unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        let i4 = runtime.end_list().unwrap();
+        let i5 = runtime.add_symbol("one").unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(4).unwrap();
-        runtime.push_register(5).unwrap();
+        runtime.push_register(i4).unwrap();
+        runtime.push_register(i5).unwrap();
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &2);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &i2);
     }
 
     #[test]
     fn access_with_number() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_pair((1, 2)).unwrap();
+        let i1 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
-        runtime.add_to_list(3, true).unwrap();
-        runtime.end_list().unwrap();
-        runtime.add_integer(0).unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        let i4 = runtime.end_list().unwrap();
+        let i5 = runtime.add_integer(0).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(4).unwrap();
-        runtime.push_register(5).unwrap();
+        runtime.push_register(i4).unwrap();
+        runtime.push_register(i5).unwrap();
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &3);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &i3);
     }
 
     #[test]
     fn access_with_number_out_of_bounds_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_pair((1, 2)).unwrap();
+        let i1 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
-        runtime.add_to_list(3, true).unwrap();
-        runtime.end_list().unwrap();
-        runtime.add_integer(10).unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        let i4 = runtime.end_list().unwrap();
+        let i5 = runtime.add_integer(10).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(4).unwrap();
-        runtime.push_register(5).unwrap();
+        runtime.push_register(i4).unwrap();
+        runtime.push_register(i5).unwrap();
 
         runtime.access().unwrap();
 
@@ -247,20 +250,18 @@ mod tests {
     fn access_with_number_negative_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_pair((1, 2)).unwrap();
-        runtime.start_list(3).unwrap();
-        runtime.add_to_list(1, true).unwrap();
-        runtime.add_to_list(2, true).unwrap();
-        runtime.add_to_list(3, true).unwrap();
-        runtime.end_list().unwrap();
-        runtime.add_integer(-1).unwrap();
+        let i1 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
+        runtime.start_list(1).unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        let i4 = runtime.end_list().unwrap();
+        let i5 = runtime.add_integer(-1).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(4).unwrap();
-        runtime.push_register(5).unwrap();
+        runtime.push_register(i4).unwrap();
+        runtime.push_register(i5).unwrap();
 
         runtime.access().unwrap();
 
@@ -271,28 +272,28 @@ mod tests {
     fn access_pair_left() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_pair((1, 2)).unwrap();
+        let i1 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
 
         runtime.push_instruction(Instruction::AccessLeftInternal, None).unwrap();
 
-        runtime.push_register(3).unwrap();
+        runtime.push_register(i3).unwrap();
 
         runtime.access_left_internal().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &1);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &i1);
     }
 
     #[test]
     fn access_left_internal_incompatible_type_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_integer(10).unwrap();
 
         runtime.push_instruction(Instruction::AccessLeftInternal, None).unwrap();
 
-        runtime.push_register(1).unwrap();
+        runtime.push_register(i1).unwrap();
 
         runtime.access_left_internal().unwrap();
 
@@ -303,28 +304,28 @@ mod tests {
     fn access_pair_right() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_pair((1, 2)).unwrap();
+        let i1 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
 
         runtime.push_instruction(Instruction::AccessRightInternal, None).unwrap();
 
-        runtime.push_register(3).unwrap();
+        runtime.push_register(i3).unwrap();
 
         runtime.access_right_internal().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &2);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &i2);
     }
 
     #[test]
     fn access_right_internal_incompatible_type_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_integer(10).unwrap();
 
         runtime.push_instruction(Instruction::AccessRightInternal, None).unwrap();
 
-        runtime.push_register(1).unwrap();
+        runtime.push_register(i1).unwrap();
 
         runtime.access_right_internal().unwrap();
 
@@ -335,32 +336,33 @@ mod tests {
     fn access_list_length() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_pair((1, 2)).unwrap();
+        let i1 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
-        runtime.add_to_list(3, true).unwrap();
-        runtime.end_list().unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        let i4 = runtime.end_list().unwrap();
+        let start = runtime.get_data_len();
 
         runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
 
-        runtime.push_register(4).unwrap();
+        runtime.push_register(i4).unwrap();
 
         runtime.access_length_internal().unwrap();
 
-        assert_eq!(runtime.get_integer(5).unwrap(), 1);
-        assert_eq!(runtime.get_register().get(0).unwrap(), &5);
+        assert_eq!(runtime.get_integer(start).unwrap(), 1);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &start);
     }
 
     #[test]
     fn access_length_internal_incompatible_type_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_integer(10).unwrap();
 
         runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
 
-        runtime.push_register(1).unwrap();
+        runtime.push_register(i1).unwrap();
 
         runtime.access_length_internal().unwrap();
 
@@ -371,13 +373,13 @@ mod tests {
     fn access_non_list_on_left_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_symbol("one").unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(1).unwrap();
-        runtime.push_register(2).unwrap();
+        runtime.push_register(i1).unwrap();
+        runtime.push_register(i2).unwrap();
 
         runtime.access().unwrap();
 
@@ -388,18 +390,18 @@ mod tests {
     fn access_non_symbol_on_right_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_pair((1, 2)).unwrap();
+        let i1 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
-        runtime.add_to_list(3, true).unwrap();
-        runtime.end_list().unwrap();
-        runtime.add_expression(10).unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        let i4 = runtime.end_list().unwrap();
+        let i5 = runtime.add_expression(10).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(4).unwrap();
-        runtime.push_register(5).unwrap();
+        runtime.push_register(i4).unwrap();
+        runtime.push_register(i5).unwrap();
 
         runtime.access().unwrap();
 
@@ -410,13 +412,13 @@ mod tests {
     fn access_no_refs_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_pair((1, 2)).unwrap();
+        let i1 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
-        runtime.add_to_list(3, true).unwrap();
-        runtime.end_list().unwrap();
-        runtime.add_symbol("one").unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        let _i4 = runtime.end_list().unwrap();
+        let _i5 = runtime.add_symbol("one").unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -429,18 +431,18 @@ mod tests {
     fn access_with_non_existent_key() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("one").unwrap();
-        runtime.add_integer(10).unwrap();
-        runtime.add_pair((1, 2)).unwrap();
+        let i1 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
-        runtime.add_to_list(3, true).unwrap();
-        runtime.end_list().unwrap();
-        runtime.add_symbol("two").unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        let i4 = runtime.end_list().unwrap();
+        let i5 = runtime.add_symbol("two").unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(4).unwrap();
-        runtime.push_register(5).unwrap();
+        runtime.push_register(i4).unwrap();
+        runtime.push_register(i5).unwrap();
 
         runtime.access().unwrap();
 

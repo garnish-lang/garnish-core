@@ -2,7 +2,11 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
-use crate::{AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, FalseData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeError, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, SimpleDataList, SymbolData, TrueData, UnitData};
+use crate::{
+    AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, FalseData, GarnishLangRuntimeContext,
+    GarnishLangRuntimeData, GarnishLangRuntimeError, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData,
+    PairData, SimpleDataList, SymbolData, TrueData, UnitData,
+};
 
 pub mod data;
 
@@ -236,13 +240,11 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn add_true(&mut self) -> Result<usize, Self::Error> {
-        self.simple_data.push(TrueData::new());
-        Ok(self.simple_data.len() - 1)
+        Ok(2)
     }
 
     fn add_false(&mut self) -> Result<usize, Self::Error> {
-        self.simple_data.push(FalseData::new());
-        Ok(self.simple_data.len() - 1)
+        Ok(1)
     }
 
     fn start_list(&mut self, _: usize) -> Result<(), Self::Error> {
@@ -459,13 +461,13 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
         runtime.add_integer(10).unwrap();
 
-        assert_eq!(runtime.get_data_type(1).unwrap(), ExpressionDataType::Integer);
+        assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Integer);
     }
 }
 
 #[cfg(test)]
 mod data_storage {
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{DataCoersion, FalseData, GarnishLangRuntimeData, SimpleRuntimeData, TrueData, UnitData};
 
     #[test]
     fn unit() {
@@ -475,6 +477,31 @@ mod data_storage {
         assert_eq!(runtime.add_unit().unwrap(), 0);
         assert_eq!(runtime.add_unit().unwrap(), 0);
 
-        assert_eq!(runtime.get_data_len(), 1);
+        assert_eq!(runtime.get_data_len(), 3);
+        assert_eq!(runtime.simple_data.get(0).unwrap().as_unit().unwrap(), UnitData::new());
+    }
+
+    #[test]
+    fn false_data() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        assert_eq!(runtime.add_false().unwrap(), 1);
+        assert_eq!(runtime.add_false().unwrap(), 1);
+        assert_eq!(runtime.add_false().unwrap(), 1);
+
+        assert_eq!(runtime.get_data_len(), 3);
+        assert_eq!(runtime.simple_data.get(1).unwrap().as_false().unwrap(), FalseData::new());
+    }
+
+    #[test]
+    fn true_data() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        assert_eq!(runtime.add_true().unwrap(), 2);
+        assert_eq!(runtime.add_true().unwrap(), 2);
+        assert_eq!(runtime.add_true().unwrap(), 2);
+
+        assert_eq!(runtime.get_data_len(), 3);
+        assert_eq!(runtime.simple_data.get(2).unwrap().as_true().unwrap(), TrueData::new());
     }
 }

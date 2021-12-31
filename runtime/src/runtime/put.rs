@@ -122,17 +122,17 @@ mod tests {
     fn push_result() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_integer(10).unwrap();
         runtime.push_instruction(Instruction::UpdateValue, None).unwrap();
 
-        runtime.push_register(1).unwrap();
+        runtime.push_register(i1).unwrap();
 
-        runtime.push_value_stack(1).unwrap();
+        runtime.push_value_stack(i1).unwrap();
 
         runtime.update_value().unwrap();
 
         assert_eq!(runtime.get_value_stack_len(), 1);
-        assert_eq!(runtime.get_current_value().unwrap(), 1usize);
+        assert_eq!(runtime.get_current_value().unwrap(), i1);
         assert_eq!(runtime.get_integer(runtime.get_current_value().unwrap()).unwrap(), 10i32);
     }
 

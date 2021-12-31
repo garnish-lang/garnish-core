@@ -49,7 +49,7 @@ mod tests {
 
         runtime.add_integer(100).unwrap();
 
-        assert_eq!(runtime.get_data_len(), 2);
+        assert_eq!(runtime.get_data_len(), 4);
     }
 
     #[test]
@@ -57,30 +57,20 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_integer(100).unwrap();
-        runtime.add_integer(200).unwrap();
+        let i2 = runtime.add_integer(200).unwrap();
 
-        assert_eq!(runtime.get_integer(2).unwrap(), 200);
-    }
-
-    #[test]
-    fn end_constant_data() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.add_integer(100).unwrap();
-        runtime.add_integer(200).unwrap();
-        runtime.set_end_of_constant(runtime.get_data_len()).unwrap();
-
-        assert_eq!(runtime.get_end_of_constant_data(), 3);
+        assert_eq!(runtime.get_integer(i2).unwrap(), 200);
     }
 
     #[test]
     fn add_data_returns_addr() {
         let mut runtime = SimpleRuntimeData::new();
+        let start = runtime.get_data_len();
 
-        assert_eq!(runtime.add_integer(100).unwrap(), 1);
-        assert_eq!(runtime.add_integer(100).unwrap(), 2);
-        assert_eq!(runtime.add_integer(100).unwrap(), 3);
-        assert_eq!(runtime.add_integer(100).unwrap(), 4);
+        assert_eq!(runtime.add_integer(100).unwrap(), start);
+        assert_eq!(runtime.add_integer(100).unwrap(), start + 1);
+        assert_eq!(runtime.add_integer(100).unwrap(), start + 2);
+        assert_eq!(runtime.add_integer(100).unwrap(), start + 3);
     }
 }
 
