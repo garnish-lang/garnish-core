@@ -87,10 +87,10 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
             data.push_instruction(Instruction::Put, Some(addr)).nest_into()?;
         }
         Definition::Identifier => {
-            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
-            data.push_instruction(Instruction::Resolve, None).nest_into()?;
+            let addr = data.add_symbol(node.get_lex_token().get_text()).nest_into()?;
 
-            data.add_symbol(node.get_lex_token().get_text()).nest_into()?;
+            data.push_instruction(Instruction::Put, Some(addr)).nest_into()?;
+            data.push_instruction(Instruction::Resolve, None).nest_into()?;
         }
         Definition::Property => {
             data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
@@ -704,6 +704,28 @@ mod operations {
             vec![
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(3)),
+                (Instruction::MakePair, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(SymbolData::from(sym_val)),
+        );
+    }
+
+    #[test]
+    fn same_identifier_twice() {
+        let sym_val = symbol_value("sym");
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Identifier, Some(1), None, None, "sym", TokenType::Identifier),
+                (Definition::Pair, None, Some(0), Some(2), "=", TokenType::Pair),
+                (Definition::Identifier, Some(1), None, None, "sym", TokenType::Identifier),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Resolve, None),
+                (Instruction::Put, Some(3)),
+                (Instruction::Resolve, None),
                 (Instruction::MakePair, None),
                 (Instruction::EndExpression, None),
             ],
