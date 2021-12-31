@@ -171,7 +171,7 @@ mod tests {
 
         runtime.empty_apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_value(0).unwrap(), 3);
+        assert_eq!(runtime.get_value(0).unwrap(), 0);
         assert_eq!(runtime.get_instruction_cursor(), 0);
         assert_eq!(runtime.get_jump_path(0).unwrap(), 6);
     }

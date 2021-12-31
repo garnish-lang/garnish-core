@@ -107,7 +107,7 @@ mod tests {
 
         runtime.resolve::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_data_type(6).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
     }
 
     #[test]

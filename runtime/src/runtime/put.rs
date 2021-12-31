@@ -1,4 +1,4 @@
-use crate::{next_ref, push_unit, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto, error};
+use crate::{error, next_ref, push_unit, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto};
 use log::trace;
 
 pub(crate) fn put<Data: GarnishLangRuntimeData>(this: &mut Data, i: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
@@ -36,7 +36,7 @@ pub(crate) fn push_result<Data: GarnishLangRuntimeData>(this: &mut Data) -> Garn
     let r = next_ref(this)?;
     match this.get_current_value_mut() {
         None => Err(error(format!("No inputs availble to update for update value operation.")))?,
-        Some(v) => *v = r
+        Some(v) => *v = r,
     }
 
     Ok(())
@@ -44,7 +44,7 @@ pub(crate) fn push_result<Data: GarnishLangRuntimeData>(this: &mut Data) -> Garn
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
 
     #[test]
     fn put() {
@@ -90,8 +90,7 @@ mod tests {
 
         runtime.put_value().unwrap();
 
-        assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Unit);
-        assert_eq!(*runtime.get_register().get(0).unwrap(), 3);
+        assert_eq!(*runtime.get_register().get(0).unwrap(), 0);
     }
 
     #[test]

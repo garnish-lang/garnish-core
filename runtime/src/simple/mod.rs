@@ -232,8 +232,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn add_unit(&mut self) -> Result<usize, Self::Error> {
-        self.simple_data.push(UnitData::new());
-        Ok(self.simple_data.len() - 1)
+        Ok(0)
     }
 
     fn add_true(&mut self) -> Result<usize, Self::Error> {
@@ -461,5 +460,21 @@ mod tests {
         runtime.add_integer(10).unwrap();
 
         assert_eq!(runtime.get_data_type(1).unwrap(), ExpressionDataType::Integer);
+    }
+}
+
+#[cfg(test)]
+mod data_storage {
+    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn unit() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        assert_eq!(runtime.add_unit().unwrap(), 0);
+        assert_eq!(runtime.add_unit().unwrap(), 0);
+        assert_eq!(runtime.add_unit().unwrap(), 0);
+
+        assert_eq!(runtime.get_data_len(), 1);
     }
 }

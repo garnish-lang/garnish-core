@@ -104,7 +104,7 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
 
     #[test]
     fn make_list() {
@@ -240,8 +240,7 @@ mod tests {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_data_type(6).unwrap(), ExpressionDataType::Unit);
-        assert_eq!(runtime.get_register().get(0).unwrap(), &6);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
     }
 
     #[test]
@@ -265,8 +264,7 @@ mod tests {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_data_type(6).unwrap(), ExpressionDataType::Unit);
-        assert_eq!(runtime.get_register().get(0).unwrap(), &6);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
     }
 
     #[test]
@@ -298,8 +296,7 @@ mod tests {
 
         runtime.access_left_internal().unwrap();
 
-        assert_eq!(runtime.get_data_type(2).unwrap(), ExpressionDataType::Unit);
-        assert_eq!(runtime.get_register().get(0).unwrap(), &2);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
     }
 
     #[test]
@@ -331,8 +328,7 @@ mod tests {
 
         runtime.access_right_internal().unwrap();
 
-        assert_eq!(runtime.get_data_type(2).unwrap(), ExpressionDataType::Unit);
-        assert_eq!(runtime.get_register().get(0).unwrap(), &2);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
     }
 
     #[test]
@@ -368,8 +364,7 @@ mod tests {
 
         runtime.access_length_internal().unwrap();
 
-        assert_eq!(runtime.get_data_type(2).unwrap(), ExpressionDataType::Unit);
-        assert_eq!(runtime.get_register().get(0).unwrap(), &2);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
     }
 
     #[test]
@@ -386,7 +381,7 @@ mod tests {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
     }
 
     #[test]
@@ -408,7 +403,7 @@ mod tests {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_data_type(6).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
     }
 
     #[test]
@@ -450,6 +445,6 @@ mod tests {
         runtime.access().unwrap();
 
         assert_eq!(runtime.get_register().len(), 1);
-        assert_eq!(runtime.get_data_type(6).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
     }
 }

@@ -141,12 +141,12 @@ mod tests {
 
         runtime.push_jump_point(3).unwrap();
         runtime.set_instruction_cursor(1).unwrap();
-        runtime.push_register(1).unwrap();
+        runtime.push_register(0).unwrap();
 
         runtime.jump_if_true(0).unwrap();
 
         assert!(runtime.get_register().is_empty());
-        assert_eq!(runtime.get_data_len(), 2);
+        assert_eq!(runtime.get_data_len(), 1);
         assert_eq!(runtime.get_instruction_cursor(), 1);
     }
 
@@ -204,12 +204,12 @@ mod tests {
 
         runtime.push_jump_point(3).unwrap();
         runtime.set_instruction_cursor(1).unwrap();
-        runtime.push_register(1).unwrap();
+        runtime.push_register(0).unwrap();
 
         runtime.jump_if_false(0).unwrap();
 
         assert!(runtime.get_register().is_empty());
-        assert_eq!(runtime.get_data_len(), 2);
+        assert_eq!(runtime.get_data_len(), 1);
         assert_eq!(runtime.get_instruction_cursor(), 2);
     }
 

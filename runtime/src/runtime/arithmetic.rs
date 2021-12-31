@@ -113,7 +113,6 @@ mod tests {
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![3]);
-        assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_register(), &vec![0]);
     }
 }
