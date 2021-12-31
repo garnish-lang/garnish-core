@@ -1,7 +1,7 @@
+use crate::error::{append_token_details, implementation_error, implementation_error_with_token, CompilerError};
 use log::trace;
 use std::{collections::HashMap, hash::Hash, vec};
 
-use crate::ParsingError;
 use crate::lexing::lexer::*;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
@@ -238,9 +238,9 @@ fn parse_token(
     priority_map: &HashMap<Definition, usize>,
     check_for_list: &mut bool,
     under_group: Option<usize>,
-) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), ParsingError> {
+) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), CompilerError> {
     let my_priority = match priority_map.get(&definition) {
-        None => Err(format!("Definition '{:?}' not registered in priority map.", definition))?,
+        None => implementation_error(format!("Definition '{:?}' not registered in priority map.", definition))?,
         Some(priority) => *priority,
     };
 
@@ -257,12 +257,12 @@ fn parse_token(
     while let Some(left_index) = current_left {
         trace!("Walking: {:?}", left_index);
         match nodes.get(left_index) {
-            None => Err(format!("Index assigned to node has no value in node list. {:?}", left_index))?,
+            None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", left_index))?,
             Some(node) => {
                 let n: &ParseNode = node;
 
                 let their_priority = match priority_map.get(&n.definition) {
-                    None => Err(format!("Definition '{:?}' not registered in priority map.", n.definition))?,
+                    None => implementation_error(format!("Definition '{:?}' not registered in priority map.", n.definition))?,
                     Some(priority) => *priority,
                 };
 
@@ -303,14 +303,14 @@ fn parse_token(
         // safty net, max iterations to len of nodes
         count += 1;
         if count > nodes.len() {
-            Err(format!("Max iterations reached when searching for last parent."))?;
+            implementation_error(format!("Max iterations reached when searching for last parent."))?;
         }
     }
 
     match true_left {
         None => (),
         Some(index) => match nodes.get_mut(index) {
-            None => Err(format!("Index assigned to node has no value in node list. {:?}", index))?,
+            None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", index))?,
             Some(node) => node.parent = Some(id),
         },
     }
@@ -318,7 +318,7 @@ fn parse_token(
     match update_parent {
         None => (),
         Some(index) => match nodes.get_mut(index) {
-            None => Err(format!("Index assigned to node has no value in node list. {:?}", index))?,
+            None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", index))?,
             Some(node) => node.right = Some(id),
         },
     }
@@ -339,7 +339,7 @@ fn parse_value_like(
     priority_map: &HashMap<Definition, usize>,
     last_token: LexerToken,
     under_group: Option<usize>,
-) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), ParsingError> {
+) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), CompilerError> {
     let mut new_parent = parent;
 
     if *check_for_list {
@@ -373,11 +373,11 @@ fn setup_space_list_check(
     nodes: &mut Vec<ParseNode>,
     check_for_list: &mut bool,
     next_last_left: &mut Option<usize>,
-) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), ParsingError> {
+) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), CompilerError> {
     match last_left {
         None => (), // ignore, spaces at begining of input can't create a list
         Some(left) => match nodes.get(left) {
-            None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+            None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", left))?,
             Some(left_node) => {
                 trace!(
                     "Checking for space list. Left {:?} {:?}. Current group {:?}.",
@@ -405,7 +405,7 @@ fn setup_space_list_check(
     Ok((Definition::Drop, None, None, None))
 }
 
-pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
+pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> {
     trace!("Starting parse");
     let priority_map = make_priority_map();
 
@@ -431,7 +431,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
         let under_group = match current_group {
             None => None,
             Some(current) => match group_stack.get(current) {
-                None => Err(format!("Current group set to non-existant group in stack."))?,
+                None => implementation_error_with_token(format!("Current group set to non-existant group in stack."), token)?,
                 Some(group) => Some(*group),
             },
         };
@@ -457,17 +457,20 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                 next_last_left = last_left;
                 (definition, None, None, None)
             }
-            SecondaryDefinition::Value => parse_value_like(
-                id,
-                definition,
-                &mut check_for_list,
-                next_parent,
-                &mut next_last_left,
-                &mut nodes,
-                last_left,
-                &priority_map,
-                last_token,
-                under_group,
+            SecondaryDefinition::Value => append_token_details(
+                parse_value_like(
+                    id,
+                    definition,
+                    &mut check_for_list,
+                    next_parent,
+                    &mut next_last_left,
+                    &mut nodes,
+                    last_left,
+                    &priority_map,
+                    last_token,
+                    under_group,
+                ),
+                token,
             )?,
             SecondaryDefinition::Identifier => {
                 // having a parent of access means its on the left
@@ -476,7 +479,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                 let definition = match next_parent {
                     None => Definition::Identifier,
                     Some(parent) => match nodes.get(parent) {
-                        None => Err(format!("No node found at next parent index {:?}", parent))?,
+                        None => implementation_error_with_token(format!("No node found at next parent index {:?}", parent), token)?,
                         Some(p) => {
                             if p.definition == Definition::Access {
                                 Definition::Property
@@ -592,9 +595,9 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                 let in_group = match current_group {
                     None => false,
                     Some(group) => match group_stack.get(group) {
-                        None => Err(format!("Current group set to non-existant group in stack."))?,
+                        None => implementation_error_with_token(format!("Current group set to non-existant group in stack."), token)?,
                         Some(group_index) => match nodes.get(*group_index) {
-                            None => Err(format!("Index assigned to node has no value in node list. {:?}", group))?,
+                            None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", group), token)?,
                             Some(group_node) => {
                                 trace!("Current group node definition is {:?}", group_node.definition);
                                 group_node.definition == Definition::Group
@@ -619,7 +622,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
                     let drop = match last_left {
                         None => false, // not a subexpression node
                         Some(left) => match nodes.get(left) {
-                            None => Err(format!("Index assigned to node has no value in node list. {:?}", left))?,
+                            None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", left), token)?,
                             Some(left_node) => left_node.definition == Definition::Subexpression,
                         },
                     };
@@ -684,7 +687,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
     trace!("Finding root node");
     let mut root = 0;
     let mut node = match nodes.get(0) {
-        None => Err(format!("No node regisistered in first slot."))?,
+        None => implementation_error(format!("No node regisistered in first slot."))?,
         Some(n) => n,
     };
 
@@ -695,7 +698,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
         match node.get_parent() {
             None => unreachable!(),
             Some(i) => match nodes.get(i) {
-                None => Err(format!("No node regisistered in slot {:?} of node in slot {:?}", i, root))?,
+                None => implementation_error(format!("No node regisistered in slot {:?} of node in slot {:?}", i, root))?,
                 Some(parent) => {
                     trace!("Moving up to node {:?} with definition {:?}", i, parent.definition);
                     root = i;
@@ -707,7 +710,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
         // safty net, max iterations to len of nodes
         count += 1;
         if count > nodes.len() {
-            Err(format!("Max iterations reached when searching for root node."))?;
+            implementation_error(format!("Max iterations reached when searching for root node."))?;
         }
     }
 

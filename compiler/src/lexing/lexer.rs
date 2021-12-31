@@ -95,6 +95,14 @@ impl LexerToken {
     pub fn get_token_type(&self) -> TokenType {
         self.token_type
     }
+
+    pub fn get_line(&self) -> usize {
+        self.row
+    }
+
+    pub fn get_column(&self) -> usize {
+        self.column
+    }
 }
 
 pub fn create_operator_tree(symbol_list: Vec<(&str, TokenType)>) -> LexerOperatorNode {
