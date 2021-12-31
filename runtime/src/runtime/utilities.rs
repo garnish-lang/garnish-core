@@ -68,9 +68,9 @@ mod tests {
         let start = runtime.get_data_len();
 
         assert_eq!(runtime.add_integer(100).unwrap(), start);
-        assert_eq!(runtime.add_integer(100).unwrap(), start + 1);
-        assert_eq!(runtime.add_integer(100).unwrap(), start + 2);
-        assert_eq!(runtime.add_integer(100).unwrap(), start + 3);
+        assert_eq!(runtime.add_integer(200).unwrap(), start + 1);
+        assert_eq!(runtime.add_integer(300).unwrap(), start + 2);
+        assert_eq!(runtime.add_integer(400).unwrap(), start + 3);
     }
 }
 

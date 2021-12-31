@@ -74,16 +74,17 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
 ) -> GarnishLangCompilerResult<(), Data::Error> {
     match node.get_definition() {
         Definition::Number => {
-            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
+            let addr = data
+                .add_integer(match node.get_lex_token().get_text().parse::<Data::Integer>() {
+                    Err(_) => Err(GarnishLangCompilerError::new(format!(
+                        "Could not parse value from integer string {:?}",
+                        node.get_lex_token().get_text()
+                    )))?,
+                    Ok(i) => i,
+                })
+                .nest_into()?;
 
-            data.add_integer(match node.get_lex_token().get_text().parse::<Data::Integer>() {
-                Err(_) => Err(GarnishLangCompilerError::new(format!(
-                    "Could not parse value from integer string {:?}",
-                    node.get_lex_token().get_text()
-                )))?,
-                Ok(i) => i,
-            })
-            .nest_into()?;
+            data.push_instruction(Instruction::Put, Some(addr)).nest_into()?;
         }
         Definition::Identifier => {
             data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
@@ -101,9 +102,8 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
             data.push_instruction(Instruction::Put, Some(Data::Size::zero())).nest_into()?;
         }
         Definition::Symbol => {
-            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
-
-            data.add_symbol(&node.get_lex_token().get_text()[1..]).nest_into()?;
+            let addr = data.add_symbol(&node.get_lex_token().get_text()[1..]).nest_into()?;
+            data.push_instruction(Instruction::Put, Some(addr)).nest_into()?;
         }
         Definition::Value => {
             // all unit literals will use unit used in the zero element slot of data
@@ -512,12 +512,6 @@ mod test_utils {
 
         Ok(data)
     }
-
-    pub fn symbol_value(s: &str) -> u64 {
-        let mut data = SimpleRuntimeData::new();
-        let addr = data.add_symbol(s).unwrap();
-        data.get_symbol(addr).unwrap()
-    }
 }
 
 #[cfg(test)]
@@ -665,7 +659,7 @@ mod operations {
             1,
             vec![
                 (Definition::Number, Some(1), None, None, "5", TokenType::Number),
-                (Definition::Addition, None, Some(0), Some(2), "+", TokenType::EmptyApply),
+                (Definition::Addition, None, Some(0), Some(2), "+", TokenType::PlusSign),
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
@@ -675,6 +669,45 @@ mod operations {
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn same_integer_twice() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Addition, None, Some(0), Some(2), "+", TokenType::PlusSign),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(3)),
+                (Instruction::PerformAddition, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)),
+        );
+    }
+
+    #[test]
+    fn same_symbol_twice() {
+        let sym_val = symbol_value("sym");
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Symbol, Some(1), None, None, ";sym", TokenType::Symbol),
+                (Definition::Pair, None, Some(0), Some(2), "=", TokenType::Pair),
+                (Definition::Symbol, Some(1), None, None, ";sym", TokenType::Symbol),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(3)),
+                (Instruction::MakePair, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(SymbolData::from(sym_val)),
         );
     }
 

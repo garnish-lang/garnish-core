@@ -1,3 +1,6 @@
+use std::collections::hash_map::DefaultHasher;
+use std::hash::Hash;
+use std::{hash::Hasher};
 use crate::simple::data::{
      ExpressionData, ExternalData, FalseData, IntegerData, ListData, PairData, SymbolData, TrueData, UnitData, SimpleData, AnyData
 };
@@ -82,6 +85,14 @@ pub fn data_equal(left: &Box<dyn Any>, right: &Box<dyn Any>) -> bool {
         || cmp_any::<ExternalData>(left, right)
         || cmp_any::<PairData>(left, right)
         || cmp_any::<ListData>(left, right)
+}
+
+pub fn symbol_value(value: &str) -> u64 {
+    let mut h = DefaultHasher::new();
+    value.hash(&mut h);
+    let hv = h.finish();
+
+    hv
 }
 
 #[cfg(test)]
