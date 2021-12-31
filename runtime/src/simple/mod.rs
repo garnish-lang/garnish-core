@@ -586,4 +586,21 @@ mod data_storage {
         assert_eq!(runtime.simple_data.get(3).unwrap().as_external().unwrap().value(), 10);
         assert_eq!(runtime.simple_data.get(4).unwrap().as_external().unwrap().value(), 20);
     }
+
+    #[test]
+    fn similar_values_cache_differently() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let start = runtime.get_data_len();
+        let i1 = runtime.add_external(10).unwrap();
+        let i2 = runtime.add_expression(10).unwrap();
+
+        assert_eq!(i1, start);
+        assert_eq!(i2, start + 1);
+        assert_ne!(i1, i2);
+
+        assert_eq!(runtime.get_data_len(), 5);
+        assert_eq!(runtime.simple_data.get(3).unwrap().as_external().unwrap().value(), 10);
+        assert_eq!(runtime.simple_data.get(4).unwrap().as_expression().unwrap().value(), 10);
+    }
 }
