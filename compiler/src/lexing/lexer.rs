@@ -1,7 +1,7 @@
 use log::trace;
 use std::{collections::HashMap, iter, vec};
 
-use crate::{LexingError};
+use crate::LexingError;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum TokenType {
@@ -537,7 +537,8 @@ pub fn lex_with_processor(input: &String) -> Result<Vec<LexerToken>, LexingError
 mod tests {
     use std::vec;
 
-    use crate::{lex, lexer::create_operator_tree, LexerToken, TokenType};
+    use crate::{lex, LexerToken, TokenType};
+    use crate::lexing::lexer::create_operator_tree;
 
     #[test]
     fn access_single_string() {

@@ -1,7 +1,7 @@
 use garnish_lang_runtime::*;
 use log::trace;
 
-use crate::parser::*;
+use crate::parsing::parser::*;
 
 pub type GarnishLangCompilerResult<T, N> = Result<T, GarnishLangCompilerError<N>>;
 pub type GarnishLangCompilerError<T> = NestedError<T>;

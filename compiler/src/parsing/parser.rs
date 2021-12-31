@@ -1,7 +1,8 @@
 use log::trace;
 use std::{collections::HashMap, hash::Hash, vec};
 
-use crate::{lexer::*, ParsingError};
+use crate::ParsingError;
+use crate::lexing::lexer::*;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
 pub enum Definition {
@@ -715,7 +716,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, ParsingError> {
 
 #[cfg(test)]
 mod tests {
-    use crate::lexer::*;
+    use crate::lexing::lexer::*;
     use crate::*;
 
     type DefAssertionInfo = (usize, Definition, Option<usize>, Option<usize>, Option<usize>);
@@ -1587,7 +1588,7 @@ mod tests {
 #[cfg(test)]
 mod lists {
     use super::tests::*;
-    use crate::lexer::*;
+    use crate::lexing::lexer::*;
     use crate::*;
 
     #[test]
@@ -1745,7 +1746,7 @@ mod lists {
 #[cfg(test)]
 mod groups {
     use super::tests::*;
-    use crate::lexer::*;
+    use crate::lexing::lexer::*;
     use crate::*;
 
     fn assert_group_nested_results(
@@ -2174,7 +2175,7 @@ mod groups {
 #[cfg(test)]
 mod conditionals {
     use super::tests::*;
-    use crate::lexer::*;
+    use crate::lexing::lexer::*;
     use crate::*;
 
     #[test]
@@ -2412,7 +2413,7 @@ mod conditionals {
 #[cfg(test)]
 mod annotations {
     use super::tests::*;
-    use crate::lexer::*;
+    use crate::lexing::lexer::*;
     use crate::*;
 
     #[test]

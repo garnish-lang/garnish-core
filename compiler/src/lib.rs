@@ -1,11 +1,9 @@
-mod lexer;
 mod lexing;
-mod make_instructions;
-mod parser;
+mod building;
 mod parsing;
 
-pub use lexer::*;
+pub use lexing::lexer::*;
 pub use lexing::*;
-pub use make_instructions::*;
-pub use parser::*;
+pub use building::*;
+pub use parsing::parser::*;
 pub use parsing::*;
