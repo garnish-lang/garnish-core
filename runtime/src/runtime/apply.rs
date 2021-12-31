@@ -296,8 +296,6 @@ mod tests {
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
 
-        println!("check check");
-
         struct MyContext {}
 
         impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
@@ -308,10 +306,8 @@ mod tests {
             fn apply(&mut self, external_value: usize, input_addr: usize, runtime: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<String, bool> {
                 assert_eq!(external_value, 3);
 
-                println!("checking input {:?} {:?}", external_value, input_addr);
                 let value = match runtime.get_data_type(input_addr).nest_into()? {
                     ExpressionDataType::Integer => {
-                        println!("is integer {:?}", input_addr);
                         runtime.get_integer(input_addr).nest_into()?
                     },
                     _ => return Ok(false),
