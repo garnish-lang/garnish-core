@@ -179,7 +179,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
     Ok(())
 }
 
-pub fn instructions_from_ast<Data: GarnishLangRuntimeData>(
+pub fn build_with_data<Data: GarnishLangRuntimeData>(
     root: usize,
     nodes: Vec<ParseNode>,
     data: &mut Data,
@@ -507,7 +507,7 @@ mod test_utils {
 
         let mut data = SimpleRuntimeData::new();
 
-        instructions_from_ast(root, nodes, &mut data)?;
+        build_with_data(root, nodes, &mut data)?;
 
         Ok(data)
     }

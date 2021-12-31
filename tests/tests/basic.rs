@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use garnish_lang_compiler::{instructions_from_ast, lex, parse};
+    use garnish_lang_compiler::{build_with_data, lex, parse};
     use garnish_lang_runtime::{GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
@@ -12,7 +12,7 @@ mod tests {
 
         let mut data = SimpleRuntimeData::new();
 
-        instructions_from_ast(parsed.get_root(), parsed.get_nodes().clone(), &mut data).unwrap();
+        build_with_data(parsed.get_root(), parsed.get_nodes().clone(), &mut data).unwrap();
 
         data.set_end_of_constant(data.get_data_len()).unwrap();
 
