@@ -1,7 +1,7 @@
 use crate::runtime::types::ExpressionDataType;
 use crate::simple::data::SimpleData;
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct UnitData {
     t: ExpressionDataType,
 }
@@ -18,7 +18,7 @@ impl SimpleData for UnitData {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct TrueData {}
 
 impl TrueData {
@@ -33,7 +33,7 @@ impl SimpleData for TrueData {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct FalseData {}
 
 impl FalseData {
@@ -48,7 +48,7 @@ impl SimpleData for FalseData {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct IntegerData {
     value: i32,
 }
@@ -71,7 +71,7 @@ impl SimpleData for IntegerData {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct SymbolData {
     value: u64,
 }
@@ -94,7 +94,7 @@ impl SimpleData for SymbolData {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct ExpressionData {
     value: usize,
 }
@@ -117,7 +117,7 @@ impl SimpleData for ExpressionData {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct ExternalData {
     value: usize,
 }
@@ -140,7 +140,7 @@ impl SimpleData for ExternalData {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct PairData {
     left: usize,
     right: usize,
@@ -168,7 +168,7 @@ impl SimpleData for PairData {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct ListData {
     items: Vec<usize>,
     associations: Vec<usize>,

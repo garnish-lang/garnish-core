@@ -2,7 +2,11 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
-use crate::{AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, FalseData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeError, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, SimpleDataList, symbol_value, SymbolData, TrueData, UnitData};
+use crate::{
+    symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, FalseData, GarnishLangRuntimeContext,
+    GarnishLangRuntimeData, GarnishLangRuntimeError, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData,
+    PairData, SimpleData, SimpleDataList, SymbolData, TrueData, UnitData,
+};
 
 pub mod data;
 
@@ -18,7 +22,7 @@ pub struct SimpleRuntimeData {
     jump_path: Vec<usize>,
     current_list: Option<(Vec<usize>, Vec<usize>)>,
     symbols: HashMap<String, u64>,
-    cache: HashMap<u64, usize>
+    cache: HashMap<u64, usize>,
 }
 
 impl SimpleRuntimeData {
@@ -122,6 +126,23 @@ impl SimpleRuntimeData {
         self.instruction_cursor += 1;
         Ok(())
     }
+
+    fn cache_add<T: SimpleData>(&mut self, value: T) -> Result<usize, String> {
+        let mut h = DefaultHasher::new();
+        value.hash(&mut h);
+        value.get_type().hash(&mut h);
+        let hv = h.finish();
+
+        match self.cache.get(&hv) {
+            Some(addr) => Ok(*addr),
+            None => {
+                let addr = self.simple_data.len();
+                self.simple_data.push(value);
+                self.cache.insert(hv, addr);
+                Ok(addr)
+            }
+        }
+    }
 }
 
 impl GarnishLangRuntimeData for SimpleRuntimeData {
@@ -201,70 +222,39 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         }
     }
 
-    fn add_integer(&mut self, value: i32) -> Result<usize, Self::Error> {
-        let mut h = DefaultHasher::new();
-        value.hash(&mut h);
-        ExpressionDataType::Integer.hash(&mut h);
-        let hv = h.finish();
-
-        match self.cache.get(&hv) {
-            Some(addr) => Ok(*addr),
-            None => {
-                let addr = self.simple_data.len();
-                self.simple_data.push(IntegerData::from(value));
-                self.cache.insert(hv, addr);
-                // self.data.push(ExpressionData::integer(value));
-                Ok(addr)
-            }
-        }
-    }
-
-    fn add_symbol(&mut self, value: &str) -> Result<usize, Self::Error> {
-        let sym_val = symbol_value(value);
-
-        let mut h = DefaultHasher::new();
-        sym_val.hash(&mut h);
-        ExpressionDataType::Symbol.hash(&mut h);
-        let hv = h.finish();
-
-        match self.cache.get(&hv) {
-            Some(addr) => Ok(*addr),
-            None => {
-                let addr = self.simple_data.len();
-                self.symbols.insert(value.to_string(), sym_val);
-                self.simple_data.push(SymbolData::from(sym_val));
-                self.cache.insert(hv, addr);
-
-                Ok(addr)
-            }
-        }
-    }
-
-    fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error> {
-        self.simple_data.push(ExpressionData::from(value));
-        Ok(self.simple_data.len() - 1)
-    }
-
-    fn add_external(&mut self, value: usize) -> Result<usize, Self::Error> {
-        self.simple_data.push(ExternalData::from(value));
-        Ok(self.simple_data.len() - 1)
-    }
-
-    fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error> {
-        self.simple_data.push(PairData::from(value));
-        Ok(self.simple_data.len() - 1)
-    }
-
     fn add_unit(&mut self) -> Result<usize, Self::Error> {
         Ok(0)
+    }
+
+    fn add_false(&mut self) -> Result<usize, Self::Error> {
+        Ok(1)
     }
 
     fn add_true(&mut self) -> Result<usize, Self::Error> {
         Ok(2)
     }
 
-    fn add_false(&mut self) -> Result<usize, Self::Error> {
-        Ok(1)
+    fn add_integer(&mut self, value: i32) -> Result<usize, Self::Error> {
+        self.cache_add(IntegerData::from(value))
+    }
+
+    fn add_symbol(&mut self, value: &str) -> Result<usize, Self::Error> {
+        let sym_val = symbol_value(value);
+        self.symbols.insert(value.to_string(), sym_val);
+        self.cache_add(SymbolData::from(sym_val))
+    }
+
+    fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error> {
+        self.cache_add(ExpressionData::from(value))
+    }
+
+    fn add_external(&mut self, value: usize) -> Result<usize, Self::Error> {
+        self.cache_add(ExternalData::from(value))
+    }
+
+    fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error> {
+        self.simple_data.push(PairData::from(value));
+        Ok(self.simple_data.len() - 1)
     }
 
     fn start_list(&mut self, _: usize) -> Result<(), Self::Error> {
@@ -487,7 +477,7 @@ mod tests {
 
 #[cfg(test)]
 mod data_storage {
-    use crate::{DataCoersion, FalseData, GarnishLangRuntimeData, SimpleRuntimeData, symbol_value, TrueData, UnitData};
+    use crate::{symbol_value, DataCoersion, FalseData, GarnishLangRuntimeData, SimpleRuntimeData, TrueData, UnitData};
 
     #[test]
     fn unit() {
@@ -559,5 +549,41 @@ mod data_storage {
         assert_eq!(runtime.get_data_len(), 5);
         assert_eq!(runtime.simple_data.get(3).unwrap().as_symbol().unwrap().value(), symbol_value("sym"));
         assert_eq!(runtime.simple_data.get(4).unwrap().as_symbol().unwrap().value(), symbol_value("value"));
+    }
+
+    #[test]
+    fn expression() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let start = runtime.get_data_len();
+        let i1 = runtime.add_expression(10).unwrap();
+        let i2 = runtime.add_expression(20).unwrap();
+        let i3 = runtime.add_expression(10).unwrap();
+
+        assert_eq!(i1, start);
+        assert_eq!(i2, start + 1);
+        assert_eq!(i3, i1);
+
+        assert_eq!(runtime.get_data_len(), 5);
+        assert_eq!(runtime.simple_data.get(3).unwrap().as_expression().unwrap().value(), 10);
+        assert_eq!(runtime.simple_data.get(4).unwrap().as_expression().unwrap().value(), 20);
+    }
+
+    #[test]
+    fn external() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let start = runtime.get_data_len();
+        let i1 = runtime.add_external(10).unwrap();
+        let i2 = runtime.add_external(20).unwrap();
+        let i3 = runtime.add_external(10).unwrap();
+
+        assert_eq!(i1, start);
+        assert_eq!(i2, start + 1);
+        assert_eq!(i3, i1);
+
+        assert_eq!(runtime.get_data_len(), 5);
+        assert_eq!(runtime.simple_data.get(3).unwrap().as_external().unwrap().value(), 10);
+        assert_eq!(runtime.simple_data.get(4).unwrap().as_external().unwrap().value(), 20);
     }
 }

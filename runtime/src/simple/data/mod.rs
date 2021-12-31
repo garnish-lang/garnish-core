@@ -9,7 +9,7 @@ use std::any::Any;
 use std::fmt::Debug;
 use std::slice::Iter;
 
-pub trait SimpleData: Any + Debug {
+pub trait SimpleData: Any + Debug + std::hash::Hash {
     fn get_type(&self) -> ExpressionDataType;
 }
 
