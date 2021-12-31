@@ -300,7 +300,7 @@ mod tests {
         }
 
         impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
-            fn resolve(&mut self, _: usize, _: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<String, bool> {
+            fn resolve(&mut self, _: u64, _: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<String, bool> {
                 Ok(false)
             }
 

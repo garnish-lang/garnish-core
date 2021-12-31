@@ -26,7 +26,7 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
     // check context
     match context {
         None => (),
-        Some(c) => match c.resolve(addr, this)? {
+        Some(c) => match c.resolve(this.get_symbol(addr).nest_into()?, this)? {
             true => return Ok(()), // context resovled end look up
             false => (),           // not resolved fall through
         },
@@ -39,12 +39,12 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
 #[cfg(test)]
 mod tests {
     use crate::{
-        error,
         runtime::{
             context::{EmptyContext, GarnishLangRuntimeContext},
             utilities::push_integer,
             GarnishRuntime,
-        }, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
+        },
+        symbol_value, GarnishLangRuntimeData, GarnishLangRuntimeResult, Instruction, SimpleRuntimeData,
     };
 
     #[test]
@@ -124,14 +124,11 @@ mod tests {
         struct MyContext {}
 
         impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
-            fn resolve(&mut self, sym_addr: usize, runtime: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<String, bool> {
-                match runtime.get_data_type(sym_addr).nest_into()? {
-                    ExpressionDataType::Symbol => {
-                        push_integer(runtime, 100)?;
-                        Ok(true)
-                    }
-                    t => Err(error(format!("Address given to resolve is of type {:?}. Expected symbol type.", t)))?,
-                }
+            fn resolve(&mut self, sym_val: u64, runtime: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<String, bool> {
+                assert_eq!(symbol_value("one"), sym_val);
+
+                push_integer(runtime, 100)?;
+                Ok(true)
             }
 
             fn apply(&mut self, _: usize, _: usize, _: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<String, bool> {
