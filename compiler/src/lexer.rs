@@ -1,7 +1,7 @@
 use log::trace;
 use std::{collections::HashMap, iter, vec};
 
-use crate::{LexerAnnotationProcessor, LexerAnnotationProcessorInstruction, LexingError, NoOpProcessor};
+use crate::{LexingError};
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum TokenType {
@@ -245,10 +245,10 @@ fn start_token<'a>(
 }
 
 pub fn lex(input: &String) -> Result<Vec<LexerToken>, LexingError> {
-    lex_with_processor(input, &mut NoOpProcessor::new())
+    lex_with_processor(input)
 }
 
-pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor: &mut T) -> Result<Vec<LexerToken>, LexingError> {
+pub fn lex_with_processor(input: &String) -> Result<Vec<LexerToken>, LexingError> {
     trace!("Beginning lexing");
 
     let mut tokens = vec![];
@@ -292,8 +292,6 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
 
     let mut should_create = true;
     let mut state = LexingState::NoToken;
-
-    let mut processor_instruction = None;
 
     for c in input.chars().chain(iter::once('\0')) {
         trace!("Character {:?} at ({:?}, {:?})", c, text_column, text_row);
@@ -464,22 +462,6 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
                 } else {
                     // end token
 
-                    match processor.yield_annotation(&current_characters, token_start_row, token_start_column) {
-                        Err(e) => Err(format!("{:?}", e.to_string()))?,
-                        Ok(v) => match v.get_instruction() {
-                            LexerAnnotationProcessorInstruction::Drop => {
-                                state = LexingState::NoToken;
-                            }
-                            LexerAnnotationProcessorInstruction::UntilToken => {
-                                // processor is given chance to consume token so we drop it here
-                                state = LexingState::NoToken;
-
-                                processor_instruction = Some(v);
-                            }
-                            LexerAnnotationProcessorInstruction::NoOp => (),
-                        },
-                    }
-
                     true
                 }
             }
@@ -487,22 +469,6 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
                 // line annotations continue until end of line
                 // for simplicity we include entire line as the token
                 if c == '\n' || c == '\0' {
-                    match processor.yield_line_annotation(&current_characters, token_start_row, token_start_column) {
-                        Err(e) => Err(format!("{:?}", e.to_string()))?,
-                        Ok(v) => match v.get_instruction() {
-                            LexerAnnotationProcessorInstruction::Drop => {
-                                state = LexingState::NoToken;
-                            }
-                            LexerAnnotationProcessorInstruction::UntilToken => {
-                                // processor is given chance to consume token so we drop it here
-                                state = LexingState::NoToken;
-
-                                processor_instruction = Some(v);
-                            }
-                            LexerAnnotationProcessorInstruction::NoOp => (),
-                        },
-                    }
-
                     true
                 } else {
                     current_characters.push(c);
@@ -528,26 +494,7 @@ pub fn lex_with_processor<T: LexerAnnotationProcessor>(input: &String, processor
                     token_start_column,
                 );
 
-                // check for annotation processing before pushing token
-                match processor_instruction {
-                    None => {
-                        tokens.push(token);
-                    }
-                    Some(info) => match info.get_instruction() {
-                        // if yielding to processor, its assumed that the processor is taking ownership of the token
-                        LexerAnnotationProcessorInstruction::UntilToken => {
-                            // check now for borrow to happen before move to processor
-                            if token.get_token_type() == info.get_token_type() {
-                                // end yielding
-                                processor_instruction = None;
-                            }
-
-                            processor.yield_token(token).or_else(|e| Err(format!("{:?}", e.to_string())))?;
-                        }
-                        // no other instruction is supported at this point
-                        _ => tokens.push(token),
-                    },
-                }
+                tokens.push(token);
             }
 
             // set default for new if next token isn't a symbol
