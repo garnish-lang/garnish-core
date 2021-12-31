@@ -1,7 +1,6 @@
+use crate::error::CompilerError;
 use log::trace;
 use std::{collections::HashMap, iter, vec};
-
-use crate::LexingError;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum TokenType {
@@ -244,11 +243,11 @@ fn start_token<'a>(
     );
 }
 
-pub fn lex(input: &String) -> Result<Vec<LexerToken>, LexingError> {
+pub fn lex(input: &String) -> Result<Vec<LexerToken>, CompilerError> {
     lex_with_processor(input)
 }
 
-pub fn lex_with_processor(input: &String) -> Result<Vec<LexerToken>, LexingError> {
+pub fn lex_with_processor(input: &String) -> Result<Vec<LexerToken>, CompilerError> {
     trace!("Beginning lexing");
 
     let mut tokens = vec![];
@@ -487,7 +486,7 @@ pub fn lex_with_processor(input: &String) -> Result<Vec<LexerToken>, LexingError
                     current_characters,
                     match current_token_type {
                         Some(t) => t,
-                        None => Err(format!("No token type at row {:?} and column {:?}", text_row, text_column))?,
+                        None => Err(CompilerError::new("No token", token_start_row, token_start_column))?,
                     },
                     token_start_row,
                     // actual token is determined after current, minus 1 to make accurate
@@ -534,11 +533,24 @@ pub fn lex_with_processor(input: &String) -> Result<Vec<LexerToken>, LexingError
 }
 
 #[cfg(test)]
+mod errors {
+    use crate::error::CompilerError;
+    use crate::lex;
+
+    #[test]
+    fn error_from_unknown_token() {
+        let result = lex(&"?".to_string());
+
+        assert_eq!(result.err().unwrap(), CompilerError::new("No token", 0, 0));
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use std::vec;
 
-    use crate::{lex, LexerToken, TokenType};
     use crate::lexing::lexer::create_operator_tree;
+    use crate::{lex, LexerToken, TokenType};
 
     #[test]
     fn access_single_string() {
