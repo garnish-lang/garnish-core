@@ -71,7 +71,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                 },
             }
         }
-        t => Err(error(format!("Data type {:?} not supported on left side of apply operation.", t))),
+        _ => push_unit(this),
     }
 }
 
@@ -115,6 +115,21 @@ mod tests {
         assert_eq!(runtime.get_value(0).unwrap(), 5);
         assert_eq!(runtime.get_instruction_cursor(), 0);
         assert_eq!(runtime.get_jump_path(0).unwrap(), 7);
+    }
+
+    #[test]
+    fn apply_with_unsupported_left_is_unit() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_integer(10).unwrap();
+        let int2 = runtime.add_integer(20).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_register().get(0).unwrap(), &0usize);
     }
 
     #[test]
