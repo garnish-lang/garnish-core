@@ -12,11 +12,7 @@ pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data)
     push_boolean(this, result)
 }
 
-fn compare_data<Data: GarnishLangRuntimeData>(
-    this: &Data,
-    left_addr: Data::Size,
-    right_addr: Data::Size,
-) -> Result<bool, RuntimeError<Data::Error>> {
+fn compare_data<Data: GarnishLangRuntimeData>(this: &Data, left_addr: Data::Size, right_addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {
     let equal = match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {
         (ExpressionDataType::Unit, ExpressionDataType::Unit)
         | (ExpressionDataType::True, ExpressionDataType::True)
@@ -60,24 +56,44 @@ fn compare_data<Data: GarnishLangRuntimeData>(
             compare_data(this, left1, left2)? && compare_data(this, right1, right2)?
         }
         (ExpressionDataType::List, ExpressionDataType::List) => {
-            let len1 = this.get_list_len(left_addr)?;
-            let len2 = this.get_list_len(right_addr)?;
+            let association_len1 = this.get_list_associations_len(left_addr)?;
+            let associations_len2 = this.get_list_associations_len(right_addr)?;
 
-            if len1 != len2 {
-                return Ok(false);
-            }
+            if association_len1 > Data::Size::zero() && association_len1 == associations_len2 {
+                // comparing associations can be done similar to regular items since,
+                // if they are the equal, they should be associated in the same order as well
+                let mut count = Data::Size::zero();
+                while count < association_len1 {
+                    let i = Data::size_to_integer(count);
+                    let item1 = this.get_list_association(left_addr, i)?;
+                    let item2 = this.get_list_association(right_addr, i)?;
 
-            let mut count = Data::Size::zero();
-            while count < len1 {
-                let i = Data::size_to_integer(count);
-                let item1 = this.get_list_item(left_addr, i)?;
-                let item2 = this.get_list_item(right_addr, i)?;
+                    if !compare_data(this, item1, item2)? {
+                        return Ok(false);
+                    }
 
-                if !compare_data(this,item1, item2)? {
+                    count += Data::Size::one();
+                }
+            } else {
+                let len1 = this.get_list_len(left_addr)?;
+                let len2 = this.get_list_len(right_addr)?;
+
+                if len1 != len2 {
                     return Ok(false);
                 }
 
-                count += Data::Size::one();
+                let mut count = Data::Size::zero();
+                while count < len1 {
+                    let i = Data::size_to_integer(count);
+                    let item1 = this.get_list_item(left_addr, i)?;
+                    let item2 = this.get_list_item(right_addr, i)?;
+
+                    if !compare_data(this, item1, item2)? {
+                        return Ok(false);
+                    }
+
+                    count += Data::Size::one();
+                }
             }
 
             true
@@ -429,6 +445,102 @@ mod lists {
         runtime.push_register(i8).unwrap();
 
         runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![1]);
+    }
+
+    #[test]
+    fn equality_associations_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_symbol("val1").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
+
+        let i4 = runtime.add_symbol("val2").unwrap();
+        let i5 = runtime.add_integer(20).unwrap();
+        let i6 = runtime.add_pair((i4, i5)).unwrap();
+
+        let i7 = runtime.add_symbol("val3").unwrap();
+        let i8 = runtime.add_integer(30).unwrap();
+        let i9 = runtime.add_pair((i7, i8)).unwrap();
+
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        runtime.add_to_list(i6, true).unwrap();
+        runtime.add_to_list(i9, true).unwrap();
+        let i10 = runtime.end_list().unwrap();
+
+        let i11 = runtime.add_symbol("val3").unwrap();
+        let i12 = runtime.add_integer(30).unwrap();
+        let i13 = runtime.add_pair((i11, i12)).unwrap();
+
+        let i14 = runtime.add_symbol("val1").unwrap();
+        let i15 = runtime.add_integer(10).unwrap();
+        let i16 = runtime.add_pair((i14, i15)).unwrap();
+
+        let i17 = runtime.add_symbol("val2").unwrap();
+        let i18 = runtime.add_integer(20).unwrap();
+        let i19 = runtime.add_pair((i17, i18)).unwrap();
+
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i13, true).unwrap();
+        runtime.add_to_list(i16, true).unwrap();
+        runtime.add_to_list(i19, true).unwrap();
+        let i20 = runtime.end_list().unwrap();
+
+        runtime.push_register(i10).unwrap();
+        runtime.push_register(i20).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![2]);
+    }
+
+    #[test]
+    fn equality_associations_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_symbol("val1").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
+
+        let i4 = runtime.add_symbol("val2").unwrap();
+        let i5 = runtime.add_integer(20).unwrap();
+        let i6 = runtime.add_pair((i4, i5)).unwrap();
+
+        let i7 = runtime.add_symbol("val3").unwrap();
+        let i8 = runtime.add_integer(30).unwrap();
+        let i9 = runtime.add_pair((i7, i8)).unwrap();
+
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        runtime.add_to_list(i6, true).unwrap();
+        runtime.add_to_list(i9, true).unwrap();
+        let i10 = runtime.end_list().unwrap();
+
+        let i11 = runtime.add_symbol("val3").unwrap();
+        let i12 = runtime.add_integer(30).unwrap();
+        let i13 = runtime.add_pair((i11, i12)).unwrap();
+
+        let i14 = runtime.add_symbol("val1").unwrap();
+        let i15 = runtime.add_integer(10).unwrap();
+        let i16 = runtime.add_pair((i14, i15)).unwrap();
+
+        let i17 = runtime.add_symbol("val2").unwrap();
+        let i18 = runtime.add_integer(100).unwrap();
+        let i19 = runtime.add_pair((i17, i18)).unwrap();
+
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i13, true).unwrap();
+        runtime.add_to_list(i16, true).unwrap();
+        runtime.add_to_list(i19, true).unwrap();
+        let i20 = runtime.end_list().unwrap();
+
+        runtime.push_register(i10).unwrap();
+        runtime.push_register(i20).unwrap();
 
         runtime.equality_comparison().unwrap();
 
