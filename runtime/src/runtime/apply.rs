@@ -91,7 +91,22 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
 
                     while count < len {
                         let i = Data::size_to_integer(count);
-                        let item = this.get_list_item(right_addr, i)?;
+                        let mut item = this.get_list_item(right_addr, i)?;
+
+                        let (is_pair_mapping, sym_addr) = match this.get_data_type(item)? {
+                            ExpressionDataType::Pair => {
+                                let (left, right) = this.get_pair(item)?;
+                                match this.get_data_type(left)? {
+                                    ExpressionDataType::Symbol => {
+                                        // update item to be mapping pair's right
+                                        item = right;
+                                        (true, left)
+                                    }
+                                    _ => (false, Data::Size::zero()),
+                                }
+                            }
+                            _ => (false, Data::Size::zero()),
+                        };
 
                         let (value, is_associative) = match get_access_addr(this, item, left_addr)? {
                             Some(addr) =>  match this.get_data_type(addr)? {
@@ -108,7 +123,12 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                             None => (this.add_unit()?, false),
                         };
 
-                        this.add_to_list(value, is_associative)?;
+                        if is_pair_mapping {
+                            let value = this.add_pair((sym_addr, value))?;
+                            this.add_to_list(value, true)?;
+                        } else {
+                            this.add_to_list(value, is_associative)?;
+                        }
 
                         count += Data::Size::one();
                     }
@@ -247,27 +267,32 @@ mod tests {
         runtime.add_to_list(i9, true).unwrap();
         let i10 = runtime.end_list().unwrap();
 
-        let i11 = runtime.add_integer(2).unwrap();
-        let i12 = runtime.add_symbol("val2").unwrap();
-        let i13 = runtime.add_integer(5).unwrap();
-        let i14 = runtime.add_expression(10).unwrap();
+        let i11 = runtime.add_integer(2).unwrap();      // integer access
+        let i12 = runtime.add_symbol("val2").unwrap();  // symbol access
+        let i13 = runtime.add_integer(5).unwrap();      // access out of bounds
+        let i14 = runtime.add_expression(10).unwrap();  // invalid access type
+
+        let i15 = runtime.add_symbol("new_key").unwrap();
+        let i16 = runtime.add_symbol("val1").unwrap();
+        let i17 = runtime.add_pair((i15, i16)).unwrap(); // pair mapping
         runtime.start_list(2).unwrap();
         runtime.add_to_list(i11, false).unwrap();
         runtime.add_to_list(i12, false).unwrap();
         runtime.add_to_list(i13, false).unwrap();
         runtime.add_to_list(i14, false).unwrap();
-        let i15 = runtime.end_list().unwrap();
+        runtime.add_to_list(i17, true).unwrap();
+        let i18 = runtime.end_list().unwrap();
 
         runtime.push_register(i10).unwrap();
-        runtime.push_register(i15).unwrap();
+        runtime.push_register(i18).unwrap();
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
         let addr = runtime.pop_register().unwrap();
         let len = runtime.get_list_len(addr).unwrap();
         let association_len = runtime.get_list_associations_len(addr).unwrap();
-        assert_eq!(len, 4);
-        assert_eq!(association_len, 1);
+        assert_eq!(len, 5);
+        assert_eq!(association_len, 2);
 
         let pair_addr = runtime.get_list_item(addr, 0).unwrap();
         assert_eq!(runtime.get_data_type(pair_addr).unwrap(), ExpressionDataType::Pair);
@@ -290,6 +315,15 @@ mod tests {
 
         assert_eq!(runtime.get_data_type(unit1).unwrap(), ExpressionDataType::Unit);
         assert_eq!(runtime.get_data_type(unit2).unwrap(), ExpressionDataType::Unit);
+
+        let map_pair_addr = runtime.get_list_item(addr, 4).unwrap();
+        assert_eq!(runtime.get_data_type(map_pair_addr).unwrap(), ExpressionDataType::Pair);
+
+        let (map_pair_left, map_pair_right) = runtime.get_pair(map_pair_addr).unwrap();
+        assert_eq!(runtime.get_data_type(map_pair_left).unwrap(), ExpressionDataType::Symbol);
+        assert_eq!(runtime.get_symbol(map_pair_left).unwrap(), symbol_value("new_key"));
+        assert_eq!(runtime.get_data_type(map_pair_right).unwrap(), ExpressionDataType::Integer);
+        assert_eq!(runtime.get_integer(map_pair_right).unwrap(), 10);
     }
 
     #[test]
