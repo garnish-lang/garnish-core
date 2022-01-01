@@ -82,17 +82,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
             if association_len1 > Data::Size::zero() && association_len1 == associations_len2 {
                 // comparing associations can be done similar to regular items since,
                 // if they are the equal, they should be associated in the same order as well
-                let mut count = Data::Size::zero();
-                while count < association_len1 {
-                    let i = Data::size_to_integer(count);
-                    let item1 = this.get_list_association(left_addr, i)?;
-                    let item2 = this.get_list_association(right_addr, i)?;
-
-                    this.push_tmp_stack(lease, item1)?;
-                    this.push_tmp_stack(lease, item2)?;
-
-                    count += Data::Size::one();
-                }
+                push_list_items(this, association_len1, left_addr, right_addr, lease, Data::get_list_association)?;
             } else {
                 let len1 = this.get_list_len(left_addr)?;
                 let len2 = this.get_list_len(right_addr)?;
@@ -101,17 +91,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                     return Ok(false);
                 }
 
-                let mut count = Data::Size::zero();
-                while count < len1 {
-                    let i = Data::size_to_integer(count);
-                    let item1 = this.get_list_item(left_addr, i)?;
-                    let item2 = this.get_list_item(right_addr, i)?;
-
-                    this.push_tmp_stack(lease, item1)?;
-                    this.push_tmp_stack(lease, item2)?;
-
-                    count += Data::Size::one();
-                }
+                push_list_items(this, len1, left_addr, right_addr, lease, Data::get_list_item)?;
             }
 
             true
@@ -120,6 +100,29 @@ fn data_equal<Data: GarnishLangRuntimeData>(
     };
 
     Ok(equal)
+}
+
+fn push_list_items<Data: GarnishLangRuntimeData, F>(
+    this: &mut Data,
+    len: Data::Size,
+    left_addr: Data::Size,
+    right_addr: Data::Size,
+    lease: Data::DataLease,
+    get_item_func: F) -> Result<(), Data::Error> where F: Fn(&Data, Data::Size, Data::Integer) -> Result<Data::Size, Data::Error> {
+
+    let mut count = Data::Size::zero();
+    while count < len {
+        let i = Data::size_to_integer(count);
+        let item1 = get_item_func(this, left_addr, i)?;
+        let item2 = get_item_func(this, right_addr, i)?;
+
+        this.push_tmp_stack(lease, item1)?;
+        this.push_tmp_stack(lease, item2)?;
+
+        count += Data::Size::one();
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]
