@@ -51,23 +51,66 @@ fn data_equal<Data: GarnishLangRuntimeData>(
         (ExpressionDataType::List, ExpressionDataType::List) => {
             let association_len1 = this.get_list_associations_len(left_addr)?;
             let associations_len2 = this.get_list_associations_len(right_addr)?;
+            let len1 = this.get_list_len(left_addr)?;
+            let len2 = this.get_list_len(right_addr)?;
 
-            if association_len1 > Data::Size::zero() && association_len1 == associations_len2 {
-                // comparing associations can be done similar to regular items since,
-                // if they are the equal, they should be associated in the same order as well
-                push_list_items(this, association_len1, left_addr, right_addr, lease, Data::get_list_association)?;
+            // Equality is determined sequentially
+            // associations and non associations must be in the same positions
+            // Ex. (for list position x)
+            //      left has association at x, right has association at x
+            //          right is check for the same association at left.x
+            //          if right has association, position not considered, values are pushed for equality check
+            //      left has item at x, right has item at x
+            //          both items are pushed for equality
+            //      left has association at x, right has item at x (and vice versa)
+            //          list is not equal, end comparison by returning false
+            if association_len1 != associations_len2 || len1 != len2 {
+                false
             } else {
-                let len1 = this.get_list_len(left_addr)?;
-                let len2 = this.get_list_len(right_addr)?;
+                let mut count = Data::Size::zero();
+                while count < len1 {
+                    let i = Data::size_to_integer(count);
+                    let left_item = this.get_list_item(left_addr, i)?;
+                    let right_item = this.get_list_item(right_addr, i)?;
 
-                if len1 != len2 {
-                    return Ok(false);
+                    let (left_is_associative, pair_sym, pair_item) = match this.get_data_type(left_item)? {
+                        ExpressionDataType::Pair => {
+                            let (left, right) = this.get_pair(left_item)?;
+                            match this.get_data_type(left)? {
+                                ExpressionDataType::Symbol => {
+                                    (true, this.get_symbol(left)?, right)
+                                },
+                                _ => (false, Data::Symbol::zero(), Data::Size::zero())
+                            }
+                        }
+                        _ => (false, Data::Symbol::zero(), Data::Size::zero())
+                    };
+
+                    if left_is_associative {
+                        match this.get_list_item_with_symbol(right_addr, pair_sym)? {
+                            Some(right_item) => {
+                                // has same association, push both items for comparison
+                                this.push_tmp_stack(lease, pair_item)?;
+                                this.push_tmp_stack(lease, right_item)?;
+                            }
+                            None => {
+                                // right does not have association
+                                // lists are not equal, return false
+                                return Ok(false)
+                            }
+                        }
+                    } else {
+                        // not an association, push both for comparision
+
+                        this.push_tmp_stack(lease, left_item)?;
+                        this.push_tmp_stack(lease, right_item)?;
+                    }
+
+                    count += Data::Size::one();
                 }
 
-                push_list_items(this, len1, left_addr, right_addr, lease, Data::get_list_item)?;
+                true
             }
-
-            true
         }
         _ => false,
     };
@@ -90,32 +133,6 @@ where
     trace!("Comparing {:?} == {:?}", left, right);
 
     Ok(left == right)
-}
-
-fn push_list_items<Data: GarnishLangRuntimeData, F>(
-    this: &mut Data,
-    len: Data::Size,
-    left_addr: Data::Size,
-    right_addr: Data::Size,
-    lease: Data::DataLease,
-    get_item_func: F,
-) -> Result<(), Data::Error>
-where
-    F: Fn(&Data, Data::Size, Data::Integer) -> Result<Data::Size, Data::Error>,
-{
-    let mut count = Data::Size::zero();
-    while count < len {
-        let i = Data::size_to_integer(count);
-        let item1 = get_item_func(this, left_addr, i)?;
-        let item2 = get_item_func(this, right_addr, i)?;
-
-        this.push_tmp_stack(lease, item1)?;
-        this.push_tmp_stack(lease, item2)?;
-
-        count += Data::Size::one();
-    }
-
-    Ok(())
 }
 
 #[cfg(test)]
@@ -555,6 +572,94 @@ mod lists {
 
         runtime.push_register(i10).unwrap();
         runtime.push_register(i20).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_registers(), &vec![1]);
+    }
+
+    #[test]
+    fn equality_mixed_values_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_symbol("val1").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
+
+        let i4 = runtime.add_integer(40).unwrap();
+
+        let i5 = runtime.add_symbol("val3").unwrap();
+        let i6 = runtime.add_integer(30).unwrap();
+        let i7 = runtime.add_pair((i5, i6)).unwrap();
+
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        runtime.add_to_list(i4, false).unwrap();
+        runtime.add_to_list(i7, true).unwrap();
+        let i8 = runtime.end_list().unwrap();
+
+        let i9 = runtime.add_symbol("val1").unwrap();
+        let i10 = runtime.add_integer(10).unwrap();
+        let i11 = runtime.add_pair((i9, i10)).unwrap();
+
+        let i12 = runtime.add_integer(40).unwrap();
+
+        let i13 = runtime.add_symbol("val3").unwrap();
+        let i14 = runtime.add_integer(30).unwrap();
+        let i15 = runtime.add_pair((i13, i14)).unwrap();
+
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i11, true).unwrap();
+        runtime.add_to_list(i12, false).unwrap();
+        runtime.add_to_list(i15, true).unwrap();
+        let i16 = runtime.end_list().unwrap();
+
+        runtime.push_register(i8).unwrap();
+        runtime.push_register(i16).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_registers(), &vec![2]);
+    }
+
+    #[test]
+    fn equality_mixed_values_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_symbol("val1").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
+
+        let i4 = runtime.add_integer(40).unwrap();
+
+        let i5 = runtime.add_symbol("val3").unwrap();
+        let i6 = runtime.add_integer(30).unwrap();
+        let i7 = runtime.add_pair((i5, i6)).unwrap();
+
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        runtime.add_to_list(i4, false).unwrap();
+        runtime.add_to_list(i7, true).unwrap();
+        let i8 = runtime.end_list().unwrap();
+
+        let i9 = runtime.add_symbol("val1").unwrap();
+        let i10 = runtime.add_integer(10).unwrap();
+        let i11 = runtime.add_pair((i9, i10)).unwrap();
+
+        let i12 = runtime.add_integer(20).unwrap();
+
+        let i13 = runtime.add_symbol("val3").unwrap();
+        let i14 = runtime.add_integer(30).unwrap();
+        let i15 = runtime.add_pair((i13, i14)).unwrap();
+
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i11, true).unwrap();
+        runtime.add_to_list(i12, false).unwrap();
+        runtime.add_to_list(i15, true).unwrap();
+        let i16 = runtime.end_list().unwrap();
+
+        runtime.push_register(i8).unwrap();
+        runtime.push_register(i16).unwrap();
 
         runtime.equality_comparison().unwrap();
 
