@@ -1,4 +1,5 @@
 use log::trace;
+use std::fmt::Debug;
 
 use crate::{next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 
@@ -31,38 +32,10 @@ fn data_equal<Data: GarnishLangRuntimeData>(
         (ExpressionDataType::Unit, ExpressionDataType::Unit)
         | (ExpressionDataType::True, ExpressionDataType::True)
         | (ExpressionDataType::False, ExpressionDataType::False) => true,
-        (ExpressionDataType::Expression, ExpressionDataType::Expression) => {
-            let left = this.get_expression(left_addr)?;
-            let right = this.get_expression(right_addr)?;
-
-            trace!("Comparing {:?} == {:?}", left, right);
-
-            left == right
-        }
-        (ExpressionDataType::External, ExpressionDataType::External) => {
-            let left = this.get_external(left_addr)?;
-            let right = this.get_external(right_addr)?;
-
-            trace!("Comparing {:?} == {:?}", left, right);
-
-            left == right
-        }
-        (ExpressionDataType::Symbol, ExpressionDataType::Symbol) => {
-            let left = this.get_symbol(left_addr)?;
-            let right = this.get_symbol(right_addr)?;
-
-            trace!("Comparing {:?} == {:?}", left, right);
-
-            left == right
-        }
-        (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-            let left = this.get_integer(left_addr)?;
-            let right = this.get_integer(right_addr)?;
-
-            trace!("Comparing {:?} == {:?}", left, right);
-
-            left == right
-        }
+        (ExpressionDataType::Expression, ExpressionDataType::Expression) => compare(this, left_addr, right_addr, Data::get_expression)?,
+        (ExpressionDataType::External, ExpressionDataType::External) => compare(this, left_addr, right_addr, Data::get_external)?,
+        (ExpressionDataType::Symbol, ExpressionDataType::Symbol) => compare(this, left_addr, right_addr, Data::get_symbol)?,
+        (ExpressionDataType::Integer, ExpressionDataType::Integer) => compare(this, left_addr, right_addr, Data::get_integer)?,
         (ExpressionDataType::Pair, ExpressionDataType::Pair) => {
             let (left1, right1) = this.get_pair(left_addr)?;
             let (left2, right2) = this.get_pair(right_addr)?;
@@ -102,14 +75,34 @@ fn data_equal<Data: GarnishLangRuntimeData>(
     Ok(equal)
 }
 
+fn compare<Data: GarnishLangRuntimeData, F, V: PartialOrd + Debug>(
+    this: &Data,
+    left_addr: Data::Size,
+    right_addr: Data::Size,
+    get_func: F,
+) -> Result<bool, Data::Error>
+where
+    F: Fn(&Data, Data::Size) -> Result<V, Data::Error>,
+{
+    let left = get_func(this, left_addr)?;
+    let right = get_func(this, right_addr)?;
+
+    trace!("Comparing {:?} == {:?}", left, right);
+
+    Ok(left == right)
+}
+
 fn push_list_items<Data: GarnishLangRuntimeData, F>(
     this: &mut Data,
     len: Data::Size,
     left_addr: Data::Size,
     right_addr: Data::Size,
     lease: Data::DataLease,
-    get_item_func: F) -> Result<(), Data::Error> where F: Fn(&Data, Data::Size, Data::Integer) -> Result<Data::Size, Data::Error> {
-
+    get_item_func: F,
+) -> Result<(), Data::Error>
+where
+    F: Fn(&Data, Data::Size, Data::Integer) -> Result<Data::Size, Data::Error>,
+{
     let mut count = Data::Size::zero();
     while count < len {
         let i = Data::size_to_integer(count);
