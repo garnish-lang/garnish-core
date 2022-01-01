@@ -137,7 +137,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
     fn equality_no_references_is_err() {
@@ -167,13 +167,13 @@ mod tests {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![1]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False); 
     }
 }
 
 #[cfg(test)]
 mod simple_types {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
     fn equality_units_equal() {
@@ -187,7 +187,7 @@ mod simple_types {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![2]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True); 
     }
 
     #[test]
@@ -202,7 +202,7 @@ mod simple_types {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![2]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True); 
     }
 
     #[test]
@@ -217,13 +217,13 @@ mod simple_types {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![2]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True); 
     }
 }
 
 #[cfg(test)]
 mod numbers {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
     fn equality_integers_equal() {
@@ -237,7 +237,7 @@ mod numbers {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![2]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True); 
     }
 
     #[test]
@@ -254,13 +254,13 @@ mod numbers {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![1]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False); 
     }
 }
 
 #[cfg(test)]
 mod symbols {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
     fn equality_equal() {
@@ -274,7 +274,7 @@ mod symbols {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![2]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True); 
     }
 
     #[test]
@@ -291,13 +291,13 @@ mod symbols {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![1]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False); 
     }
 }
 
 #[cfg(test)]
 mod expression {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
     fn equality_equal() {
@@ -311,7 +311,7 @@ mod expression {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![2]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True); 
     }
 
     #[test]
@@ -328,13 +328,13 @@ mod expression {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![1]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False); 
     }
 }
 
 #[cfg(test)]
 mod external {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
     fn equality_equal() {
@@ -348,7 +348,7 @@ mod external {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![2]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True); 
     }
 
     #[test]
@@ -365,13 +365,13 @@ mod external {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![1]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False); 
     }
 }
 
 #[cfg(test)]
 mod pairs {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
     fn equality_equal() {
@@ -390,7 +390,7 @@ mod pairs {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![2]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True); 
     }
 
     #[test]
@@ -412,13 +412,13 @@ mod pairs {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![1]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False); 
     }
 }
 
 #[cfg(test)]
 mod lists {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
     fn equality_only_items_equal() {
@@ -447,7 +447,7 @@ mod lists {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![2]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True); 
     }
 
     #[test]
@@ -479,7 +479,7 @@ mod lists {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![1]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False); 
     }
 
     #[test]
@@ -527,7 +527,7 @@ mod lists {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![2]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True); 
     }
 
     #[test]
@@ -575,7 +575,7 @@ mod lists {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![1]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False); 
     }
 
     #[test]
@@ -619,7 +619,7 @@ mod lists {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![2]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True); 
     }
 
     #[test]
@@ -663,6 +663,6 @@ mod lists {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![1]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False); 
     }
 }

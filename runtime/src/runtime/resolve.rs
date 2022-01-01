@@ -44,7 +44,7 @@ mod tests {
             utilities::push_integer,
             GarnishRuntime,
         },
-        symbol_value, GarnishLangRuntimeData, RuntimeError, Instruction, SimpleRuntimeData,
+        symbol_value, GarnishLangRuntimeData, RuntimeError, Instruction, SimpleRuntimeData, ExpressionDataType
     };
     use crate::simple::DataError;
 
@@ -85,7 +85,7 @@ mod tests {
 
         runtime.resolve::<EmptyContext>(i5, None).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), 0);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]

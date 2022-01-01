@@ -46,7 +46,7 @@ mod tests {
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![new_data_start]);
+        assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_integer(new_data_start).unwrap(), 30);
     }
 
@@ -63,7 +63,7 @@ mod tests {
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![new_data_start + 1]);
+        assert_eq!(runtime.get_register(0).unwrap(), new_data_start + 1);
         let (left, right) = runtime.get_pair(new_data_start + 1).unwrap();
         assert_eq!(left, new_data_start);
         assert_eq!(right, 2);
@@ -84,7 +84,7 @@ mod tests {
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![new_data_start + 1]);
+        assert_eq!(runtime.get_register(0).unwrap(), new_data_start + 1);
         let (left, right) = runtime.get_pair(new_data_start + 1).unwrap();
         assert_eq!(left, new_data_start);
         assert_eq!(right, 2);
@@ -116,6 +116,6 @@ mod tests {
 
         runtime.perform_addition().unwrap();
 
-        assert_eq!(runtime.get_registers(), &vec![0]);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
 }

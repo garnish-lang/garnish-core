@@ -32,7 +32,6 @@ mod tests {
         assert_eq!(runtime.get_data_type(start).unwrap(), ExpressionDataType::Pair);
         assert_eq!(runtime.get_pair(start).unwrap(), (i1, i2));
 
-        assert_eq!(runtime.get_registers().len(), 1);
         assert_eq!(runtime.get_register(0).unwrap(), start);
     }
 

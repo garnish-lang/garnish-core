@@ -50,7 +50,7 @@ pub(crate) fn push_result<Data: GarnishLangRuntimeData>(this: &mut Data) -> Resu
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
     fn put() {
@@ -96,7 +96,7 @@ mod tests {
 
         runtime.put_value().unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), 0);
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
