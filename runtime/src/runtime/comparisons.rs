@@ -8,6 +8,9 @@ pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data)
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
     let result = match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {
+        (ExpressionDataType::Unit, ExpressionDataType::Unit)
+        | (ExpressionDataType::True, ExpressionDataType::True)
+        | (ExpressionDataType::False, ExpressionDataType::False) => true,
         (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
             let left = this.get_integer(left_addr)?;
             let right = this.get_integer(right_addr)?;
@@ -25,40 +28,6 @@ pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data)
 #[cfg(test)]
 mod tests {
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
-
-    #[test]
-    fn equality_true() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let int1 = runtime.add_integer(10).unwrap();
-        let int2 = runtime.add_integer(10).unwrap();
-
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
-
-        runtime.equality_comparison().unwrap();
-
-        assert_eq!(runtime.get_register(), &vec![2]);
-        assert_eq!(runtime.get_data_type(2).unwrap(), ExpressionDataType::True);
-    }
-
-    #[test]
-    fn equality_false() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let int1 = runtime.add_integer(10).unwrap();
-        let int2 = runtime.add_integer(20).unwrap();
-
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
-
-        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
-
-        runtime.equality_comparison().unwrap();
-
-        assert_eq!(runtime.get_register(), &vec![1]);
-        assert_eq!(runtime.get_data_type(1).unwrap(), ExpressionDataType::False);
-    }
 
     #[test]
     fn equality_no_references_is_err() {
@@ -85,6 +54,98 @@ mod tests {
 
         runtime.push_register(int1).unwrap();
         runtime.push_register(exp1).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_data_type(1).unwrap(), ExpressionDataType::False);
+    }
+}
+
+#[cfg(test)]
+mod simple_types {
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn equality_units_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_unit().unwrap();
+        let int2 = runtime.add_unit().unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_data_type(2).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_true_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_true().unwrap();
+        let int2 = runtime.add_true().unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_data_type(2).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_false_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_false().unwrap();
+        let int2 = runtime.add_false().unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_data_type(2).unwrap(), ExpressionDataType::True);
+    }
+}
+
+#[cfg(test)]
+mod numbers {
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+
+    #[test]
+    fn equality_integers_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_integer(10).unwrap();
+        let int2 = runtime.add_integer(10).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_data_type(2).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_integers_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_integer(10).unwrap();
+        let int2 = runtime.add_integer(20).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
 
         runtime.equality_comparison().unwrap();
 
