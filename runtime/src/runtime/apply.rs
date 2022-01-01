@@ -1,12 +1,14 @@
 use crate::runtime::utilities::*;
-use crate::{ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, state_error};
+use crate::runtime::list::get_access_addr;
+use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 use log::trace;
 
 use super::context::GarnishLangRuntimeContext;
 
 pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
-    context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+    context: Option<&mut T>,
+) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Apply");
     apply_internal(this, context)
 }
@@ -22,13 +24,13 @@ pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data
         _ => {
             let point = match this.get_jump_point(index) {
                 None => state_error(format!("No jump point at index {:?}", index))?,
-                Some(i) => i
+                Some(i) => i,
             };
 
             this.set_instruction_cursor(point - Data::Size::one())?;
             match this.pop_value_stack() {
                 None => state_error(format!("Failed to pop input during reapply operation."))?,
-                Some(_) => ()
+                Some(_) => (),
             }
             Ok(this.push_value_stack(right_addr)?)
         }
@@ -37,7 +39,8 @@ pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data
 
 pub(crate) fn empty_apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
-    context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+    context: Option<&mut T>,
+) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Empty Apply");
     push_unit(this)?;
 
@@ -57,7 +60,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
 
             let next_instruction = match this.get_jump_point(expression_index) {
                 None => state_error(format!("No jump point at index {:?}", expression_index))?,
-                Some(i) => i
+                Some(i) => i,
             };
 
             // Expression stores index of expression table, look up actual instruction index
@@ -77,19 +80,28 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                 },
             }
         }
+        ExpressionDataType::List => {
+            match get_access_addr(this, right_addr, left_addr)? {
+                None => push_unit(this)?,
+                Some(i) => this.push_register(i)?,
+            }
+
+            Ok(())
+        }
         _ => push_unit(this),
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::simple::DataError;
     use crate::{
         runtime::{
             context::{EmptyContext, GarnishLangRuntimeContext},
             GarnishRuntime,
-        }, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, Instruction, SimpleRuntimeData,
+        },
+        ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData,
     };
-    use crate::simple::DataError;
 
     #[test]
     fn apply() {
@@ -122,6 +134,60 @@ mod tests {
         assert_eq!(runtime.get_value(0).unwrap(), 5);
         assert_eq!(runtime.get_instruction_cursor(), 0);
         assert_eq!(runtime.get_jump_path(0).unwrap(), 7);
+    }
+
+    #[test]
+    fn apply_integer_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(20).unwrap();
+        let i3 = runtime.add_integer(30).unwrap();
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i1, false).unwrap();
+        runtime.add_to_list(i2, false).unwrap();
+        runtime.add_to_list(i3, false).unwrap();
+        let i4 = runtime.end_list().unwrap();
+        let i5 = runtime.add_integer(1).unwrap();
+
+        runtime.push_register(i4).unwrap();
+        runtime.push_register(i5).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_integer(*runtime.get_register().get(0).unwrap()).unwrap(), 20);
+    }
+
+    #[test]
+    fn apply_symbol_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_symbol("val1").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
+
+        let i4 = runtime.add_symbol("val2").unwrap();
+        let i5 = runtime.add_integer(20).unwrap();
+        let i6 = runtime.add_pair((i4, i5)).unwrap();
+
+        let i7 = runtime.add_symbol("val3").unwrap();
+        let i8 = runtime.add_integer(30).unwrap();
+        let i9 = runtime.add_pair((i7, i8)).unwrap();
+
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        runtime.add_to_list(i6, true).unwrap();
+        runtime.add_to_list(i9, true).unwrap();
+        let i10 = runtime.end_list().unwrap();
+
+        let i11 = runtime.add_symbol("val2").unwrap();
+
+        runtime.push_register(i10).unwrap();
+        runtime.push_register(i11).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_integer(*runtime.get_register().get(0).unwrap()).unwrap(), 20);
     }
 
     #[test]
@@ -318,7 +384,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
 
         struct MyContext {
-            new_addr: usize
+            new_addr: usize,
         }
 
         impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
@@ -330,9 +396,7 @@ mod tests {
                 assert_eq!(external_value, 3);
 
                 let value = match runtime.get_data_type(input_addr)? {
-                    ExpressionDataType::Integer => {
-                        runtime.get_integer(input_addr)?
-                    },
+                    ExpressionDataType::Integer => runtime.get_integer(input_addr)?,
                     _ => return Ok(false),
                 };
 
