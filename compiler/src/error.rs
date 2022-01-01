@@ -46,6 +46,10 @@ impl<Source: 'static + std::error::Error> CompilerError<Source> {
         self.column = token.get_column();
         self
     }
+
+    pub fn get_message(&self) -> &String {
+        &self.message
+    }
 }
 
 impl<Source: 'static + std::error::Error> Default for CompilerError<Source> {
