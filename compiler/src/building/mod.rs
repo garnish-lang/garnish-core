@@ -89,9 +89,8 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
             data.push_instruction(Instruction::Resolve, Some(addr))?;
         }
         Definition::Property => {
-            data.push_instruction(Instruction::Put, Some(data.get_data_len()))?;
-
-            data.add_symbol(node.get_lex_token().get_text())?;
+            let addr = data.add_symbol(node.get_lex_token().get_text())?;
+            data.push_instruction(Instruction::Put, Some(addr))?;
         }
         Definition::Unit => {
             // all unit literals will use unit used in the zero element slot of data
@@ -705,6 +704,30 @@ mod operations {
                 (Instruction::Resolve, Some(3)),
                 (Instruction::Resolve, Some(3)),
                 (Instruction::MakePair, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(SymbolData::from(sym_val)),
+        );
+    }
+
+    #[test]
+    fn same_property_twice() {
+        let sym_val = symbol_value("sym");
+        assert_instruction_data(
+            3,
+            vec![
+                (Definition::Identifier, Some(1), None, None, "sym", TokenType::Identifier),
+                (Definition::Access, Some(3), Some(0), Some(2), ".", TokenType::Period),
+                (Definition::Property, Some(1), None, None, "sym", TokenType::Identifier),
+                (Definition::Access, None, Some(1), Some(4), ".", TokenType::Period),
+                (Definition::Property, Some(3), None, None, "sym", TokenType::Identifier),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Access, None),
+                (Instruction::Put, Some(3)),
+                (Instruction::Access, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(SymbolData::from(sym_val)),
