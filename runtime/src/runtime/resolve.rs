@@ -66,7 +66,7 @@ mod tests {
 
         runtime.resolve::<EmptyContext>(i5, None).unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &i2);
+        assert_eq!(runtime.get_register(0).unwrap(), i2);
     }
 
     #[test]
@@ -85,7 +85,7 @@ mod tests {
 
         runtime.resolve::<EmptyContext>(i5, None).unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
+        assert_eq!(runtime.get_register(0).unwrap(), 0);
     }
 
     #[test]
@@ -116,6 +116,6 @@ mod tests {
 
         runtime.resolve(i1, Some(&mut context)).unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &start);
+        assert_eq!(runtime.get_register(0).unwrap(), start);
     }
 }

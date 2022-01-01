@@ -378,7 +378,7 @@ mod tests {
 
         runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![start]);
+        assert_eq!(runtime.get_registers(), &vec![start]);
         assert_eq!(runtime.get_integer(start).unwrap(), 30);
     }
 

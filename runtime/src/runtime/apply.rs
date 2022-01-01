@@ -89,10 +89,10 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                     // and finding out all items aren't either an integer or symbol
                     let lease = this.lease_tmp_stack()?;
 
-                    let mut count = Data::Size::zero();
+                    let mut count = len;
 
-                    while count < len {
-                        let i = Data::size_to_integer(count);
+                    while count > Data::Size::zero() {
+                        let i = Data::size_to_integer(count - Data::Size::one());
                         let item = this.get_list_item(right_addr, i)?;
                         let value = match get_access_addr(this, item, left_addr)? {
                             Some(addr) => addr,
@@ -102,7 +102,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
 
                         this.push_tmp_stack(lease, value)?;
 
-                        count += Data::Size::one();
+                        count -= Data::Size::one();
                     }
 
                     this.start_list(len)?;
@@ -182,14 +182,14 @@ mod tests {
         runtime.add_to_list(i2, false).unwrap();
         runtime.add_to_list(i3, false).unwrap();
         let i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_integer(1).unwrap();
+        let i5 = runtime.add_integer(2).unwrap();
 
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_integer(*runtime.get_register().get(0).unwrap()).unwrap(), 20);
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 30);
     }
 
     #[test]
@@ -221,7 +221,7 @@ mod tests {
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_integer(*runtime.get_register().get(0).unwrap()).unwrap(), 20);
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 20);
     }
 
     #[test]
@@ -241,9 +241,9 @@ mod tests {
         let i9 = runtime.add_pair((i7, i8)).unwrap();
 
         runtime.start_list(3).unwrap();
-        runtime.add_to_list(i9, true).unwrap();
-        runtime.add_to_list(i6, true).unwrap();
         runtime.add_to_list(i3, true).unwrap();
+        runtime.add_to_list(i6, true).unwrap();
+        runtime.add_to_list(i9, true).unwrap();
         let i10 = runtime.end_list().unwrap();
 
         let i11 = runtime.add_integer(2).unwrap();
@@ -251,10 +251,10 @@ mod tests {
         let i13 = runtime.add_integer(5).unwrap();
         let i14 = runtime.add_expression(10).unwrap();
         runtime.start_list(2).unwrap();
-        runtime.add_to_list(i14, false).unwrap();
-        runtime.add_to_list(i13, false).unwrap();
-        runtime.add_to_list(i12, false).unwrap();
         runtime.add_to_list(i11, false).unwrap();
+        runtime.add_to_list(i12, false).unwrap();
+        runtime.add_to_list(i13, false).unwrap();
+        runtime.add_to_list(i14, false).unwrap();
         let i15 = runtime.end_list().unwrap();
 
         runtime.push_register(i10).unwrap();
@@ -298,7 +298,7 @@ mod tests {
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &0usize);
+        assert_eq!(runtime.get_register(0).unwrap(), 0usize);
     }
 
     #[test]
@@ -508,6 +508,6 @@ mod tests {
         runtime.apply(Some(&mut context)).unwrap();
 
         assert_eq!(runtime.get_integer(context.new_addr).unwrap(), 200);
-        assert_eq!(runtime.get_register().get(0).unwrap(), &context.new_addr);
+        assert_eq!(runtime.get_register(0).unwrap(), context.new_addr);
     }
 }

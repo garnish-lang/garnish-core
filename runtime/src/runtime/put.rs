@@ -60,7 +60,7 @@ mod tests {
 
         runtime.put(1).unwrap();
 
-        assert_eq!(*runtime.get_register().get(0).unwrap(), 1);
+        assert_eq!(runtime.get_register(0).unwrap(), 1);
     }
 
     #[test]
@@ -84,7 +84,7 @@ mod tests {
 
         runtime.put_value().unwrap();
 
-        assert_eq!(*runtime.get_register().get(0).unwrap(), 2);
+        assert_eq!(runtime.get_register(0).unwrap(), 2);
     }
 
     #[test]
@@ -96,7 +96,7 @@ mod tests {
 
         runtime.put_value().unwrap();
 
-        assert_eq!(*runtime.get_register().get(0).unwrap(), 0);
+        assert_eq!(runtime.get_register(0).unwrap(), 0);
     }
 
     #[test]

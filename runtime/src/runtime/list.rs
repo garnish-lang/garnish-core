@@ -1,30 +1,45 @@
 use log::trace;
 
-use crate::{next_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, push_integer};
+use crate::{next_ref, push_integer, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 
 pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Make List | Length - {:?}", len);
 
+    if len > this.get_register_len() {
+        state_error(format!("Not enough register values to make list of length {:?}", len))?
+    }
+
     this.start_list(len)?;
 
+    let mut count = this.get_register_len() - len;
+    let end = this.get_register_len();
     // look into getting this to work with a range value
-    let mut count = Data::Size::zero();
-    while count < len {
-        let r = next_ref(this)?;
+    while count < end {
+        let r = match this.get_register(count) {
+            None => state_error(format!("No register value at {:?} when making list", count))?,
+            Some(r) => r,
+        };
 
         let is_associative = match this.get_data_type(r)? {
             ExpressionDataType::Pair => {
                 let (left, _right) = this.get_pair(r)?;
                 match this.get_data_type(left)? {
                     ExpressionDataType::Symbol => true,
-                    _ => false
+                    _ => false,
                 }
             }
-            _ => false
+            _ => false,
         };
 
         this.add_to_list(r, is_associative)?;
 
+        count += Data::Size::one();
+    }
+
+    // remove used registers
+    count = Data::Size::zero();
+    while count < len {
+        this.pop_register();
         count += Data::Size::one();
     }
 
@@ -56,7 +71,7 @@ pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData>(this: &mut Data
             let (left, _) = this.get_pair(r)?;
             this.push_register(left)?;
         }
-        _ => push_unit(this)?
+        _ => push_unit(this)?,
     }
 
     Ok(())
@@ -71,7 +86,7 @@ pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData>(this: &mut Dat
             let (_, right) = this.get_pair(r)?;
             this.push_register(right)?;
         }
-        _ => push_unit(this)?
+        _ => push_unit(this)?,
     }
 
     Ok(())
@@ -86,7 +101,7 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
             let len = Data::size_to_integer(this.get_list_len(r)?);
             push_integer(this, len)?;
         }
-        _ => push_unit(this)?
+        _ => push_unit(this)?,
     }
 
     Ok(())
@@ -221,7 +236,7 @@ mod tests {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &i2);
+        assert_eq!(runtime.get_register(0).unwrap(), i2);
     }
 
     #[test]
@@ -243,7 +258,7 @@ mod tests {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &i3);
+        assert_eq!(runtime.get_register(0).unwrap(), i3);
     }
 
     #[test]
@@ -265,7 +280,7 @@ mod tests {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
+        assert_eq!(runtime.get_register(0).unwrap(), 0);
     }
 
     #[test]
@@ -287,7 +302,7 @@ mod tests {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
+        assert_eq!(runtime.get_register(0).unwrap(), 0);
     }
 
     #[test]
@@ -304,7 +319,7 @@ mod tests {
 
         runtime.access_left_internal().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &i1);
+        assert_eq!(runtime.get_register(0).unwrap(), i1);
     }
 
     #[test]
@@ -319,7 +334,7 @@ mod tests {
 
         runtime.access_left_internal().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
+        assert_eq!(runtime.get_register(0).unwrap(), 0);
     }
 
     #[test]
@@ -336,7 +351,7 @@ mod tests {
 
         runtime.access_right_internal().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &i2);
+        assert_eq!(runtime.get_register(0).unwrap(), i2);
     }
 
     #[test]
@@ -351,7 +366,7 @@ mod tests {
 
         runtime.access_right_internal().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
+        assert_eq!(runtime.get_register(0).unwrap(), 0);
     }
 
     #[test]
@@ -373,7 +388,7 @@ mod tests {
         runtime.access_length_internal().unwrap();
 
         assert_eq!(runtime.get_integer(start).unwrap(), 1);
-        assert_eq!(runtime.get_register().get(0).unwrap(), &start);
+        assert_eq!(runtime.get_register(0).unwrap(), start);
     }
 
     #[test]
@@ -388,7 +403,7 @@ mod tests {
 
         runtime.access_length_internal().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
+        assert_eq!(runtime.get_register(0).unwrap(), 0);
     }
 
     #[test]
@@ -405,7 +420,7 @@ mod tests {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
+        assert_eq!(runtime.get_register(0).unwrap(), 0);
     }
 
     #[test]
@@ -427,7 +442,7 @@ mod tests {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
+        assert_eq!(runtime.get_register(0).unwrap(), 0);
     }
 
     #[test]
@@ -468,7 +483,7 @@ mod tests {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_register().len(), 1);
-        assert_eq!(runtime.get_register().get(0).unwrap(), &0);
+        assert_eq!(runtime.get_registers().len(), 1);
+        assert_eq!(runtime.get_register(0).unwrap(), 0);
     }
 }

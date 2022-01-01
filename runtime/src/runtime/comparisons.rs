@@ -150,7 +150,7 @@ mod tests {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_registers(), &vec![1]);
     }
 }
 
@@ -170,7 +170,7 @@ mod simple_types {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_registers(), &vec![2]);
     }
 
     #[test]
@@ -185,7 +185,7 @@ mod simple_types {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_registers(), &vec![2]);
     }
 
     #[test]
@@ -200,7 +200,7 @@ mod simple_types {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_registers(), &vec![2]);
     }
 }
 
@@ -220,7 +220,7 @@ mod numbers {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_registers(), &vec![2]);
     }
 
     #[test]
@@ -237,7 +237,7 @@ mod numbers {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_registers(), &vec![1]);
     }
 }
 
@@ -257,7 +257,7 @@ mod symbols {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_registers(), &vec![2]);
     }
 
     #[test]
@@ -274,7 +274,7 @@ mod symbols {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_registers(), &vec![1]);
     }
 }
 
@@ -294,7 +294,7 @@ mod expression {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_registers(), &vec![2]);
     }
 
     #[test]
@@ -311,7 +311,7 @@ mod expression {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_registers(), &vec![1]);
     }
 }
 
@@ -331,7 +331,7 @@ mod external {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_registers(), &vec![2]);
     }
 
     #[test]
@@ -348,7 +348,7 @@ mod external {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_registers(), &vec![1]);
     }
 }
 
@@ -373,7 +373,7 @@ mod pairs {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_registers(), &vec![2]);
     }
 
     #[test]
@@ -395,7 +395,7 @@ mod pairs {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_registers(), &vec![1]);
     }
 }
 
@@ -430,7 +430,7 @@ mod lists {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_registers(), &vec![2]);
     }
 
     #[test]
@@ -462,7 +462,7 @@ mod lists {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_registers(), &vec![1]);
     }
 
     #[test]
@@ -510,7 +510,7 @@ mod lists {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_registers(), &vec![2]);
     }
 
     #[test]
@@ -558,6 +558,6 @@ mod lists {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_registers(), &vec![1]);
     }
 }

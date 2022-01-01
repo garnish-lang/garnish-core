@@ -208,7 +208,7 @@ mod tests {
 
         runtime.jump_if_true(0).unwrap();
 
-        assert!(runtime.get_register().is_empty());
+        assert!(runtime.get_registers().is_empty());
         assert_eq!(runtime.get_data_len(), 3);
         assert_eq!(runtime.get_instruction_cursor(), 2);
     }
@@ -229,7 +229,7 @@ mod tests {
 
         runtime.jump_if_true(0).unwrap();
 
-        assert!(runtime.get_register().is_empty());
+        assert!(runtime.get_registers().is_empty());
         assert_eq!(runtime.get_data_len(), 3);
         assert_eq!(runtime.get_instruction_cursor(), 1);
     }
@@ -250,7 +250,7 @@ mod tests {
 
         runtime.jump_if_true(0).unwrap();
 
-        assert!(runtime.get_register().is_empty());
+        assert!(runtime.get_registers().is_empty());
         assert_eq!(runtime.get_data_len(), 3);
         assert_eq!(runtime.get_instruction_cursor(), 1);
     }
@@ -271,7 +271,7 @@ mod tests {
 
         runtime.jump_if_false(0).unwrap();
 
-        assert!(runtime.get_register().is_empty());
+        assert!(runtime.get_registers().is_empty());
         assert_eq!(runtime.get_data_len(), 3);
         assert_eq!(runtime.get_instruction_cursor(), 1);
     }
@@ -292,7 +292,7 @@ mod tests {
 
         runtime.jump_if_false(0).unwrap();
 
-        assert!(runtime.get_register().is_empty());
+        assert!(runtime.get_registers().is_empty());
         assert_eq!(runtime.get_data_len(), 3);
         assert_eq!(runtime.get_instruction_cursor(), 2);
     }
@@ -313,7 +313,7 @@ mod tests {
 
         runtime.jump_if_false(0).unwrap();
 
-        assert!(runtime.get_register().is_empty());
+        assert!(runtime.get_registers().is_empty());
         assert_eq!(runtime.get_data_len(), 3);
         assert_eq!(runtime.get_instruction_cursor(), 2);
     }

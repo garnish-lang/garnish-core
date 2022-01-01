@@ -59,7 +59,9 @@ pub trait GarnishLangRuntimeData {
     fn end_list(&mut self) -> Result<Self::Size, Self::Error>;
     fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error>;
 
+    fn get_register_len(&self) -> Self::Size;
     fn push_register(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
+    fn get_register(&self, addr: Self::Size) -> Option<Self::Size>;
     fn pop_register(&mut self) -> Option<Self::Size>;
 
     fn get_instruction_len(&self) -> Self::Size;

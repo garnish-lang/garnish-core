@@ -24,7 +24,7 @@ pub struct SimpleRuntimeData {
     current_list: Option<(Vec<usize>, Vec<usize>)>,
     symbols: HashMap<String, u64>,
     cache: HashMap<u64, usize>,
-    lease_stack: Vec<usize>
+    lease_stack: Vec<usize>,
 }
 
 impl SimpleRuntimeData {
@@ -41,7 +41,7 @@ impl SimpleRuntimeData {
             current_list: None,
             symbols: HashMap::new(),
             cache: HashMap::new(),
-            lease_stack: vec![]
+            lease_stack: vec![],
         }
     }
 
@@ -56,7 +56,7 @@ impl SimpleRuntimeData {
         &self.symbols
     }
 
-    pub fn get_register(&self) -> &Vec<usize> {
+    pub fn get_registers(&self) -> &Vec<usize> {
         &self.register
     }
 
@@ -320,8 +320,6 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
                     ordered[i] = item;
                 }
 
-                items.reverse();
-
                 self.simple_data.push(ListData::from_items(items.to_vec(), ordered));
                 Ok(self.simple_data.len() - 1)
             }
@@ -377,9 +375,17 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         }
     }
 
+    fn get_register_len(&self) -> Self::Size {
+        self.register.len()
+    }
+
     fn push_register(&mut self, addr: usize) -> Result<(), Self::Error> {
         self.register.push(addr);
         Ok(())
+    }
+
+    fn get_register(&self, addr: Self::Size) -> Option<Self::Size>{
+        self.register.get(addr).cloned()
     }
 
     fn pop_register(&mut self) -> Option<usize> {
