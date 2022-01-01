@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
+use crate::{next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 
 pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Equality Comparison");
@@ -58,6 +58,29 @@ fn compare_data<Data: GarnishLangRuntimeData>(
             let (left2, right2) = this.get_pair(right_addr)?;
 
             compare_data(this, left1, left2)? && compare_data(this, right1, right2)?
+        }
+        (ExpressionDataType::List, ExpressionDataType::List) => {
+            let len1 = this.get_list_len(left_addr)?;
+            let len2 = this.get_list_len(right_addr)?;
+
+            if len1 != len2 {
+                return Ok(false);
+            }
+
+            let mut count = Data::Size::zero();
+            while count < len1 {
+                let i = Data::size_to_integer(count);
+                let item1 = this.get_list_item(left_addr, i)?;
+                let item2 = this.get_list_item(right_addr, i)?;
+
+                if !compare_data(this,item1, item2)? {
+                    return Ok(false);
+                }
+
+                count += Data::Size::one();
+            }
+
+            true
         }
         _ => false,
     };
@@ -337,6 +360,73 @@ mod pairs {
 
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
+
+        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![1]);
+    }
+}
+
+#[cfg(test)]
+mod lists {
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+
+    #[test]
+    fn equality_only_items_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_integer(10).unwrap();
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i1, false).unwrap();
+        runtime.add_to_list(i2, false).unwrap();
+        runtime.add_to_list(i3, false).unwrap();
+        let i4 = runtime.end_list().unwrap();
+
+        let i5 = runtime.add_integer(10).unwrap();
+        let i6 = runtime.add_integer(10).unwrap();
+        let i7 = runtime.add_integer(10).unwrap();
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i5, false).unwrap();
+        runtime.add_to_list(i6, false).unwrap();
+        runtime.add_to_list(i7, false).unwrap();
+        let i8 = runtime.end_list().unwrap();
+
+        runtime.push_register(i4).unwrap();
+        runtime.push_register(i8).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![2]);
+    }
+
+    #[test]
+    fn equality_only_items_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_integer(10).unwrap();
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i1, false).unwrap();
+        runtime.add_to_list(i2, false).unwrap();
+        runtime.add_to_list(i3, false).unwrap();
+        let i4 = runtime.end_list().unwrap();
+
+        let i5 = runtime.add_integer(10).unwrap();
+        let i6 = runtime.add_integer(20).unwrap();
+        let i7 = runtime.add_integer(30).unwrap();
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i5, false).unwrap();
+        runtime.add_to_list(i6, false).unwrap();
+        runtime.add_to_list(i7, false).unwrap();
+        let i8 = runtime.end_list().unwrap();
+
+        runtime.push_register(i4).unwrap();
+        runtime.push_register(i8).unwrap();
 
         runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
 
