@@ -1,4 +1,5 @@
 use crate::LexerToken;
+use garnish_lang_runtime::ExpressionDataType;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -83,14 +84,28 @@ impl<Source: 'static + std::error::Error> From<Source> for CompilerError<Source>
 
 // Creation utilities
 
-pub(crate) fn implementation_error<T>(message: String) -> Result<T, CompilerError> {
+pub(crate) fn implementation_error<T, S: std::error::Error + 'static>(message: String) -> Result<T, CompilerError<S>> {
     Err(CompilerError::new_message(format!("Implementation Error: {}", message)))
 }
 
-pub(crate) fn implementation_error_with_token<T>(message: String, token: &LexerToken) -> Result<T, CompilerError> {
+pub(crate) fn implementation_error_with_token<T, S: std::error::Error + 'static>(message: String, token: &LexerToken) -> Result<T, CompilerError<S>> {
     append_token_details(Err(CompilerError::new_message(format!("Implementation Error: {}", message))), token)
 }
 
-pub(crate) fn append_token_details<T>(result: Result<T, CompilerError>, token: &LexerToken) -> Result<T, CompilerError> {
+pub(crate) fn append_token_details<T, S: std::error::Error + 'static>(
+    result: Result<T, CompilerError<S>>,
+    token: &LexerToken,
+) -> Result<T, CompilerError<S>> {
     result.map_err(|e| e.append_token_details(token))
+}
+
+pub(crate) fn data_parse_error<T, S: std::error::Error + 'static>(
+    token: LexerToken,
+    desired_type: ExpressionDataType,
+) -> Result<T, CompilerError<S>> {
+    Err(CompilerError::new(
+        format!("Could not create {:?} data from string {:?}.", desired_type, token.get_text()).as_str(),
+        token.get_line(),
+        token.get_column(),
+    ))
 }

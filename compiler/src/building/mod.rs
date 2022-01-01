@@ -1,10 +1,8 @@
+use crate::error::{data_parse_error, implementation_error, implementation_error_with_token, CompilerError};
 use garnish_lang_runtime::*;
 use log::trace;
 
 use crate::parsing::parser::*;
-
-pub type GarnishLangCompilerResult<T, N> = Result<T, GarnishLangCompilerError<N>>;
-pub type GarnishLangCompilerError<T> = NestedError<T>;
 
 struct ResolveNodeInfo {
     node_index: Option<usize>,
@@ -71,105 +69,104 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
     list_count: Option<&Data::Size>,
     current_jump_index: Data::Size,
     nearest_expression_point: Data::Size,
-) -> GarnishLangCompilerResult<(), Data::Error> {
+) -> Result<(), CompilerError<Data::Error>> {
     match node.get_definition() {
         Definition::Number => {
-            let addr = data
-                .add_integer(match node.get_lex_token().get_text().parse::<Data::Integer>() {
-                    Err(_) => Err(GarnishLangCompilerError::new(format!(
-                        "Could not parse value from integer string {:?}",
-                        node.get_lex_token().get_text()
-                    )))?,
-                    Ok(i) => i,
-                })
-                .nest_into()?;
+            let addr = data.add_integer(match node.get_lex_token().get_text().parse::<Data::Integer>() {
+                // Err(_) => implementation_error(format!(
+                //     "Could not parse value from integer string {:?}",
+                //     node.get_lex_token().get_text()
+                // )))?,
+                Err(_) => data_parse_error(node.get_lex_token(), ExpressionDataType::Integer)?,
+                Ok(i) => i,
+            })?;
 
-            data.push_instruction(Instruction::Put, Some(addr)).nest_into()?;
+            data.push_instruction(Instruction::Put, Some(addr))?;
         }
         Definition::Identifier => {
-            let addr = data.add_symbol(node.get_lex_token().get_text()).nest_into()?;
+            let addr = data.add_symbol(node.get_lex_token().get_text())?;
 
-            data.push_instruction(Instruction::Resolve, Some(addr)).nest_into()?;
+            data.push_instruction(Instruction::Resolve, Some(addr))?;
         }
         Definition::Property => {
-            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
+            data.push_instruction(Instruction::Put, Some(data.get_data_len()))?;
 
-            data.add_symbol(node.get_lex_token().get_text()).nest_into()?;
+            data.add_symbol(node.get_lex_token().get_text())?;
         }
         Definition::Unit => {
             // all unit literals will use unit used in the zero element slot of data
-            data.push_instruction(Instruction::Put, Some(Data::Size::zero())).nest_into()?;
+            data.push_instruction(Instruction::Put, Some(Data::Size::zero()))?;
         }
         Definition::Symbol => {
-            let addr = data.add_symbol(&node.get_lex_token().get_text()[1..]).nest_into()?;
-            data.push_instruction(Instruction::Put, Some(addr)).nest_into()?;
+            let addr = data.add_symbol(&node.get_lex_token().get_text()[1..])?;
+            data.push_instruction(Instruction::Put, Some(addr))?;
         }
         Definition::Value => {
             // all unit literals will use unit used in the zero element slot of data
-            data.push_instruction(Instruction::PutValue, None).nest_into()?;
+            data.push_instruction(Instruction::PutValue, None)?;
         }
         Definition::True => {
-            let addr = data.add_true().nest_into()?;
-            data.push_instruction(Instruction::Put, Some(addr)).nest_into()?;
+            let addr = data.add_true()?;
+            data.push_instruction(Instruction::Put, Some(addr))?;
         }
         Definition::False => {
-            let addr = data.add_false().nest_into()?;
-            data.push_instruction(Instruction::Put, Some(addr)).nest_into()?;
+            let addr = data.add_false()?;
+            data.push_instruction(Instruction::Put, Some(addr))?;
         }
         Definition::AbsoluteValue => todo!(), // not currently in runtime
         Definition::EmptyApply => {
-            data.push_instruction(Instruction::EmptyApply, None).nest_into()?;
+            data.push_instruction(Instruction::EmptyApply, None)?;
         }
         Definition::Addition => {
-            data.push_instruction(Instruction::PerformAddition, None).nest_into()?;
+            data.push_instruction(Instruction::PerformAddition, None)?;
         }
         Definition::Equality => {
-            data.push_instruction(Instruction::EqualityComparison, None).nest_into()?;
+            data.push_instruction(Instruction::EqualityComparison, None)?;
         }
         Definition::Pair => {
-            data.push_instruction(Instruction::MakePair, None).nest_into()?;
+            data.push_instruction(Instruction::MakePair, None)?;
         }
         Definition::Access => {
-            data.push_instruction(Instruction::Access, None).nest_into()?;
+            data.push_instruction(Instruction::Access, None)?;
         }
         Definition::AccessLeftInternal => {
-            data.push_instruction(Instruction::AccessLeftInternal, None).nest_into()?;
+            data.push_instruction(Instruction::AccessLeftInternal, None)?;
         }
         Definition::AccessRightInternal => {
-            data.push_instruction(Instruction::AccessRightInternal, None).nest_into()?;
+            data.push_instruction(Instruction::AccessRightInternal, None)?;
         }
         Definition::AccessLengthInternal => {
-            data.push_instruction(Instruction::AccessLengthInternal, None).nest_into()?;
+            data.push_instruction(Instruction::AccessLengthInternal, None)?;
         }
         Definition::List | Definition::CommaList => match list_count {
-            None => Err(GarnishLangCompilerError::new(format!("No list count passed to list node resolve.")))?,
+            None => implementation_error_with_token(format!("No list count passed to list node resolve."), &node.get_lex_token())?,
             Some(count) => {
-                data.push_instruction(Instruction::MakeList, Some(*count)).nest_into()?;
+                data.push_instruction(Instruction::MakeList, Some(*count))?;
             }
         },
         Definition::Subexpression => {
-            data.push_instruction(Instruction::UpdateValue, None).nest_into()?;
+            data.push_instruction(Instruction::UpdateValue, None)?;
         }
         Definition::Group => (), // no additional instructions for groups
         Definition::NestedExpression => {
-            data.push_instruction(Instruction::Put, Some(data.get_data_len())).nest_into()?;
+            data.push_instruction(Instruction::Put, Some(data.get_data_len()))?;
 
-            data.add_expression(current_jump_index).nest_into()?;
+            data.add_expression(current_jump_index)?;
         }
         Definition::Apply => {
-            data.push_instruction(Instruction::Apply, None).nest_into()?;
+            data.push_instruction(Instruction::Apply, None)?;
         }
         Definition::ApplyTo => {
-            data.push_instruction(Instruction::Apply, None).nest_into()?;
+            data.push_instruction(Instruction::Apply, None)?;
         }
         Definition::Reapply => {
-            data.push_instruction(Instruction::Reapply, Some(nearest_expression_point)).nest_into()?;
+            data.push_instruction(Instruction::Reapply, Some(nearest_expression_point))?;
         }
         Definition::JumpIfTrue => {
-            data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index)).nest_into()?;
+            data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index))?;
         }
         Definition::JumpIfFalse => {
-            data.push_instruction(Instruction::JumpIfFalse, Some(current_jump_index)).nest_into()?;
+            data.push_instruction(Instruction::JumpIfFalse, Some(current_jump_index))?;
         }
         Definition::ElseJump => (), // no additional instructions
         // no runtime meaning, parser only utility
@@ -179,11 +176,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
     Ok(())
 }
 
-pub fn build_with_data<Data: GarnishLangRuntimeData>(
-    root: usize,
-    nodes: Vec<ParseNode>,
-    data: &mut Data,
-) -> GarnishLangCompilerResult<(), Data::Error> {
+pub fn build_with_data<Data: GarnishLangRuntimeData>(root: usize, nodes: Vec<ParseNode>, data: &mut Data) -> Result<(), CompilerError<Data::Error>> {
     // since we will be popping and pushing values from root_stack
     // need to keep separate count of total so expression values put in data are accurate
     let mut jump_count = data.get_jump_table_len() + Data::Size::one();
@@ -205,7 +198,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
         // push start of this expression to jump table
         let jump_point = data.get_instruction_len();
         let jump_index = data.get_jump_table_len();
-        data.push_jump_point(Data::Size::zero()).nest_into()?; // updated down below
+        data.push_jump_point(Data::Size::zero())?; // updated down below
 
         // limit, maximum times a node is visited is 3
         // so limit to 3 times node count should allow for more than enough
@@ -216,15 +209,15 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
             let pop = match stack.last_mut() {
                 None => break, // no more nodes
                 Some(resolve_node_info) => match resolve_node_info.node_index {
-                    None => Err(GarnishLangCompilerError::new(format!(
+                    None => implementation_error(format!(
                         "None value for node index. All nodes should resolve properly if starting from root node."
-                    )))?,
+                    ))?,
                     Some(node_index) => match nodes.get(node_index) {
                         // all nodes should exist if starting from root
-                        None => Err(GarnishLangCompilerError::new(format!(
+                        None => implementation_error(format!(
                             "Node at index {:?} does not exist. All nodes should resolve properly if starting from root node.",
                             node_index
-                        )))?,
+                        ))?,
                         Some(node) => {
                             trace!("---------------------------------------------------------");
                             trace!("Visiting node with definition {:?} at {:?}", node.get_definition(), node_index);
@@ -274,7 +267,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                         data.get_jump_table_len()
                                     );
                                     let i = data.get_jump_table_len();
-                                    data.push_jump_point(Data::Size::zero()).nest_into()?; // this will be updated when conditional branch nod resolves
+                                    data.push_jump_point(Data::Size::zero())?; // this will be updated when conditional branch nod resolves
                                     conditional_stack.push(i);
                                     jump_count += Data::Size::one();
                                 }
@@ -338,9 +331,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 let mut return_instruction = (Instruction::EndExpression, None);
                                 if we_are_conditional {
                                     return_instruction = match conditional_stack.last() {
-                                        None => Err(GarnishLangCompilerError::new(format!(
-                                            "Conditional stack empty when attempting to resolve conditional."
-                                        )))?,
+                                        None => implementation_error(format!("Conditional stack empty when attempting to resolve conditional."))?,
                                         // apply if true/false resolve fully before the parent conditional branch
                                         // second look up to get accurate value instruction data will happen when this instruction is placed
                                         // add 1 to account for current base jump
@@ -357,14 +348,12 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 if we_are_parent_conditional_branch || we_are_non_chained_conditional {
                                     let count = data.get_instruction_len();
                                     match conditional_stack.pop() {
-                                        None => Err(GarnishLangCompilerError::new(format!(
-                                            "End of conditional branch and conditional stack is empty."
-                                        )))?,
+                                        None => implementation_error(format!("End of conditional branch and conditional stack is empty."))?,
                                         Some(jump_index) => match data.get_jump_point_mut(jump_index) {
-                                            None => Err(GarnishLangCompilerError::new(format!(
+                                            None => implementation_error(format!(
                                                 "No value in jump table at index {:?} to update for conditional branch.",
                                                 jump_index
-                                            )))?,
+                                            ))?,
                                             Some(jump_value) => {
                                                 trace!(
                                                     "Updating jump table at index {:?} to {:?} for conditional branch.",
@@ -384,11 +373,9 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                         nearest_expression_point
                                     };
                                     match node.get_right() {
-                                        None => Err(GarnishLangCompilerError::new(format!(
-                                            "No child value on {:?} node at {:?}",
-                                            node.get_definition(),
-                                            node_index
-                                        )))?,
+                                        None => {
+                                            implementation_error(format!("No child value on {:?} node at {:?}", node.get_definition(), node_index))?
+                                        }
                                         Some(node_index) => {
                                             trace!("Adding index {:?} to root stack", node_index);
                                             root_stack.insert(0, (node_index, return_instruction.0, return_instruction.1, nearest_expression))
@@ -403,7 +390,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 // add to its count, unless we are a list
                                 if we_are_list_item {
                                     match list_counts.last_mut() {
-                                        None => Err(GarnishLangCompilerError::new(format!("Child of list node has no count add to.")))?,
+                                        None => implementation_error(format!("Child of list node has no count add to."))?,
                                         Some(count) => {
                                             *count += Data::Size::one();
                                             trace!("Added to current list count. Current count is at {:?}", count);
@@ -432,31 +419,29 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
 
             iter_count += 1;
             if iter_count > max_iterations {
-                return Err(GarnishLangCompilerError::new(format!(
-                    "Max iterations reached in resolving tree at root {:?}",
-                    root_index
-                )));
+                return implementation_error(format!("Max iterations reached in resolving tree at root {:?}", root_index));
             }
         }
 
         trace!("Adding return instruction {:?} with data {:?}", return_instruction, instruction_data);
 
-        data.push_instruction(return_instruction, instruction_data).nest_into()?;
+        data.push_instruction(return_instruction, instruction_data)?;
 
         trace!("Finished instructions for tree starting at index {:?}", root_index);
 
         root_iter_count += 1;
 
         if root_iter_count > max_roots {
-            return Err(GarnishLangCompilerError::new(format!("Max iterations for roots reached.")));
+            return implementation_error(format!("Max iterations for roots reached."));
         }
 
-        data.get_jump_point_mut(jump_index)
-            .and_then(|i| Some(*i = jump_point))
-            .ok_or(GarnishLangCompilerError::new(format!(
+        match data.get_jump_point_mut(jump_index) {
+            None => implementation_error(format!(
                 "Failed to update jump point at index {:?} because None was returned.",
                 jump_index
-            )))?;
+            ))?,
+            Some(i) => *i = jump_point,
+        }
     }
 
     Ok(())
@@ -464,6 +449,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
 
 #[cfg(test)]
 mod test_utils {
+    use crate::error::CompilerError;
     use crate::*;
     use garnish_lang_runtime::*;
     use std::iter;
@@ -499,7 +485,7 @@ mod test_utils {
     pub fn get_instruction_data(
         root: usize,
         nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
-    ) -> GarnishLangCompilerResult<SimpleRuntimeData, DataError> {
+    ) -> Result<SimpleRuntimeData, CompilerError<DataError>> {
         let nodes: Vec<ParseNode> = nodes
             .iter()
             .map(|v| ParseNode::new(v.0, v.1, v.2, v.3, LexerToken::new(v.4.to_string(), v.5, 0, 0)))
@@ -556,10 +542,7 @@ mod values {
         assert_instruction_data(
             0,
             vec![(Definition::Identifier, None, None, None, "value", TokenType::Identifier)],
-            vec![
-                (Instruction::Resolve, Some(3)),
-                (Instruction::EndExpression, None),
-            ],
+            vec![(Instruction::Resolve, Some(3)), (Instruction::EndExpression, None)],
             SimpleDataList::default().append(SymbolData::from(symbol_value("value"))),
         );
     }
