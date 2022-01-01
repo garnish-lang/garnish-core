@@ -1,16 +1,16 @@
 use log::trace;
 
-use crate::{next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto};
+use crate::{next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
 
-pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Equality Comparison");
 
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
-    let result = match (this.get_data_type(left_addr).nest_into()?, this.get_data_type(right_addr).nest_into()?) {
+    let result = match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {
         (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-            let left = this.get_integer(left_addr).nest_into()?;
-            let right = this.get_integer(right_addr).nest_into()?;
+            let left = this.get_integer(left_addr)?;
+            let right = this.get_integer(right_addr)?;
 
             trace!("Comparing {:?} == {:?}", left, right);
 

@@ -1,8 +1,8 @@
 use log::trace;
 
-use crate::{next_two_raw_ref, push_pair, GarnishLangRuntimeData, GarnishLangRuntimeResult};
+use crate::{next_two_raw_ref, push_pair, GarnishLangRuntimeData, RuntimeError};
 
-pub(crate) fn make_pair<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn make_pair<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Make Pair");
 
     let (right_addr, left_addr) = next_two_raw_ref(this)?;

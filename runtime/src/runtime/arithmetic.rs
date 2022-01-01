@@ -1,25 +1,25 @@
 use log::trace;
 
 use crate::runtime::data::Overflowable;
-use crate::{next_two_raw_ref, push_integer, push_pair, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto};
+use crate::{next_two_raw_ref, push_integer, push_pair, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
 
-pub fn perform_addition<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+pub fn perform_addition<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Addition");
 
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
-    match (this.get_data_type(left_addr).nest_into()?, this.get_data_type(right_addr).nest_into()?) {
+    match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {
         (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-            let left = this.get_integer(left_addr).nest_into()?;
-            let right = this.get_integer(right_addr).nest_into()?;
+            let left = this.get_integer(left_addr)?;
+            let right = this.get_integer(right_addr)?;
 
             trace!("Performing {:?} + {:?}", left, right);
 
             let (sum, overflowed) = left.overflowable_addition(right);
 
             if overflowed {
-                let left = this.add_integer(sum).nest_into()?;
-                let right = this.add_true().nest_into()?;
+                let left = this.add_integer(sum)?;
+                let right = this.add_true()?;
                 push_pair(this, left, right)
             } else {
                 push_integer(this, sum)

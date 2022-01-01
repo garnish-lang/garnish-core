@@ -1,14 +1,14 @@
 use log::trace;
 
 use crate::{
-     push_unit, runtime::list::get_access_addr, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto,
+     push_unit, runtime::list::get_access_addr, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError,
 };
 
 pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
     data: Data::Size,
     context: Option<&mut T>,
-) -> GarnishLangRuntimeResult<Data::Error> {
+) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Resolve");
 
     // check input
@@ -17,7 +17,7 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
         Some(list_ref) => match get_access_addr(this, data, list_ref)? {
             None => (),
             Some(i) => {
-                this.push_register(i).nest_into()?;
+                this.push_register(i)?;
                 return Ok(());
             }
         },
@@ -26,7 +26,7 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
     // check context
     match context {
         None => (),
-        Some(c) => match c.resolve(this.get_symbol(data).nest_into()?, this)? {
+        Some(c) => match c.resolve(this.get_symbol(data)?, this)? {
             true => return Ok(()), // context resovled end look up
             false => (),           // not resolved fall through
         },
@@ -44,7 +44,7 @@ mod tests {
             utilities::push_integer,
             GarnishRuntime,
         },
-        symbol_value, GarnishLangRuntimeData, GarnishLangRuntimeResult, Instruction, SimpleRuntimeData,
+        symbol_value, GarnishLangRuntimeData, RuntimeError, Instruction, SimpleRuntimeData,
     };
     use crate::simple::DataError;
 
@@ -100,14 +100,14 @@ mod tests {
         struct MyContext {}
 
         impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
-            fn resolve(&mut self, sym_val: u64, runtime: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<DataError, bool> {
+            fn resolve(&mut self, sym_val: u64, runtime: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
                 assert_eq!(symbol_value("one"), sym_val);
 
                 push_integer(runtime, 100)?;
                 Ok(true)
             }
 
-            fn apply(&mut self, _: usize, _: usize, _: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<DataError, bool> {
+            fn apply(&mut self, _: usize, _: usize, _: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
                 Ok(false)
             }
         }

@@ -1,100 +1,122 @@
 use log::trace;
 
-use crate::{next_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto, TypeConstants};
+use crate::{next_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, push_integer};
 
-pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Make List | Length - {:?}", len);
 
-    this.start_list(len).nest_into()?;
+    this.start_list(len)?;
 
     // look into getting this to work with a range value
     let mut count = Data::Size::zero();
     while count < len {
-        next_ref(this).and_then(|r| {
-            this.get_data_type(r)
-                .and_then(|t| match t {
-                    ExpressionDataType::Pair => this.get_pair(r).and_then(|(left, _)| {
-                        this.get_data_type(left).and_then(|t| match t {
-                            ExpressionDataType::Symbol => Ok(true),
-                            _ => Ok(false),
-                        })
-                    }),
-                    _ => Ok(false), // Other values are just simple items
-                })
-                .and_then(|is_associative| this.add_to_list(r, is_associative))
-                .nest_into()
-        })?;
+        let r = next_ref(this)?;
+
+        let is_associative = match this.get_data_type(r)? {
+            ExpressionDataType::Pair => {
+                let (left, _right) = this.get_pair(r)?;
+                match this.get_data_type(left)? {
+                    ExpressionDataType::Symbol => true,
+                    _ => false
+                }
+            }
+            _ => false
+        };
+
+        this.add_to_list(r, is_associative)?;
 
         count += Data::Size::one();
     }
 
-    this.end_list().and_then(|r| this.push_register(r)).nest_into()
+    this.end_list().and_then(|r| this.push_register(r))?;
+
+    Ok(())
 }
 
-pub(crate) fn access<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn access<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Access");
 
     let right_ref = next_ref(this)?;
     let left_ref = next_ref(this)?;
 
     match get_access_addr(this, right_ref, left_ref)? {
-        None => push_unit(this),
-        Some(i) => this.push_register(i).nest_into(),
+        None => push_unit(this)?,
+        Some(i) => this.push_register(i)?,
     }
+
+    Ok(())
 }
 
-pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Access Left Internal");
-    next_ref(this).and_then(|r| match this.get_data_type(r).nest_into()? {
-        ExpressionDataType::Pair => this.get_pair(r).and_then(|(left, _)| this.push_register(left)).nest_into(),
-        _ => push_unit(this),
-    })
+
+    let r = next_ref(this)?;
+    match this.get_data_type(r)? {
+        ExpressionDataType::Pair => {
+            let (left, _) = this.get_pair(r)?;
+            this.push_register(left)?;
+        }
+        _ => push_unit(this)?
+    }
+
+    Ok(())
 }
 
-pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Access Right Internal");
-    next_ref(this).and_then(|r| match this.get_data_type(r).nest_into()? {
-        ExpressionDataType::Pair => this.get_pair(r).and_then(|(_, right)| this.push_register(right)).nest_into(),
-        _ => push_unit(this),
-    })
+
+    let r = next_ref(this)?;
+    match this.get_data_type(r)? {
+        ExpressionDataType::Pair => {
+            let (_, right) = this.get_pair(r)?;
+            this.push_register(right)?;
+        }
+        _ => push_unit(this)?
+    }
+
+    Ok(())
 }
 
-pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Data) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Access Length Internal");
-    next_ref(this).and_then(|r| match this.get_data_type(r).nest_into()? {
-        ExpressionDataType::List => this
-            .get_list_len(r)
-            .and_then(|len| this.add_integer(Data::size_to_integer(len)).and_then(|r| this.push_register(r)))
-            .nest_into(),
-        _ => push_unit(this),
-    })
+
+    let r = next_ref(this)?;
+    match this.get_data_type(r)? {
+        ExpressionDataType::List => {
+            let len = Data::size_to_integer(this.get_list_len(r)?);
+            push_integer(this, len)?;
+        }
+        _ => push_unit(this)?
+    }
+
+    Ok(())
 }
 
 pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     sym: Data::Size,
     list: Data::Size,
-) -> GarnishLangRuntimeResult<Data::Error, Option<Data::Size>> {
+) -> Result<Option<Data::Size>, Data::Error> {
     let sym_ref = sym;
     let list_ref = list;
 
-    match (this.get_data_type(list_ref).nest_into()?, this.get_data_type(sym_ref).nest_into()?) {
+    match (this.get_data_type(list_ref)?, this.get_data_type(sym_ref)?) {
         (ExpressionDataType::List, ExpressionDataType::Symbol) => {
-            let sym_val = this.get_symbol(sym_ref).nest_into()?;
+            let sym_val = this.get_symbol(sym_ref)?;
 
-            Ok(this.get_list_item_with_symbol(list_ref, sym_val).nest_into()?)
+            Ok(this.get_list_item_with_symbol(list_ref, sym_val)?)
         }
         (ExpressionDataType::List, ExpressionDataType::Integer) => {
-            let i = this.get_integer(sym).nest_into()?;
+            let i = this.get_integer(sym)?;
 
             if i < Data::Integer::zero() {
                 Ok(None)
             } else {
                 let i = i;
-                if i >= Data::size_to_integer(this.get_list_len(list).nest_into()?) {
+                if i >= Data::size_to_integer(this.get_list_len(list)?) {
                     Ok(None)
                 } else {
-                    Ok(Some(this.get_list_item(list, i).nest_into()?))
+                    Ok(Some(this.get_list_item(list, i)?))
                 }
             }
         }

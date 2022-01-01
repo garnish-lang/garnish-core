@@ -3,11 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
-use crate::{
-    symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, FalseData, GarnishLangRuntimeContext,
-    GarnishLangRuntimeData, GarnishLangRuntimeError, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData,
-    PairData, SimpleData, SimpleDataList, SymbolData, TrueData, UnitData,
-};
+use crate::{symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, FalseData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, SimpleData, SimpleDataList, SymbolData, TrueData, UnitData, RuntimeError};
 
 pub mod data;
 
@@ -74,7 +70,7 @@ impl SimpleRuntimeData {
         &self.simple_data
     }
 
-    pub fn execute_all_instructions(&mut self) -> Result<(), GarnishLangRuntimeError<DataError>> {
+    pub fn execute_all_instructions(&mut self) -> Result<(), RuntimeError<DataError>> {
         loop {
             match self.execute_current_instruction::<EmptyContext>(None) {
                 Err(e) => return Err(e),
@@ -89,7 +85,7 @@ impl SimpleRuntimeData {
     pub fn execute_all_instructions_with_context<Context: GarnishLangRuntimeContext<Self>>(
         &mut self,
         context: &mut Context,
-    ) -> Result<(), GarnishLangRuntimeError<DataError>> {
+    ) -> Result<(), RuntimeError<DataError>> {
         loop {
             match self.execute_current_instruction(Some(context)) {
                 Err(e) => return Err(e),

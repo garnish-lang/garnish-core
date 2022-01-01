@@ -1,38 +1,43 @@
 use crate::runtime::utilities::*;
-use crate::{error, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, NestInto, TypeConstants};
+use crate::{ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, state_error};
 use log::trace;
 
 use super::context::GarnishLangRuntimeContext;
 
 pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
-    context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
+    context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Apply");
     apply_internal(this, context)
 }
 
-pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> GarnishLangRuntimeResult<Data::Error> {
+pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Reapply | Data - {:?}", index);
 
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
     // only execute if left side is a true like value
-    match this.get_data_type(left_addr).nest_into()? {
+    match this.get_data_type(left_addr)? {
         ExpressionDataType::Unit | ExpressionDataType::False => Ok(()),
         _ => {
-            let point = this.get_jump_point(index).ok_or(error(format!("No jump point at index {:?}", index)))?;
+            let point = match this.get_jump_point(index) {
+                None => state_error(format!("No jump point at index {:?}", index))?,
+                Some(i) => i
+            };
 
-            this.set_instruction_cursor(point - Data::Size::one()).nest_into()?;
-            this.pop_value_stack()
-                .ok_or(error(format!("Failed to pop input during reapply operation.")))?;
-            this.push_value_stack(right_addr).nest_into()
+            this.set_instruction_cursor(point - Data::Size::one())?;
+            match this.pop_value_stack() {
+                None => state_error(format!("Failed to pop input during reapply operation."))?,
+                Some(_) => ()
+            }
+            Ok(this.push_value_stack(right_addr)?)
         }
     }
 }
 
 pub(crate) fn empty_apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
-    context: Option<&mut T>) -> GarnishLangRuntimeResult<Data::Error> {
+    context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Empty Apply");
     push_unit(this)?;
 
@@ -42,26 +47,27 @@ pub(crate) fn empty_apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeCon
 pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
     context: Option<&mut T>,
-) -> GarnishLangRuntimeResult<Data::Error> {
+) -> Result<(), RuntimeError<Data::Error>> {
     let right_addr = next_ref(this)?;
     let left_addr = next_ref(this)?;
 
-    match this.get_data_type(left_addr).nest_into()? {
+    match this.get_data_type(left_addr)? {
         ExpressionDataType::Expression => {
-            let expression_index = this.get_expression(left_addr).nest_into()?;
+            let expression_index = this.get_expression(left_addr)?;
 
-            let next_instruction = this
-                .get_jump_point(expression_index)
-                .ok_or(error(format!("No jump point at index {:?}", expression_index)))?;
+            let next_instruction = match this.get_jump_point(expression_index) {
+                None => state_error(format!("No jump point at index {:?}", expression_index))?,
+                Some(i) => i
+            };
 
             // Expression stores index of expression table, look up actual instruction index
 
-            this.push_jump_path(this.get_instruction_cursor()).nest_into()?;
-            this.set_instruction_cursor(next_instruction - Data::Size::one()).nest_into()?;
-            this.push_value_stack(right_addr).nest_into()
+            this.push_jump_path(this.get_instruction_cursor())?;
+            this.set_instruction_cursor(next_instruction - Data::Size::one())?;
+            Ok(this.push_value_stack(right_addr)?)
         }
         ExpressionDataType::External => {
-            let external_value = this.get_external(left_addr).nest_into()?;
+            let external_value = this.get_external(left_addr)?;
 
             match context {
                 None => push_unit(this),
@@ -81,7 +87,7 @@ mod tests {
         runtime::{
             context::{EmptyContext, GarnishLangRuntimeContext},
             GarnishRuntime,
-        }, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
+        }, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, Instruction, SimpleRuntimeData,
     };
     use crate::simple::DataError;
 
@@ -316,22 +322,22 @@ mod tests {
         }
 
         impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
-            fn resolve(&mut self, _: u64, _: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<DataError, bool> {
+            fn resolve(&mut self, _: u64, _: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
                 Ok(false)
             }
 
-            fn apply(&mut self, external_value: usize, input_addr: usize, runtime: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<DataError, bool> {
+            fn apply(&mut self, external_value: usize, input_addr: usize, runtime: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
                 assert_eq!(external_value, 3);
 
-                let value = match runtime.get_data_type(input_addr).nest_into()? {
+                let value = match runtime.get_data_type(input_addr)? {
                     ExpressionDataType::Integer => {
-                        runtime.get_integer(input_addr).nest_into()?
+                        runtime.get_integer(input_addr)?
                     },
                     _ => return Ok(false),
                 };
 
-                self.new_addr = runtime.add_integer(value * 2).nest_into()?;
-                runtime.push_register(self.new_addr).nest_into()?;
+                self.new_addr = runtime.add_integer(value * 2)?;
+                runtime.push_register(self.new_addr)?;
 
                 Ok(true)
             }
