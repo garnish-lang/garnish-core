@@ -7,12 +7,12 @@ pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data)
 
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
-    let result = compare_data(this, left_addr, right_addr)?;
+    let result = data_equal(this, left_addr, right_addr)?;
 
     push_boolean(this, result)
 }
 
-fn compare_data<Data: GarnishLangRuntimeData>(this: &Data, left_addr: Data::Size, right_addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {
+fn data_equal<Data: GarnishLangRuntimeData>(this: &Data, left_addr: Data::Size, right_addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {
     let equal = match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {
         (ExpressionDataType::Unit, ExpressionDataType::Unit)
         | (ExpressionDataType::True, ExpressionDataType::True)
@@ -53,7 +53,7 @@ fn compare_data<Data: GarnishLangRuntimeData>(this: &Data, left_addr: Data::Size
             let (left1, right1) = this.get_pair(left_addr)?;
             let (left2, right2) = this.get_pair(right_addr)?;
 
-            compare_data(this, left1, left2)? && compare_data(this, right1, right2)?
+            data_equal(this, left1, left2)? && data_equal(this, right1, right2)?
         }
         (ExpressionDataType::List, ExpressionDataType::List) => {
             let association_len1 = this.get_list_associations_len(left_addr)?;
@@ -68,7 +68,7 @@ fn compare_data<Data: GarnishLangRuntimeData>(this: &Data, left_addr: Data::Size
                     let item1 = this.get_list_association(left_addr, i)?;
                     let item2 = this.get_list_association(right_addr, i)?;
 
-                    if !compare_data(this, item1, item2)? {
+                    if !data_equal(this, item1, item2)? {
                         return Ok(false);
                     }
 
@@ -88,7 +88,7 @@ fn compare_data<Data: GarnishLangRuntimeData>(this: &Data, left_addr: Data::Size
                     let item1 = this.get_list_item(left_addr, i)?;
                     let item2 = this.get_list_item(right_addr, i)?;
 
-                    if !compare_data(this, item1, item2)? {
+                    if !data_equal(this, item1, item2)? {
                         return Ok(false);
                     }
 
