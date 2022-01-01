@@ -43,6 +43,7 @@ pub trait GarnishLangRuntimeData {
     fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Integer) -> Result<Self::Size, Self::Error>;
     fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Integer) -> Result<Self::Size, Self::Error>;
+    fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error>;
 
     fn add_unit(&mut self) -> Result<Self::Size, Self::Error>;
     fn add_true(&mut self) -> Result<Self::Size, Self::Error>;
@@ -57,7 +58,6 @@ pub trait GarnishLangRuntimeData {
     fn start_list(&mut self, len: Self::Size) -> Result<(), Self::Error>;
     fn add_to_list(&mut self, addr: Self::Size, is_associative: bool) -> Result<(), Self::Error>;
     fn end_list(&mut self) -> Result<Self::Size, Self::Error>;
-    fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error>;
 
     fn get_register_len(&self) -> Self::Size;
     fn push_register(&mut self, addr: Self::Size) -> Result<(), Self::Error>;

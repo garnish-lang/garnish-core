@@ -85,34 +85,35 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                 ExpressionDataType::List => {
                     let len = this.get_list_len(right_addr)?;
 
-                    // lease stack to avoid creating a partial list
-                    // and finding out all items aren't either an integer or symbol
-                    let lease = this.lease_tmp_stack()?;
-
-                    let mut count = len;
-
-                    while count > Data::Size::zero() {
-                        let i = Data::size_to_integer(count - Data::Size::one());
-                        let item = this.get_list_item(right_addr, i)?;
-                        let value = match get_access_addr(this, item, left_addr)? {
-                            Some(addr) => addr,
-                            // make sure there is a unit value to use
-                            None => this.add_unit()?,
-                        };
-
-                        this.push_tmp_stack(lease, value)?;
-
-                        count -= Data::Size::one();
-                    }
+                    let mut count = Data::Size::zero();
 
                     this.start_list(len)?;
-                    while let Some(i) = this.pop_tmp_stack(lease)? {
-                        this.add_to_list(i, false)?;
+
+                    while count < len {
+                        let i = Data::size_to_integer(count);
+                        let item = this.get_list_item(right_addr, i)?;
+
+                        let (value, is_associative) = match get_access_addr(this, item, left_addr)? {
+                            Some(addr) =>  match this.get_data_type(addr)? {
+                                ExpressionDataType::Pair => {
+                                    let (left, _right) = this.get_pair(addr)?;
+                                    match this.get_data_type(left)? {
+                                        ExpressionDataType::Symbol => (addr, true),
+                                        _ => (addr, false)
+                                    }
+                                }
+                                _ => (addr, false)
+                            },
+                            // make sure there is a unit value to use
+                            None => (this.add_unit()?, false),
+                        };
+
+                        this.add_to_list(value, is_associative)?;
+
+                        count += Data::Size::one();
                     }
 
                     this.end_list().and_then(|r| this.push_register(r))?;
-
-                    this.release_tmp_stack(lease)?;
                 }
                 _ => match get_access_addr(this, right_addr, left_addr)? {
                     None => push_unit(this)?,
@@ -264,7 +265,9 @@ mod tests {
 
         let addr = runtime.pop_register().unwrap();
         let len = runtime.get_list_len(addr).unwrap();
+        let association_len = runtime.get_list_associations_len(addr).unwrap();
         assert_eq!(len, 4);
+        assert_eq!(association_len, 1);
 
         let pair_addr = runtime.get_list_item(addr, 0).unwrap();
         assert_eq!(runtime.get_data_type(pair_addr).unwrap(), ExpressionDataType::Pair);
@@ -274,6 +277,9 @@ mod tests {
         assert_eq!(runtime.get_symbol(pair_left).unwrap(), symbol_value("val3"));
         assert_eq!(runtime.get_data_type(pair_right).unwrap(), ExpressionDataType::Integer);
         assert_eq!(runtime.get_integer(pair_right).unwrap(), 30);
+
+        let association_value1 = runtime.get_list_item_with_symbol(addr, symbol_value("val3")).unwrap().unwrap();
+        assert_eq!(runtime.get_integer(association_value1).unwrap(), 30);
 
         let int_addr = runtime.get_list_item(addr, 1).unwrap();
         assert_eq!(runtime.get_data_type(int_addr).unwrap(), ExpressionDataType::Integer);
