@@ -1,6 +1,6 @@
 use crate::{ExpressionDataType, Instruction};
 use std::fmt::{Debug, Display};
-use std::ops::{Add, AddAssign, Sub};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 use std::str::FromStr;
 
 pub trait TypeConstants {
@@ -19,7 +19,7 @@ pub trait GarnishLangRuntimeData {
     type DataLease: Copy;
     type Symbol: Display + Debug + PartialOrd;
     type Integer: Display + Debug + Overflowable + PartialOrd + TypeConstants + Copy + FromStr;
-    type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
+    type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + SubAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
 
     fn get_data_len(&self) -> Self::Size;
 

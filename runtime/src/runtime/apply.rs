@@ -1,5 +1,5 @@
-use crate::runtime::utilities::*;
 use crate::runtime::list::get_access_addr;
+use crate::runtime::utilities::*;
 use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 use log::trace;
 
@@ -81,9 +81,43 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             }
         }
         ExpressionDataType::List => {
-            match get_access_addr(this, right_addr, left_addr)? {
-                None => push_unit(this)?,
-                Some(i) => this.push_register(i)?,
+            match this.get_data_type(right_addr)? {
+                ExpressionDataType::List => {
+                    let len = this.get_list_len(right_addr)?;
+
+                    // lease stack to avoid creating a partial list
+                    // and finding out all items aren't either an integer or symbol
+                    let lease = this.lease_tmp_stack()?;
+
+                    let mut count = Data::Size::zero();
+
+                    while count < len {
+                        let i = Data::size_to_integer(count);
+                        let item = this.get_list_item(right_addr, i)?;
+                        let value = match get_access_addr(this, item, left_addr)? {
+                            Some(addr) => addr,
+                            // make sure there is a unit value to use
+                            None => this.add_unit()?,
+                        };
+
+                        this.push_tmp_stack(lease, value)?;
+
+                        count += Data::Size::one();
+                    }
+
+                    this.start_list(len)?;
+                    while let Some(i) = this.pop_tmp_stack(lease)? {
+                        this.add_to_list(i, false)?;
+                    }
+
+                    this.end_list().and_then(|r| this.push_register(r))?;
+
+                    this.release_tmp_stack(lease)?;
+                }
+                _ => match get_access_addr(this, right_addr, left_addr)? {
+                    None => push_unit(this)?,
+                    Some(i) => this.push_register(i)?,
+                },
             }
 
             Ok(())
@@ -100,7 +134,7 @@ mod tests {
             context::{EmptyContext, GarnishLangRuntimeContext},
             GarnishRuntime,
         },
-        ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData,
+        symbol_value, ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData,
     };
 
     #[test]
@@ -188,6 +222,68 @@ mod tests {
         runtime.apply::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_integer(*runtime.get_register().get(0).unwrap()).unwrap(), 20);
+    }
+
+    #[test]
+    fn apply_list_of_sym_or_integer_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_symbol("val1").unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
+
+        let i4 = runtime.add_symbol("val2").unwrap();
+        let i5 = runtime.add_integer(20).unwrap();
+        let i6 = runtime.add_pair((i4, i5)).unwrap();
+
+        let i7 = runtime.add_symbol("val3").unwrap();
+        let i8 = runtime.add_integer(30).unwrap();
+        let i9 = runtime.add_pair((i7, i8)).unwrap();
+
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(i9, true).unwrap();
+        runtime.add_to_list(i6, true).unwrap();
+        runtime.add_to_list(i3, true).unwrap();
+        let i10 = runtime.end_list().unwrap();
+
+        let i11 = runtime.add_integer(2).unwrap();
+        let i12 = runtime.add_symbol("val2").unwrap();
+        let i13 = runtime.add_integer(5).unwrap();
+        let i14 = runtime.add_expression(10).unwrap();
+        runtime.start_list(2).unwrap();
+        runtime.add_to_list(i14, false).unwrap();
+        runtime.add_to_list(i13, false).unwrap();
+        runtime.add_to_list(i12, false).unwrap();
+        runtime.add_to_list(i11, false).unwrap();
+        let i15 = runtime.end_list().unwrap();
+
+        runtime.push_register(i10).unwrap();
+        runtime.push_register(i15).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        let addr = runtime.pop_register().unwrap();
+        let len = runtime.get_list_len(addr).unwrap();
+        assert_eq!(len, 4);
+
+        let pair_addr = runtime.get_list_item(addr, 0).unwrap();
+        assert_eq!(runtime.get_data_type(pair_addr).unwrap(), ExpressionDataType::Pair);
+
+        let (pair_left, pair_right) = runtime.get_pair(pair_addr).unwrap();
+        assert_eq!(runtime.get_data_type(pair_left).unwrap(), ExpressionDataType::Symbol);
+        assert_eq!(runtime.get_symbol(pair_left).unwrap(), symbol_value("val3"));
+        assert_eq!(runtime.get_data_type(pair_right).unwrap(), ExpressionDataType::Integer);
+        assert_eq!(runtime.get_integer(pair_right).unwrap(), 30);
+
+        let int_addr = runtime.get_list_item(addr, 1).unwrap();
+        assert_eq!(runtime.get_data_type(int_addr).unwrap(), ExpressionDataType::Integer);
+        assert_eq!(runtime.get_integer(int_addr).unwrap(), 20);
+
+        let unit1 = runtime.get_list_item(addr, 2).unwrap();
+        let unit2 = runtime.get_list_item(addr, 3).unwrap();
+
+        assert_eq!(runtime.get_data_type(unit1).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_type(unit2).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
