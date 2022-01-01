@@ -46,6 +46,7 @@ mod tests {
         },
         symbol_value, GarnishLangRuntimeData, GarnishLangRuntimeResult, Instruction, SimpleRuntimeData,
     };
+    use crate::simple::DataError;
 
     #[test]
     fn resolve_from_input() {
@@ -99,14 +100,14 @@ mod tests {
         struct MyContext {}
 
         impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
-            fn resolve(&mut self, sym_val: u64, runtime: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<String, bool> {
+            fn resolve(&mut self, sym_val: u64, runtime: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<DataError, bool> {
                 assert_eq!(symbol_value("one"), sym_val);
 
                 push_integer(runtime, 100)?;
                 Ok(true)
             }
 
-            fn apply(&mut self, _: usize, _: usize, _: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<String, bool> {
+            fn apply(&mut self, _: usize, _: usize, _: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<DataError, bool> {
                 Ok(false)
             }
         }

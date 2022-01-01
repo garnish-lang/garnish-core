@@ -499,7 +499,7 @@ mod test_utils {
     pub fn get_instruction_data(
         root: usize,
         nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
-    ) -> GarnishLangCompilerResult<SimpleRuntimeData, String> {
+    ) -> GarnishLangCompilerResult<SimpleRuntimeData, DataError> {
         let nodes: Vec<ParseNode> = nodes
             .iter()
             .map(|v| ParseNode::new(v.0, v.1, v.2, v.3, LexerToken::new(v.4.to_string(), v.5, 0, 0)))

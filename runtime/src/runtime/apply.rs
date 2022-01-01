@@ -83,6 +83,7 @@ mod tests {
             GarnishRuntime,
         }, ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeResult, Instruction, NestInto, SimpleRuntimeData,
     };
+    use crate::simple::DataError;
 
     #[test]
     fn apply() {
@@ -315,11 +316,11 @@ mod tests {
         }
 
         impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
-            fn resolve(&mut self, _: u64, _: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<String, bool> {
+            fn resolve(&mut self, _: u64, _: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<DataError, bool> {
                 Ok(false)
             }
 
-            fn apply(&mut self, external_value: usize, input_addr: usize, runtime: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<String, bool> {
+            fn apply(&mut self, external_value: usize, input_addr: usize, runtime: &mut SimpleRuntimeData) -> GarnishLangRuntimeResult<DataError, bool> {
                 assert_eq!(external_value, 3);
 
                 let value = match runtime.get_data_type(input_addr).nest_into()? {

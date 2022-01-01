@@ -1,4 +1,5 @@
 use std::collections::hash_map::DefaultHasher;
+use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
@@ -42,9 +43,9 @@ impl SimpleRuntimeData {
         }
     }
 
-    pub fn get(&self, index: usize) -> Result<&AnyData, String> {
+    pub fn get(&self, index: usize) -> Result<&AnyData, DataError> {
         match self.simple_data.get(index) {
-            None => Err(format!("No data at addr {:?}", index)),
+            None => Err(format!("No data at addr {:?}", index))?,
             Some(d) => Ok(d),
         }
     }
@@ -73,7 +74,7 @@ impl SimpleRuntimeData {
         &self.simple_data
     }
 
-    pub fn execute_all_instructions(&mut self) -> Result<(), GarnishLangRuntimeError<String>> {
+    pub fn execute_all_instructions(&mut self) -> Result<(), GarnishLangRuntimeError<DataError>> {
         loop {
             match self.execute_current_instruction::<EmptyContext>(None) {
                 Err(e) => return Err(e),
@@ -88,7 +89,7 @@ impl SimpleRuntimeData {
     pub fn execute_all_instructions_with_context<Context: GarnishLangRuntimeContext<Self>>(
         &mut self,
         context: &mut Context,
-    ) -> Result<(), GarnishLangRuntimeError<String>> {
+    ) -> Result<(), GarnishLangRuntimeError<DataError>> {
         loop {
             match self.execute_current_instruction(Some(context)) {
                 Err(e) => return Err(e),
@@ -100,7 +101,7 @@ impl SimpleRuntimeData {
         }
     }
 
-    pub fn set_end_of_constant(&mut self, addr: usize) -> Result<(), String> {
+    pub fn set_end_of_constant(&mut self, addr: usize) -> Result<(), DataError> {
         self.end_of_constant_data = addr;
         Ok(())
     }
@@ -122,7 +123,7 @@ impl SimpleRuntimeData {
         Ok(())
     }
 
-    fn cache_add<T: SimpleData>(&mut self, value: T) -> Result<usize, String> {
+    fn cache_add<T: SimpleData>(&mut self, value: T) -> Result<usize, DataError> {
         let mut h = DefaultHasher::new();
         value.hash(&mut h);
         value.get_type().hash(&mut h);
@@ -140,8 +141,27 @@ impl SimpleRuntimeData {
     }
 }
 
+#[derive(Debug)]
+pub struct DataError {
+    message: String,
+}
+
+impl Display for DataError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.message.as_str())
+    }
+}
+
+impl std::error::Error for DataError {}
+
+impl From<String> for DataError {
+    fn from(s: String) -> Self {
+        DataError { message: s }
+    }
+}
+
 impl GarnishLangRuntimeData for SimpleRuntimeData {
-    type Error = String;
+    type Error = DataError;
     type Integer = i32;
     type Symbol = u64;
     type Size = usize;
@@ -201,7 +221,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn get_list_item(&self, list_index: usize, item_index: i32) -> Result<usize, Self::Error> {
         match self.get(list_index)?.as_list()?.items().get(item_index as usize) {
-            None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index)),
+            None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
             Some(v) => Ok(*v),
         }
     }
@@ -212,7 +232,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn get_list_association(&self, list_index: usize, item_index: i32) -> Result<usize, Self::Error> {
         match self.get(list_index)?.as_list()?.associations().get(item_index as usize) {
-            None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index)),
+            None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
             Some(v) => Ok(*v),
         }
     }
@@ -259,7 +279,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn add_to_list(&mut self, addr: usize, is_associative: bool) -> Result<(), Self::Error> {
         match &mut self.current_list {
-            None => Err(format!("Not currently creating a list.")),
+            None => Err(format!("Not currently creating a list."))?,
             Some((items, associations)) => {
                 items.push(addr);
 
@@ -274,7 +294,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn end_list(&mut self) -> Result<usize, Self::Error> {
         match &mut self.current_list {
-            None => Err(format!("Not currently creating a list.")),
+            None => Err(format!("Not currently creating a list."))?,
             Some((items, associations)) => {
                 // reorder associative values by modulo value
                 let mut ordered = vec![0usize; associations.len()];
@@ -290,7 +310,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
                         count += 1;
                         if count > associations.len() {
-                            return Err(format!("Could not place associative value"));
+                            Err(format!("Could not place associative value"))?;
                         }
                     }
 
@@ -420,11 +440,11 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn push_jump_point(&mut self, index: usize) -> Result<(), Self::Error> {
         if index >= self.instructions.len() {
-            return Err(format!(
+            Err(format!(
                 "Specified jump point {:?} is out of bounds of instructions with length {:?}",
                 index,
                 self.instructions.len()
-            ));
+            ))?;
         }
 
         self.expression_table.push(index);
