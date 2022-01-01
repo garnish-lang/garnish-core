@@ -3,7 +3,11 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
-use crate::{symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, FalseData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, SimpleData, SimpleDataList, SymbolData, TrueData, UnitData, RuntimeError};
+use crate::{
+    symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, FalseData, GarnishLangRuntimeContext,
+    GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, RuntimeError,
+    SimpleData, SimpleDataList, SymbolData, TrueData, UnitData,
+};
 
 pub mod data;
 
@@ -20,6 +24,7 @@ pub struct SimpleRuntimeData {
     current_list: Option<(Vec<usize>, Vec<usize>)>,
     symbols: HashMap<String, u64>,
     cache: HashMap<u64, usize>,
+    lease_stack: Vec<usize>
 }
 
 impl SimpleRuntimeData {
@@ -36,6 +41,7 @@ impl SimpleRuntimeData {
             current_list: None,
             symbols: HashMap::new(),
             cache: HashMap::new(),
+            lease_stack: vec![]
         }
     }
 
@@ -158,6 +164,7 @@ impl From<String> for DataError {
 
 impl GarnishLangRuntimeData for SimpleRuntimeData {
     type Error = DataError;
+    type DataLease = usize;
     type Integer = i32;
     type Symbol = u64;
     type Size = usize;
@@ -471,6 +478,24 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn size_to_integer(from: Self::Size) -> Self::Integer {
         from as Self::Integer
     }
+
+    fn lease_tmp_stack(&mut self) -> Result<Self::DataLease, Self::Error> {
+        Ok(1)
+    }
+
+    fn push_tmp_stack(&mut self, _lease: Self::DataLease, item: Self::Size) -> Result<(), Self::Error> {
+        self.lease_stack.push(item);
+        Ok(())
+    }
+
+    fn pop_tmp_stack(&mut self, _lease: Self::DataLease) -> Result<Option<Self::Size>, Self::Error> {
+        Ok(self.lease_stack.pop())
+    }
+
+    fn release_tmp_stack(&mut self, _lease: Self::DataLease) -> Result<(), Self::Error> {
+        self.lease_stack.clear();
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -613,5 +638,51 @@ mod data_storage {
         assert_eq!(runtime.get_data_len(), 5);
         assert_eq!(runtime.simple_data.get(3).unwrap().as_external().unwrap().value(), 10);
         assert_eq!(runtime.simple_data.get(4).unwrap().as_expression().unwrap().value(), 10);
+    }
+}
+
+#[cfg(test)]
+mod leases {
+    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn lease_data() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let lease = runtime.lease_tmp_stack().unwrap();
+
+        assert_eq!(lease, 1);
+    }
+
+    #[test]
+    fn push_with_lease() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let lease = runtime.lease_tmp_stack().unwrap();
+        runtime.push_tmp_stack(lease, 5).unwrap();
+
+        assert_eq!(runtime.lease_stack.get(0).unwrap(), &5);
+    }
+
+    #[test]
+    fn pop_with_lease() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let lease = runtime.lease_tmp_stack().unwrap();
+        runtime.push_tmp_stack(lease, 5).unwrap();
+
+        assert_eq!(runtime.pop_tmp_stack(lease).unwrap(), Some(5));
+        assert!(runtime.lease_stack.is_empty());
+    }
+
+    #[test]
+    fn end_lease() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let lease = runtime.lease_tmp_stack().unwrap();
+        runtime.push_tmp_stack(lease, 5).unwrap();
+        runtime.release_tmp_stack(lease).unwrap();
+
+        assert!(runtime.lease_stack.is_empty());
     }
 }

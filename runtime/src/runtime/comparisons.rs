@@ -7,12 +7,26 @@ pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data)
 
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
-    let result = data_equal(this, left_addr, right_addr)?;
+    let lease = this.lease_tmp_stack()?;
+    this.push_tmp_stack(lease, left_addr)?;
+    this.push_tmp_stack(lease, right_addr)?;
 
-    push_boolean(this, result)
+    while let (Some(right), Some(left)) = (this.pop_tmp_stack(lease)?, this.pop_tmp_stack(lease)?) {
+        if !data_equal(this, left, right, lease)? {
+            push_boolean(this, false)?;
+            return Ok(());
+        }
+    }
+
+    push_boolean(this, true)
 }
 
-fn data_equal<Data: GarnishLangRuntimeData>(this: &Data, left_addr: Data::Size, right_addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {
+fn data_equal<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    left_addr: Data::Size,
+    right_addr: Data::Size,
+    lease: Data::DataLease,
+) -> Result<bool, RuntimeError<Data::Error>> {
     let equal = match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {
         (ExpressionDataType::Unit, ExpressionDataType::Unit)
         | (ExpressionDataType::True, ExpressionDataType::True)
@@ -53,7 +67,13 @@ fn data_equal<Data: GarnishLangRuntimeData>(this: &Data, left_addr: Data::Size, 
             let (left1, right1) = this.get_pair(left_addr)?;
             let (left2, right2) = this.get_pair(right_addr)?;
 
-            data_equal(this, left1, left2)? && data_equal(this, right1, right2)?
+            this.push_tmp_stack(lease, left1)?;
+            this.push_tmp_stack(lease, left2)?;
+
+            this.push_tmp_stack(lease, right1)?;
+            this.push_tmp_stack(lease, right2)?;
+
+            true
         }
         (ExpressionDataType::List, ExpressionDataType::List) => {
             let association_len1 = this.get_list_associations_len(left_addr)?;
@@ -68,9 +88,8 @@ fn data_equal<Data: GarnishLangRuntimeData>(this: &Data, left_addr: Data::Size, 
                     let item1 = this.get_list_association(left_addr, i)?;
                     let item2 = this.get_list_association(right_addr, i)?;
 
-                    if !data_equal(this, item1, item2)? {
-                        return Ok(false);
-                    }
+                    this.push_tmp_stack(lease, item1)?;
+                    this.push_tmp_stack(lease, item2)?;
 
                     count += Data::Size::one();
                 }
@@ -88,9 +107,8 @@ fn data_equal<Data: GarnishLangRuntimeData>(this: &Data, left_addr: Data::Size, 
                     let item1 = this.get_list_item(left_addr, i)?;
                     let item2 = this.get_list_item(right_addr, i)?;
 
-                    if !data_equal(this, item1, item2)? {
-                        return Ok(false);
-                    }
+                    this.push_tmp_stack(lease, item1)?;
+                    this.push_tmp_stack(lease, item2)?;
 
                     count += Data::Size::one();
                 }

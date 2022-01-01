@@ -9,11 +9,14 @@ pub trait TypeConstants {
 }
 
 pub trait Overflowable {
-    fn overflowable_addition(self, rhs: Self) -> (Self, bool) where Self: Sized;
+    fn overflowable_addition(self, rhs: Self) -> (Self, bool)
+    where
+        Self: Sized;
 }
 
 pub trait GarnishLangRuntimeData {
     type Error: std::error::Error + 'static;
+    type DataLease: Copy;
     type Symbol: Display + Debug + PartialOrd;
     type Integer: Display + Debug + Overflowable + PartialOrd + TypeConstants + Copy + FromStr;
     type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
@@ -76,10 +79,19 @@ pub trait GarnishLangRuntimeData {
 
     // deferred conversions
     fn size_to_integer(from: Self::Size) -> Self::Integer;
+
+    // data lease methods
+    fn lease_tmp_stack(&mut self) -> Result<Self::DataLease, Self::Error>;
+    fn push_tmp_stack(&mut self, lease: Self::DataLease, item: Self::Size) -> Result<(), Self::Error>;
+    fn pop_tmp_stack(&mut self, lease: Self::DataLease) -> Result<Option<Self::Size>, Self::Error>;
+    fn release_tmp_stack(&mut self, lease: Self::DataLease) -> Result<(), Self::Error>;
 }
 
 impl Overflowable for i32 {
-    fn overflowable_addition(self, rhs: Self) -> (Self, bool) where Self: Sized {
+    fn overflowable_addition(self, rhs: Self) -> (Self, bool)
+    where
+        Self: Sized,
+    {
         self.overflowing_add(rhs)
     }
 }
@@ -133,7 +145,6 @@ impl TypeConstants for i128 {
         1
     }
 }
-
 
 impl TypeConstants for u8 {
     fn zero() -> Self {
