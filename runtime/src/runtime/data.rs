@@ -14,8 +14,8 @@ pub trait Overflowable {
 
 pub trait GarnishLangRuntimeData {
     type Error: std::error::Error + 'static;
-    type Symbol: Display + Debug;
-    type Integer: Display + Debug + Overflowable + PartialEq + PartialOrd + TypeConstants + Copy + FromStr;
+    type Symbol: Display + Debug + PartialOrd;
+    type Integer: Display + Debug + Overflowable + PartialOrd + TypeConstants + Copy + FromStr;
     type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
 
     fn get_data_len(&self) -> Self::Size;

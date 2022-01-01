@@ -11,6 +11,30 @@ pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data)
         (ExpressionDataType::Unit, ExpressionDataType::Unit)
         | (ExpressionDataType::True, ExpressionDataType::True)
         | (ExpressionDataType::False, ExpressionDataType::False) => true,
+        (ExpressionDataType::Expression, ExpressionDataType::Expression) => {
+            let left = this.get_expression(left_addr)?;
+            let right = this.get_expression(right_addr)?;
+
+            trace!("Comparing {:?} == {:?}", left, right);
+
+            left == right
+        }
+        (ExpressionDataType::External, ExpressionDataType::External) => {
+            let left = this.get_external(left_addr)?;
+            let right = this.get_external(right_addr)?;
+
+            trace!("Comparing {:?} == {:?}", left, right);
+
+            left == right
+        }
+        (ExpressionDataType::Symbol, ExpressionDataType::Symbol) => {
+            let left = this.get_symbol(left_addr)?;
+            let right = this.get_symbol(right_addr)?;
+
+            trace!("Comparing {:?} == {:?}", left, right);
+
+            left == right
+        }
         (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
             let left = this.get_integer(left_addr)?;
             let right = this.get_integer(right_addr)?;
@@ -141,6 +165,123 @@ mod numbers {
 
         let int1 = runtime.add_integer(10).unwrap();
         let int2 = runtime.add_integer(20).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_data_type(1).unwrap(), ExpressionDataType::False);
+    }
+}
+
+#[cfg(test)]
+mod symbols {
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+
+    #[test]
+    fn equality_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_symbol("sym").unwrap();
+        let int2 = runtime.add_symbol("sym").unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_data_type(2).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_symbol("sym").unwrap();
+        let int2 = runtime.add_symbol("val").unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_data_type(1).unwrap(), ExpressionDataType::False);
+    }
+}
+
+#[cfg(test)]
+mod expression {
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+
+    #[test]
+    fn equality_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_expression(10).unwrap();
+        let int2 = runtime.add_expression(10).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_data_type(2).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_expression(10).unwrap();
+        let int2 = runtime.add_expression(20).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![1]);
+        assert_eq!(runtime.get_data_type(1).unwrap(), ExpressionDataType::False);
+    }
+}
+
+#[cfg(test)]
+mod external {
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+
+    #[test]
+    fn equality_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_external(10).unwrap();
+        let int2 = runtime.add_external(10).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_register(), &vec![2]);
+        assert_eq!(runtime.get_data_type(2).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_external(10).unwrap();
+        let int2 = runtime.add_external(20).unwrap();
 
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
