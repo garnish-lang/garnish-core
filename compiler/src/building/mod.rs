@@ -4,6 +4,21 @@ use log::trace;
 
 use crate::parsing::parser::*;
 
+#[derive(Debug, PartialOrd, Eq, PartialEq, Clone)]
+pub struct InstructionMetadata {
+    parse_node_index: Option<usize>,
+}
+
+impl InstructionMetadata {
+    fn new(parse_node_index: Option<usize>) -> Self {
+        InstructionMetadata { parse_node_index }
+    }
+
+    pub fn get_parse_node_index(&self) -> Option<usize> {
+        self.parse_node_index
+    }
+}
+
 struct ResolveNodeInfo {
     node_index: Option<usize>,
     first_resolved: bool,
@@ -59,24 +74,21 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         Definition::JumpIfTrue => ((true, node.get_left()), (false, None)),
         Definition::JumpIfFalse => ((true, node.get_left()), (false, None)),
         Definition::ElseJump => ((true, node.get_left()), (true, node.get_right())),
-        Definition::Drop => todo!(),
+        Definition::Drop => ((false, None), (false, None)),
     }
 }
 
+// returns true/false on whether or not an instruction was added
 fn resolve_node<Data: GarnishLangRuntimeData>(
     node: &ParseNode,
     data: &mut Data,
     list_count: Option<&Data::Size>,
     current_jump_index: Data::Size,
     nearest_expression_point: Data::Size,
-) -> Result<(), CompilerError<Data::Error>> {
+) -> Result<bool, CompilerError<Data::Error>> {
     match node.get_definition() {
         Definition::Number => {
             let addr = data.add_integer(match node.get_lex_token().get_text().parse::<Data::Integer>() {
-                // Err(_) => implementation_error(format!(
-                //     "Could not parse value from integer string {:?}",
-                //     node.get_lex_token().get_text()
-                // )))?,
                 Err(_) => data_parse_error(node.get_lex_token(), ExpressionDataType::Integer)?,
                 Ok(i) => i,
             })?;
@@ -146,7 +158,6 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         Definition::Subexpression => {
             data.push_instruction(Instruction::UpdateValue, None)?;
         }
-        Definition::Group => (), // no additional instructions for groups
         Definition::NestedExpression => {
             data.push_instruction(Instruction::Put, Some(data.get_data_len()))?;
 
@@ -167,15 +178,22 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         Definition::JumpIfFalse => {
             data.push_instruction(Instruction::JumpIfFalse, Some(current_jump_index))?;
         }
-        Definition::ElseJump => (), // no additional instructions
+        Definition::Group => return Ok(false), // no additional instructions for groups
+        Definition::ElseJump => return Ok(false),            // no additional instructions
         // no runtime meaning, parser only utility
-        Definition::Drop => (),
+        Definition::Drop => return Err(CompilerError::new_message("Drop definition is not allowed during build.".to_string())),
     }
 
-    Ok(())
+    Ok(true)
 }
 
-pub fn build_with_data<Data: GarnishLangRuntimeData>(root: usize, nodes: Vec<ParseNode>, data: &mut Data) -> Result<(), CompilerError<Data::Error>> {
+pub fn build_with_data<Data: GarnishLangRuntimeData>(
+    root: usize,
+    nodes: Vec<ParseNode>,
+    data: &mut Data,
+) -> Result<Vec<InstructionMetadata>, CompilerError<Data::Error>> {
+    let mut metadata = vec![];
+
     // since we will be popping and pushing values from root_stack
     // need to keep separate count of total so expression values put in data are accurate
     let mut jump_count = data.get_jump_table_len() + Data::Size::one();
@@ -318,7 +336,11 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(root: usize, nodes: Vec<Par
                                 if resolve {
                                     trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
 
-                                    resolve_node(node, data, list_counts.last(), jump_count, nearest_expression_point)?;
+                                    let instruction_created = resolve_node(node, data, list_counts.last(), jump_count, nearest_expression_point)?;
+
+                                    if instruction_created {
+                                        metadata.push(InstructionMetadata::new(resolve_node_info.node_index))
+                                    }
 
                                     if we_are_list_root {
                                         list_counts.pop();
@@ -425,6 +447,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(root: usize, nodes: Vec<Par
         trace!("Adding return instruction {:?} with data {:?}", return_instruction, instruction_data);
 
         data.push_instruction(return_instruction, instruction_data)?;
+        metadata.push(InstructionMetadata::new(None));
 
         trace!("Finished instructions for tree starting at index {:?}", root_index);
 
@@ -443,7 +466,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(root: usize, nodes: Vec<Par
         }
     }
 
-    Ok(())
+    Ok(metadata)
 }
 
 #[cfg(test)]
@@ -474,7 +497,7 @@ mod test_utils {
             .chain(expected_instructions.into_iter())
             .collect();
 
-        let result = get_instruction_data(root, nodes).unwrap();
+        let (result, _) = get_instruction_data(root, nodes).unwrap();
 
         assert_eq!(result.get_instructions().clone(), expected_instructions);
         assert_eq!(result.get_data(), &expected_data);
@@ -484,7 +507,7 @@ mod test_utils {
     pub fn get_instruction_data(
         root: usize,
         nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
-    ) -> Result<SimpleRuntimeData, CompilerError<DataError>> {
+    ) -> Result<(SimpleRuntimeData, Vec<InstructionMetadata>), CompilerError<DataError>> {
         let nodes: Vec<ParseNode> = nodes
             .iter()
             .map(|v| ParseNode::new(v.0, v.1, v.2, v.3, LexerToken::new(v.4.to_string(), v.5, 0, 0)))
@@ -492,9 +515,22 @@ mod test_utils {
 
         let mut data = SimpleRuntimeData::new();
 
-        build_with_data(root, nodes, &mut data)?;
+        let metadata = build_with_data(root, nodes, &mut data)?;
 
-        Ok(data)
+        Ok((data, metadata))
+    }
+}
+
+#[cfg(test)]
+mod general {
+    use super::test_utils::*;
+    use crate::*;
+
+    #[test]
+    fn drop_definition_is_err() {
+        let result = get_instruction_data(0, vec![(Definition::Drop, None, None, None, "5", TokenType::Number)]);
+
+        assert!(result.is_err())
     }
 }
 
@@ -583,6 +619,60 @@ mod values {
             vec![(Definition::Value, None, None, None, "$", TokenType::Value)],
             vec![(Instruction::PutValue, None), (Instruction::EndExpression, None)],
             SimpleDataList::default(),
+        );
+    }
+}
+
+#[cfg(test)]
+mod metadata {
+    use super::test_utils::*;
+    use crate::*;
+
+    #[test]
+    fn created() {
+        let (_, metadata) = get_instruction_data(0, vec![(Definition::Number, None, None, None, "5", TokenType::Number)]).unwrap();
+
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
+    }
+
+    #[test]
+    fn group_is_ignored() {
+        let (_, metadata) = get_instruction_data(
+            0,
+            vec![
+                (Definition::Group, None, None, Some(1), "(", TokenType::StartGroup),
+                (Definition::Number, Some(0), None, None, "5", TokenType::Number),
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(1)), InstructionMetadata::new(None)])
+    }
+
+    #[test]
+    fn conditional_chain_ignored() {
+        let (_, metadata) = get_instruction_data(
+            3,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::JumpIfTrue, Some(3), Some(0), Some(2), "?>", TokenType::JumpIfTrue),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::ElseJump, None, Some(1), Some(4), "|>", TokenType::ElseJump),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+            ],
+        )
+        .unwrap();
+
+        assert_eq!(
+            metadata,
+            vec![
+                InstructionMetadata::new(Some(0)),
+                InstructionMetadata::new(Some(1)),
+                InstructionMetadata::new(Some(4)),
+                InstructionMetadata::new(None),
+                InstructionMetadata::new(Some(2)),
+                InstructionMetadata::new(None)
+            ]
         );
     }
 }
