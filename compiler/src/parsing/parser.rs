@@ -448,7 +448,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 
         let (definition, secondary_definition) = get_definition(token.get_token_type());
 
-        // structure validation
+        // composition validation
         // value definitions must be preceded and succeded by non-value
         // binary ops must be preceded by a value or unary suffix and succeded by value or unary prefix
         // unary prefix must be preceded by unary prefix or binary and succeded by value or unary prefix
