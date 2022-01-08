@@ -1,4 +1,4 @@
-use crate::LexerToken;
+use crate::{LexerToken, SecondaryDefinition};
 use garnish_lang_runtime::ExpressionDataType;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
@@ -87,6 +87,14 @@ impl<Source: 'static + std::error::Error> From<Source> for CompilerError<Source>
 }
 
 // Creation utilities
+
+pub(crate) fn composition_error<T, S: std::error::Error + 'static>(
+    first: SecondaryDefinition,
+    second: SecondaryDefinition,
+    token: &LexerToken,
+) -> Result<T, CompilerError<S>> {
+    Err(CompilerError::new_message(format!("A {:?} token cannot follow a {:?} token", second, first)).append_token_details(token))
+}
 
 pub(crate) fn implementation_error<T, S: std::error::Error + 'static>(message: String) -> Result<T, CompilerError<S>> {
     Err(CompilerError::new_message(format!("Implementation Error: {}", message)))

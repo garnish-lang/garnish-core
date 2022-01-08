@@ -1,4 +1,4 @@
-use crate::error::{append_token_details, implementation_error, implementation_error_with_token, CompilerError};
+use crate::error::{append_token_details, implementation_error, implementation_error_with_token, CompilerError, composition_error};
 use log::trace;
 use std::{collections::HashMap, hash::Hash, vec};
 
@@ -57,7 +57,9 @@ impl Definition {
     }
 }
 
-enum SecondaryDefinition {
+#[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
+pub(crate) enum SecondaryDefinition {
+    None,
     Annotation,
     Value,
     BinaryLeftToRight,
@@ -418,6 +420,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
     let mut next_last_left = None;
     let mut group_stack = vec![];
     let mut current_group = None;
+    let mut previous_second_def = SecondaryDefinition::None;
 
     for (_, token) in lex_tokens.iter().enumerate() {
         trace!(
@@ -445,7 +448,30 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 
         let (definition, secondary_definition) = get_definition(token.get_token_type());
 
+        // structure validation
+        // value definitions must be preceded and succeded by non-value
+        // binary ops must be preceded by a value or unary suffix and succeded by value or unary prefix
+        // unary prefix must be preceded by unary prefix or binary and succeded by value or unary prefix
+        // unary suffix must be preceded by value or unary suffix, and succeded by unary suffix or binary
+        let is_valid = match (previous_second_def, secondary_definition) {
+            (SecondaryDefinition::None, _) => true, // first token, check for valid start tokens
+            (SecondaryDefinition::Value, SecondaryDefinition::Value)
+            | (SecondaryDefinition::Value, SecondaryDefinition::Identifier)
+            | (SecondaryDefinition::Identifier, SecondaryDefinition::Value)
+            | (SecondaryDefinition::Identifier, SecondaryDefinition::Identifier)
+            | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::BinaryLeftToRight) => false,
+            _ => true
+        };
+
+        if !is_valid {
+            composition_error(previous_second_def, secondary_definition, &token)?;
+        }
+
+        // done with previous, can update now
+        previous_second_def = secondary_definition;
+
         let (definition, parent, left, right) = match secondary_definition {
+            SecondaryDefinition::None => implementation_error("Secondary definition of none shouldn't reach check.".to_string())?,
             SecondaryDefinition::Whitespace => setup_space_list_check(
                 last_left,
                 current_group.and_then(|i| group_stack.get(i)).cloned(),
@@ -715,6 +741,71 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
     }
 
     Ok(ParseResult { root, nodes })
+}
+
+#[cfg(test)]
+mod errors {
+    use crate::*;
+
+    #[test]
+    fn double_value_token_err() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn double_identifier_token_err() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn value_identifier_token_err() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn identifier_value_token_err() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn double_operator_token_err() {
+        let tokens = vec![
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
 }
 
 #[cfg(test)]
