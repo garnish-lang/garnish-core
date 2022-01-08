@@ -305,7 +305,13 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 if node.get_definition() == Definition::Subexpression {
                                     trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
 
-                                    resolve_node(node, data, None, Data::Size::zero(), nearest_expression_point)?;
+                                    let instruction_created = resolve_node(node, data, None, Data::Size::zero(), nearest_expression_point)?;
+
+                                    // should always create, but check for posterity
+                                    if instruction_created {
+                                        metadata.push(InstructionMetadata::new(resolve_node_info.node_index))
+                                    }
+
                                     resolve_node_info.resolved = true;
                                 }
 
@@ -674,6 +680,45 @@ mod metadata {
                 InstructionMetadata::new(None)
             ]
         );
+    }
+
+    #[test]
+    fn subexpression() {
+        let (_, metadata) = get_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Subexpression, None, Some(0), Some(2), "\n\n", TokenType::Subexpression),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+        )
+            .unwrap();
+
+        assert_eq!(
+            metadata,
+            vec![
+                InstructionMetadata::new(Some(0)),
+                InstructionMetadata::new(Some(1)),
+                InstructionMetadata::new(Some(2)),
+                InstructionMetadata::new(None),
+            ]
+        );
+
+        // assert_instruction_data(
+        //     1,
+        //     vec![
+        //         (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+        //         (Definition::Subexpression, None, Some(0), Some(2), "\n\n", TokenType::Subexpression),
+        //         (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+        //     ],
+        //     vec![
+        //         (Instruction::Put, Some(3)),
+        //         (Instruction::UpdateValue, None),
+        //         (Instruction::Put, Some(4)),
+        //         (Instruction::EndExpression, None),
+        //     ],
+        //     SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        // );
     }
 }
 
