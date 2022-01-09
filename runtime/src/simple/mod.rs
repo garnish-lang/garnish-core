@@ -425,9 +425,9 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.values.last_mut()
     }
 
-    fn push_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> Result<(), Self::Error> {
+    fn push_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> Result<usize, Self::Error> {
         self.instructions.push(InstructionData::new(instruction, data));
-        Ok(())
+        Ok(self.instructions.len() - 1)
     }
 
     fn get_instruction(&self, index: usize) -> Option<(Instruction, Option<usize>)> {

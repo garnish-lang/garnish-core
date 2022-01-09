@@ -65,7 +65,7 @@ pub trait GarnishLangRuntimeData {
     fn pop_register(&mut self) -> Option<Self::Size>;
 
     fn get_instruction_len(&self) -> Self::Size;
-    fn push_instruction(&mut self, instruction: Instruction, data: Option<Self::Size>) -> Result<(), Self::Error>;
+    fn push_instruction(&mut self, instruction: Instruction, data: Option<Self::Size>) -> Result<Self::Size, Self::Error>;
     fn get_instruction(&self, addr: Self::Size) -> Option<(Instruction, Option<Self::Size>)>;
 
     fn get_instruction_cursor(&self) -> Self::Size;

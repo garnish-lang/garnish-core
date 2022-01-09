@@ -27,7 +27,7 @@ pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data
                 Some(i) => i,
             };
 
-            this.set_instruction_cursor(point - Data::Size::one())?;
+            this.set_instruction_cursor(point)?;
             match this.pop_value_stack() {
                 None => state_error(format!("Failed to pop input during reapply operation."))?,
                 Some(_) => (),
@@ -66,7 +66,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             // Expression stores index of expression table, look up actual instruction index
 
             this.push_jump_path(this.get_instruction_cursor())?;
-            this.set_instruction_cursor(next_instruction - Data::Size::one())?;
+            this.set_instruction_cursor(next_instruction)?;
             Ok(this.push_value_stack(right_addr)?)
         }
         ExpressionDataType::External => {
@@ -167,7 +167,7 @@ mod tests {
         let int2 = runtime.add_integer(20).unwrap();
 
         // 1
-        runtime.push_instruction(Instruction::Put, Some(int1)).unwrap();
+        let i1 = runtime.push_instruction(Instruction::Put, Some(int1)).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
@@ -175,20 +175,20 @@ mod tests {
         // 5
         runtime.push_instruction(Instruction::Put, Some(exp1)).unwrap();
         runtime.push_instruction(Instruction::Put, Some(int2)).unwrap();
-        runtime.push_instruction(Instruction::Apply, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Apply, None).unwrap();
 
-        runtime.push_jump_point(1).unwrap();
+        runtime.push_jump_point(i1).unwrap();
 
         runtime.push_register(exp1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.set_instruction_cursor(7).unwrap();
+        runtime.set_instruction_cursor(i2).unwrap();
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_value(0).unwrap(), 5);
-        assert_eq!(runtime.get_instruction_cursor(), 0);
-        assert_eq!(runtime.get_jump_path(0).unwrap(), 7);
+        assert_eq!(runtime.get_value(0).unwrap(), int2);
+        assert_eq!(runtime.get_instruction_cursor(), i1);
+        assert_eq!(runtime.get_jump_path(0).unwrap(), i2);
     }
 
     #[test]
@@ -377,26 +377,26 @@ mod tests {
         let exp1 = runtime.add_expression(0).unwrap();
 
         // 1
-        runtime.push_instruction(Instruction::Put, Some(int1)).unwrap();
+        let i1 = runtime.push_instruction(Instruction::Put, Some(int1)).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
         // 5
         runtime.push_instruction(Instruction::Put, Some(exp1)).unwrap();
-        runtime.push_instruction(Instruction::EmptyApply, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::EmptyApply, None).unwrap();
 
-        runtime.push_jump_point(1).unwrap();
+        runtime.push_jump_point(i1).unwrap();
 
         runtime.push_register(exp1).unwrap();
 
-        runtime.set_instruction_cursor(6).unwrap();
+        runtime.set_instruction_cursor(i2).unwrap();
 
         runtime.empty_apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_value(0).unwrap(), 0);
-        assert_eq!(runtime.get_instruction_cursor(), 0);
-        assert_eq!(runtime.get_jump_path(0).unwrap(), 6);
+        assert_eq!(runtime.get_data_type(runtime.get_value(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_instruction_cursor(), i1);
+        assert_eq!(runtime.get_jump_path(0).unwrap(), i2);
     }
 
     #[test]
@@ -441,29 +441,27 @@ mod tests {
         runtime.push_instruction(Instruction::Apply, None).unwrap();
 
         // 4
-        runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
+        let i1 = runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
-        runtime.push_instruction(Instruction::Reapply, Some(0)).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Reapply, Some(0)).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
-        runtime.push_jump_point(4).unwrap();
+        runtime.push_jump_point(i1).unwrap();
 
         runtime.push_register(true1).unwrap();
         runtime.push_register(int3).unwrap();
 
         runtime.push_value_stack(int1).unwrap();
-        runtime.push_jump_path(9).unwrap();
 
-        runtime.set_instruction_cursor(8).unwrap();
+        runtime.set_instruction_cursor(i2).unwrap();
 
         runtime.reapply(0).unwrap();
 
         assert_eq!(runtime.get_value_stack_len(), 1);
         assert_eq!(runtime.get_value(0).unwrap(), int3);
-        assert_eq!(runtime.get_instruction_cursor(), 3);
-        assert_eq!(runtime.get_jump_path(0).unwrap(), 9);
+        assert_eq!(runtime.get_instruction_cursor(), i1);
     }
 
     #[test]

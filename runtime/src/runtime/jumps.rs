@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{next_ref, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, state_error};
+use crate::{next_ref, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 
 pub(crate) fn jump<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - Jump | Data - {:?}", index);
@@ -8,7 +8,7 @@ pub(crate) fn jump<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::S
     match this.get_jump_point(index) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => {
-            this.set_instruction_cursor(point - Data::Size::one())?;
+            this.set_instruction_cursor(point)?;
         }
     }
 
@@ -20,28 +20,18 @@ pub(crate) fn jump_if_true<Data: GarnishLangRuntimeData>(this: &mut Data, index:
 
     let point = match this.get_jump_point(index) {
         None => state_error(format!("No jump point at index {:?}", index))?,
-        Some(point) => {
-            point - Data::Size::one()
-        }
+        Some(point) => point,
     };
 
     let d = next_ref(this)?;
 
     match this.get_data_type(d)? {
         ExpressionDataType::False | ExpressionDataType::Unit => {
-            trace!(
-                "Not jumping from value of type {:?} with addr {:?}",
-                this.get_data_type(d)?,
-                this.get_data_len() - Data::Size::one()
-            );
+            trace!("Not jumping from value of type {:?} with addr {:?}", this.get_data_type(d)?, d);
         }
         // all other values are considered true
         t => {
-            trace!(
-                "Jumping from value of type {:?} with addr {:?}",
-                t,
-                this.get_data_len() - Data::Size::one()
-            );
+            trace!("Jumping from value of type {:?} with addr {:?}", t, d);
             this.set_instruction_cursor(point)?
         }
     };
@@ -54,28 +44,18 @@ pub(crate) fn jump_if_false<Data: GarnishLangRuntimeData>(this: &mut Data, index
 
     let point = match this.get_jump_point(index) {
         None => state_error(format!("No jump point at index {:?}", index))?,
-        Some(point) => {
-            point - Data::Size::one()
-        }
+        Some(point) => point,
     };
 
     let d = next_ref(this)?;
 
     match this.get_data_type(d)? {
         ExpressionDataType::False | ExpressionDataType::Unit => {
-            trace!(
-                "Jumping from value of type {:?} with addr {:?}",
-                this.get_data_type(d)?,
-                this.get_data_len() - Data::Size::one()
-            );
+            trace!("Jumping from value of type {:?} with addr {:?}", this.get_data_type(d)?, d);
             this.set_instruction_cursor(point)?
         }
         t => {
-            trace!(
-                "Not jumping from value of type {:?} with addr {:?}",
-                t,
-                this.get_data_len() - Data::Size::one()
-            );
+            trace!("Not jumping from value of type {:?} with addr {:?}", t, d);
         }
     };
 
@@ -88,8 +68,7 @@ pub(crate) fn end_expression<Data: GarnishLangRuntimeData>(this: &mut Data) -> R
         None => {
             // no more jumps, this should be the end of the entire execution
             let r = next_ref(this)?;
-            this.set_instruction_cursor(this.get_instruction_cursor() + Data::Size::one())
-                ?;
+            this.set_instruction_cursor(this.get_instruction_cursor() + Data::Size::one())?;
             this.push_value_stack(r)?;
         }
         Some(jump_point) => {
@@ -148,14 +127,14 @@ mod tests {
         runtime.push_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
         runtime.push_instruction(Instruction::JumpTo, Some(0)).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i1 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.push_jump_point(4).unwrap();
+        runtime.push_jump_point(i1).unwrap();
 
         runtime.jump(0).unwrap();
 
         assert!(runtime.get_jump_path_vec().is_empty());
-        assert_eq!(runtime.get_instruction_cursor(), 3);
+        assert_eq!(runtime.get_instruction_cursor(), i1);
     }
 
     #[test]
@@ -197,20 +176,22 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         let ta = runtime.add_true().unwrap();
-        runtime.push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
+        let i1 = runtime.push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.push_jump_point(3).unwrap();
-        runtime.set_instruction_cursor(1).unwrap();
+        runtime.push_jump_point(i2).unwrap();
+
+        runtime.set_instruction_cursor(i1).unwrap();
+
         runtime.push_register(ta).unwrap();
 
         runtime.jump_if_true(0).unwrap();
 
         assert_eq!(runtime.get_register_len(), 0);
         assert_eq!(runtime.get_data_len(), 3);
-        assert_eq!(runtime.get_instruction_cursor(), 2);
+        assert_eq!(runtime.get_instruction_cursor(), i2);
     }
 
     #[test]
@@ -281,20 +262,20 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         let ua = runtime.add_unit().unwrap();
-        runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
+        let i1 = runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.push_jump_point(3).unwrap();
-        runtime.set_instruction_cursor(1).unwrap();
+        runtime.push_jump_point(i2).unwrap();
+        runtime.set_instruction_cursor(i1).unwrap();
         runtime.push_register(ua).unwrap();
 
         runtime.jump_if_false(0).unwrap();
 
         assert_eq!(runtime.get_register_len(), 0);
         assert_eq!(runtime.get_data_len(), 3);
-        assert_eq!(runtime.get_instruction_cursor(), 2);
+        assert_eq!(runtime.get_instruction_cursor(), i2);
     }
 
     #[test]
@@ -302,19 +283,19 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         let fa = runtime.add_false().unwrap();
-        runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
+        let i1 = runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.push_jump_point(3).unwrap();
-        runtime.set_instruction_cursor(1).unwrap();
+        runtime.push_jump_point(i2).unwrap();
+        runtime.set_instruction_cursor(i1).unwrap();
         runtime.push_register(fa).unwrap();
 
         runtime.jump_if_false(0).unwrap();
 
         assert_eq!(runtime.get_register_len(), 0);
         assert_eq!(runtime.get_data_len(), 3);
-        assert_eq!(runtime.get_instruction_cursor(), 2);
+        assert_eq!(runtime.get_instruction_cursor(), i2);
     }
 }

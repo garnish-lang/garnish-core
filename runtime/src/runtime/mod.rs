@@ -25,7 +25,7 @@ use crate::runtime::arithmetic::perform_addition;
 use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
 use crate::runtime::pair::make_pair;
 use crate::runtime::put::{push_input, push_result, put, put_input};
-use crate::{GarnishLangRuntimeInfo};
+use crate::GarnishLangRuntimeInfo;
 use apply::*;
 use comparisons::equality_comparison;
 use instruction::*;
@@ -83,9 +83,12 @@ where
     ) -> Result<GarnishLangRuntimeInfo, RuntimeError<Data::Error>> {
         let (instruction, data) = match self.get_instruction(self.get_instruction_cursor()) {
             None => return Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::End)),
-            Some(v) => v
+            Some(v) => v,
         };
-        
+
+
+        let mut next_instruction = self.get_instruction_cursor() + Data::Size::one();
+
         match instruction {
             Instruction::PerformAddition => self.perform_addition()?,
             Instruction::PutValue => self.put_value()?,
@@ -93,33 +96,15 @@ where
             Instruction::UpdateValue => self.update_value()?,
             Instruction::EndExpression => self.end_expression()?,
             Instruction::EqualityComparison => self.equality_comparison()?,
-            Instruction::JumpIfTrue => match data {
-                None => instruction_error(instruction, self.get_instruction_cursor())?,
-                Some(i) => self.jump_if_true(i)?,
-            },
-            Instruction::JumpIfFalse => match data {
-                None => instruction_error(instruction, self.get_instruction_cursor())?,
-                Some(i) => self.jump_if_false(i)?,
-            },
             Instruction::Put => match data {
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
                 Some(i) => self.put(i)?,
             },
             Instruction::EndExecution => self.end_execution()?,
-            Instruction::JumpTo => match data {
-                None => instruction_error(instruction, self.get_instruction_cursor())?,
-                Some(i) => self.jump(i)?,
-            },
             Instruction::MakePair => self.make_pair()?,
             Instruction::MakeList => match data {
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
                 Some(i) => self.make_list(i)?,
-            },
-            Instruction::Apply => self.apply(context)?,
-            Instruction::EmptyApply => self.empty_apply(context)?,
-            Instruction::Reapply => match data {
-                None => instruction_error(instruction, self.get_instruction_cursor())?,
-                Some(i) => self.reapply(i)?,
             },
             Instruction::Access => self.access()?,
             Instruction::Resolve => match data {
@@ -129,13 +114,49 @@ where
             Instruction::AccessLeftInternal => self.access_left_internal()?,
             Instruction::AccessRightInternal => self.access_right_internal()?,
             Instruction::AccessLengthInternal => self.access_length_internal()?,
+            Instruction::Apply => {
+                // sets instruction cursor for us
+                self.apply(context)?;
+                next_instruction = self.get_instruction_cursor();
+            },
+            Instruction::EmptyApply => {
+                self.empty_apply(context)?;
+                next_instruction = self.get_instruction_cursor();
+            },
+            Instruction::Reapply => match data {
+                None => instruction_error(instruction, self.get_instruction_cursor())?,
+                Some(i) => {
+                    self.reapply(i)?;
+                    next_instruction = self.get_instruction_cursor();
+                },
+            },
+            Instruction::JumpIfTrue => match data {
+                None => instruction_error(instruction, self.get_instruction_cursor())?,
+                Some(i) => {
+                    self.jump_if_true(i)?;
+                    next_instruction = self.get_instruction_cursor();
+                }
+            },
+            Instruction::JumpIfFalse => match data {
+                None => instruction_error(instruction, self.get_instruction_cursor())?,
+                Some(i) => {
+                    self.jump_if_false(i)?;
+                    next_instruction = self.get_instruction_cursor();
+                }
+            },
+            Instruction::JumpTo => match data {
+                None => instruction_error(instruction, self.get_instruction_cursor())?,
+                Some(i) => {
+                    self.jump(i)?;
+                    next_instruction = self.get_instruction_cursor();
+                }
+            },
         };
 
-        match self.get_instruction_cursor() + Data::Size::one() >= self.get_instruction_len() {
+        match next_instruction >= self.get_instruction_len() {
             true => Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::End)),
             false => {
-                self.set_instruction_cursor(self.get_instruction_cursor() + Data::Size::one())
-                    ?;
+                self.set_instruction_cursor(next_instruction)?;
                 Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::Running))
             }
         }
@@ -254,7 +275,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::{context::EmptyContext, GarnishRuntime}, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, GarnishLangRuntimeState};
+    use crate::{
+        runtime::{context::EmptyContext, GarnishRuntime},
+        GarnishLangRuntimeData, GarnishLangRuntimeState, Instruction, SimpleRuntimeData, ExpressionDataType
+    };
 
     #[test]
     fn create_runtime() {
@@ -400,5 +424,187 @@ mod tests {
         let result = runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 
         assert_eq!(result.get_state(), GarnishLangRuntimeState::End);
+    }
+
+    #[test]
+    fn execute_current_instruction_apply() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_integer(10).unwrap();
+        let exp1 = runtime.add_expression(0).unwrap();
+        let int2 = runtime.add_integer(20).unwrap();
+
+        // 1
+        let i1 = runtime.push_instruction(Instruction::Put, Some(int1)).unwrap();
+        runtime.push_instruction(Instruction::PutValue, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::EndExpression, None).unwrap();
+
+        // 5
+        runtime.push_instruction(Instruction::Put, Some(exp1)).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(int2)).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Apply, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.push_jump_point(i1).unwrap();
+
+        runtime.push_register(exp1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.set_instruction_cursor(i2).unwrap();
+
+        runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_value(0).unwrap(), int2);
+        assert_eq!(runtime.get_instruction_cursor(), i1);
+        assert_eq!(runtime.get_jump_path(0).unwrap(), i2);
+    }
+
+    #[test]
+    fn execute_current_instruction_empty_apply() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_integer(10).unwrap();
+        let exp1 = runtime.add_expression(0).unwrap();
+
+        // 1
+        let i1 = runtime.push_instruction(Instruction::Put, Some(int1)).unwrap();
+        runtime.push_instruction(Instruction::PutValue, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::EndExpression, None).unwrap();
+
+        // 5
+        runtime.push_instruction(Instruction::Put, Some(exp1)).unwrap();
+        let i2 = runtime.push_instruction(Instruction::EmptyApply, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.push_jump_point(i1).unwrap();
+
+        runtime.push_register(exp1).unwrap();
+
+        runtime.set_instruction_cursor(i2).unwrap();
+
+        runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_value(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_instruction_cursor(), i1);
+        assert_eq!(runtime.get_jump_path(0).unwrap(), i2);
+    }
+
+    #[test]
+    fn execute_current_instruction_reapply_if_true() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let true1 = runtime.add_true().unwrap();
+        let _exp1 = runtime.add_expression(0).unwrap();
+        let int1 = runtime.add_integer(20).unwrap();
+        let _int2 = runtime.add_integer(30).unwrap();
+        let int3 = runtime.add_integer(40).unwrap();
+
+        // 1
+        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(2)).unwrap();
+        runtime.push_instruction(Instruction::Apply, None).unwrap();
+
+        // 4
+        let i1 = runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
+        runtime.push_instruction(Instruction::PutValue, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PutValue, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Reapply, Some(0)).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::EndExpression, None).unwrap();
+
+        runtime.push_jump_point(i1).unwrap();
+
+        runtime.push_register(true1).unwrap();
+        runtime.push_register(int3).unwrap();
+
+        runtime.push_value_stack(int1).unwrap();
+
+        runtime.set_instruction_cursor(i2).unwrap();
+
+        runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_value_stack_len(), 1);
+        assert_eq!(runtime.get_value(0).unwrap(), int3);
+        assert_eq!(runtime.get_instruction_cursor(), i1);
+    }
+
+    #[test]
+    fn execute_current_instruction_jump_if_true_when_true() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let ta = runtime.add_true().unwrap();
+        let i1 = runtime.push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.push_jump_point(i2).unwrap();
+
+        runtime.set_instruction_cursor(i1).unwrap();
+
+        runtime.push_register(ta).unwrap();
+
+        runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_register_len(), 0);
+        assert_eq!(runtime.get_data_len(), 3);
+        assert_eq!(runtime.get_instruction_cursor(), i2);
+    }
+
+    #[test]
+    fn execute_current_instruction_jump_if_false_when_unit() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let ua = runtime.add_unit().unwrap();
+        let i1 = runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.push_jump_point(i2).unwrap();
+
+        runtime.set_instruction_cursor(i1).unwrap();
+
+        runtime.push_register(ua).unwrap();
+
+        runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_register_len(), 0);
+        assert_eq!(runtime.get_data_len(), 3);
+        assert_eq!(runtime.get_instruction_cursor(), i2);
+    }
+
+    #[test]
+    fn execute_current_instruction_jump_if_false_when_false() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let fa = runtime.add_false().unwrap();
+        let i1 = runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.push_jump_point(i2).unwrap();
+
+        runtime.set_instruction_cursor(i1).unwrap();
+
+        runtime.push_register(fa).unwrap();
+
+        runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_register_len(), 0);
+        assert_eq!(runtime.get_data_len(), 3);
+        assert_eq!(runtime.get_instruction_cursor(), i2);
     }
 }
