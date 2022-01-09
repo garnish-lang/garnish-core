@@ -1,4 +1,4 @@
-use crate::error::{append_token_details, implementation_error, implementation_error_with_token, CompilerError, composition_error};
+use crate::error::{append_token_details, composition_error, implementation_error, implementation_error_with_token, CompilerError};
 use log::trace;
 use std::{collections::HashMap, hash::Hash, vec};
 
@@ -407,6 +407,52 @@ fn setup_space_list_check(
     Ok((Definition::Drop, None, None, None))
 }
 
+// composition validation
+// value definitions must be preceded and succeded by non-value
+// binary ops must be preceded by a value or unary suffix and succeded by value or unary prefix
+// unary prefix must be preceded by unary prefix or binary and succeded by value or unary prefix
+// unary suffix must be preceded by value or unary suffix, and succeded by unary suffix or binary
+fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition, token: &LexerToken) -> Result<(), CompilerError> {
+    if !match (previous, current) {
+        (SecondaryDefinition::None, SecondaryDefinition::BinaryLeftToRight)
+        | (SecondaryDefinition::None, SecondaryDefinition::UnarySuffix)
+        | (SecondaryDefinition::None, SecondaryDefinition::EndGrouping)
+        | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::None)
+        | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::None)
+        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::None)
+        | (SecondaryDefinition::Subexpression, SecondaryDefinition::BinaryLeftToRight)
+        | (SecondaryDefinition::Subexpression, SecondaryDefinition::UnarySuffix)
+        | (SecondaryDefinition::Subexpression, SecondaryDefinition::EndGrouping)
+        | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::Subexpression)
+        | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::Subexpression)
+        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::Subexpression)
+        | (SecondaryDefinition::Value, SecondaryDefinition::Value)
+        | (SecondaryDefinition::Value, SecondaryDefinition::Identifier)
+        | (SecondaryDefinition::Identifier, SecondaryDefinition::Value)
+        | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Value)
+        | (SecondaryDefinition::Value, SecondaryDefinition::StartGrouping)
+        | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Identifier)
+        | (SecondaryDefinition::Identifier, SecondaryDefinition::StartGrouping)
+        | (SecondaryDefinition::Identifier, SecondaryDefinition::Identifier)
+        | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::BinaryLeftToRight)
+        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::BinaryLeftToRight)
+        | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::EndGrouping)
+        | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Value)
+        | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Identifier)
+        | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::StartGrouping)
+        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnaryPrefix)
+        | (SecondaryDefinition::Value, SecondaryDefinition::UnaryPrefix)
+        | (SecondaryDefinition::Identifier, SecondaryDefinition::UnaryPrefix)
+        | (SecondaryDefinition::EndGrouping, SecondaryDefinition::UnaryPrefix)
+        | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::EndGrouping) => false,
+        _ => true,
+    } {
+        composition_error(previous, current, &token)?;
+    }
+
+    Ok(())
+}
+
 pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> {
     trace!("Starting parse");
     let priority_map = make_priority_map();
@@ -448,38 +494,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 
         let (definition, secondary_definition) = get_definition(token.get_token_type());
 
-        // composition validation
-        // value definitions must be preceded and succeded by non-value
-        // binary ops must be preceded by a value or unary suffix and succeded by value or unary prefix
-        // unary prefix must be preceded by unary prefix or binary and succeded by value or unary prefix
-        // unary suffix must be preceded by value or unary suffix, and succeded by unary suffix or binary
-        let is_valid = match (previous_second_def, secondary_definition) {
-            (SecondaryDefinition::None, _) => true, // first token, check for valid start tokens
-            (SecondaryDefinition::Value, SecondaryDefinition::Value)
-            | (SecondaryDefinition::Value, SecondaryDefinition::Identifier)
-            | (SecondaryDefinition::Identifier, SecondaryDefinition::Value)
-            | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Value)
-            | (SecondaryDefinition::Value, SecondaryDefinition::StartGrouping)
-            | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Identifier)
-            | (SecondaryDefinition::Identifier, SecondaryDefinition::StartGrouping)
-            | (SecondaryDefinition::Identifier, SecondaryDefinition::Identifier)
-            | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::BinaryLeftToRight)
-            | (SecondaryDefinition::StartGrouping, SecondaryDefinition::BinaryLeftToRight)
-            | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::EndGrouping)
-            | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Value)
-            | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Identifier)
-            | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::StartGrouping)
-            | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnaryPrefix)
-            | (SecondaryDefinition::Value, SecondaryDefinition::UnaryPrefix)
-            | (SecondaryDefinition::Identifier, SecondaryDefinition::UnaryPrefix)
-            | (SecondaryDefinition::EndGrouping, SecondaryDefinition::UnaryPrefix)
-            | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::EndGrouping)  => false,
-            _ => true
-        };
-
-        if !is_valid {
-            composition_error(previous_second_def, secondary_definition, &token)?;
-        }
+        check_composition(previous_second_def, secondary_definition, token)?;
 
         // done with previous, can update now
         previous_second_def = secondary_definition;
@@ -722,6 +737,10 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
             token.get_token_type()
         );
     }
+
+    // final composition check
+    // previous is def of last node
+    check_composition(previous_second_def, SecondaryDefinition::None, &last_token)?;
 
     // walk up tree to find root
     trace!("Finding root node");
@@ -1000,6 +1019,158 @@ mod composition_errors {
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn start_with_binary() {
+        let tokens = vec![
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn end_with_binary() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn start_with_unary_suffix() {
+        let tokens = vec![
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn end_with_unary_prefix() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn start_with_end_group() {
+        let tokens = vec![LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0)];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn end_with_start_group() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn subexpression_binary() {
+        let tokens = vec![
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn binary_subexpression() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn subexpression_unary_suffix() {
+        let tokens = vec![
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn unary_prefix_subexpression() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn subexpression_end_group() {
+        let tokens = vec![
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn start_group_subexpression() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -1401,44 +1572,6 @@ mod tests {
                 (0, Definition::Identifier, Some(1), None, None),
                 (1, Definition::Subexpression, None, Some(0), Some(2)),
                 (2, Definition::Identifier, Some(1), None, None),
-            ],
-        );
-    }
-
-    #[test]
-    fn partial_addition_no_left() {
-        let tokens = vec![
-            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-        ];
-
-        let result = parse(tokens).unwrap();
-
-        assert_result(
-            &result,
-            0,
-            &[
-                (0, Definition::Addition, None, None, Some(1)),
-                (1, Definition::Number, Some(0), None, None),
-            ],
-        );
-    }
-
-    #[test]
-    fn partial_addition_no_right() {
-        let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-        ];
-
-        let result = parse(tokens).unwrap();
-
-        assert_result(
-            &result,
-            1,
-            &[
-                (0, Definition::Number, Some(1), None, None),
-                (1, Definition::Addition, None, Some(0), None),
             ],
         );
     }
