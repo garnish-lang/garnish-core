@@ -413,44 +413,40 @@ fn setup_space_list_check(
 // unary prefix must be preceded by unary prefix or binary and succeded by value or unary prefix
 // unary suffix must be preceded by value or unary suffix, and succeded by unary suffix or binary
 fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition, token: &LexerToken) -> Result<(), CompilerError> {
-    if !match (previous, current) {
-        (SecondaryDefinition::None, SecondaryDefinition::BinaryLeftToRight)
+    match (previous, current) {
+        (SecondaryDefinition::None, SecondaryDefinition::EndGrouping)
+        | (SecondaryDefinition::None, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::None, SecondaryDefinition::UnarySuffix)
-        | (SecondaryDefinition::None, SecondaryDefinition::EndGrouping)
-        | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::None)
-        | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::None)
-        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::None)
+        | (SecondaryDefinition::Subexpression, SecondaryDefinition::EndGrouping)
         | (SecondaryDefinition::Subexpression, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::Subexpression, SecondaryDefinition::UnarySuffix)
-        | (SecondaryDefinition::Subexpression, SecondaryDefinition::EndGrouping)
-        | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::Subexpression)
-        | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::Subexpression)
-        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::Subexpression)
         | (SecondaryDefinition::Value, SecondaryDefinition::Value)
         | (SecondaryDefinition::Value, SecondaryDefinition::Identifier)
-        | (SecondaryDefinition::Identifier, SecondaryDefinition::Value)
-        | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Value)
         | (SecondaryDefinition::Value, SecondaryDefinition::StartGrouping)
-        | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Identifier)
-        | (SecondaryDefinition::Identifier, SecondaryDefinition::StartGrouping)
+        | (SecondaryDefinition::Value, SecondaryDefinition::UnaryPrefix)
+        | (SecondaryDefinition::Identifier, SecondaryDefinition::Value)
         | (SecondaryDefinition::Identifier, SecondaryDefinition::Identifier)
-        | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::BinaryLeftToRight)
+        | (SecondaryDefinition::Identifier, SecondaryDefinition::StartGrouping)
+        | (SecondaryDefinition::Identifier, SecondaryDefinition::UnaryPrefix)
+        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::None)
+        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::Subexpression)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::BinaryLeftToRight)
+        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnaryPrefix)
+        | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Value)
+        | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Identifier)
+        | (SecondaryDefinition::EndGrouping, SecondaryDefinition::UnaryPrefix)
+        | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::None)
+        | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::Subexpression)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::EndGrouping)
+        | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::BinaryLeftToRight)
+        | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::None)
+        | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::Subexpression)
+        | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::EndGrouping)
         | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Value)
         | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Identifier)
-        | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::StartGrouping)
-        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnaryPrefix)
-        | (SecondaryDefinition::Value, SecondaryDefinition::UnaryPrefix)
-        | (SecondaryDefinition::Identifier, SecondaryDefinition::UnaryPrefix)
-        | (SecondaryDefinition::EndGrouping, SecondaryDefinition::UnaryPrefix)
-        | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::EndGrouping) => false,
-        _ => true,
-    } {
-        composition_error(previous, current, &token)?;
+        | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::StartGrouping) => composition_error(previous, current, &token),
+        _ => Ok(()),
     }
-
-    Ok(())
 }
 
 pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> {
