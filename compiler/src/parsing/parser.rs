@@ -458,6 +458,9 @@ fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::Subexpression)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::EndGrouping)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::BinaryLeftToRight)
+        | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::OptionalBinaryLeftToRight)
+        | (SecondaryDefinition::OptionalBinaryLeftToRight, SecondaryDefinition::BinaryLeftToRight)
+        | (SecondaryDefinition::OptionalBinaryLeftToRight, SecondaryDefinition::OptionalBinaryLeftToRight)
         | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::None)
         | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::Subexpression)
         | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::EndGrouping)
@@ -745,9 +748,17 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                     // drop this token if so
                     let drop = match last_left {
                         None => false, // not a subexpression node
-                        Some(left) => match nodes.get(left) {
+                        Some(left) => match nodes.get_mut(left) {
                             None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", left), token)?,
-                            Some(left_node) => left_node.definition == Definition::Subexpression,
+                            Some(left_node) => {
+                                // check last left for optional
+                                // unset its right if so
+                                if left_node.definition.is_optional() {
+                                    left_node.right = None;
+                                }
+
+                                left_node.definition == Definition::Subexpression
+                            },
                         },
                     };
 
@@ -1291,6 +1302,48 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn optional_optional() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn binary_optional() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn optional_binary() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
@@ -2246,6 +2299,29 @@ mod lists {
     }
 
     #[test]
+    fn single_item_left_subexpression() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            2,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::CommaList, Some(2), Some(0), None),
+                (2, Definition::Subexpression, None, Some(1), Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+            ],
+        );
+    }
+
+    #[test]
     fn single_item_left_in_group() {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
@@ -2282,6 +2358,29 @@ mod lists {
             &[
                 (0, Definition::CommaList, None, None, Some(1)),
                 (1, Definition::Number, Some(0), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn subexpression_single_item_right() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Subexpression, None, Some(0), Some(2)),
+                (2, Definition::CommaList, Some(1), None, Some(3)),
+                (3, Definition::Number, Some(2), None, None),
             ],
         );
     }
