@@ -459,7 +459,11 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
             | (SecondaryDefinition::Value, SecondaryDefinition::Identifier)
             | (SecondaryDefinition::Identifier, SecondaryDefinition::Value)
             | (SecondaryDefinition::Identifier, SecondaryDefinition::Identifier)
-            | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::BinaryLeftToRight) => false,
+            | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::BinaryLeftToRight)
+            | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Value)
+            | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Identifier)
+            | (SecondaryDefinition::Value, SecondaryDefinition::UnaryPrefix)
+            | (SecondaryDefinition::Identifier, SecondaryDefinition::UnaryPrefix)  => false,
             _ => true
         };
 
@@ -744,11 +748,11 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 }
 
 #[cfg(test)]
-mod errors {
+mod composition_errors {
     use crate::*;
 
     #[test]
-    fn double_value_token_err() {
+    fn double_value_token() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
@@ -760,7 +764,7 @@ mod errors {
     }
 
     #[test]
-    fn double_identifier_token_err() {
+    fn double_identifier_token() {
         let tokens = vec![
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
@@ -772,7 +776,7 @@ mod errors {
     }
 
     #[test]
-    fn value_identifier_token_err() {
+    fn value_identifier_token() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
@@ -784,7 +788,7 @@ mod errors {
     }
 
     #[test]
-    fn identifier_value_token_err() {
+    fn identifier_value_token() {
         let tokens = vec![
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
@@ -796,10 +800,62 @@ mod errors {
     }
 
     #[test]
-    fn double_operator_token_err() {
+    fn double_operator_token() {
         let tokens = vec![
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn value_unary_prefix() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn identifier_unary_prefix() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn unary_suffix_value() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn unary_suffix_identifier() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Identifier, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -1277,25 +1333,6 @@ mod tests {
             &[
                 (0, Definition::Identifier, Some(1), None, None),
                 (1, Definition::EmptyApply, None, Some(0), None),
-            ],
-        );
-    }
-
-    #[test]
-    fn absolute_value_reversed() {
-        let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
-        ];
-
-        let result = parse(tokens).unwrap();
-
-        assert_result(
-            &result,
-            0,
-            &[
-                (0, Definition::Number, None, None, None),
-                (1, Definition::AbsoluteValue, None, None, None),
             ],
         );
     }
