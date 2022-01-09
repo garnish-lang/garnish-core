@@ -449,6 +449,34 @@ fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition
     }
 }
 
+const EMPTY_TOKENS: &[LexerToken] = &[];
+fn trim_tokens(tokens: &Vec<LexerToken>) -> &[LexerToken] {
+    let mut start = 0;
+    let mut end = tokens.len();
+
+    for token in tokens.iter() {
+        if token.get_token_type() == TokenType::Whitespace || token.get_token_type() == TokenType::Subexpression {
+            start += 1;
+        } else {
+            break;
+        }
+    }
+
+    for token in tokens.iter().rev() {
+        if token.get_token_type() == TokenType::Whitespace || token.get_token_type() == TokenType::Subexpression {
+            end -= 1;
+        } else {
+            break;
+        }
+    }
+
+    if start > end {
+        return EMPTY_TOKENS;
+    }
+
+    &tokens[start..end]
+}
+
 pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> {
     trace!("Starting parse");
     let priority_map = make_priority_map();
@@ -464,7 +492,13 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
     let mut current_group = None;
     let mut previous_second_def = SecondaryDefinition::None;
 
-    for (_, token) in lex_tokens.iter().enumerate() {
+    let trimmed = trim_tokens(&lex_tokens);
+
+    if trimmed.is_empty() {
+        return Ok(ParseResult { root: 0, nodes })
+    }
+
+    for token in trimmed.iter() {
         trace!(
             "------ Start Token {:?} -------------------------------------------------------------------------",
             token.get_token_type()
@@ -1097,6 +1131,7 @@ mod composition_errors {
     #[test]
     fn subexpression_binary() {
         let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
@@ -1113,6 +1148,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -1123,6 +1159,7 @@ mod composition_errors {
     #[test]
     fn subexpression_unary_suffix() {
         let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
@@ -1141,6 +1178,7 @@ mod composition_errors {
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -1151,6 +1189,7 @@ mod composition_errors {
     #[test]
     fn subexpression_end_group() {
         let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
@@ -1167,6 +1206,7 @@ mod composition_errors {
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -1259,6 +1299,43 @@ mod tests {
         for def in value_like {
             assert!(def.is_conditional());
         }
+    }
+
+    #[test]
+    fn white_space_and_sub_expressions_trimed() {
+        let tokens = vec![
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
+    }
+
+    #[test]
+    fn all_whitespace_or_subexpressions_is_empty() {
+        let tokens = vec![
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(&result, 0, &[]);
     }
 
     #[test]
