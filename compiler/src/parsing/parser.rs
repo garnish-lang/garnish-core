@@ -458,12 +458,22 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
             (SecondaryDefinition::Value, SecondaryDefinition::Value)
             | (SecondaryDefinition::Value, SecondaryDefinition::Identifier)
             | (SecondaryDefinition::Identifier, SecondaryDefinition::Value)
+            | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Value)
+            | (SecondaryDefinition::Value, SecondaryDefinition::StartGrouping)
+            | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Identifier)
+            | (SecondaryDefinition::Identifier, SecondaryDefinition::StartGrouping)
             | (SecondaryDefinition::Identifier, SecondaryDefinition::Identifier)
             | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::BinaryLeftToRight)
+            | (SecondaryDefinition::StartGrouping, SecondaryDefinition::BinaryLeftToRight)
+            | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::EndGrouping)
             | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Value)
             | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Identifier)
+            | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::StartGrouping)
+            | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnaryPrefix)
             | (SecondaryDefinition::Value, SecondaryDefinition::UnaryPrefix)
-            | (SecondaryDefinition::Identifier, SecondaryDefinition::UnaryPrefix)  => false,
+            | (SecondaryDefinition::Identifier, SecondaryDefinition::UnaryPrefix)
+            | (SecondaryDefinition::EndGrouping, SecondaryDefinition::UnaryPrefix)
+            | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::EndGrouping)  => false,
             _ => true
         };
 
@@ -788,6 +798,58 @@ mod composition_errors {
     }
 
     #[test]
+    fn value_start_group() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn identifier_start_group() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn end_group_value() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn end_group_identifier() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn identifier_value_token() {
         let tokens = vec![
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
@@ -800,10 +862,38 @@ mod composition_errors {
     }
 
     #[test]
-    fn double_operator_token() {
+    fn double_binary() {
         let tokens = vec![
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn start_group_binary() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn binary_end_group() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -838,6 +928,33 @@ mod composition_errors {
     }
 
     #[test]
+    fn end_group_unary_prefix() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn unary_prefix_end_group() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn unary_suffix_value() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
@@ -856,6 +973,33 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn unary_suffix_start_group() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn start_group_unary_suffix() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
         let result = parse(tokens);
