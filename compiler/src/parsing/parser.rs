@@ -55,6 +55,10 @@ impl Definition {
     pub fn is_conditional(self) -> bool {
         self == Definition::JumpIfFalse || self == Definition::JumpIfTrue
     }
+
+    pub fn is_optional(self) -> bool {
+        self == Definition::CommaList
+    }
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
@@ -62,6 +66,7 @@ pub(crate) enum SecondaryDefinition {
     None,
     Annotation,
     Value,
+    OptionalBinaryLeftToRight,
     BinaryLeftToRight,
     UnaryPrefix,
     UnarySuffix,
@@ -110,7 +115,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::LeftInternal => (Definition::AccessLeftInternal, SecondaryDefinition::UnaryPrefix),
         TokenType::RightInternal => (Definition::AccessRightInternal, SecondaryDefinition::UnarySuffix),
         TokenType::LengthInternal => (Definition::AccessLengthInternal, SecondaryDefinition::UnarySuffix),
-        TokenType::Comma => (Definition::CommaList, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Comma => (Definition::CommaList, SecondaryDefinition::OptionalBinaryLeftToRight),
 
         TokenType::Reapply => (Definition::Reapply, SecondaryDefinition::BinaryLeftToRight),
 
@@ -252,7 +257,6 @@ fn parse_token(
     let mut count = 0;
 
     let mut parent = None;
-    let mut update_parent = None;
 
     // // go up tree until no parent
     trace!("Searching parent chain for true left");
@@ -289,8 +293,6 @@ fn parse_token(
 
                     parent = Some(left_index);
 
-                    update_parent = Some(left_index);
-
                     // stop
                     break;
                 } else {
@@ -309,20 +311,37 @@ fn parse_token(
         }
     }
 
-    match true_left {
-        None => (),
-        Some(index) => match nodes.get_mut(index) {
-            None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", index))?,
-            Some(node) => node.parent = Some(id),
-        },
-    }
+    if parent == true_left {
+        // can happen with optional binary operators that are next to start of groups
+        // causes cyclic relationship
+        // the parent is the correct value
+        // unset true left
 
-    match update_parent {
-        None => (),
-        Some(index) => match nodes.get_mut(index) {
-            None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", index))?,
-            Some(node) => node.right = Some(id),
-        },
+        true_left = None;
+    } else {
+        trace!("Checking for left and parent to update values.");
+
+        match true_left {
+            None => (),
+            Some(index) => match nodes.get_mut(index) {
+                None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", index))?,
+                Some(node) => {
+                    trace!("Updating true left's ({:?}) parent to {:?}", index, id);
+                    node.parent = Some(id)
+                },
+            },
+        }
+
+        match parent {
+            None => (),
+            Some(index) => match nodes.get_mut(index) {
+                None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", index))?,
+                Some(node) => {
+                    trace!("Updating parent's ({:?}) right to {:?}", index, id);
+                    node.right = Some(id)
+                },
+            },
+        }
     }
 
     *check_for_list = false;
@@ -430,6 +449,7 @@ fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::None)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnaryPrefix)
+        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnarySuffix)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Value)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Identifier)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::StartGrouping)
@@ -589,7 +609,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                     under_group,
                 )?
             }
-            SecondaryDefinition::BinaryLeftToRight => {
+            SecondaryDefinition::BinaryLeftToRight | SecondaryDefinition::OptionalBinaryLeftToRight => {
                 next_parent = Some(id);
                 parse_token(
                     id,
@@ -678,6 +698,20 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                     true => None,
                     false => Some(group_stack.len() - 1),
                 };
+
+                // check last left for optional
+                // unset its right if so
+                match last_left {
+                    None => (), // unreachable?
+                    Some(left) => match nodes.get_mut(left) {
+                        None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", left), token)?,
+                        Some(left_node) => {
+                            if left_node.definition.is_optional() {
+                                left_node.right = None;
+                            }
+                        }
+                    }
+                }
 
                 (Definition::Drop, None, None, None)
             }
@@ -1331,6 +1365,17 @@ mod tests {
 
         for def in value_like {
             assert!(def.is_value_like());
+        }
+    }
+
+    #[test]
+    fn optional_binary_definition() {
+        let value_like = [
+            Definition::CommaList,
+        ];
+
+        for def in value_like {
+            assert!(def.is_optional());
         }
     }
 
@@ -2139,6 +2184,125 @@ mod lists {
             &[
                 (0, Definition::Number, Some(1), None, None),
                 (1, Definition::CommaList, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn empty_list() {
+        let tokens = vec![
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::CommaList, None, None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn empty_list_in_group() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Group, None, None, Some(1)),
+                (1, Definition::CommaList, Some(0), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn single_item_left() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::CommaList, None, Some(0), None),
+            ],
+        );
+    }
+
+    #[test]
+    fn single_item_left_in_group() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Group, None, None, Some(2)),
+                (1, Definition::Number, Some(2), None, None),
+                (2, Definition::CommaList, Some(0), Some(1), None),
+            ],
+        );
+    }
+
+    #[test]
+    fn single_item_right() {
+        let tokens = vec![
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::CommaList, None, None, Some(1)),
+                (1, Definition::Number, Some(0), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn single_item_right_in_group() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Group, None, None, Some(1)),
+                (1, Definition::CommaList, Some(0), None, Some(2)),
                 (2, Definition::Number, Some(1), None, None),
             ],
         );

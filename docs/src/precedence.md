@@ -16,15 +16,15 @@
 |     14     |        ^        |      Bit Xor      |  left-right   |
 |     15     |     &#124;      |      Bit Or       |  left-right   |
 |     16     | .. >.. ..< >..< |   Create Range    |  left-right   |
+|     23     |        =        |    Create Pair    |  left-right   |
+|     24     |      10 20      |    Space List     |  left-right   |
+|     25     |       ->        |    Create Link    |  left-right   |
 |     17     |    < <= > >=    |    Relational     |  left-right   |
 |     18     |    == != #=     |     Equality      |  left-right   |
 |     19     |       !!        |    Logical Not    |  right-left   |
 |     20     |       &&        |    Logical And    |  left-right   |
 |     21     |       ^^        |    Logical Xor    |  left-right   |
 |     22     |  &#124;&#124;   |    Logical Or     |  left-right   |
-|     23     |        =        |    Create Pair    |  left-right   |
-|     24     |      10 20      |    Space List     |  left-right   |
-|     25     |       ->        |    Create Link    |  left-right   |
 |     26     |     expr\`      |   Prefix Apply    |  right-left   |
 |     27     |    \`expr\`     |    Infix Apply    |  left-right   |
 |     28     |     \`expr      |   Suffix Apply    |  left-right   |
