@@ -490,7 +490,6 @@ mod test_utils {
     use crate::error::CompilerError;
     use crate::*;
     use garnish_lang_runtime::*;
-    use std::iter;
 
     pub fn assert_instruction_data(
         root: usize,
@@ -498,7 +497,7 @@ mod test_utils {
         expected_instructions: Vec<(Instruction, Option<usize>)>,
         expected_data: SimpleDataList,
     ) {
-        assert_instruction_data_jumps(root, nodes, expected_instructions, expected_data, vec![1]);
+        assert_instruction_data_jumps(root, nodes, expected_instructions, expected_data, vec![0]);
     }
 
     pub fn assert_instruction_data_jumps(
@@ -509,9 +508,6 @@ mod test_utils {
         expected_jumps: Vec<usize>,
     ) {
         let expected_instructions: Vec<InstructionData> = expected_instructions.iter().map(|i| InstructionData::new(i.0, i.1)).collect();
-        let expected_instructions: Vec<InstructionData> = iter::once(InstructionData::new(Instruction::EndExecution, None))
-            .chain(expected_instructions.into_iter())
-            .collect();
 
         let (result, _) = get_instruction_data(root, nodes).unwrap();
 
@@ -1356,7 +1352,7 @@ mod nested_expressions {
                 .append(ExpressionData::from(1))
                 .append(IntegerData::from(5))
                 .append(IntegerData::from(10)),
-            vec![1, 3],
+            vec![0, 2],
         );
     }
 
@@ -1386,7 +1382,7 @@ mod nested_expressions {
                 .append(ExpressionData::from(2))
                 .append(IntegerData::from(5))
                 .append(IntegerData::from(10)),
-            vec![1, 5, 7],
+            vec![0, 4, 6],
         );
     }
 
@@ -1425,7 +1421,7 @@ mod nested_expressions {
                 .append(IntegerData::from(10))
                 .append(ExpressionData::from(3))
                 .append(IntegerData::from(15)),
-            vec![1, 3, 7, 11],
+            vec![0, 2, 6, 10],
         );
     }
 }
@@ -1453,7 +1449,7 @@ mod conditionals {
                 (Instruction::JumpTo, Some(1)),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
-            vec![1, 3, 4],
+            vec![0, 2, 3],
         );
     }
 
@@ -1474,7 +1470,7 @@ mod conditionals {
                 (Instruction::JumpTo, Some(1)),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
-            vec![1, 3, 4],
+            vec![0, 2, 3],
         );
     }
 
@@ -1507,7 +1503,7 @@ mod conditionals {
                 .append(IntegerData::from(15))
                 .append(IntegerData::from(10))
                 .append(IntegerData::from(20)),
-            vec![1, 5, 6, 8],
+            vec![0, 4, 5, 7],
         );
     }
 
@@ -1534,7 +1530,7 @@ mod conditionals {
                 .append(IntegerData::from(5))
                 .append(IntegerData::from(15))
                 .append(IntegerData::from(10)),
-            vec![1, 4, 5],
+            vec![0, 3, 4],
         );
     }
 
@@ -1554,13 +1550,13 @@ mod conditionals {
                 (Instruction::Put, Some(4)),
                 (Instruction::Reapply, Some(0)),
                 (Instruction::Put, Some(5)),
-                (Instruction::EndExpression, None), // 5
+                (Instruction::EndExpression, None), // 4
             ],
             SimpleDataList::default()
                 .append(IntegerData::from(5))
                 .append(IntegerData::from(10))
                 .append(IntegerData::from(15)),
-            vec![1, 5], // TODO: Either more tests to verify if extra jump is needed or find way to remove it
+            vec![0, 4], // TODO: Either more tests to verify if extra jump is needed or find way to remove it
         );
     }
 
@@ -1607,7 +1603,7 @@ mod conditionals {
                 .append(IntegerData::from(10))
                 .append(IntegerData::from(20))
                 .append(IntegerData::from(30)),
-            vec![1, 7, 8, 10, 12],
+            vec![0, 6, 7, 9, 11],
         );
     }
 }

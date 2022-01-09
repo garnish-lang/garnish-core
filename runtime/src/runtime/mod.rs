@@ -19,8 +19,6 @@ pub use data::{GarnishLangRuntimeData, TypeConstants};
 pub use error::*;
 pub(crate) use utilities::*;
 
-use log::trace;
-
 use crate::runtime::arithmetic::perform_addition;
 use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
 use crate::runtime::pair::make_pair;
@@ -33,7 +31,6 @@ use list::*;
 use result::*;
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
-    fn end_execution(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
         &mut self,
         context: Option<&mut T>,
@@ -72,11 +69,6 @@ impl<Data> GarnishRuntime<Data> for Data
 where
     Data: GarnishLangRuntimeData,
 {
-    fn end_execution(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        trace!("Instruction - End Execution");
-        Ok(self.set_instruction_cursor(self.get_instruction_len())?)
-    }
-
     fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
         &mut self,
         context: Option<&mut T>,
@@ -100,7 +92,6 @@ where
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
                 Some(i) => self.put(i)?,
             },
-            Instruction::EndExecution => self.end_execution()?,
             Instruction::MakePair => self.make_pair()?,
             Instruction::MakeList => match data {
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
@@ -297,25 +288,6 @@ mod tests {
     }
 
     #[test]
-    fn add_jump_point_out_of_bounds() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.push_instruction(Instruction::EndExpression, None).unwrap();
-        let result = runtime.push_jump_point(5);
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn add_instruction() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
-
-        assert_eq!(runtime.get_instructions().len(), 2);
-    }
-
-    #[test]
     fn add_input_reference() {
         let mut runtime = SimpleRuntimeData::new();
 
@@ -338,67 +310,19 @@ mod tests {
     }
 
     #[test]
-    fn get_instruction() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.push_instruction(Instruction::Put, None).unwrap();
-
-        assert_eq!(runtime.get_instruction(1).unwrap().0, Instruction::Put);
-    }
-
-    #[test]
-    fn get_current_instruction() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.push_instruction(Instruction::Put, None).unwrap();
-
-        runtime.set_instruction_cursor(1).unwrap();
-
-        assert_eq!(runtime.get_current_instruction().unwrap().0, Instruction::Put);
-    }
-
-    #[test]
-    fn set_instruction_cursor() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.push_instruction(Instruction::Put, None).unwrap();
-        runtime.push_instruction(Instruction::Put, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-
-        runtime.set_instruction_cursor(3).unwrap();
-
-        assert_eq!(runtime.get_current_instruction().unwrap().0, Instruction::PerformAddition);
-    }
-
-    #[test]
-    fn end_execution() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        runtime.push_instruction(Instruction::Put, None).unwrap();
-        runtime.push_instruction(Instruction::Put, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-
-        runtime.set_instruction_cursor(3).unwrap();
-
-        runtime.end_execution().unwrap();
-
-        assert_eq!(runtime.get_instruction_cursor(), 4);
-    }
-
-    #[test]
     fn execute_current_instruction() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
+        let d1 = runtime.add_integer(10).unwrap();
+        let d2 = runtime.add_integer(20).unwrap();
         let start = runtime.get_data_len();
 
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i1 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
 
-        runtime.push_register(i1).unwrap();
-        runtime.push_register(i2).unwrap();
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
 
-        runtime.set_instruction_cursor(1).unwrap();
+        runtime.set_instruction_cursor(i1).unwrap();
 
         runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 

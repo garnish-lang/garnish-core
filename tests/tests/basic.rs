@@ -16,7 +16,7 @@ mod tests {
 
         data.set_end_of_constant(data.get_data_len()).unwrap();
 
-        data.set_instruction_cursor(1).unwrap();
+        data.set_instruction_cursor(data.get_jump_point(0).unwrap()).unwrap();
 
         data.execute_all_instructions().unwrap();
 

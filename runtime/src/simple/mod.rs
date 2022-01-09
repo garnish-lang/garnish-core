@@ -35,7 +35,7 @@ impl SimpleRuntimeData {
             end_of_constant_data: 0,
             values: vec![],
             instruction_cursor: 0,
-            instructions: vec![InstructionData::new(Instruction::EndExecution, None)],
+            instructions: vec![],
             expression_table: vec![],
             jump_path: vec![],
             current_list: None,
@@ -448,13 +448,13 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn push_jump_point(&mut self, index: usize) -> Result<(), Self::Error> {
-        if index >= self.instructions.len() {
-            Err(format!(
-                "Specified jump point {:?} is out of bounds of instructions with length {:?}",
-                index,
-                self.instructions.len()
-            ))?;
-        }
+        // if index >= self.instructions.len() {
+        //     Err(format!(
+        //         "Specified jump point {:?} is out of bounds of instructions with length {:?}",
+        //         index,
+        //         self.instructions.len()
+        //     ))?;
+        // }
 
         self.expression_table.push(index);
         Ok(())
@@ -506,7 +506,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData, Instruction};
 
     #[test]
     fn type_of() {
@@ -514,6 +514,59 @@ mod tests {
         runtime.add_integer(10).unwrap();
 
         assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Integer);
+    }
+
+    // #[test]
+    // fn add_jump_point_out_of_bounds() {
+    //     let mut runtime = SimpleRuntimeData::new();
+    //
+    //     runtime.push_instruction(Instruction::EndExpression, None).unwrap();
+    //     let result = runtime.push_jump_point(5);
+    //
+    //     assert!(result.is_err());
+    // }
+
+    #[test]
+    fn add_instruction() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
+
+        assert_eq!(runtime.get_instructions().len(), 1);
+    }
+
+
+    #[test]
+    fn get_instruction() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.push_instruction(Instruction::Put, None).unwrap();
+
+        assert_eq!(runtime.get_instruction(0).unwrap().0, Instruction::Put);
+    }
+
+    #[test]
+    fn get_current_instruction() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.push_instruction(Instruction::Put, None).unwrap();
+
+        runtime.set_instruction_cursor(0).unwrap();
+
+        assert_eq!(runtime.get_current_instruction().unwrap().0, Instruction::Put);
+    }
+
+    #[test]
+    fn set_instruction_cursor() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.push_instruction(Instruction::Put, None).unwrap();
+        runtime.push_instruction(Instruction::Put, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.set_instruction_cursor(2).unwrap();
+
+        assert_eq!(runtime.get_current_instruction().unwrap().0, Instruction::PerformAddition);
     }
 }
 
