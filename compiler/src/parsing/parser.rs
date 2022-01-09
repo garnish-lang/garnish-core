@@ -1,4 +1,4 @@
-use crate::error::{append_token_details, composition_error, implementation_error, implementation_error_with_token, CompilerError};
+use crate::error::{append_token_details, composition_error, implementation_error, implementation_error_with_token, CompilerError, unmatched_grouping_error, unclosed_grouping_error};
 use log::trace;
 use std::{collections::HashMap, hash::Hash, vec};
 
@@ -417,7 +417,6 @@ fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition
         (SecondaryDefinition::None, SecondaryDefinition::EndGrouping)
         | (SecondaryDefinition::None, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::None, SecondaryDefinition::UnarySuffix)
-        | (SecondaryDefinition::Subexpression, SecondaryDefinition::EndGrouping)
         | (SecondaryDefinition::Subexpression, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::Subexpression, SecondaryDefinition::UnarySuffix)
         | (SecondaryDefinition::Value, SecondaryDefinition::Value)
@@ -429,7 +428,6 @@ fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition
         | (SecondaryDefinition::Identifier, SecondaryDefinition::StartGrouping)
         | (SecondaryDefinition::Identifier, SecondaryDefinition::UnaryPrefix)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::None)
-        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::Subexpression)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnaryPrefix)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Value)
@@ -669,10 +667,15 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 (definition, parent, None, right)
             }
             SecondaryDefinition::EndGrouping => {
-                // if current grouping is a conditional group
-                // end that group and our normal grouping
                 next_last_left = group_stack.pop();
-                current_group = match group_stack.len() == 0 {
+                // should always have a value after popping hear
+                // if not it means we didn't pass through start grouping and equal amount of times
+                println!("next {:?}", next_last_left);
+                if next_last_left.is_none() {
+                    unmatched_grouping_error(token)?;
+                }
+
+                current_group = match group_stack.is_empty() {
                     true => None,
                     false => Some(group_stack.len() - 1),
                 };
@@ -774,6 +777,11 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
     // final composition check
     // previous is def of last node
     check_composition(previous_second_def, SecondaryDefinition::None, &last_token)?;
+
+    // also make sure all groups have been closed
+    if !group_stack.is_empty() {
+        unclosed_grouping_error(&last_token)?;
+    }
 
     // walk up tree to find root
     trace!("Finding root node");
@@ -1231,11 +1239,12 @@ mod composition_errors {
     }
 
     #[test]
-    fn subexpression_end_group() {
+    fn unclosed_group() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
-            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
-            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -1244,12 +1253,11 @@ mod composition_errors {
     }
 
     #[test]
-    fn start_group_subexpression() {
+    fn end_group_without_start() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
