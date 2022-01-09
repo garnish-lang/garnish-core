@@ -78,7 +78,6 @@ where
             Some(v) => v,
         };
 
-
         let mut next_instruction = self.get_instruction_cursor() + Data::Size::one();
 
         match instruction {
@@ -109,7 +108,7 @@ where
                 // sets instruction cursor for us
                 self.apply(context)?;
                 next_instruction = self.get_instruction_cursor();
-            },
+            }
             Instruction::EmptyApply => {
                 self.empty_apply(context)?;
                 next_instruction = self.get_instruction_cursor();
@@ -268,7 +267,7 @@ where
 mod tests {
     use crate::{
         runtime::{context::EmptyContext, GarnishRuntime},
-        GarnishLangRuntimeData, GarnishLangRuntimeState, Instruction, SimpleRuntimeData, ExpressionDataType
+        ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeState, Instruction, SimpleRuntimeData,
     };
 
     #[test]
