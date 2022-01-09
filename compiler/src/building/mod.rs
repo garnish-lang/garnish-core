@@ -21,6 +21,7 @@ impl InstructionMetadata {
 
 struct ResolveNodeInfo {
     node_index: Option<usize>,
+    initialized: bool,
     first_resolved: bool,
     can_ignore_first: bool,
     second_resolved: bool,
@@ -32,6 +33,7 @@ impl ResolveNodeInfo {
     fn new(node_index: Option<usize>, parent_definition: Definition) -> ResolveNodeInfo {
         ResolveNodeInfo {
             node_index,
+            initialized: false,
             first_resolved: false,
             can_ignore_first: false,
             second_resolved: false,
@@ -68,7 +70,8 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
             ((true, node.get_left()), (true, node.get_right()))
         }
         Definition::ApplyTo => ((true, node.get_right()), (true, node.get_left())),
-        Definition::List | Definition::CommaList => ((true, node.get_left()), (true, node.get_right())),
+        Definition::List => ((true, node.get_left()), (true, node.get_right())),
+        Definition::CommaList => ((false, node.get_left()), (false, node.get_right())),
         Definition::Group => ((true, node.get_right()), (false, None)),
         Definition::NestedExpression => ((false, None), (false, None)),
         Definition::JumpIfTrue => ((true, node.get_left()), (false, None)),
@@ -268,14 +271,21 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 || we_are_list && resolve_node_info.parent_definition == Definition::CommaList
                                 || we_are_comma_list && resolve_node_info.parent_definition == Definition::List;
 
-                            let pop = if first_expected && !resolve_node_info.first_resolved {
-                                // on first visit to a list node
-                                // if parent isn't a list, we start a new list count
+                            if !resolve_node_info.initialized {
+                                // initialization for specific nodes
+
+                                // on first visit to a root list node
+                                // may not pass through first or second branches, due to allowing single item lists and empty lists
+                                // start a new list count
                                 if we_are_list_root {
                                     trace!("Starting new list count");
                                     list_counts.push(Data::Size::zero());
                                 }
 
+                                resolve_node_info.initialized = true;
+                            }
+
+                            let pop = if (first_expected || first_index.is_some()) && !resolve_node_info.first_resolved {
                                 // on first visit to a conditional branch node
                                 // add to jump table and store the position in conditional stack
                                 if we_are_parent_conditional_branch || we_are_non_chained_conditional {
@@ -299,7 +309,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 }
 
                                 false
-                            } else if second_expected && !resolve_node_info.second_resolved {
+                            } else if (second_expected || second_index.is_some()) && !resolve_node_info.second_resolved {
                                 // special check for subexpression, so far is only operations that isn't fully depth first
                                 // gets resolved before second child
                                 if node.get_definition() == Definition::Subexpression {
@@ -1130,6 +1140,55 @@ mod lists {
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn empty_list() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::CommaList, None, None, None, ",", TokenType::Comma),
+            ],
+            vec![
+                (Instruction::MakeList, Some(0)),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default(),
+        );
+    }
+
+    #[test]
+    fn single_item_left() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::CommaList, None, Some(0), None, ",", TokenType::Comma),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::MakeList, Some(1)),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)),
+        );
+    }
+
+    #[test]
+    fn single_item_right() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::CommaList, None, None, Some(1), ",", TokenType::Comma),
+                (Definition::Number, Some(2), None, None, "5", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::MakeList, Some(1)),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)),
         );
     }
 
