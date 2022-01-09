@@ -670,7 +670,6 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 next_last_left = group_stack.pop();
                 // should always have a value after popping hear
                 // if not it means we didn't pass through start grouping and equal amount of times
-                println!("next {:?}", next_last_left);
                 if next_last_left.is_none() {
                     unmatched_grouping_error(token)?;
                 }
