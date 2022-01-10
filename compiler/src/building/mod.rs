@@ -72,7 +72,7 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         Definition::ApplyTo => ((true, node.get_right()), (true, node.get_left())),
         Definition::List => ((true, node.get_left()), (true, node.get_right())),
         Definition::CommaList => ((false, node.get_left()), (false, node.get_right())),
-        Definition::SideEffect => todo!(),
+        Definition::SideEffect => ((true, node.get_right()), (false, None)),
         Definition::Group => ((true, node.get_right()), (false, None)),
         Definition::NestedExpression => ((false, None), (false, None)),
         Definition::JumpIfTrue => ((true, node.get_left()), (false, None)),
@@ -182,7 +182,9 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         Definition::JumpIfFalse => {
             data.push_instruction(Instruction::JumpIfFalse, Some(current_jump_index))?;
         }
-        Definition::SideEffect => todo!(),
+        Definition::SideEffect => {
+            data.push_instruction(Instruction::EndSideEffect, None)?;
+        },
         Definition::Group => return Ok(false), // no additional instructions for groups
         Definition::ElseJump => return Ok(false),            // no additional instructions
         // no runtime meaning, parser only utility
@@ -282,6 +284,15 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 if we_are_list_root {
                                     trace!("Starting new list count");
                                     list_counts.push(Data::Size::zero());
+                                }
+
+                                // side effect inserts two instruction
+                                // first on initialization and second on resolution
+                                if node.get_definition() == Definition::SideEffect {
+                                    data.push_instruction(Instruction::StartSideEffect, None)?;
+
+                                    // use same node for now
+                                    metadata.push(InstructionMetadata::new(resolve_node_info.node_index));
                                 }
 
                                 resolve_node_info.initialized = true;
