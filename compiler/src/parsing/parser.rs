@@ -71,6 +71,7 @@ pub(crate) enum SecondaryDefinition {
     BinaryLeftToRight,
     UnaryPrefix,
     UnarySuffix,
+    StartSideEffect,
     StartGrouping,
     EndGrouping,
     Subexpression,
@@ -95,7 +96,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::EndExpression => (Definition::Drop, SecondaryDefinition::EndGrouping),
         TokenType::StartGroup => (Definition::Group, SecondaryDefinition::StartGrouping),
         TokenType::EndGroup => (Definition::Drop, SecondaryDefinition::EndGrouping),
-        TokenType::StartSideEffect => (Definition::SideEffect, SecondaryDefinition::StartGrouping),
+        TokenType::StartSideEffect => (Definition::SideEffect, SecondaryDefinition::StartSideEffect),
         TokenType::EndSideEffect => (Definition::Drop, SecondaryDefinition::EndGrouping),
 
         // Specialty
@@ -193,6 +194,8 @@ impl ParseResult {
 fn make_priority_map() -> HashMap<Definition, usize> {
     let mut map = HashMap::new();
 
+    map.insert(Definition::SideEffect, 5);
+
     map.insert(Definition::Number, 10);
     map.insert(Definition::Identifier, 10);
     map.insert(Definition::Property, 10);
@@ -204,7 +207,6 @@ fn make_priority_map() -> HashMap<Definition, usize> {
 
     map.insert(Definition::Group, 20);
     map.insert(Definition::NestedExpression, 20);
-    map.insert(Definition::SideEffect, 20);
 
     map.insert(Definition::Access, 30);
 
@@ -316,36 +318,35 @@ fn parse_token(
     }
 
     if parent == true_left {
+        trace!("Parent and ture left are same, Unsetting true left.");
         // can happen with optional binary operators that are next to start of groups
         // causes cyclic relationship
         // the parent is the correct value
         // unset true left
 
         true_left = None;
-    } else {
-        trace!("Checking for left and parent to update values.");
+    }
 
-        match true_left {
-            None => (),
-            Some(index) => match nodes.get_mut(index) {
-                None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", index))?,
-                Some(node) => {
-                    trace!("Updating true left's ({:?}) parent to {:?}", index, id);
-                    node.parent = Some(id)
-                },
+    match true_left {
+        None => (),
+        Some(index) => match nodes.get_mut(index) {
+            None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", index))?,
+            Some(node) => {
+                trace!("Updating true left's ({:?}) parent to {:?}", index, id);
+                node.parent = Some(id)
             },
-        }
+        },
+    }
 
-        match parent {
-            None => (),
-            Some(index) => match nodes.get_mut(index) {
-                None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", index))?,
-                Some(node) => {
-                    trace!("Updating parent's ({:?}) right to {:?}", index, id);
-                    node.right = Some(id)
-                },
+    match parent {
+        None => (),
+        Some(index) => match nodes.get_mut(index) {
+            None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", index))?,
+            Some(node) => {
+                trace!("Updating parent's ({:?}) right to {:?}", index, id);
+                node.right = Some(id)
             },
-        }
+        },
     }
 
     *check_for_list = false;
@@ -552,6 +553,8 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 
         let (definition, secondary_definition) = get_definition(token.get_token_type());
 
+        trace!("Given priliminary definition of {:?} and secondary definition of {:?}", definition, secondary_definition);
+
         check_composition(previous_second_def, secondary_definition, token)?;
 
         // done with previous, can update now
@@ -692,6 +695,24 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 next_parent = Some(our_id);
 
                 (definition, parent, None, right)
+            }
+            SecondaryDefinition::StartSideEffect => {
+                next_parent = Some(id);
+                let info = parse_token(
+                    id,
+                    definition,
+                    last_left,
+                    assumed_right,
+                    &mut nodes,
+                    &priority_map,
+                    &mut check_for_list,
+                    under_group,
+                )?;
+
+                current_group = Some(group_stack.len());
+                group_stack.push(id);
+
+                info
             }
             SecondaryDefinition::EndGrouping => {
                 next_last_left = group_stack.pop();
