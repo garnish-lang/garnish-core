@@ -18,8 +18,13 @@ pub(crate) fn start_side_effect<Data: GarnishLangRuntimeData>(this: &mut Data) -
 pub(crate) fn end_side_effect<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     trace!("Instruction - End Side Effect");
     match this.pop_value_stack() {
+        Some(_) => (),
+        None => state_error("Could not pop value at end of side effect.".to_string())?
+    }
+
+    match this.pop_register() {
         Some(_) => Ok(()),
-        None => state_error("Could not pop value at end of side effect.".to_string())
+        None => state_error("Could not pop register at end of side effect.".to_string())
     }
 }
 
@@ -57,10 +62,12 @@ mod tests {
 
         let d1 = runtime.add_integer(10).unwrap();
 
+        runtime.push_register(d1).unwrap();
         runtime.push_value_stack(d1).unwrap();
 
         runtime.end_side_effect().unwrap();
 
+        assert_eq!(runtime.get_register_len(), 0);
         assert_eq!(runtime.get_current_value(), None);
     }
 
@@ -68,7 +75,22 @@ mod tests {
     fn end_side_effect_no_value_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
+        let d1 = runtime.add_integer(10).unwrap();
+
+        runtime.push_register(d1).unwrap();
+
+        let result = runtime.end_side_effect();
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn end_side_effect_no_register_is_err() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_integer(10).unwrap();
+
+        runtime.push_value_stack(d1).unwrap();
 
         let result = runtime.end_side_effect();
 
