@@ -10,6 +10,7 @@ mod list;
 mod pair;
 mod put;
 mod resolve;
+mod sideeffect;
 pub mod result;
 pub mod types;
 mod utilities;
@@ -29,6 +30,7 @@ use comparisons::equality_comparison;
 use instruction::*;
 use list::*;
 use result::*;
+use sideeffect::*;
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
@@ -62,6 +64,9 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn push_value(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn update_value(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
+    fn start_side_effect(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn end_side_effect(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+
     fn resolve<T: GarnishLangRuntimeContext<Data>>(&mut self, data: Data::Size, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
 }
 
@@ -86,24 +91,26 @@ where
             Instruction::PushValue => self.push_value()?,
             Instruction::UpdateValue => self.update_value()?,
             Instruction::EndExpression => self.end_expression()?,
+            Instruction::StartSideEffect => self.start_side_effect()?,
+            Instruction::EndSideEffect =>self.end_side_effect()?,
             Instruction::EqualityComparison => self.equality_comparison()?,
+            Instruction::MakePair => self.make_pair()?,
+            Instruction::Access => self.access()?,
+            Instruction::AccessLeftInternal => self.access_left_internal()?,
+            Instruction::AccessRightInternal => self.access_right_internal()?,
+            Instruction::AccessLengthInternal => self.access_length_internal()?,
             Instruction::Put => match data {
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
                 Some(i) => self.put(i)?,
             },
-            Instruction::MakePair => self.make_pair()?,
             Instruction::MakeList => match data {
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
                 Some(i) => self.make_list(i)?,
             },
-            Instruction::Access => self.access()?,
             Instruction::Resolve => match data {
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
                 Some(i) => self.resolve(i, context)?,
             },
-            Instruction::AccessLeftInternal => self.access_left_internal()?,
-            Instruction::AccessRightInternal => self.access_right_internal()?,
-            Instruction::AccessLengthInternal => self.access_length_internal()?,
             Instruction::Apply => {
                 // sets instruction cursor for us
                 self.apply(context)?;
@@ -260,6 +267,18 @@ where
 
     fn resolve<T: GarnishLangRuntimeContext<Data>>(&mut self, data: Data::Size, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
         resolve::resolve(self, data, context)
+    }
+
+    //
+    // Side Effect
+    //
+
+    fn start_side_effect(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        start_side_effect(self)
+    }
+
+    fn end_side_effect(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        end_side_effect(self)
     }
 }
 

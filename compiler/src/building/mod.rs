@@ -72,6 +72,7 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         Definition::ApplyTo => ((true, node.get_right()), (true, node.get_left())),
         Definition::List => ((true, node.get_left()), (true, node.get_right())),
         Definition::CommaList => ((false, node.get_left()), (false, node.get_right())),
+        Definition::SideEffect => todo!(),
         Definition::Group => ((true, node.get_right()), (false, None)),
         Definition::NestedExpression => ((false, None), (false, None)),
         Definition::JumpIfTrue => ((true, node.get_left()), (false, None)),
@@ -181,6 +182,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         Definition::JumpIfFalse => {
             data.push_instruction(Instruction::JumpIfFalse, Some(current_jump_index))?;
         }
+        Definition::SideEffect => todo!(),
         Definition::Group => return Ok(false), // no additional instructions for groups
         Definition::ElseJump => return Ok(false),            // no additional instructions
         // no runtime meaning, parser only utility
@@ -1317,6 +1319,35 @@ mod groups {
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(4)),
                 (Instruction::PerformAddition, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+}
+
+#[cfg(test)]
+mod side_effects {
+    use super::test_utils::*;
+    use crate::*;
+    use garnish_lang_runtime::*;
+
+    #[test]
+    fn single_operation() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::SideEffect, None, None, Some(2), "[", TokenType::StartSideEffect),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Addition, Some(0), Some(1), Some(3), "+", TokenType::PlusSign),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::StartSideEffect, None),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::PerformAddition, None),
+                (Instruction::EndSideEffect, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),

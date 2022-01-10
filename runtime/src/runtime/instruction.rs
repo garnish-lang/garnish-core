@@ -21,6 +21,8 @@ pub enum Instruction {
     AccessRightInternal,
     AccessLengthInternal,
     Resolve,
+    StartSideEffect,
+    EndSideEffect,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]

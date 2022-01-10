@@ -31,7 +31,6 @@ pub(crate) fn push_input<Data: GarnishLangRuntimeData>(this: &mut Data) -> Resul
     let r = next_ref(this)?;
 
     this.push_value_stack(r)?;
-    this.push_value_stack(r)?;
 
     Ok(())
 }
@@ -110,6 +109,7 @@ mod tests {
 
         runtime.push_value().unwrap();
 
+        assert_eq!(runtime.get_value_stack_len(), 1);
         assert_eq!(runtime.get_value(0).unwrap(), 2usize);
         assert_eq!(runtime.get_current_value().unwrap(), 2usize);
     }

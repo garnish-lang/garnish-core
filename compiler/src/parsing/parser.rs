@@ -27,6 +27,7 @@ pub enum Definition {
     Subexpression,
     Group,
     NestedExpression,
+    SideEffect,
     Apply,
     ApplyTo,
     Reapply,
@@ -49,7 +50,7 @@ impl Definition {
     }
 
     pub fn is_group_like(self) -> bool {
-        self == Definition::Group || self == Definition::NestedExpression
+        self == Definition::Group || self == Definition::NestedExpression || self == Definition::SideEffect
     }
 
     pub fn is_conditional(self) -> bool {
@@ -94,6 +95,8 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::EndExpression => (Definition::Drop, SecondaryDefinition::EndGrouping),
         TokenType::StartGroup => (Definition::Group, SecondaryDefinition::StartGrouping),
         TokenType::EndGroup => (Definition::Drop, SecondaryDefinition::EndGrouping),
+        TokenType::StartSideEffect => (Definition::SideEffect, SecondaryDefinition::StartGrouping),
+        TokenType::EndSideEffect => (Definition::Drop, SecondaryDefinition::EndGrouping),
 
         // Specialty
         TokenType::Annotation => (Definition::Drop, SecondaryDefinition::Annotation),
@@ -201,6 +204,7 @@ fn make_priority_map() -> HashMap<Definition, usize> {
 
     map.insert(Definition::Group, 20);
     map.insert(Definition::NestedExpression, 20);
+    map.insert(Definition::SideEffect, 20);
 
     map.insert(Definition::Access, 30);
 
@@ -1434,7 +1438,7 @@ mod tests {
 
     #[test]
     fn group_like_definitions() {
-        let value_like = [Definition::Group, Definition::NestedExpression];
+        let value_like = [Definition::Group, Definition::NestedExpression, Definition::SideEffect];
 
         for def in value_like {
             assert!(def.is_group_like());
@@ -2565,6 +2569,25 @@ mod groups {
             .iter()
             .map(|(i, def, p, l, r)| match def {
                 Definition::Group => (*i, Definition::NestedExpression, *p, *l, *r),
+                _ => (*i, *def, *p, *l, *r),
+            })
+            .collect();
+
+        assert_result(&parse(exp_tokens.clone()).unwrap(), root, &exp_assertions);
+
+        let exp_tokens: Vec<LexerToken> = tokens
+            .iter()
+            .map(|t| match t.get_token_type() {
+                TokenType::StartGroup => LexerToken::new("{".to_string(), TokenType::StartSideEffect, 0, 0),
+                TokenType::EndGroup => LexerToken::new("}".to_string(), TokenType::EndSideEffect, 0, 0),
+                _ => t.clone(),
+            })
+            .collect();
+
+        let exp_assertions: Vec<(usize, Definition, Option<usize>, Option<usize>, Option<usize>)> = assertions
+            .iter()
+            .map(|(i, def, p, l, r)| match def {
+                Definition::Group => (*i, Definition::SideEffect, *p, *l, *r),
                 _ => (*i, *def, *p, *l, *r),
             })
             .collect();
