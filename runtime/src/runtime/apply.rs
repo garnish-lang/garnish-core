@@ -54,31 +54,37 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
     let right_addr = next_ref(this)?;
     let left_addr = next_ref(this)?;
 
+    // currently, apply is responsible for advancing the instruction cursor itself
+    // assume default, apply expression will update to its value
+    let mut next_instruction = this.get_instruction_cursor() + Data::Size::one();
+
     match this.get_data_type(left_addr)? {
         ExpressionDataType::Expression => {
             let expression_index = this.get_expression(left_addr)?;
 
-            let next_instruction = match this.get_jump_point(expression_index) {
+            // Expression stores index of expression table, look up actual instruction index
+            next_instruction = match this.get_jump_point(expression_index) {
                 None => state_error(format!("No jump point at index {:?}", expression_index))?,
                 Some(i) => i,
             };
 
-            // Expression stores index of expression table, look up actual instruction index
-
             this.push_jump_path(this.get_instruction_cursor())?;
-            this.set_instruction_cursor(next_instruction)?;
-            Ok(this.push_value_stack(right_addr)?)
+            this.push_value_stack(right_addr)?;
         }
         ExpressionDataType::External => {
             let external_value = this.get_external(left_addr)?;
 
             match context {
-                None => push_unit(this),
-                Some(c) => match c.apply(external_value, right_addr, this)? {
-                    true => Ok(()),
-                    false => push_unit(this),
+                None => {
+                    push_unit(this)?;
                 },
-            }
+                Some(c) => match c.apply(external_value, right_addr, this)? {
+                    true => (),
+                    false => {
+                        push_unit(this)?;
+                    },
+                },
+            };
         }
         ExpressionDataType::List => {
             match this.get_data_type(right_addr)? {
@@ -139,12 +145,16 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                     None => push_unit(this)?,
                     Some(i) => this.push_register(i)?,
                 },
-            }
-
-            Ok(())
+            };
         }
-        _ => push_unit(this),
+        _ => {
+            push_unit(this)?;
+        },
     }
+
+    this.set_instruction_cursor(next_instruction)?;
+
+    Ok(())
 }
 
 #[cfg(test)]
@@ -195,22 +205,30 @@ mod tests {
     fn apply_integer_to_list() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_integer(30).unwrap();
+        let d1 = runtime.add_integer(10).unwrap();
+        let d2 = runtime.add_integer(20).unwrap();
+        let d3 = runtime.add_integer(30).unwrap();
         runtime.start_list(3).unwrap();
-        runtime.add_to_list(i1, false).unwrap();
-        runtime.add_to_list(i2, false).unwrap();
-        runtime.add_to_list(i3, false).unwrap();
-        let i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_integer(2).unwrap();
+        runtime.add_to_list(d1, false).unwrap();
+        runtime.add_to_list(d2, false).unwrap();
+        runtime.add_to_list(d3, false).unwrap();
+        let d4 = runtime.end_list().unwrap();
+        let d5 = runtime.add_integer(2).unwrap();
 
-        runtime.push_register(i4).unwrap();
-        runtime.push_register(i5).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i1 = runtime.push_instruction(Instruction::Apply, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.set_instruction_cursor(i1).unwrap();
+
+        runtime.push_register(d4).unwrap();
+        runtime.push_register(d5).unwrap();
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 30);
+        assert_eq!(runtime.get_instruction_cursor(), i2);
     }
 
     #[test]
@@ -512,10 +530,15 @@ mod tests {
         let ext1 = runtime.add_external(3).unwrap();
         let int1 = runtime.add_integer(100).unwrap();
 
-        runtime.push_instruction(Instruction::Resolve, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i1 = runtime.push_instruction(Instruction::Apply, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
 
         runtime.push_register(ext1).unwrap();
         runtime.push_register(int1).unwrap();
+
+        runtime.set_instruction_cursor(i1).unwrap();
 
         struct MyContext {
             new_addr: usize,
@@ -547,5 +570,6 @@ mod tests {
 
         assert_eq!(runtime.get_integer(context.new_addr).unwrap(), 200);
         assert_eq!(runtime.get_register(0).unwrap(), context.new_addr);
+        assert_eq!(runtime.get_instruction_cursor(), i2);
     }
 }
