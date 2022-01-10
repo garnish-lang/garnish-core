@@ -2543,6 +2543,55 @@ mod lists {
 }
 
 #[cfg(test)]
+mod side_effects {
+    use super::tests::*;
+    use crate::lexing::lexer::*;
+    use crate::*;
+
+    #[test]
+    fn alone() {
+        let tokens = vec![
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::SideEffect, None, None, Some(1)),
+                (1, Definition::Number, Some(0), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn after_value() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Number, None, None, Some(1)),
+                (1, Definition::SideEffect, Some(0), None, Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+}
+
+#[cfg(test)]
 mod groups {
     use super::tests::*;
     use crate::lexing::lexer::*;
@@ -2569,25 +2618,6 @@ mod groups {
             .iter()
             .map(|(i, def, p, l, r)| match def {
                 Definition::Group => (*i, Definition::NestedExpression, *p, *l, *r),
-                _ => (*i, *def, *p, *l, *r),
-            })
-            .collect();
-
-        assert_result(&parse(exp_tokens.clone()).unwrap(), root, &exp_assertions);
-
-        let exp_tokens: Vec<LexerToken> = tokens
-            .iter()
-            .map(|t| match t.get_token_type() {
-                TokenType::StartGroup => LexerToken::new("{".to_string(), TokenType::StartSideEffect, 0, 0),
-                TokenType::EndGroup => LexerToken::new("}".to_string(), TokenType::EndSideEffect, 0, 0),
-                _ => t.clone(),
-            })
-            .collect();
-
-        let exp_assertions: Vec<(usize, Definition, Option<usize>, Option<usize>, Option<usize>)> = assertions
-            .iter()
-            .map(|(i, def, p, l, r)| match def {
-                Definition::Group => (*i, Definition::SideEffect, *p, *l, *r),
                 _ => (*i, *def, *p, *l, *r),
             })
             .collect();
