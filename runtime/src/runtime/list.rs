@@ -228,7 +228,7 @@ mod tests {
     }
 
     #[test]
-    fn access_with_number() {
+    fn access_with_integer() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol("one").unwrap();
@@ -250,7 +250,7 @@ mod tests {
     }
 
     #[test]
-    fn access_with_number_out_of_bounds_is_unit() {
+    fn access_with_integer_out_of_bounds_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol("one").unwrap();

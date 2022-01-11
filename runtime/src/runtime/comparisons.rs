@@ -33,6 +33,19 @@ fn data_equal<Data: GarnishLangRuntimeData>(
         (ExpressionDataType::Expression, ExpressionDataType::Expression) => compare(this, left_addr, right_addr, Data::get_expression)?,
         (ExpressionDataType::External, ExpressionDataType::External) => compare(this, left_addr, right_addr, Data::get_external)?,
         (ExpressionDataType::Symbol, ExpressionDataType::Symbol) => compare(this, left_addr, right_addr, Data::get_symbol)?,
+        (ExpressionDataType::Float, ExpressionDataType::Float) => compare(this, left_addr, right_addr, Data::get_float)?,
+        (ExpressionDataType::Integer, ExpressionDataType::Float) => {
+            let left = this.get_integer(left_addr)?;
+            let right = this.get_float(right_addr)?;
+
+            Data::integer_to_float(left) == right
+        },
+        (ExpressionDataType::Float, ExpressionDataType::Integer) => {
+            let left = this.get_float(left_addr)?;
+            let right = this.get_integer(right_addr)?;
+
+            left == Data::integer_to_float(right)
+        },
         (ExpressionDataType::Integer, ExpressionDataType::Integer) => compare(this, left_addr, right_addr, Data::get_integer)?,
         (ExpressionDataType::Pair, ExpressionDataType::Pair) => {
             let (left1, right1) = this.get_pair(left_addr)?;
@@ -253,6 +266,96 @@ mod numbers {
         runtime.equality_comparison().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False); 
+    }
+
+    #[test]
+    fn equality_floats_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_float(10.0).unwrap();
+        let int2 = runtime.add_float(10.0).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_floats_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_float(10.0).unwrap();
+        let int2 = runtime.add_float(20.0).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn equality_integer_float_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_integer(10).unwrap();
+        let int2 = runtime.add_float(10.0).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_float_integer_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_float(10.0).unwrap();
+        let int2 = runtime.add_integer(10).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_integer_float_note_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_integer(10).unwrap();
+        let int2 = runtime.add_float(20.0).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn equality_float_integer_note_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_float(10.0).unwrap();
+        let int2 = runtime.add_integer(20).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
 }
 
