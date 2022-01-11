@@ -499,15 +499,17 @@ fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition
         | (SecondaryDefinition::Identifier, SecondaryDefinition::UnaryPrefix)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::None)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::BinaryLeftToRight)
-        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnaryPrefix)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnarySuffix)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Value)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Identifier)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::StartGrouping)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::UnaryPrefix)
+        | (SecondaryDefinition::StartSideEffect, SecondaryDefinition::BinaryLeftToRight)
+        | (SecondaryDefinition::StartSideEffect, SecondaryDefinition::UnarySuffix)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::None)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::Subexpression)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::EndGrouping)
+        | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::EndSideEffect)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::OptionalBinaryLeftToRight)
         | (SecondaryDefinition::OptionalBinaryLeftToRight, SecondaryDefinition::BinaryLeftToRight)
@@ -515,6 +517,7 @@ fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition
         | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::None)
         | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::Subexpression)
         | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::EndGrouping)
+        | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::EndSideEffect)
         | (SecondaryDefinition::UnaryPrefix, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Value)
         | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Identifier)
@@ -1364,11 +1367,55 @@ mod composition_errors {
     }
 
     #[test]
+    fn start_with_end_side_effect() {
+        let tokens = vec![LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0)];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn start_with_end_expression() {
+        let tokens = vec![LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0)];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn end_with_start_group() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn end_with_start_side_effect() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn end_with_start_expression() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -1497,6 +1544,60 @@ mod composition_errors {
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn start_side_effect_binary() {
+        let tokens = vec![
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn start_side_effect_unary_suffix() {
+        let tokens = vec![
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn binary_end_side_effect() {
+        let tokens = vec![
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn unary_prefix_end_side_effect() {
+        let tokens = vec![
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
         let result = parse(tokens);
