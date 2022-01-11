@@ -499,12 +499,14 @@ fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition
         | (SecondaryDefinition::Identifier, SecondaryDefinition::StartGrouping)
         | (SecondaryDefinition::Identifier, SecondaryDefinition::UnaryPrefix)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::None)
+        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::EndGrouping)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnarySuffix)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Value)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Identifier)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::StartGrouping)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::UnaryPrefix)
+        | (SecondaryDefinition::StartSideEffect, SecondaryDefinition::EndSideEffect)
         | (SecondaryDefinition::StartSideEffect, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::StartSideEffect, SecondaryDefinition::UnarySuffix)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::None)
@@ -847,10 +849,30 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
             }
             SecondaryDefinition::EndGrouping | SecondaryDefinition::EndSideEffect => {
                 next_last_left = group_stack.pop();
+
                 // should always have a value after popping hear
                 // if not it means we didn't pass through start grouping and equal amount of times
-                if next_last_left.is_none() {
-                    unmatched_grouping_error(token)?;
+                match next_last_left {
+                    None => unmatched_grouping_error(token)?,
+                    Some(left) => match nodes.get(left) {
+                        None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", left), token)?,
+                        Some(start_group_node) => {
+                            let expected_token = match start_group_node.definition {
+                                Definition::Group => TokenType::EndGroup,
+                                Definition::NestedExpression => TokenType::EndExpression,
+                                Definition::SideEffect => TokenType::EndSideEffect,
+                                d => implementation_error_with_token(format!("Unknown group definition added to group stack {:?}", d), token)?,
+                            };
+
+                            // Check that end group matches start group
+                            if token.get_token_type() != expected_token {
+                                Err(
+                                    CompilerError::new_message(format!("Expected {:?} token, found {:?}", expected_token, token.get_token_type()))
+                                        .append_token_details(&token),
+                                )?;
+                            }
+                        }
+                    },
                 }
 
                 current_group = match group_stack.is_empty() {
@@ -1286,6 +1308,81 @@ mod composition_errors {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn empty_group() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn mismatched_group() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn empty_expression() {
+        let tokens = vec![
+            LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
+            LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn mismatched_expression() {
+        let tokens = vec![
+            LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn empty_side_effect() {
+        let tokens = vec![
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn mismatched_side_effect() {
+        let tokens = vec![
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
