@@ -1,5 +1,3 @@
-use log::trace;
-
 use crate::{
      push_unit, runtime::list::get_access_addr, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError,
 };
@@ -9,8 +7,6 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
     data: Data::Size,
     context: Option<&mut T>,
 ) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Resolve");
-
     // check input
     match this.get_current_value() {
         None => (),

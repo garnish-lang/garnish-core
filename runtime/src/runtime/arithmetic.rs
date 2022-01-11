@@ -4,8 +4,6 @@ use crate::runtime::data::Overflowable;
 use crate::{next_two_raw_ref, push_integer, push_pair, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
 
 pub fn perform_addition<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Addition");
-
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
     match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {

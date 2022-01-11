@@ -1,10 +1,8 @@
 use log::trace;
 
-use crate::{next_ref, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
+use crate::{next_ref, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
 
 pub(crate) fn jump<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Jump | Data - {:?}", index);
-
     match this.get_jump_point(index) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => {
@@ -16,8 +14,6 @@ pub(crate) fn jump<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::S
 }
 
 pub(crate) fn jump_if_true<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Execute Expression If True | Data - {:?}", index);
-
     let point = match this.get_jump_point(index) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => point,
@@ -40,8 +36,6 @@ pub(crate) fn jump_if_true<Data: GarnishLangRuntimeData>(this: &mut Data, index:
 }
 
 pub(crate) fn jump_if_false<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Execute Expression If False | Data - {:?}", index);
-
     let point = match this.get_jump_point(index) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => point,
@@ -63,15 +57,16 @@ pub(crate) fn jump_if_false<Data: GarnishLangRuntimeData>(this: &mut Data, index
 }
 
 pub(crate) fn end_expression<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - End Expression");
     match this.pop_jump_path() {
         None => {
             // no more jumps, this should be the end of the entire execution
             let r = next_ref(this)?;
-            this.set_instruction_cursor(this.get_instruction_cursor() + Data::Size::one())?;
+            trace!("No remaining return points. Pushing {:?} to values. Setting cursor to instruction length {:?}.", r, this.get_instruction_len());
+            this.set_instruction_cursor(this.get_instruction_len())?;
             this.push_value_stack(r)?;
         }
         Some(jump_point) => {
+            trace!("Setting cursor to {:?}", jump_point);
             this.set_instruction_cursor(jump_point)?;
         }
     }
@@ -89,13 +84,17 @@ mod tests {
 
         let int1 = runtime.add_integer(10).unwrap();
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
+        let i1 = runtime.push_instruction(Instruction::EndExpression, None).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
 
-        runtime.set_instruction_cursor(1).unwrap();
+        runtime.set_instruction_cursor(i1).unwrap();
         runtime.push_register(int1).unwrap();
 
         runtime.end_expression().unwrap();
 
-        assert_eq!(runtime.get_instruction_cursor(), 2);
+        assert_eq!(runtime.get_instruction_cursor(), runtime.get_instruction_len());
         assert_eq!(runtime.get_integer(runtime.get_current_value().unwrap()).unwrap(), 10);
     }
 

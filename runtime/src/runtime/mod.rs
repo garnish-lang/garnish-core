@@ -15,6 +15,7 @@ pub mod result;
 pub mod types;
 mod utilities;
 
+use log::trace;
 pub use context::{EmptyContext, GarnishLangRuntimeContext};
 pub use data::{GarnishLangRuntimeData, TypeConstants};
 pub use error::*;
@@ -83,6 +84,8 @@ where
             Some(v) => v,
         };
 
+        trace!("Executing instruction {:?} at {:?} with data {:?}", instruction, self.get_instruction_cursor(),  data);
+
         let mut next_instruction = self.get_instruction_cursor() + Data::Size::one();
 
         match instruction {
@@ -90,7 +93,6 @@ where
             Instruction::PutValue => self.put_value()?,
             Instruction::PushValue => self.push_value()?,
             Instruction::UpdateValue => self.update_value()?,
-            Instruction::EndExpression => self.end_expression()?,
             Instruction::StartSideEffect => self.start_side_effect()?,
             Instruction::EndSideEffect =>self.end_side_effect()?,
             Instruction::EqualityComparison => self.equality_comparison()?,
@@ -110,6 +112,10 @@ where
             Instruction::Resolve => match data {
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
                 Some(i) => self.resolve(i, context)?,
+            },
+            Instruction::EndExpression => {
+                self.end_expression()?;
+                next_instruction = self.get_instruction_cursor();
             },
             Instruction::Apply => {
                 // sets instruction cursor for us
@@ -548,5 +554,45 @@ mod tests {
         assert_eq!(runtime.get_register_len(), 0);
         assert_eq!(runtime.get_data_len(), 3);
         assert_eq!(runtime.get_instruction_cursor(), i2);
+    }
+
+    #[test]
+    fn execute_current_instruction_end_expression() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_integer(10).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
+        let i1 = runtime.push_instruction(Instruction::EndExpression, None).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
+
+        runtime.set_instruction_cursor(i1).unwrap();
+        runtime.push_register(int1).unwrap();
+
+        runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_instruction_cursor(), runtime.get_instruction_len());
+        assert_eq!(runtime.get_integer(runtime.get_current_value().unwrap()).unwrap(), 10);
+    }
+
+    #[test]
+    fn execute_current_instructionend_expression_with_path() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.add_integer(10).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.push_instruction(Instruction::EndExpression, Some(0)).unwrap();
+        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.push_instruction(Instruction::EmptyApply, None).unwrap();
+
+        runtime.push_register(1).unwrap();
+        runtime.push_jump_path(4).unwrap();
+        runtime.set_instruction_cursor(2).unwrap();
+
+        runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_instruction_cursor(), 4);
     }
 }

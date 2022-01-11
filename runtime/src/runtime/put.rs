@@ -1,8 +1,6 @@
 use crate::{next_ref, push_unit, GarnishLangRuntimeData, RuntimeError, state_error};
-use log::trace;
 
 pub(crate) fn put<Data: GarnishLangRuntimeData>(this: &mut Data, i: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Put | Data - {:?}", i);
     match i >= this.get_data_len() {
         true => state_error(format!(
             "Attempting to put reference to {:?} which is outside of data bounds {:?}.",
@@ -16,8 +14,6 @@ pub(crate) fn put<Data: GarnishLangRuntimeData>(this: &mut Data, i: Data::Size) 
 }
 
 pub(crate) fn put_input<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Put Input");
-
     match this.get_current_value() {
         None => push_unit(this)?,
         Some(i) => this.push_register(i)?,
@@ -27,7 +23,6 @@ pub(crate) fn put_input<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
 }
 
 pub(crate) fn push_input<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Push Input");
     let r = next_ref(this)?;
 
     this.push_value_stack(r)?;
@@ -36,8 +31,6 @@ pub(crate) fn push_input<Data: GarnishLangRuntimeData>(this: &mut Data) -> Resul
 }
 
 pub(crate) fn push_result<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Output Result");
-
     let r = next_ref(this)?;
     match this.get_current_value_mut() {
         None => state_error(format!("No inputs availble to update for update value operation."))?,

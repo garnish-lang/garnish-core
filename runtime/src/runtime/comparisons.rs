@@ -4,8 +4,6 @@ use std::fmt::Debug;
 use crate::{next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 
 pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Equality Comparison");
-
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
     let lease = this.lease_tmp_stack()?;

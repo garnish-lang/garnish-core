@@ -1,10 +1,6 @@
-use log::trace;
-
 use crate::{next_ref, push_integer, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 
 pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Make List | Length - {:?}", len);
-
     if len > this.get_register_len() {
         state_error(format!("Not enough register values to make list of length {:?}", len))?
     }
@@ -49,8 +45,6 @@ pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data
 }
 
 pub(crate) fn access<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Access");
-
     let right_ref = next_ref(this)?;
     let left_ref = next_ref(this)?;
 
@@ -63,8 +57,6 @@ pub(crate) fn access<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<()
 }
 
 pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Access Left Internal");
-
     let r = next_ref(this)?;
     match this.get_data_type(r)? {
         ExpressionDataType::Pair => {
@@ -78,8 +70,6 @@ pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData>(this: &mut Data
 }
 
 pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Access Right Internal");
-
     let r = next_ref(this)?;
     match this.get_data_type(r)? {
         ExpressionDataType::Pair => {
@@ -93,8 +83,6 @@ pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData>(this: &mut Dat
 }
 
 pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Access Length Internal");
-
     let r = next_ref(this)?;
     match this.get_data_type(r)? {
         ExpressionDataType::List => {

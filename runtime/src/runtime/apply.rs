@@ -1,21 +1,16 @@
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
 use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
-use log::trace;
-
 use super::context::GarnishLangRuntimeContext;
 
 pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
     context: Option<&mut T>,
 ) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Apply");
     apply_internal(this, context)
 }
 
 pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Reapply | Data - {:?}", index);
-
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
     // only execute if left side is a true like value
@@ -41,9 +36,7 @@ pub(crate) fn empty_apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeCon
     this: &mut Data,
     context: Option<&mut T>,
 ) -> Result<(), RuntimeError<Data::Error>> {
-    trace!("Instruction - Empty Apply");
     push_unit(this)?;
-
     apply_internal(this, context)
 }
 
