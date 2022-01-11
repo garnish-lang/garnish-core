@@ -61,7 +61,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                 Some(i) => i,
             };
 
-            this.push_jump_path(this.get_instruction_cursor())?;
+            this.push_jump_path(this.get_instruction_cursor() + Data::Size::one())?;
             this.push_value_stack(right_addr)?;
         }
         ExpressionDataType::External => {
@@ -179,6 +179,7 @@ mod tests {
         runtime.push_instruction(Instruction::Put, Some(exp1)).unwrap();
         runtime.push_instruction(Instruction::Put, Some(int2)).unwrap();
         let i2 = runtime.push_instruction(Instruction::Apply, None).unwrap();
+        let i3 = runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
         runtime.push_jump_point(i1).unwrap();
 
@@ -191,7 +192,7 @@ mod tests {
 
         assert_eq!(runtime.get_value(0).unwrap(), int2);
         assert_eq!(runtime.get_instruction_cursor(), i1);
-        assert_eq!(runtime.get_jump_path(0).unwrap(), i2);
+        assert_eq!(runtime.get_jump_path(0).unwrap(), i3);
     }
 
     #[test]
@@ -396,6 +397,7 @@ mod tests {
         // 5
         runtime.push_instruction(Instruction::Put, Some(exp1)).unwrap();
         let i2 = runtime.push_instruction(Instruction::EmptyApply, None).unwrap();
+        let i3 = runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
         runtime.push_jump_point(i1).unwrap();
 
@@ -407,7 +409,7 @@ mod tests {
 
         assert_eq!(runtime.get_data_type(runtime.get_value(0).unwrap()).unwrap(), ExpressionDataType::Unit);
         assert_eq!(runtime.get_instruction_cursor(), i1);
-        assert_eq!(runtime.get_jump_path(0).unwrap(), i2);
+        assert_eq!(runtime.get_jump_path(0).unwrap(), i3);
     }
 
     #[test]
