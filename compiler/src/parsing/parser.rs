@@ -482,15 +482,15 @@ fn setup_space_list_check(
 // binary ops must be preceded by a value or unary suffix and succeded by value or unary prefix
 // unary prefix must be preceded by unary prefix or binary and succeded by value or unary prefix
 // unary suffix must be preceded by value or unary suffix, and succeded by unary suffix or binary
-fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition, token: &LexerToken) -> Result<(), CompilerError> {
+fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition, check_for_list: bool, token: &LexerToken) -> Result<(), CompilerError> {
     trace!("Composition check between previous {:?} and current {:?}", previous, current);
     match (previous, current) {
+        (SecondaryDefinition::Value, SecondaryDefinition::Value) if !check_for_list => composition_error(previous, current, &token),
         (SecondaryDefinition::None, SecondaryDefinition::EndGrouping)
         | (SecondaryDefinition::None, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::None, SecondaryDefinition::UnarySuffix)
         | (SecondaryDefinition::Subexpression, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::Subexpression, SecondaryDefinition::UnarySuffix)
-        | (SecondaryDefinition::Value, SecondaryDefinition::Value)
         | (SecondaryDefinition::Value, SecondaryDefinition::Identifier)
         | (SecondaryDefinition::Value, SecondaryDefinition::StartGrouping)
         | (SecondaryDefinition::Value, SecondaryDefinition::UnaryPrefix)
@@ -569,7 +569,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
     let mut check_for_list = false;
     let mut last_token = LexerToken::empty();
     let mut next_last_left = None;
-    let mut group_stack = vec![];
+    let mut group_stack: Vec<(usize, bool)> = vec![];
     let mut current_group = None;
     let mut previous_second_def = SecondaryDefinition::None;
 
@@ -593,7 +593,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
             None => None,
             Some(current) => match group_stack.get(current) {
                 None => implementation_error_with_token(format!("Current group set to non-existant group in stack."), token)?,
-                Some(group) => Some(*group),
+                Some((group, _)) => Some(*group),
             },
         };
 
@@ -637,7 +637,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
             secondary_definition
         );
 
-        check_composition(previous_second_def, secondary_definition, token)?;
+        check_composition(previous_second_def, secondary_definition, check_for_list, token)?;
 
         // done with previous, can update now
         previous_second_def = secondary_definition;
@@ -646,7 +646,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
             SecondaryDefinition::None => implementation_error("Secondary definition of none shouldn't reach check.".to_string())?,
             SecondaryDefinition::Whitespace => setup_space_list_check(
                 last_left,
-                current_group.and_then(|i| group_stack.get(i)).cloned(),
+                under_group,
                 &mut nodes,
                 &mut check_for_list,
                 &mut &mut next_last_left,
@@ -779,84 +779,48 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                     next_last_left = Some(our_id);
                 }
 
-                group_stack.push(our_id);
+                group_stack.push((our_id, check_for_list));
                 next_parent = Some(our_id);
 
                 (definition, parent, None, right)
             }
             SecondaryDefinition::StartSideEffect => {
-                let mut right = assumed_right;
-                let mut left = last_left;
-                let mut our_id = id;
+                next_parent = Some(id);
 
-                // both groupings are considered to be value like
-                // groups will result in a single value after evaluation
-                // nested expressions are replaced with an expression value placeholder
-                if check_for_list {
-                    trace!("List flag is set, creating list node before current node.");
-
-                    // our new id will be +1, since list node will use current id
-                    our_id += 1;
-                    trace!("Updated current id to {}. List id will be {}", our_id, id);
-
-                    left = Some(id);
-
-                    // use current id for list token
-                    let list_info = parse_token(
-                        id,
-                        Definition::List,
-                        last_left,
-                        Some(our_id),
-                        &mut nodes,
-                        &priority_map,
-                        &mut check_for_list,
-                        under_group,
-                    )?;
-
-                    nodes.push(ParseNode::new(
-                        list_info.0,
-                        SecondaryDefinition::StartGrouping,
-                        list_info.1,
-                        list_info.2,
-                        list_info.3,
-                        last_token.clone(),
-                    ));
-
-                    // update right since we just added to node list
-                    right = Some(our_id + 1);
-
-                    // last left  is the node we are about to create
-                    next_last_left = Some(our_id);
-                }
-
-                next_parent = Some(our_id);
+                // gets set to false in parse token
+                // but group stack should be pushed to after, store data now
+                let group_info = (id, check_for_list);
 
                 let info = parse_token(
-                    our_id,
+                    id,
                     definition,
-                    left,
-                    right,
+                    last_left,
+                    assumed_right,
                     &mut nodes,
                     &priority_map,
                     &mut check_for_list,
                     under_group,
                 )?;
 
+                trace!("Starting side effect. Will check for list at end {:?}", group_info.1);
                 current_group = Some(group_stack.len());
-                group_stack.push(our_id);
+                group_stack.push(group_info);
 
                 info
             }
             SecondaryDefinition::EndGrouping | SecondaryDefinition::EndSideEffect => {
-                next_last_left = group_stack.pop();
-
                 // should always have a value after popping hear
                 // if not it means we didn't pass through start grouping and equal amount of times
-                match next_last_left {
+                match group_stack.pop() {
                     None => unmatched_grouping_error(token)?,
-                    Some(left) => match nodes.get(left) {
+                    Some((left, need_list_check)) => match nodes.get(left) {
                         None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", left), token)?,
                         Some(start_group_node) => {
+                            trace!("Ending grouping starting with {:?}. Will check for list {:?}", start_group_node.get_definition(), need_list_check);
+
+                            next_last_left = Some(left);
+                            check_for_list = need_list_check;
+
                             let expected_token = match start_group_node.definition {
                                 Definition::Group => TokenType::EndGroup,
                                 Definition::NestedExpression => TokenType::EndExpression,
@@ -864,10 +828,12 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                                 d => implementation_error_with_token(format!("Unknown group definition added to group stack {:?}", d), token)?,
                             };
 
+                            trace!("Expecting matching group token {:?}", expected_token);
+
                             // Check that end group matches start group
                             if token.get_token_type() != expected_token {
                                 Err(
-                                    CompilerError::new_message(format!("Expected {:?} token, found {:?}", expected_token, token.get_token_type()))
+                                    CompilerError::new_message(format!("Syntax Error: Expected {:?} token, found {:?}", expected_token, token.get_token_type()))
                                         .append_token_details(&token),
                                 )?;
                             }
@@ -901,7 +867,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                     None => false,
                     Some(group) => match group_stack.get(group) {
                         None => implementation_error_with_token(format!("Current group set to non-existant group in stack."), token)?,
-                        Some(group_index) => match nodes.get(*group_index) {
+                        Some((group_index, _check_for_list)) => match nodes.get(*group_index) {
                             None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", group), token)?,
                             Some(group_node) => {
                                 trace!("Current group node definition is {:?}", group_node.definition);
@@ -915,7 +881,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                     trace!("Inside of a group, treating as white space");
                     setup_space_list_check(
                         last_left,
-                        current_group.and_then(|i| group_stack.get(i)).cloned(),
+                        under_group,
                         &mut nodes,
                         &mut check_for_list,
                         &mut &mut next_last_left,
@@ -998,7 +964,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 
     // final composition check
     // previous is def of last node
-    check_composition(previous_second_def, SecondaryDefinition::None, &last_token)?;
+    check_composition(previous_second_def, SecondaryDefinition::None, check_for_list, &last_token)?;
 
     // also make sure all groups have been closed
     if !group_stack.is_empty() {
@@ -3023,13 +2989,36 @@ mod side_effects {
 
         assert_result(
             &result,
-            1,
+            3,
             &[
-                (0, Definition::Number, Some(1), None, None),
-                (1, Definition::List, None, Some(0), Some(4)),
-                (2, Definition::SideEffect, Some(4), None, Some(3)),
-                (3, Definition::Number, Some(2), None, None),
-                (4, Definition::Number, Some(1), Some(2), None),
+                (0, Definition::Number, Some(3), None, Some(1)),
+                (1, Definition::SideEffect, Some(0), None, Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+                (3, Definition::List, None, Some(0), Some(4)),
+                (4, Definition::Number, Some(3), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn after_value_space_is_not_list() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Number, None, None, Some(1)),
+                (1, Definition::SideEffect, Some(0), None, Some(2)),
+                (2, Definition::Number, Some(1), None, None),
             ],
         );
     }
