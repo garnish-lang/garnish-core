@@ -45,6 +45,7 @@ impl Definition {
     pub fn is_value_like(self) -> bool {
         self == Definition::Number
             || self == Definition::Identifier
+            || self == Definition::Property
             || self == Definition::Symbol
             || self == Definition::Unit
             || self == Definition::Value
@@ -1694,6 +1695,7 @@ mod tests {
         let value_like = [
             Definition::Number,
             Definition::Identifier,
+            Definition::Property,
             Definition::Symbol,
             Definition::Unit,
             Definition::Value,

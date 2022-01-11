@@ -53,9 +53,9 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         | Definition::Symbol
         | Definition::Value
         | Definition::Unit
-        | Definition::False
+        | Definition::False // Shares logic with subexpression, TODO look into refactoring this logic to specify all three visits instead of just two
         | Definition::True => {
-            ((false, None), (false, None))
+            ((false, node.get_left()), (false, node.get_right()))
         }
         Definition::AccessLeftInternal => ((true, node.get_right()), (false, None)),
         Definition::AbsoluteValue => todo!(),
@@ -325,7 +325,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                             } else if (second_expected || second_index.is_some()) && !resolve_node_info.second_resolved {
                                 // special check for subexpression, so far is only operations that isn't fully depth first
                                 // gets resolved before second child
-                                if node.get_definition() == Definition::Subexpression {
+                                if node.get_definition() == Definition::Subexpression || node.get_definition().is_value_like() {
                                     trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
 
                                     let instruction_created = resolve_node(node, data, None, Data::Size::zero(), nearest_expression_point)?;
@@ -357,9 +357,10 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 false
                             } else {
                                 // all children resolved, now resolve this node
+                                let we_are_resolved_value = node.get_definition().is_value_like() && resolve_node_info.resolved;
                                 let we_are_subexpression = node.get_definition() == Definition::Subexpression;
 
-                                let resolve = !we_are_subexpression && !we_are_sub_list;
+                                let resolve = !we_are_subexpression && !we_are_sub_list && !we_are_resolved_value;
 
                                 // subexpression already resolved before second child
                                 if resolve {
@@ -1349,9 +1350,9 @@ mod side_effects {
             0,
             vec![
                 (Definition::SideEffect, None, None, Some(2), "[", TokenType::StartSideEffect),
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(2), None, None, "5", TokenType::Number),
                 (Definition::Addition, Some(0), Some(1), Some(3), "+", TokenType::PlusSign),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(2), None, None, "10", TokenType::Number),
             ],
             vec![
                 (Instruction::StartSideEffect, None),
@@ -1362,6 +1363,54 @@ mod side_effects {
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn after_value() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::Number, None, None, Some(1), "5", TokenType::Number),
+                (Definition::SideEffect, Some(0), None, Some(3), "[", TokenType::StartSideEffect),
+                (Definition::Number, Some(3), None, None, "10", TokenType::Number),
+                (Definition::Addition, Some(1), Some(2), Some(4), "+", TokenType::PlusSign),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::StartSideEffect, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::Put, Some(5)),
+                (Instruction::PerformAddition, None),
+                (Instruction::EndSideEffect, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)).append(IntegerData::from(15)),
+        );
+    }
+
+    #[test]
+    fn before_value() {
+        assert_instruction_data(
+            4,
+            vec![
+                (Definition::SideEffect, Some(4), None, Some(2), "[", TokenType::StartSideEffect),
+                (Definition::Number, Some(2), None, None, "5", TokenType::Number),
+                (Definition::Addition, Some(0), Some(1), Some(3), "+", TokenType::PlusSign),
+                (Definition::Number, Some(2), None, None, "10", TokenType::Number),
+                (Definition::Number, None, Some(0), None, "15", TokenType::Number),
+            ],
+            vec![
+                (Instruction::StartSideEffect, None),
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::PerformAddition, None),
+                (Instruction::EndSideEffect, None),
+                (Instruction::Put, Some(5)),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)).append(IntegerData::from(15)),
         );
     }
 }
