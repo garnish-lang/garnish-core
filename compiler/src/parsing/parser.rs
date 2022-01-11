@@ -145,7 +145,14 @@ pub struct ParseNode {
 }
 
 impl ParseNode {
-    pub fn new(definition: Definition, secondary_definition: SecondaryDefinition, parent: Option<usize>, left: Option<usize>, right: Option<usize>, lex_token: LexerToken) -> ParseNode {
+    pub fn new(
+        definition: Definition,
+        secondary_definition: SecondaryDefinition,
+        parent: Option<usize>,
+        left: Option<usize>,
+        right: Option<usize>,
+        lex_token: LexerToken,
+    ) -> ParseNode {
         ParseNode {
             definition,
             secondary_definition,
@@ -354,7 +361,27 @@ fn parse_token(
             None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", index))?,
             Some(node) => {
                 trace!("Updating parent's ({:?}) right to {:?}", index, id);
-                node.right = Some(id)
+                let right = node.right;
+
+                node.right = Some(id);
+
+                // in case of side effect
+                // parent's right might not have been reassigned by becoming true left
+                // do it again here shouldn't change anything for other cases
+                // pre assigned above to avoid mutability borrow issue
+                match right {
+                    None => (),
+                    Some(r) => match nodes.get_mut(r) {
+                        // None fine here since, right is initially assumed, may not have been created yet
+                        // but should exist for side effect case
+                        None => (),
+                        Some(node) => {
+                            node.parent = Some(id);
+                            // and assign it this node as our new left
+                            true_left = Some(r);
+                        }
+                    },
+                }
             }
         },
     }
@@ -392,7 +419,14 @@ fn parse_value_like(
             check_for_list,
             under_group,
         )?;
-        nodes.push(ParseNode::new(list_info.0, SecondaryDefinition::StartGrouping, list_info.1, list_info.2, list_info.3, last_token.clone()));
+        nodes.push(ParseNode::new(
+            list_info.0,
+            SecondaryDefinition::StartGrouping,
+            list_info.1,
+            list_info.2,
+            list_info.3,
+            last_token.clone(),
+        ));
 
         // update parent to point to list node just created
         our_left = Some(id);
@@ -579,7 +613,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                         });
                     }
                 }
-            }
+            },
         }
 
         // most operations will have their right be the next element
@@ -720,7 +754,14 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                         &mut check_for_list,
                         under_group,
                     )?;
-                    nodes.push(ParseNode::new(list_info.0, SecondaryDefinition::StartGrouping, list_info.1, list_info.2, list_info.3, last_token.clone()));
+                    nodes.push(ParseNode::new(
+                        list_info.0,
+                        SecondaryDefinition::StartGrouping,
+                        list_info.1,
+                        list_info.2,
+                        list_info.3,
+                        last_token.clone(),
+                    ));
 
                     // update parent to point to list node just created
                     parent = Some(id);
@@ -1425,6 +1466,23 @@ mod composition_errors {
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn side_effect_surrounded_by_binary() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
@@ -2675,6 +2733,32 @@ mod side_effects {
                 (0, Definition::SideEffect, Some(2), None, Some(1)),
                 (1, Definition::Number, Some(0), None, None),
                 (2, Definition::Number, None, Some(0), None),
+            ],
+        );
+    }
+
+    #[test]
+    fn after_binary() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Addition, None, Some(0), Some(4)),
+                (2, Definition::SideEffect, Some(4), None, Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+                (4, Definition::Number, Some(1), Some(2), None),
             ],
         );
     }
