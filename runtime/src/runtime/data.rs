@@ -19,6 +19,7 @@ pub trait GarnishLangRuntimeData {
     type DataLease: Copy;
     type Symbol: Display + Debug + PartialOrd + TypeConstants + Copy;
     type Integer: Display + Debug + Overflowable + PartialOrd + TypeConstants + Copy + FromStr;
+    type Float: Display + Debug + PartialOrd + TypeConstants + Copy + FromStr;
     type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + SubAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
 
     fn get_data_len(&self) -> Self::Size;
@@ -34,6 +35,7 @@ pub trait GarnishLangRuntimeData {
     fn get_data_type(&self, addr: Self::Size) -> Result<ExpressionDataType, Self::Error>;
 
     fn get_integer(&self, addr: Self::Size) -> Result<Self::Integer, Self::Error>;
+    fn get_float(&self, addr: Self::Size) -> Result<Self::Float, Self::Error>;
     fn get_symbol(&self, addr: Self::Size) -> Result<Self::Symbol, Self::Error>;
     fn get_expression(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_external(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
@@ -50,6 +52,7 @@ pub trait GarnishLangRuntimeData {
     fn add_false(&mut self) -> Result<Self::Size, Self::Error>;
 
     fn add_integer(&mut self, value: Self::Integer) -> Result<Self::Size, Self::Error>;
+    fn add_float(&mut self, value: Self::Float) -> Result<Self::Size, Self::Error>;
     fn add_symbol(&mut self, value: &str) -> Result<Self::Size, Self::Error>;
     fn add_expression(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_external(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error>;

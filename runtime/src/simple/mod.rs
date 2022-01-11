@@ -6,7 +6,7 @@ use std::{collections::HashMap, hash::Hasher};
 use crate::{
     symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, FalseData, GarnishLangRuntimeContext,
     GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, RuntimeError,
-    SimpleData, SimpleDataList, SymbolData, TrueData, UnitData,
+    SimpleData, SimpleDataList, SymbolData, TrueData, UnitData, FloatData
 };
 
 pub mod data;
@@ -166,6 +166,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     type Error = DataError;
     type DataLease = usize;
     type Integer = i32;
+    type Float = f64;
     type Symbol = u64;
     type Size = usize;
 
@@ -199,6 +200,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn get_integer(&self, index: usize) -> Result<i32, Self::Error> {
         Ok(self.get(index)?.as_integer()?.value())
+    }
+
+    fn get_float(&self, index: usize) -> Result<f64, Self::Error> {
+        Ok(self.get(index)?.as_float()?.value())
     }
 
     fn get_symbol(&self, index: usize) -> Result<u64, Self::Error> {
@@ -254,6 +259,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn add_integer(&mut self, value: i32) -> Result<usize, Self::Error> {
         self.cache_add(IntegerData::from(value))
+    }
+
+    fn add_float(&mut self, value: f64) -> Result<usize, Self::Error> {
+        self.cache_add(FloatData::from(value))
     }
 
     fn add_symbol(&mut self, value: &str) -> Result<usize, Self::Error> {
@@ -626,6 +635,24 @@ mod data_storage {
         assert_eq!(runtime.get_data_len(), 5);
         assert_eq!(runtime.simple_data.get(3).unwrap().as_integer().unwrap().value(), 10);
         assert_eq!(runtime.simple_data.get(4).unwrap().as_integer().unwrap().value(), 20);
+    }
+
+    #[test]
+    fn floats() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let start = runtime.get_data_len();
+        let i1 = runtime.add_float(10.0).unwrap();
+        let i2 = runtime.add_float(20.0).unwrap();
+        let i3 = runtime.add_float(10.0).unwrap();
+
+        assert_eq!(i1, start);
+        assert_eq!(i2, start + 1);
+        assert_eq!(i3, i1);
+
+        assert_eq!(runtime.get_data_len(), 5);
+        assert_eq!(runtime.simple_data.get(3).unwrap().as_float().unwrap().value(), 10.0);
+        assert_eq!(runtime.simple_data.get(4).unwrap().as_float().unwrap().value(), 20.0);
     }
 
     #[test]

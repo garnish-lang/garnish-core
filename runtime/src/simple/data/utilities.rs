@@ -2,7 +2,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::{hash::Hasher};
 use crate::simple::data::{
-     ExpressionData, ExternalData, FalseData, IntegerData, ListData, PairData, SymbolData, TrueData, UnitData, SimpleData, AnyData
+     ExpressionData, ExternalData, FalseData, IntegerData, FloatData, ListData, PairData, SymbolData, TrueData, UnitData, SimpleData, AnyData
 };
 
 use std::any::Any;
@@ -14,6 +14,7 @@ pub trait DataCoersion {
     fn as_true(&self) -> DataCoersionResult<TrueData>;
     fn as_false(&self) -> DataCoersionResult<FalseData>;
     fn as_integer(&self) -> DataCoersionResult<IntegerData>;
+    fn as_float(&self) -> DataCoersionResult<FloatData>;
     fn as_symbol(&self) -> DataCoersionResult<SymbolData>;
     fn as_expression(&self) -> DataCoersionResult<ExpressionData>;
     fn as_external(&self) -> DataCoersionResult<ExternalData>;
@@ -42,6 +43,10 @@ impl DataCoersion for AnyData {
     }
 
     fn as_integer(&self) -> DataCoersionResult<IntegerData> {
+        downcast_result(self)
+    }
+
+    fn as_float(&self) -> DataCoersionResult<FloatData> {
         downcast_result(self)
     }
 

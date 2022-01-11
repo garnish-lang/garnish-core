@@ -1,3 +1,4 @@
+use std::hash::{Hash, Hasher};
 use crate::runtime::types::ExpressionDataType;
 use crate::simple::data::SimpleData;
 
@@ -68,6 +69,36 @@ impl From<i32> for IntegerData {
 impl SimpleData for IntegerData {
     fn get_type(&self) -> ExpressionDataType {
         ExpressionDataType::Integer
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct FloatData {
+    value: f64,
+}
+
+impl FloatData {
+    pub fn value(&self) -> f64 {
+        self.value
+    }
+}
+
+impl From<f64> for FloatData {
+    fn from(value: f64) -> Self {
+        FloatData { value }
+    }
+}
+
+impl Hash for FloatData {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        state.write(&self.value.to_le_bytes());
+        state.finish();
+    }
+}
+
+impl SimpleData for FloatData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::Float
     }
 }
 
