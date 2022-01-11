@@ -6,12 +6,13 @@ use crate::{next_two_raw_ref, push_integer, push_pair, push_unit, ExpressionData
 pub fn perform_addition<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
-    match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {
+    let types = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
+    trace!("Attempting addition between {:?} at {:?} and {:?} at {:?}", types.0, left_addr, types.1, right_addr);
+
+    match types {
         (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
             let left = this.get_integer(left_addr)?;
             let right = this.get_integer(right_addr)?;
-
-            trace!("Performing {:?} + {:?}", left, right);
 
             let (sum, overflowed) = left.overflowable_addition(right);
 
@@ -23,7 +24,40 @@ pub fn perform_addition<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 push_integer(this, sum)
             }
         }
-        _ => push_unit(this),
+        (ExpressionDataType::Integer, ExpressionDataType::Float) => {
+            let left = this.get_integer(left_addr)?;
+            let right = this.get_float(right_addr)?;
+
+            let sum = Data::integer_to_float(left) + right;
+
+            this.add_float(sum).and_then(|r| this.push_register(r))?;
+
+            Ok(())
+        }
+        (ExpressionDataType::Float, ExpressionDataType::Integer) => {
+            let left = this.get_float(left_addr)?;
+            let right = this.get_integer(right_addr)?;
+
+            let sum = left + Data::integer_to_float(right);
+
+            this.add_float(sum).and_then(|r| this.push_register(r))?;
+
+            Ok(())
+        }
+        (ExpressionDataType::Float, ExpressionDataType::Float) => {
+            let left = this.get_float(left_addr)?;
+            let right = this.get_float(right_addr)?;
+
+            let sum = left + right;
+
+            this.add_float(sum).and_then(|r| this.push_register(r))?;
+
+            Ok(())
+        }
+        _ => {
+            trace!("Unsupported types pushing unit");
+            push_unit(this)
+        },
     }
 }
 
@@ -32,7 +66,7 @@ mod tests {
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
-    fn perform_addition() {
+    fn perform_addition_integer_integer() {
         let mut runtime = SimpleRuntimeData::new();
 
         let int1 = runtime.add_integer(10).unwrap();
@@ -46,6 +80,57 @@ mod tests {
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_integer(new_data_start).unwrap(), 30);
+    }
+
+    #[test]
+    fn perform_addition_integer_float() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_integer(10).unwrap();
+        let int2 = runtime.add_float(20.5).unwrap();
+        let new_data_start = runtime.get_data_len();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.perform_addition().unwrap();
+
+        assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
+        assert_eq!(runtime.get_float(new_data_start).unwrap(), 30.5);
+    }
+
+    #[test]
+    fn perform_addition_float_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_float(10.5).unwrap();
+        let int2 = runtime.add_integer(20).unwrap();
+        let new_data_start = runtime.get_data_len();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.perform_addition().unwrap();
+
+        assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
+        assert_eq!(runtime.get_float(new_data_start).unwrap(), 30.5);
+    }
+
+    #[test]
+    fn perform_addition_float_float() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_float(10.5).unwrap();
+        let int2 = runtime.add_float(20.5).unwrap();
+        let new_data_start = runtime.get_data_len();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.perform_addition().unwrap();
+
+        assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
+        assert_eq!(runtime.get_float(new_data_start).unwrap(), 31.0);
     }
 
     #[test]

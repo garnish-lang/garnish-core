@@ -19,7 +19,7 @@ pub trait GarnishLangRuntimeData {
     type DataLease: Copy;
     type Symbol: Display + Debug + PartialOrd + TypeConstants + Copy;
     type Integer: Display + Debug + Overflowable + PartialOrd + TypeConstants + Copy + FromStr;
-    type Float: Display + Debug + PartialOrd + TypeConstants + Copy + FromStr;
+    type Float: Display + Debug + Add<Self::Float, Output=Self::Float> + PartialOrd + TypeConstants + Copy + FromStr;
     type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + SubAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
 
     fn get_data_len(&self) -> Self::Size;
@@ -84,6 +84,7 @@ pub trait GarnishLangRuntimeData {
 
     // deferred conversions
     fn size_to_integer(from: Self::Size) -> Self::Integer;
+    fn integer_to_float(from: Self::Integer) -> Self::Float;
 
     // data lease methods
     fn lease_tmp_stack(&mut self) -> Result<Self::DataLease, Self::Error>;

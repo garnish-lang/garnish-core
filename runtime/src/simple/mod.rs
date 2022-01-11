@@ -181,6 +181,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
             ExpressionDataType::False
         } else if i.is::<IntegerData>() {
             ExpressionDataType::Integer
+        } else if i.is::<FloatData>() {
+            ExpressionDataType::Float
         } else if i.is::<SymbolData>() {
             ExpressionDataType::Symbol
         } else if i.is::<ExternalData>() {
@@ -492,6 +494,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn size_to_integer(from: Self::Size) -> Self::Integer {
         from as Self::Integer
+    }
+
+    fn integer_to_float(from: Self::Integer) -> Self::Float {
+        from as Self::Float
     }
 
     fn lease_tmp_stack(&mut self) -> Result<Self::DataLease, Self::Error> {
