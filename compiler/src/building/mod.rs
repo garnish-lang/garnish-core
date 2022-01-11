@@ -184,9 +184,9 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         }
         Definition::SideEffect => {
             data.push_instruction(Instruction::EndSideEffect, None)?;
-        },
-        Definition::Group => return Ok(false), // no additional instructions for groups
-        Definition::ElseJump => return Ok(false),            // no additional instructions
+        }
+        Definition::Group => return Ok(false),    // no additional instructions for groups
+        Definition::ElseJump => return Ok(false), // no additional instructions
         // no runtime meaning, parser only utility
         Definition::Drop => return Err(CompilerError::new_message("Drop definition is not allowed during build.".to_string())),
     }
@@ -712,7 +712,7 @@ mod metadata {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
         )
-            .unwrap();
+        .unwrap();
 
         assert_eq!(
             metadata,
@@ -1157,13 +1157,8 @@ mod lists {
     fn empty_list() {
         assert_instruction_data(
             0,
-            vec![
-                (Definition::CommaList, None, None, None, ",", TokenType::Comma),
-            ],
-            vec![
-                (Instruction::MakeList, Some(0)),
-                (Instruction::EndExpression, None),
-            ],
+            vec![(Definition::CommaList, None, None, None, ",", TokenType::Comma)],
+            vec![(Instruction::MakeList, Some(0)), (Instruction::EndExpression, None)],
             SimpleDataList::default(),
         );
     }
@@ -1386,7 +1381,10 @@ mod side_effects {
                 (Instruction::EndSideEffect, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)).append(IntegerData::from(15)),
+            SimpleDataList::default()
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(10))
+                .append(IntegerData::from(15)),
         );
     }
 
@@ -1410,7 +1408,42 @@ mod side_effects {
                 (Instruction::Put, Some(5)),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)).append(IntegerData::from(15)),
+            SimpleDataList::default()
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(10))
+                .append(IntegerData::from(15)),
+        );
+    }
+
+    #[test]
+    fn doesnt_add_to_list() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::List, None, Some(0), Some(2), " ", TokenType::Whitespace),
+                (Definition::Number, Some(1), None, Some(3), "10", TokenType::Number),
+                (Definition::SideEffect, Some(2), None, Some(5), "[", TokenType::StartSideEffect),
+                (Definition::Number, Some(5), None, None, "15", TokenType::Number),
+                (Definition::Addition, Some(3), Some(4), Some(6), "+", TokenType::PlusSign),
+                (Definition::Number, Some(5), None, None, "20", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::StartSideEffect, None),
+                (Instruction::Put, Some(5)),
+                (Instruction::Put, Some(6)),
+                (Instruction::PerformAddition, None),
+                (Instruction::EndSideEffect, None),
+                (Instruction::MakeList, Some(2)),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default()
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(10))
+                .append(IntegerData::from(15))
+                .append(IntegerData::from(20)),
         );
     }
 }
