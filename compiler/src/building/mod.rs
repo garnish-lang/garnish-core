@@ -271,9 +271,10 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                             // we are list item if either
                             // we are not a list and our parent is
                             // or we are a list and our parent is the other type of list (i.e. we are List and parent is CommaList or we are CommaList and our parent is List)
-                            let we_are_list_item = !we_are_list_type && parent_is_list_type
+                            let we_are_list_item = (!we_are_list_type && parent_is_list_type
                                 || we_are_list && resolve_node_info.parent_definition == Definition::CommaList
-                                || we_are_comma_list && resolve_node_info.parent_definition == Definition::List;
+                                || we_are_comma_list && resolve_node_info.parent_definition == Definition::List)
+                                && node.get_definition() != Definition::SideEffect;
 
                             if !resolve_node_info.initialized {
                                 // initialization for specific nodes
@@ -1444,6 +1445,35 @@ mod side_effects {
                 .append(IntegerData::from(10))
                 .append(IntegerData::from(15))
                 .append(IntegerData::from(20)),
+        );
+    }
+
+    #[test]
+    fn doesnt_add_to_comma_list() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::CommaList, None, Some(0), Some(2), ",", TokenType::Comma),
+                (Definition::SideEffect, Some(1), None, Some(4), "[", TokenType::StartSideEffect),
+                (Definition::Number, Some(4), None, None, "10", TokenType::Number),
+                (Definition::Addition, Some(2), Some(3), Some(5), "+", TokenType::PlusSign),
+                (Definition::Number, Some(4), None, None, "15", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::StartSideEffect, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::Put, Some(5)),
+                (Instruction::PerformAddition, None),
+                (Instruction::EndSideEffect, None),
+                (Instruction::MakeList, Some(1)),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default()
+                .append(IntegerData::from(5))
+                .append(IntegerData::from(10))
+                .append(IntegerData::from(15)),
         );
     }
 }
