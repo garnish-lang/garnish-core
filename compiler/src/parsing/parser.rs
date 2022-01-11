@@ -1,4 +1,7 @@
-use crate::error::{append_token_details, composition_error, implementation_error, implementation_error_with_token, CompilerError, unmatched_grouping_error, unclosed_grouping_error};
+use crate::error::{
+    append_token_details, composition_error, implementation_error, implementation_error_with_token, unclosed_grouping_error,
+    unmatched_grouping_error, CompilerError,
+};
 use log::trace;
 use std::{collections::HashMap, hash::Hash, vec};
 
@@ -72,6 +75,7 @@ pub(crate) enum SecondaryDefinition {
     UnaryPrefix,
     UnarySuffix,
     StartSideEffect,
+    EndSideEffect,
     StartGrouping,
     EndGrouping,
     Subexpression,
@@ -97,7 +101,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::StartGroup => (Definition::Group, SecondaryDefinition::StartGrouping),
         TokenType::EndGroup => (Definition::Drop, SecondaryDefinition::EndGrouping),
         TokenType::StartSideEffect => (Definition::SideEffect, SecondaryDefinition::StartSideEffect),
-        TokenType::EndSideEffect => (Definition::Drop, SecondaryDefinition::EndGrouping),
+        TokenType::EndSideEffect => (Definition::Drop, SecondaryDefinition::EndSideEffect),
 
         // Specialty
         TokenType::Annotation => (Definition::Drop, SecondaryDefinition::Annotation),
@@ -265,7 +269,7 @@ fn parse_token(
     let mut parent = None;
 
     // // go up tree until no parent
-    trace!("Searching parent chain for true left");
+    trace!("Searching parent chain for true left starting at {:?}", current_left);
     while let Some(left_index) = current_left {
         trace!("Walking: {:?}", left_index);
         match nodes.get(left_index) {
@@ -318,7 +322,7 @@ fn parse_token(
     }
 
     if parent == true_left {
-        trace!("Parent and ture left are same, Unsetting true left.");
+        trace!("Parent and true left are same, Unsetting true left.");
         // can happen with optional binary operators that are next to start of groups
         // causes cyclic relationship
         // the parent is the correct value
@@ -334,7 +338,7 @@ fn parse_token(
             Some(node) => {
                 trace!("Updating true left's ({:?}) parent to {:?}", index, id);
                 node.parent = Some(id)
-            },
+            }
         },
     }
 
@@ -345,7 +349,7 @@ fn parse_token(
             Some(node) => {
                 trace!("Updating parent's ({:?}) right to {:?}", index, id);
                 node.right = Some(id)
-            },
+            }
         },
     }
 
@@ -367,15 +371,18 @@ fn parse_value_like(
     under_group: Option<usize>,
 ) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), CompilerError> {
     let mut new_parent = parent;
+    let mut our_left = last_left;
+    let mut our_id = id;
 
     if *check_for_list {
         trace!("List flag is set, creating list node before current node.");
+        our_id = id + 1;
         // use current id for list token
         let list_info = parse_token(
             id,
             Definition::List,
             last_left,
-            Some(id + 1),
+            Some(our_id),
             nodes,
             &priority_map,
             check_for_list,
@@ -385,12 +392,13 @@ fn parse_value_like(
 
         // update parent to point to list node just created
         new_parent = Some(id);
+        our_left = Some(id);
 
         // last left is the node we are about to create
         *next_last_left = Some(nodes.len());
     }
 
-    Ok((definition, new_parent, None, None))
+    parse_token(our_id, definition, our_left, None, nodes, priority_map, check_for_list, under_group)
 }
 
 fn setup_space_list_check(
@@ -524,7 +532,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
     let trimmed = trim_tokens(&lex_tokens);
 
     if trimmed.is_empty() {
-        return Ok(ParseResult { root: 0, nodes })
+        return Ok(ParseResult { root: 0, nodes });
     }
 
     for token in trimmed.iter() {
@@ -553,7 +561,11 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 
         let (definition, secondary_definition) = get_definition(token.get_token_type());
 
-        trace!("Given priliminary definition of {:?} and secondary definition of {:?}", definition, secondary_definition);
+        trace!(
+            "Given priliminary definition of {:?} and secondary definition of {:?}",
+            definition,
+            secondary_definition
+        );
 
         check_composition(previous_second_def, secondary_definition, token)?;
 
@@ -714,7 +726,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 
                 info
             }
-            SecondaryDefinition::EndGrouping => {
+            SecondaryDefinition::EndGrouping | SecondaryDefinition::EndSideEffect => {
                 next_last_left = group_stack.pop();
                 // should always have a value after popping hear
                 // if not it means we didn't pass through start grouping and equal amount of times
@@ -738,7 +750,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                                 left_node.right = None;
                             }
                         }
-                    }
+                    },
                 }
 
                 (Definition::Drop, None, None, None)
@@ -783,7 +795,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                                 }
 
                                 left_node.definition == Definition::Subexpression
-                            },
+                            }
                         },
                     };
 
@@ -1448,9 +1460,7 @@ mod tests {
 
     #[test]
     fn optional_binary_definition() {
-        let value_like = [
-            Definition::CommaList,
-        ];
+        let value_like = [Definition::CommaList];
 
         for def in value_like {
             assert!(def.is_optional());
@@ -2269,19 +2279,11 @@ mod lists {
 
     #[test]
     fn empty_list() {
-        let tokens = vec![
-            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
-        ];
+        let tokens = vec![LexerToken::new(",".to_string(), TokenType::Comma, 0, 0)];
 
         let result = parse(tokens).unwrap();
 
-        assert_result(
-            &result,
-            0,
-            &[
-                (0, Definition::CommaList, None, None, None),
-            ],
-        );
+        assert_result(&result, 0, &[(0, Definition::CommaList, None, None, None)]);
     }
 
     #[test]
@@ -2607,6 +2609,28 @@ mod side_effects {
                 (0, Definition::Number, None, None, Some(1)),
                 (1, Definition::SideEffect, Some(0), None, Some(2)),
                 (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn before_value() {
+        let tokens = vec![
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            2,
+            &[
+                (0, Definition::SideEffect, Some(2), None, Some(1)),
+                (1, Definition::Number, Some(0), None, None),
+                (2, Definition::Number, None, Some(0), None),
             ],
         );
     }
