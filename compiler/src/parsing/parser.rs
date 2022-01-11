@@ -66,7 +66,7 @@ impl Definition {
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
-pub(crate) enum SecondaryDefinition {
+pub enum SecondaryDefinition {
     None,
     Annotation,
     Value,
@@ -137,6 +137,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone)]
 pub struct ParseNode {
     definition: Definition,
+    secondary_definition: SecondaryDefinition,
     parent: Option<usize>,
     left: Option<usize>,
     right: Option<usize>,
@@ -144,9 +145,10 @@ pub struct ParseNode {
 }
 
 impl ParseNode {
-    pub fn new(definition: Definition, parent: Option<usize>, left: Option<usize>, right: Option<usize>, lex_token: LexerToken) -> ParseNode {
+    pub fn new(definition: Definition, secondary_definition: SecondaryDefinition, parent: Option<usize>, left: Option<usize>, right: Option<usize>, lex_token: LexerToken) -> ParseNode {
         ParseNode {
             definition,
+            secondary_definition,
             parent,
             left,
             right,
@@ -156,6 +158,10 @@ impl ParseNode {
 
     pub fn get_definition(&self) -> Definition {
         self.definition
+    }
+
+    pub fn get_secondary_definition(&self) -> SecondaryDefinition {
+        self.secondary_definition
     }
 
     pub fn get_parent(&self) -> Option<usize> {
@@ -362,7 +368,6 @@ fn parse_value_like(
     id: usize,
     definition: Definition,
     check_for_list: &mut bool,
-    parent: Option<usize>,
     next_last_left: &mut Option<usize>,
     nodes: &mut Vec<ParseNode>,
     last_left: Option<usize>,
@@ -370,7 +375,6 @@ fn parse_value_like(
     last_token: LexerToken,
     under_group: Option<usize>,
 ) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), CompilerError> {
-    let mut new_parent = parent;
     let mut our_left = last_left;
     let mut our_id = id;
 
@@ -388,10 +392,9 @@ fn parse_value_like(
             check_for_list,
             under_group,
         )?;
-        nodes.push(ParseNode::new(list_info.0, list_info.1, list_info.2, list_info.3, last_token.clone()));
+        nodes.push(ParseNode::new(list_info.0, SecondaryDefinition::StartGrouping, list_info.1, list_info.2, list_info.3, last_token.clone()));
 
         // update parent to point to list node just created
-        new_parent = Some(id);
         our_left = Some(id);
 
         // last left is the node we are about to create
@@ -445,6 +448,7 @@ fn setup_space_list_check(
 // unary prefix must be preceded by unary prefix or binary and succeded by value or unary prefix
 // unary suffix must be preceded by value or unary suffix, and succeded by unary suffix or binary
 fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition, token: &LexerToken) -> Result<(), CompilerError> {
+    trace!("Composition check between previous {:?} and current {:?}", previous, current);
     match (previous, current) {
         (SecondaryDefinition::None, SecondaryDefinition::EndGrouping)
         | (SecondaryDefinition::None, SecondaryDefinition::BinaryLeftToRight)
@@ -543,6 +547,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
         trace!("");
 
         let id = nodes.len();
+        trace!("Id: {}", id);
 
         let under_group = match current_group {
             None => None,
@@ -551,6 +556,31 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 Some(group) => Some(*group),
             },
         };
+
+        // can't do this update with next_last_left on previous iteration because it could be None
+        // if last left is side effect, we're not inside the side effect and side effect has a parent
+        // change last left to the side effect's parent
+        // current group is gotten above as under_group
+        match last_left {
+            None => (),
+            Some(i) => match nodes.get(i) {
+                None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", i), token)?,
+                Some(node) => {
+                    let node: &ParseNode = node;
+                    trace!("Checking if last left ({:?}) needs to be changed due to end of side effect.", last_left);
+                    if node.get_definition() == Definition::SideEffect && last_left != under_group && node.parent.is_some() {
+                        trace!("Changing last left to side effect's parent {:?}", node.parent);
+                        last_left = node.parent;
+
+                        last_left.and_then(|p| nodes.get(p)).and_then(|node| {
+                            // need to update prev def as well for composition check
+                            previous_second_def = node.secondary_definition;
+                            Some(())
+                        });
+                    }
+                }
+            }
+        }
 
         // most operations will have their right be the next element
         // corrects are made after the fact
@@ -562,7 +592,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
         let (definition, secondary_definition) = get_definition(token.get_token_type());
 
         trace!(
-            "Given priliminary definition of {:?} and secondary definition of {:?}",
+            "Given preliminary definition of {:?} and secondary definition of {:?}",
             definition,
             secondary_definition
         );
@@ -590,7 +620,6 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                     id,
                     definition,
                     &mut check_for_list,
-                    next_parent,
                     &mut next_last_left,
                     &mut nodes,
                     last_left,
@@ -609,6 +638,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                     Some(parent) => match nodes.get(parent) {
                         None => implementation_error_with_token(format!("No node found at next parent index {:?}", parent), token)?,
                         Some(p) => {
+                            let p: &ParseNode = p;
                             if p.definition == Definition::Access {
                                 Definition::Property
                             } else {
@@ -622,7 +652,6 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                     id,
                     definition,
                     &mut check_for_list,
-                    next_parent,
                     &mut next_last_left,
                     &mut nodes,
                     last_left,
@@ -691,7 +720,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                         &mut check_for_list,
                         under_group,
                     )?;
-                    nodes.push(ParseNode::new(list_info.0, list_info.1, list_info.2, list_info.3, last_token.clone()));
+                    nodes.push(ParseNode::new(list_info.0, SecondaryDefinition::StartGrouping, list_info.1, list_info.2, list_info.3, last_token.clone()));
 
                     // update parent to point to list node just created
                     parent = Some(id);
@@ -830,7 +859,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
         );
 
         if definition != Definition::Drop {
-            nodes.push(ParseNode::new(definition, parent, left, right, token.clone()));
+            nodes.push(ParseNode::new(definition, secondary_definition, parent, left, right, token.clone()));
         }
 
         last_left = match next_last_left {
@@ -1382,6 +1411,21 @@ mod composition_errors {
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn side_effect_surrounded_by_value() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens);

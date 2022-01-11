@@ -535,7 +535,7 @@ mod test_utils {
     ) -> Result<(SimpleRuntimeData, Vec<InstructionMetadata>), CompilerError<DataError>> {
         let nodes: Vec<ParseNode> = nodes
             .iter()
-            .map(|v| ParseNode::new(v.0, v.1, v.2, v.3, LexerToken::new(v.4.to_string(), v.5, 0, 0)))
+            .map(|v| ParseNode::new(v.0, SecondaryDefinition::None, v.1, v.2, v.3, LexerToken::new(v.4.to_string(), v.5, 0, 0)))
             .collect();
 
         let mut data = SimpleRuntimeData::new();
