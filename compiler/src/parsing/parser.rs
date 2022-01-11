@@ -779,12 +779,57 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 (definition, parent, None, right)
             }
             SecondaryDefinition::StartSideEffect => {
-                next_parent = Some(id);
+                let mut right = assumed_right;
+                let mut left = last_left;
+                let mut our_id = id;
+
+                // both groupings are considered to be value like
+                // groups will result in a single value after evaluation
+                // nested expressions are replaced with an expression value placeholder
+                if check_for_list {
+                    trace!("List flag is set, creating list node before current node.");
+
+                    // our new id will be +1, since list node will use current id
+                    our_id += 1;
+                    trace!("Updated current id to {}. List id will be {}", our_id, id);
+
+                    left = Some(id);
+
+                    // use current id for list token
+                    let list_info = parse_token(
+                        id,
+                        Definition::List,
+                        last_left,
+                        Some(our_id),
+                        &mut nodes,
+                        &priority_map,
+                        &mut check_for_list,
+                        under_group,
+                    )?;
+
+                    nodes.push(ParseNode::new(
+                        list_info.0,
+                        SecondaryDefinition::StartGrouping,
+                        list_info.1,
+                        list_info.2,
+                        list_info.3,
+                        last_token.clone(),
+                    ));
+
+                    // update right since we just added to node list
+                    right = Some(our_id + 1);
+
+                    // last left  is the node we are about to create
+                    next_last_left = Some(our_id);
+                }
+
+                next_parent = Some(our_id);
+
                 let info = parse_token(
-                    id,
+                    our_id,
                     definition,
-                    last_left,
-                    assumed_right,
+                    left,
+                    right,
                     &mut nodes,
                     &priority_map,
                     &mut check_for_list,
@@ -792,7 +837,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 )?;
 
                 current_group = Some(group_stack.len());
-                group_stack.push(id);
+                group_stack.push(our_id);
 
                 info
             }
@@ -2738,7 +2783,7 @@ mod side_effects {
     }
 
     #[test]
-    fn after_binary() {
+    fn between_binary() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
@@ -2759,6 +2804,108 @@ mod side_effects {
                 (2, Definition::SideEffect, Some(4), None, Some(3)),
                 (3, Definition::Number, Some(2), None, None),
                 (4, Definition::Number, Some(1), Some(2), None),
+            ],
+        );
+    }
+
+    #[test]
+    fn between_space_list() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::List, None, Some(0), Some(4)),
+                (2, Definition::SideEffect, Some(4), None, Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+                (4, Definition::Number, Some(1), Some(2), None),
+            ],
+        );
+    }
+
+    #[test]
+    fn after_binary() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Addition, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, Some(3)),
+                (3, Definition::SideEffect, Some(2), None, Some(4)),
+                (4, Definition::Number, Some(3), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn before_binary() {
+        let tokens = vec![
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            3,
+            &[
+                (0, Definition::SideEffect, Some(2), None, Some(1)),
+                (1, Definition::Number, Some(0), None, None),
+                (2, Definition::Number, Some(3), Some(0), None),
+                (3, Definition::Addition, None, Some(2), Some(4)),
+                (4, Definition::Number, Some(3), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn between_unary() {
+        let tokens = vec![
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::AbsoluteValue, None, None, Some(3)),
+                (1, Definition::SideEffect, Some(3), None, Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+                (3, Definition::Number, Some(0), Some(1), None),
             ],
         );
     }
