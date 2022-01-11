@@ -34,6 +34,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
         (ExpressionDataType::External, ExpressionDataType::External) => compare(this, left_addr, right_addr, Data::get_external)?,
         (ExpressionDataType::Symbol, ExpressionDataType::Symbol) => compare(this, left_addr, right_addr, Data::get_symbol)?,
         (ExpressionDataType::Float, ExpressionDataType::Float) => compare(this, left_addr, right_addr, Data::get_float)?,
+        (ExpressionDataType::Integer, ExpressionDataType::Integer) => compare(this, left_addr, right_addr, Data::get_integer)?,
         (ExpressionDataType::Integer, ExpressionDataType::Float) => {
             let left = this.get_integer(left_addr)?;
             let right = this.get_float(right_addr)?;
@@ -46,7 +47,6 @@ fn data_equal<Data: GarnishLangRuntimeData>(
 
             left == Data::integer_to_float(right)
         },
-        (ExpressionDataType::Integer, ExpressionDataType::Integer) => compare(this, left_addr, right_addr, Data::get_integer)?,
         (ExpressionDataType::Pair, ExpressionDataType::Pair) => {
             let (left1, right1) = this.get_pair(left_addr)?;
             let (left2, right2) = this.get_pair(right_addr)?;
