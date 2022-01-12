@@ -6,6 +6,8 @@ pub enum ExpressionDataType {
     Float,
     Char,
     CharList,
+    Byte,
+    ByteList,
     Symbol,
     Pair,
     List,

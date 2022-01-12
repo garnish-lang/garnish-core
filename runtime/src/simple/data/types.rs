@@ -153,6 +153,52 @@ impl SimpleData for CharListData {
     }
 }
 
+#[derive(Clone, PartialEq, Debug, Hash)]
+pub struct ByteData {
+    value: u8,
+}
+
+impl ByteData {
+    pub fn value(&self) -> u8 {
+        self.value
+    }
+}
+
+impl From<u8> for ByteData {
+    fn from(value: u8) -> Self {
+        ByteData { value }
+    }
+}
+
+impl SimpleData for ByteData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::Byte
+    }
+}
+
+#[derive(Clone, PartialEq, Debug, Hash)]
+pub struct ByteListData {
+    value: Vec<u8>,
+}
+
+impl ByteListData {
+    pub fn value(&self) -> &Vec<u8> {
+        &self.value
+    }
+}
+
+impl From<Vec<u8>> for ByteListData {
+    fn from(value: Vec<u8>) -> Self {
+        ByteListData { value: value }
+    }
+}
+
+impl SimpleData for ByteListData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::ByteList
+    }
+}
+
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct SymbolData {
     value: u64,
@@ -280,7 +326,10 @@ impl SimpleData for ListData {
 
 #[cfg(test)]
 mod simple_tests {
-    use crate::{AnyData, AsAnyData, CharData, CharListData, DataCoersion, ExpressionData, ExpressionDataType, ExternalData, FalseData, FloatData, IntegerData, ListData, PairData, SimpleData, SymbolData, TrueData, UnitData};
+    use crate::{
+        AnyData, AsAnyData, ByteData, ByteListData, CharData, CharListData, DataCoersion, ExpressionData, ExpressionDataType, ExternalData,
+        FalseData, FloatData, IntegerData, ListData, PairData, SimpleData, SymbolData, TrueData, UnitData,
+    };
 
     fn all_data_list(remove: usize) -> Vec<AnyData> {
         let mut data: Vec<AnyData> = vec![
@@ -295,6 +344,9 @@ mod simple_tests {
             ListData::from_items(vec![1, 2, 3], vec![1, 2, 3]).as_any_data(),
             FloatData::from(3.14).as_any_data(), // 9
             CharData::from('a').as_any_data(),
+            CharListData::from("abc").as_any_data(), // 11
+            ByteData::from(10).as_any_data(),
+            ByteListData::from(vec![10u8, 15u8, 20u8]).as_any_data(),
         ];
 
         data.remove(remove);
@@ -461,10 +513,60 @@ mod simple_tests {
 
     #[test]
     fn not_char_list_coersion_fails() {
-        let data: Vec<AnyData> = all_data_list(10);
+        let data: Vec<AnyData> = all_data_list(11);
 
         for d in data {
             assert!(d.as_char_list().is_err());
+        }
+    }
+
+    #[test]
+    fn byte() {
+        assert_eq!(ByteData::from(10).get_type(), ExpressionDataType::Byte);
+    }
+
+    #[test]
+    fn byte_value() {
+        assert_eq!(ByteData::from(10).value(), 10);
+    }
+
+    #[test]
+    fn byte_coersion() {
+        let data = ByteData::from(10).as_any_data().as_byte();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_byte_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(12);
+
+        for d in data {
+            assert!(d.as_byte().is_err());
+        }
+    }
+
+    #[test]
+    fn byte_list() {
+        assert_eq!(ByteListData::from(vec![10, 15, 20]).get_type(), ExpressionDataType::ByteList);
+    }
+
+    #[test]
+    fn byte_list_value() {
+        assert_eq!(ByteListData::from(vec![10, 15, 20]).value(), &[10, 15, 20]);
+    }
+
+    #[test]
+    fn byte_list_coersion() {
+        let data = ByteListData::from(vec![10, 15, 20]).as_any_data().as_byte_list();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_byte_list_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(13);
+
+        for d in data {
+            assert!(d.as_byte_list().is_err());
         }
     }
 

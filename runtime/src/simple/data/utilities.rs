@@ -6,7 +6,7 @@ use crate::simple::data::{
 };
 
 use std::any::Any;
-use crate::CharListData;
+use crate::{ByteData, ByteListData, CharListData};
 
 pub type DataCoersionResult<T> = Result<T, String>;
 
@@ -18,6 +18,8 @@ pub trait DataCoersion {
     fn as_float(&self) -> DataCoersionResult<FloatData>;
     fn as_char(&self) -> DataCoersionResult<CharData>;
     fn as_char_list(&self) -> DataCoersionResult<CharListData>;
+    fn as_byte(&self) -> DataCoersionResult<ByteData>;
+    fn as_byte_list(&self) -> DataCoersionResult<ByteListData>;
     fn as_symbol(&self) -> DataCoersionResult<SymbolData>;
     fn as_expression(&self) -> DataCoersionResult<ExpressionData>;
     fn as_external(&self) -> DataCoersionResult<ExternalData>;
@@ -58,6 +60,14 @@ impl DataCoersion for AnyData {
     }
 
     fn as_char_list(&self) -> DataCoersionResult<CharListData> {
+        downcast_result(self)
+    }
+
+    fn as_byte(&self) -> DataCoersionResult<ByteData> {
+        downcast_result(self)
+    }
+
+    fn as_byte_list(&self) -> DataCoersionResult<ByteListData> {
         downcast_result(self)
     }
 

@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
-use crate::{symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, RuntimeError, SimpleData, SimpleDataList, SymbolData, FloatData, CharData, CharListData};
+use crate::{symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, RuntimeError, SimpleData, SimpleDataList, SymbolData, FloatData, CharData, CharListData, ByteData, ByteListData};
 
 pub mod data;
 
@@ -19,6 +19,7 @@ pub struct SimpleRuntimeData {
     jump_path: Vec<usize>,
     current_list: Option<(Vec<usize>, Vec<usize>)>,
     current_char_list: Option<String>,
+    current_byte_list: Option<Vec<u8>>,
     symbols: HashMap<String, u64>,
     cache: HashMap<u64, usize>,
     lease_stack: Vec<usize>,
@@ -37,6 +38,7 @@ impl SimpleRuntimeData {
             jump_path: vec![],
             current_list: None,
             current_char_list: None,
+            current_byte_list: None,
             symbols: HashMap::new(),
             cache: HashMap::new(),
             lease_stack: vec![],
@@ -165,6 +167,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     type DataLease = usize;
     type Symbol = u64;
     type Char = char;
+    type Byte = u8;
     type Integer = i32;
     type Float = f64;
     type Size = usize;
@@ -237,6 +240,17 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         }
     }
 
+    fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
+        Ok(self.get(addr)?.as_byte_list()?.value().len())
+    }
+
+    fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Integer) -> Result<Self::Byte, Self::Error> {
+        match self.get(addr)?.as_byte_list()?.value().get(item_index as usize) {
+            None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
+            Some(c) => Ok(*c)
+        }
+    }
+
     fn add_unit(&mut self) -> Result<usize, Self::Error> {
         Ok(0)
     }
@@ -259,6 +273,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn add_char(&mut self, value: Self::Char) -> Result<Self::Size, Self::Error> {
         self.cache_add(CharData::from(value))
+    }
+
+    fn add_byte(&mut self, value: Self::Byte) -> Result<Self::Size, Self::Error> {
+        self.cache_add(ByteData::from(value))
     }
 
     fn add_symbol(&mut self, value: &str) -> Result<usize, Self::Error> {
@@ -354,6 +372,33 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         let addr = self.cache_add(data)?;
 
         self.current_char_list = None;
+
+        Ok(addr)
+    }
+
+    fn start_byte_list(&mut self) -> Result<(), Self::Error> {
+        self.current_byte_list = Some(Vec::new());
+        Ok(())
+    }
+
+    fn add_to_byte_list(&mut self, c: Self::Byte) -> Result<(), Self::Error> {
+        match &mut self.current_byte_list {
+            None => Err(format!("Attempting to add to unstarted byte list."))?,
+            Some(l) => l.push(c)
+        }
+
+        Ok(())
+    }
+
+    fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error> {
+        let data = match &self.current_byte_list {
+            None => Err(format!("Attempting to end unstarted byte list."))?,
+            Some(l) => ByteListData::from(l.clone())
+        };
+
+        let addr = self.cache_add(data)?;
+
+        self.current_byte_list = None;
 
         Ok(addr)
     }
