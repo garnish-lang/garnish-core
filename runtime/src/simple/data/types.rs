@@ -230,10 +230,7 @@ impl SimpleData for ListData {
 
 #[cfg(test)]
 mod simple_tests {
-    use crate::{
-        AnyData, AsAnyData, DataCoersion, ExpressionData, ExpressionDataType, ExternalData, FalseData, IntegerData, ListData, PairData, SimpleData,
-        SymbolData, TrueData, UnitData,
-    };
+    use crate::{AnyData, AsAnyData, DataCoersion, ExpressionData, ExpressionDataType, ExternalData, FalseData, FloatData, IntegerData, ListData, PairData, SimpleData, SymbolData, TrueData, UnitData};
 
     fn all_data_list(remove: usize) -> Vec<AnyData> {
         let mut data: Vec<AnyData> = vec![
@@ -246,6 +243,7 @@ mod simple_tests {
             ExpressionData::from(1).as_any_data(),
             PairData::from((1, 2)).as_any_data(), // 7
             ListData::from_items(vec![1, 2, 3], vec![1, 2, 3]).as_any_data(),
+            FloatData::from(3.14).as_any_data(), // 9
         ];
 
         data.remove(remove);
@@ -341,6 +339,31 @@ mod simple_tests {
 
         for d in data {
             assert!(d.as_integer().is_err());
+        }
+    }
+
+    #[test]
+    fn float() {
+        assert_eq!(FloatData::from(3.14).get_type(), ExpressionDataType::Float);
+    }
+
+    #[test]
+    fn float_value() {
+        assert_eq!(FloatData::from(3.14).value(), 3.14);
+    }
+
+    #[test]
+    fn float_coersion() {
+        let data = FloatData::from(3.14).as_any_data().as_float();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_float_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(9);
+
+        for d in data {
+            assert!(d.as_float().is_err());
         }
     }
 

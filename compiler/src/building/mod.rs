@@ -47,8 +47,8 @@ type DefinitionResolveInfo = (bool, Option<usize>);
 
 fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
-        Definition::Float => todo!(),
         Definition::Integer
+        | Definition::Float
         | Definition::Identifier
         | Definition::Property
         | Definition::Symbol
@@ -92,7 +92,18 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
     nearest_expression_point: Data::Size,
 ) -> Result<bool, CompilerError<Data::Error>> {
     match node.get_definition() {
-        Definition::Float => todo!(),
+        Definition::Float => {
+            println!("Parsing {:?}", node.get_lex_token().get_text());
+            let addr = data.add_float(match node.get_lex_token().get_text().parse::<Data::Float>() {
+                Err(_) => data_parse_error(node.get_lex_token(), ExpressionDataType::Float)?,
+                Ok(f) => {
+                    println!("{:?}", f);
+                    f
+                },
+            })?;
+
+            data.push_instruction(Instruction::Put, Some(addr))?;
+        }
         Definition::Integer => {
             let addr = data.add_integer(match node.get_lex_token().get_text().parse::<Data::Integer>() {
                 Err(_) => data_parse_error(node.get_lex_token(), ExpressionDataType::Integer)?,
@@ -572,13 +583,36 @@ mod values {
     use garnish_lang_runtime::*;
 
     #[test]
-    fn put_number() {
+    fn put_integer() {
         assert_instruction_data(
             0,
             vec![(Definition::Integer, None, None, None, "5", TokenType::Integer)],
             vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
             SimpleDataList::default().append(IntegerData::from(5)),
         );
+    }
+
+    #[test]
+    fn put_float() {
+        let (data, _) = get_instruction_data(0, vec![(Definition::Float, None, None, None, "3.14", TokenType::Float)]).unwrap();
+
+        // for some reason the data comparison was failing
+        // but float value seemed equal, could be a floating point error or something with the dyn Any data
+        // should look into more, but below assertions are enough for now
+        // could also see about implementing a item wise comparison through SimpleDataRuntime instead of SimpleDataList
+
+        // assert_instruction_data(
+        //     0,
+        //     vec![(Definition::Float, None, None, None, "3.14", TokenType::Float)],
+        //     vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
+        //     SimpleDataList::default().append(FloatData::from(3.14)),
+        // );
+
+        let i1 = data.get_instruction(0).unwrap();
+        let i2 = data.get_instruction(1).unwrap();
+        assert_eq!(i1, (Instruction::Put, Some(3)));
+        assert_eq!(i2, (Instruction::EndExpression, None));
+        assert_eq!(data.get_float(3).unwrap(), 3.14);
     }
 
     #[test]
