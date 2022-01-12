@@ -9,7 +9,8 @@ use crate::lexing::lexer::*;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
 pub enum Definition {
-    Number,
+    Integer,
+    Float,
     Identifier,
     Property,
     AbsoluteValue,
@@ -43,7 +44,8 @@ pub enum Definition {
 
 impl Definition {
     pub fn is_value_like(self) -> bool {
-        self == Definition::Number
+        self == Definition::Integer
+            || self == Definition::Float
             || self == Definition::Identifier
             || self == Definition::Property
             || self == Definition::Symbol
@@ -90,8 +92,8 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
         TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
         TokenType::Symbol => (Definition::Symbol, SecondaryDefinition::Value),
-        TokenType::Integer => (Definition::Number, SecondaryDefinition::Value),
-        TokenType::Float => todo!(),
+        TokenType::Integer => (Definition::Integer, SecondaryDefinition::Value),
+        TokenType::Float => (Definition::Float, SecondaryDefinition::Value),
         TokenType::Value => (Definition::Value, SecondaryDefinition::Value),
         TokenType::True => (Definition::True, SecondaryDefinition::Value),
         TokenType::False => (Definition::False, SecondaryDefinition::Value),
@@ -215,7 +217,8 @@ fn make_priority_map() -> HashMap<Definition, usize> {
 
     map.insert(Definition::SideEffect, 5);
 
-    map.insert(Definition::Number, 10);
+    map.insert(Definition::Integer, 10);
+    map.insert(Definition::Float, 10);
     map.insert(Definition::Identifier, 10);
     map.insert(Definition::Property, 10);
     map.insert(Definition::Symbol, 10);
@@ -1757,7 +1760,8 @@ mod tests {
     #[test]
     fn value_like_definitions() {
         let value_like = [
-            Definition::Number,
+            Definition::Integer,
+            Definition::Float,
             Definition::Identifier,
             Definition::Property,
             Definition::Symbol,
@@ -1815,7 +1819,7 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
+        assert_result(&result, 0, &[(0, Definition::Integer, None, None, None)]);
     }
 
     #[test]
@@ -1842,8 +1846,18 @@ mod tests {
 
         let result = parse(tokens).unwrap();
 
-        assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
+        assert_result(&result, 0, &[(0, Definition::Integer, None, None, None)]);
     }
+
+    #[test]
+    fn single_float() {
+        let tokens = vec![LexerToken::new("3.14".to_string(), TokenType::Float, 0, 0)];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::Float, None, None, None)]);
+    }
+
 
     #[test]
     fn single_identifier() {
@@ -1913,9 +1927,9 @@ mod tests {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Addition, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -1934,9 +1948,9 @@ mod tests {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Equality, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -1955,9 +1969,9 @@ mod tests {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Apply, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -1976,9 +1990,9 @@ mod tests {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::ApplyTo, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -1997,9 +2011,9 @@ mod tests {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Reapply, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -2018,9 +2032,9 @@ mod tests {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Pair, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -2161,7 +2175,7 @@ mod tests {
             0,
             &[
                 (0, Definition::AbsoluteValue, None, None, Some(1)),
-                (1, Definition::Number, Some(0), None, None),
+                (1, Definition::Integer, Some(0), None, None),
             ],
         );
     }
@@ -2201,9 +2215,9 @@ mod tests {
             2,
             &[
                 (0, Definition::AbsoluteValue, Some(2), None, Some(1)),
-                (1, Definition::Number, Some(0), None, None),
+                (1, Definition::Integer, Some(0), None, None),
                 (2, Definition::Addition, None, Some(0), Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (3, Definition::Integer, Some(2), None, None),
             ],
         );
     }
@@ -2223,10 +2237,10 @@ mod tests {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Addition, None, Some(0), Some(2)),
                 (2, Definition::AbsoluteValue, Some(1), None, Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (3, Definition::Integer, Some(2), None, None),
             ],
         );
     }
@@ -2249,7 +2263,7 @@ mod tests {
                 (0, Definition::AbsoluteValue, None, None, Some(1)),
                 (1, Definition::AbsoluteValue, Some(0), None, Some(2)),
                 (2, Definition::AbsoluteValue, Some(1), None, Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (3, Definition::Integer, Some(2), None, None),
             ],
         );
     }
@@ -2275,7 +2289,7 @@ mod tests {
                 (0, Definition::AbsoluteValue, None, None, Some(1)),
                 (1, Definition::AbsoluteValue, Some(0), None, Some(2)),
                 (2, Definition::AbsoluteValue, Some(1), None, Some(6)),
-                (3, Definition::Number, Some(4), None, None),
+                (3, Definition::Integer, Some(4), None, None),
                 (4, Definition::EmptyApply, Some(5), Some(3), None),
                 (5, Definition::EmptyApply, Some(6), Some(4), None),
                 (6, Definition::EmptyApply, Some(2), Some(5), None),
@@ -2301,13 +2315,13 @@ mod tests {
             &result,
             5,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Addition, Some(3), Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
                 (3, Definition::Addition, Some(5), Some(1), Some(4)),
-                (4, Definition::Number, Some(3), None, None),
+                (4, Definition::Integer, Some(3), None, None),
                 (5, Definition::Addition, None, Some(3), Some(6)),
-                (6, Definition::Number, Some(5), None, None),
+                (6, Definition::Integer, Some(5), None, None),
             ],
         );
     }
@@ -2334,11 +2348,11 @@ mod tests {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Equality, None, Some(0), Some(3)),
-                (2, Definition::Number, Some(3), None, None),
+                (2, Definition::Integer, Some(3), None, None),
                 (3, Definition::Addition, Some(1), Some(2), Some(4)),
-                (4, Definition::Number, Some(3), None, None),
+                (4, Definition::Integer, Some(3), None, None),
             ],
         );
     }
@@ -2378,21 +2392,21 @@ mod tests {
             &result,
             13,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Equality, Some(5), Some(0), Some(3)),
-                (2, Definition::Number, Some(3), None, None),
+                (2, Definition::Integer, Some(3), None, None),
                 (3, Definition::Addition, Some(1), Some(2), Some(4)),
-                (4, Definition::Number, Some(3), None, None),
+                (4, Definition::Integer, Some(3), None, None),
                 (5, Definition::Equality, Some(9), Some(1), Some(7)),
-                (6, Definition::Number, Some(7), None, None),
+                (6, Definition::Integer, Some(7), None, None),
                 (7, Definition::Addition, Some(5), Some(6), Some(8)),
-                (8, Definition::Number, Some(7), None, None),
+                (8, Definition::Integer, Some(7), None, None),
                 (9, Definition::Equality, Some(13), Some(5), Some(11)),
-                (10, Definition::Number, Some(11), None, None),
+                (10, Definition::Integer, Some(11), None, None),
                 (11, Definition::Addition, Some(9), Some(10), Some(12)),
-                (12, Definition::Number, Some(11), None, None),
+                (12, Definition::Integer, Some(11), None, None),
                 (13, Definition::Equality, None, Some(9), Some(14)),
-                (14, Definition::Number, Some(13), None, None),
+                (14, Definition::Integer, Some(13), None, None),
             ],
         );
     }
@@ -2448,21 +2462,21 @@ mod tests {
             &result,
             13,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Equality, Some(5), Some(0), Some(3)),
-                (2, Definition::Number, Some(3), None, None),
+                (2, Definition::Integer, Some(3), None, None),
                 (3, Definition::Addition, Some(1), Some(2), Some(4)),
-                (4, Definition::Number, Some(3), None, None),
+                (4, Definition::Integer, Some(3), None, None),
                 (5, Definition::Equality, Some(9), Some(1), Some(7)),
-                (6, Definition::Number, Some(7), None, None),
+                (6, Definition::Integer, Some(7), None, None),
                 (7, Definition::Addition, Some(5), Some(6), Some(8)),
-                (8, Definition::Number, Some(7), None, None),
+                (8, Definition::Integer, Some(7), None, None),
                 (9, Definition::Equality, Some(13), Some(5), Some(11)),
-                (10, Definition::Number, Some(11), None, None),
+                (10, Definition::Integer, Some(11), None, None),
                 (11, Definition::Addition, Some(9), Some(10), Some(12)),
-                (12, Definition::Number, Some(11), None, None),
+                (12, Definition::Integer, Some(11), None, None),
                 (13, Definition::Equality, None, Some(9), Some(14)),
-                (14, Definition::Number, Some(13), None, None),
+                (14, Definition::Integer, Some(13), None, None),
             ],
         );
     }
@@ -2553,7 +2567,7 @@ mod tests {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Addition, None, Some(0), Some(5)),
                 (2, Definition::Identifier, Some(3), None, None),
                 (3, Definition::Access, Some(5), Some(2), Some(4)),
@@ -2584,9 +2598,9 @@ mod lists {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::CommaList, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -2633,7 +2647,7 @@ mod lists {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::CommaList, None, Some(0), None),
             ],
         );
@@ -2654,10 +2668,10 @@ mod lists {
             &result,
             2,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::CommaList, Some(2), Some(0), None),
                 (2, Definition::Subexpression, None, Some(1), Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (3, Definition::Integer, Some(2), None, None),
             ],
         );
     }
@@ -2678,7 +2692,7 @@ mod lists {
             0,
             &[
                 (0, Definition::Group, None, None, Some(2)),
-                (1, Definition::Number, Some(2), None, None),
+                (1, Definition::Integer, Some(2), None, None),
                 (2, Definition::CommaList, Some(0), Some(1), None),
             ],
         );
@@ -2698,7 +2712,7 @@ mod lists {
             0,
             &[
                 (0, Definition::CommaList, None, None, Some(1)),
-                (1, Definition::Number, Some(0), None, None),
+                (1, Definition::Integer, Some(0), None, None),
             ],
         );
     }
@@ -2718,10 +2732,10 @@ mod lists {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Subexpression, None, Some(0), Some(2)),
                 (2, Definition::CommaList, Some(1), None, Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (3, Definition::Integer, Some(2), None, None),
             ],
         );
     }
@@ -2743,7 +2757,7 @@ mod lists {
             &[
                 (0, Definition::Group, None, None, Some(1)),
                 (1, Definition::CommaList, Some(0), None, Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -2770,19 +2784,19 @@ mod lists {
             &result,
             9,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::CommaList, Some(9), Some(0), Some(7)),
                 //
-                (2, Definition::Number, Some(3), None, None),
+                (2, Definition::Integer, Some(3), None, None),
                 (3, Definition::List, Some(5), Some(2), Some(4)),
-                (4, Definition::Number, Some(3), None, None),
+                (4, Definition::Integer, Some(3), None, None),
                 (5, Definition::List, Some(7), Some(3), Some(6)),
-                (6, Definition::Number, Some(5), None, None),
+                (6, Definition::Integer, Some(5), None, None),
                 (7, Definition::List, Some(1), Some(5), Some(8)),
-                (8, Definition::Number, Some(7), None, None),
+                (8, Definition::Integer, Some(7), None, None),
                 //
                 (9, Definition::CommaList, None, Some(1), Some(10)),
-                (10, Definition::Number, Some(9), None, None),
+                (10, Definition::Integer, Some(9), None, None),
             ],
         );
     }
@@ -2801,9 +2815,9 @@ mod lists {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::List, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -2830,7 +2844,7 @@ mod lists {
             &result,
             9,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::List, Some(3), Some(0), Some(2)),
                 (2, Definition::Identifier, Some(1), None, None),
                 (3, Definition::List, Some(5), Some(1), Some(4)),
@@ -2867,13 +2881,13 @@ mod lists {
             &result,
             3,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Addition, Some(3), Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
                 (3, Definition::List, None, Some(1), Some(5)),
-                (4, Definition::Number, Some(5), None, None),
+                (4, Definition::Integer, Some(5), None, None),
                 (5, Definition::Addition, Some(3), Some(4), Some(6)),
-                (6, Definition::Number, Some(5), None, None),
+                (6, Definition::Integer, Some(5), None, None),
             ],
         );
     }
@@ -2900,7 +2914,7 @@ mod side_effects {
             0,
             &[
                 (0, Definition::SideEffect, None, None, Some(1)),
-                (1, Definition::Number, Some(0), None, None),
+                (1, Definition::Integer, Some(0), None, None),
             ],
         );
     }
@@ -2920,9 +2934,9 @@ mod side_effects {
             &result,
             0,
             &[
-                (0, Definition::Number, None, None, Some(1)),
+                (0, Definition::Integer, None, None, Some(1)),
                 (1, Definition::SideEffect, Some(0), None, Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -2943,8 +2957,8 @@ mod side_effects {
             2,
             &[
                 (0, Definition::SideEffect, Some(2), None, Some(1)),
-                (1, Definition::Number, Some(0), None, None),
-                (2, Definition::Number, None, Some(0), None),
+                (1, Definition::Integer, Some(0), None, None),
+                (2, Definition::Integer, None, Some(0), None),
             ],
         );
     }
@@ -2966,11 +2980,11 @@ mod side_effects {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Addition, None, Some(0), Some(4)),
                 (2, Definition::SideEffect, Some(4), None, Some(3)),
-                (3, Definition::Number, Some(2), None, None),
-                (4, Definition::Number, Some(1), Some(2), None),
+                (3, Definition::Integer, Some(2), None, None),
+                (4, Definition::Integer, Some(1), Some(2), None),
             ],
         );
     }
@@ -2992,11 +3006,11 @@ mod side_effects {
             &result,
             3,
             &[
-                (0, Definition::Number, Some(3), None, Some(1)),
+                (0, Definition::Integer, Some(3), None, Some(1)),
                 (1, Definition::SideEffect, Some(0), None, Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
                 (3, Definition::List, None, Some(0), Some(4)),
-                (4, Definition::Number, Some(3), None, None),
+                (4, Definition::Integer, Some(3), None, None),
             ],
         );
     }
@@ -3017,9 +3031,9 @@ mod side_effects {
             &result,
             0,
             &[
-                (0, Definition::Number, None, None, Some(1)),
+                (0, Definition::Integer, None, None, Some(1)),
                 (1, Definition::SideEffect, Some(0), None, Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -3041,11 +3055,11 @@ mod side_effects {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Addition, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, Some(3)),
+                (2, Definition::Integer, Some(1), None, Some(3)),
                 (3, Definition::SideEffect, Some(2), None, Some(4)),
-                (4, Definition::Number, Some(3), None, None),
+                (4, Definition::Integer, Some(3), None, None),
             ],
         );
     }
@@ -3068,10 +3082,10 @@ mod side_effects {
             3,
             &[
                 (0, Definition::SideEffect, Some(2), None, Some(1)),
-                (1, Definition::Number, Some(0), None, None),
-                (2, Definition::Number, Some(3), Some(0), None),
+                (1, Definition::Integer, Some(0), None, None),
+                (2, Definition::Integer, Some(3), Some(0), None),
                 (3, Definition::Addition, None, Some(2), Some(4)),
-                (4, Definition::Number, Some(3), None, None),
+                (4, Definition::Integer, Some(3), None, None),
             ],
         );
     }
@@ -3094,8 +3108,8 @@ mod side_effects {
             &[
                 (0, Definition::AbsoluteValue, None, None, Some(3)),
                 (1, Definition::SideEffect, Some(3), None, Some(2)),
-                (2, Definition::Number, Some(1), None, None),
-                (3, Definition::Number, Some(0), Some(1), None),
+                (2, Definition::Integer, Some(1), None, None),
+                (3, Definition::Integer, Some(0), Some(1), None),
             ],
         );
     }
@@ -3146,7 +3160,7 @@ mod groups {
         assert_group_nested_results(
             0,
             tokens,
-            &[(0, Definition::Group, None, None, Some(1)), (1, Definition::Number, Some(0), None, None)],
+            &[(0, Definition::Group, None, None, Some(1)), (1, Definition::Integer, Some(0), None, None)],
         )
     }
 
@@ -3163,7 +3177,7 @@ mod groups {
         assert_group_nested_results(
             0,
             tokens,
-            &[(0, Definition::Group, None, None, Some(1)), (1, Definition::Number, Some(0), None, None)],
+            &[(0, Definition::Group, None, None, Some(1)), (1, Definition::Integer, Some(0), None, None)],
         )
     }
 
@@ -3181,10 +3195,10 @@ mod groups {
             1,
             tokens,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::List, None, Some(0), Some(2)),
                 (2, Definition::Group, Some(1), None, Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (3, Definition::Integer, Some(2), None, None),
             ],
         )
     }
@@ -3205,10 +3219,10 @@ mod groups {
             1,
             tokens,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::List, None, Some(0), Some(2)),
                 (2, Definition::Group, Some(1), None, Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (3, Definition::Integer, Some(2), None, None),
             ],
         )
     }
@@ -3229,12 +3243,12 @@ mod groups {
             1,
             tokens,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::List, None, Some(0), Some(2)),
                 (2, Definition::Group, Some(1), None, Some(4)),
-                (3, Definition::Number, Some(4), None, None),
+                (3, Definition::Integer, Some(4), None, None),
                 (4, Definition::List, Some(2), Some(3), Some(5)),
-                (5, Definition::Number, Some(4), None, None),
+                (5, Definition::Integer, Some(4), None, None),
             ],
         )
     }
@@ -3260,14 +3274,14 @@ mod groups {
             tokens,
             &[
                 (0, Definition::Group, Some(4), None, Some(2)),
-                (1, Definition::Number, Some(2), None, None),
+                (1, Definition::Integer, Some(2), None, None),
                 (2, Definition::List, Some(0), Some(1), Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (3, Definition::Integer, Some(2), None, None),
                 (4, Definition::List, None, Some(0), Some(5)),
                 (5, Definition::Group, Some(4), None, Some(7)),
-                (6, Definition::Number, Some(7), None, None),
+                (6, Definition::Integer, Some(7), None, None),
                 (7, Definition::List, Some(5), Some(6), Some(8)),
-                (8, Definition::Number, Some(7), None, None),
+                (8, Definition::Integer, Some(7), None, None),
             ],
         )
     }
@@ -3287,9 +3301,9 @@ mod groups {
             tokens,
             &[
                 (0, Definition::Group, None, None, Some(2)),
-                (1, Definition::Number, Some(2), None, None),
+                (1, Definition::Integer, Some(2), None, None),
                 (2, Definition::Addition, Some(0), Some(1), Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (3, Definition::Integer, Some(2), None, None),
             ],
         );
     }
@@ -3312,14 +3326,14 @@ mod groups {
             6,
             tokens,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Addition, Some(6), Some(0), Some(2)),
                 (2, Definition::Group, Some(1), None, Some(4)),
-                (3, Definition::Number, Some(4), None, None),
+                (3, Definition::Integer, Some(4), None, None),
                 (4, Definition::Addition, Some(2), Some(3), Some(5)),
-                (5, Definition::Number, Some(4), None, None),
+                (5, Definition::Integer, Some(4), None, None),
                 (6, Definition::Addition, None, Some(1), Some(7)),
-                (7, Definition::Number, Some(6), None, None),
+                (7, Definition::Integer, Some(6), None, None),
             ],
         );
     }
@@ -3340,9 +3354,9 @@ mod groups {
             tokens,
             &[
                 (0, Definition::Group, Some(4), None, Some(2)),
-                (1, Definition::Number, Some(2), None, None),
+                (1, Definition::Integer, Some(2), None, None),
                 (2, Definition::Addition, Some(0), Some(1), Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (3, Definition::Integer, Some(2), None, None),
                 (4, Definition::EmptyApply, None, Some(0), None),
             ],
         );
@@ -3365,9 +3379,9 @@ mod groups {
             &[
                 (0, Definition::AbsoluteValue, None, None, Some(1)),
                 (1, Definition::Group, Some(0), None, Some(3)),
-                (2, Definition::Number, Some(3), None, None),
+                (2, Definition::Integer, Some(3), None, None),
                 (3, Definition::Addition, Some(1), Some(2), Some(4)),
-                (4, Definition::Number, Some(3), None, None),
+                (4, Definition::Integer, Some(3), None, None),
             ],
         );
     }
@@ -3400,23 +3414,23 @@ mod groups {
             &[
                 // group 1
                 (0, Definition::Group, None, None, Some(12)),
-                (1, Definition::Number, Some(2), None, None),
+                (1, Definition::Integer, Some(2), None, None),
                 (2, Definition::Addition, Some(12), Some(1), Some(3)),
                 // group 2
                 (3, Definition::Group, Some(2), None, Some(10)),
-                (4, Definition::Number, Some(5), None, None),
+                (4, Definition::Integer, Some(5), None, None),
                 (5, Definition::Addition, Some(10), Some(4), Some(6)),
                 // group 3
                 (6, Definition::Group, Some(5), None, Some(8)),
-                (7, Definition::Number, Some(8), None, None),
+                (7, Definition::Integer, Some(8), None, None),
                 (8, Definition::Addition, Some(6), Some(7), Some(9)),
-                (9, Definition::Number, Some(8), None, None),
+                (9, Definition::Integer, Some(8), None, None),
                 // group 2
                 (10, Definition::Addition, Some(3), Some(5), Some(11)),
-                (11, Definition::Number, Some(10), None, None),
+                (11, Definition::Integer, Some(10), None, None),
                 // group 1
                 (12, Definition::Addition, Some(0), Some(2), Some(13)),
-                (13, Definition::Number, Some(12), None, None),
+                (13, Definition::Integer, Some(12), None, None),
             ],
         );
     }
@@ -3438,9 +3452,9 @@ mod groups {
             0,
             &[
                 (0, Definition::Group, None, None, Some(2)),
-                (1, Definition::Number, Some(2), None, None),
+                (1, Definition::Integer, Some(2), None, None),
                 (2, Definition::List, Some(0), Some(1), Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (3, Definition::Integer, Some(2), None, None),
             ],
         );
     }
@@ -3465,12 +3479,12 @@ mod groups {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Addition, None, Some(0), Some(2)),
                 (2, Definition::Group, Some(1), None, Some(4)),
-                (3, Definition::Number, Some(4), None, None),
+                (3, Definition::Integer, Some(4), None, None),
                 (4, Definition::List, Some(2), Some(3), Some(5)),
-                (5, Definition::Number, Some(4), None, None),
+                (5, Definition::Integer, Some(4), None, None),
             ],
         );
     }
@@ -3492,9 +3506,9 @@ mod groups {
             0,
             &[
                 (0, Definition::NestedExpression, None, None, Some(2)),
-                (1, Definition::Number, Some(2), None, None),
+                (1, Definition::Integer, Some(2), None, None),
                 (2, Definition::Subexpression, Some(0), Some(1), Some(3)),
-                (3, Definition::Number, Some(2), None, None),
+                (3, Definition::Integer, Some(2), None, None),
             ],
         );
     }
@@ -3519,12 +3533,12 @@ mod groups {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Addition, None, Some(0), Some(2)),
                 (2, Definition::NestedExpression, Some(1), None, Some(4)),
-                (3, Definition::Number, Some(4), None, None),
+                (3, Definition::Integer, Some(4), None, None),
                 (4, Definition::Subexpression, Some(2), Some(3), Some(5)),
-                (5, Definition::Number, Some(4), None, None),
+                (5, Definition::Integer, Some(4), None, None),
             ],
         );
     }
@@ -3550,9 +3564,9 @@ mod conditionals {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::JumpIfTrue, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -3571,9 +3585,9 @@ mod conditionals {
             &result,
             1,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::JumpIfFalse, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
@@ -3596,13 +3610,13 @@ mod conditionals {
             &result,
             3,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::JumpIfTrue, Some(3), Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
                 (3, Definition::ElseJump, None, Some(1), Some(5)),
-                (4, Definition::Number, Some(5), None, None),
+                (4, Definition::Integer, Some(5), None, None),
                 (5, Definition::JumpIfTrue, Some(3), Some(4), Some(6)),
-                (6, Definition::Number, Some(5), None, None),
+                (6, Definition::Integer, Some(5), None, None),
             ],
         );
     }
@@ -3629,19 +3643,19 @@ mod conditionals {
             &result,
             7,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::JumpIfTrue, Some(3), Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
                 // second
                 (3, Definition::ElseJump, Some(7), Some(1), Some(5)),
-                (4, Definition::Number, Some(5), None, None),
+                (4, Definition::Integer, Some(5), None, None),
                 (5, Definition::JumpIfTrue, Some(3), Some(4), Some(6)),
-                (6, Definition::Number, Some(5), None, None),
+                (6, Definition::Integer, Some(5), None, None),
                 // third
                 (7, Definition::ElseJump, None, Some(3), Some(9)),
-                (8, Definition::Number, Some(9), None, None),
+                (8, Definition::Integer, Some(9), None, None),
                 (9, Definition::JumpIfTrue, Some(7), Some(8), Some(10)),
-                (10, Definition::Number, Some(9), None, None),
+                (10, Definition::Integer, Some(9), None, None),
             ],
         );
     }
@@ -3668,19 +3682,19 @@ mod conditionals {
             &result,
             7,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::JumpIfFalse, Some(3), Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
                 // second
                 (3, Definition::ElseJump, Some(7), Some(1), Some(5)),
-                (4, Definition::Number, Some(5), None, None),
+                (4, Definition::Integer, Some(5), None, None),
                 (5, Definition::JumpIfTrue, Some(3), Some(4), Some(6)),
-                (6, Definition::Number, Some(5), None, None),
+                (6, Definition::Integer, Some(5), None, None),
                 // third
                 (7, Definition::ElseJump, None, Some(3), Some(9)),
-                (8, Definition::Number, Some(9), None, None),
+                (8, Definition::Integer, Some(9), None, None),
                 (9, Definition::JumpIfFalse, Some(7), Some(8), Some(10)),
-                (10, Definition::Number, Some(9), None, None),
+                (10, Definition::Integer, Some(9), None, None),
             ],
         );
     }
@@ -3701,11 +3715,11 @@ mod conditionals {
             &result,
             3,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::JumpIfTrue, Some(3), Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
                 (3, Definition::ElseJump, None, Some(1), Some(4)),
-                (4, Definition::Number, Some(3), None, None),
+                (4, Definition::Integer, Some(3), None, None),
             ],
         );
     }
@@ -3726,11 +3740,11 @@ mod conditionals {
             &result,
             3,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Reapply, Some(3), Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
+                (2, Definition::Integer, Some(1), None, None),
                 (3, Definition::ElseJump, None, Some(1), Some(4)),
-                (4, Definition::Number, Some(3), None, None),
+                (4, Definition::Integer, Some(3), None, None),
             ],
         );
     }
@@ -3755,14 +3769,14 @@ mod conditionals {
             &result,
             6,
             &[
-                (0, Definition::Number, Some(1), None, None),
+                (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Addition, Some(6), Some(0), Some(2)),
                 (2, Definition::Group, Some(1), None, Some(4)),
-                (3, Definition::Number, Some(4), None, None),
+                (3, Definition::Integer, Some(4), None, None),
                 (4, Definition::JumpIfTrue, Some(2), Some(3), Some(5)),
-                (5, Definition::Number, Some(4), None, None),
+                (5, Definition::Integer, Some(4), None, None),
                 (6, Definition::Addition, None, Some(1), Some(7)),
-                (7, Definition::Number, Some(6), None, None),
+                (7, Definition::Integer, Some(6), None, None),
             ],
         );
     }
@@ -3784,7 +3798,7 @@ mod annotations {
 
         let result = parse(tokens).unwrap();
 
-        assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
+        assert_result(&result, 0, &[(0, Definition::Integer, None, None, None)]);
     }
 
     #[test]
@@ -3797,6 +3811,6 @@ mod annotations {
 
         let result = parse(tokens).unwrap();
 
-        assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
+        assert_result(&result, 0, &[(0, Definition::Integer, None, None, None)]);
     }
 }
