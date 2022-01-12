@@ -190,6 +190,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.get(index)?.as_char()?.value())
     }
 
+    fn get_byte(&self, addr: Self::Size) -> Result<Self::Byte, Self::Error> {
+        Ok(self.get(addr)?.as_byte()?.value())
+    }
+
     fn get_symbol(&self, index: usize) -> Result<u64, Self::Error> {
         Ok(self.get(index)?.as_symbol()?.value())
     }

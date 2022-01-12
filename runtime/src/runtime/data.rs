@@ -39,6 +39,7 @@ pub trait GarnishLangRuntimeData {
     fn get_integer(&self, addr: Self::Size) -> Result<Self::Integer, Self::Error>;
     fn get_float(&self, addr: Self::Size) -> Result<Self::Float, Self::Error>;
     fn get_char(&self, addr: Self::Size) -> Result<Self::Char, Self::Error>;
+    fn get_byte(&self, addr: Self::Size) -> Result<Self::Byte, Self::Error>;
     fn get_symbol(&self, addr: Self::Size) -> Result<Self::Symbol, Self::Error>;
     fn get_expression(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_external(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
