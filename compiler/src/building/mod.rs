@@ -93,13 +93,9 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
 ) -> Result<bool, CompilerError<Data::Error>> {
     match node.get_definition() {
         Definition::Float => {
-            println!("Parsing {:?}", node.get_lex_token().get_text());
             let addr = data.add_float(match node.get_lex_token().get_text().parse::<Data::Float>() {
                 Err(_) => data_parse_error(node.get_lex_token(), ExpressionDataType::Float)?,
-                Ok(f) => {
-                    println!("{:?}", f);
-                    f
-                },
+                Ok(f) => f,
             })?;
 
             data.push_instruction(Instruction::Put, Some(addr))?;
