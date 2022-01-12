@@ -7,20 +7,24 @@ pub use utilities::*;
 use crate::runtime::types::ExpressionDataType;
 use std::any::Any;
 use std::fmt::Debug;
-use std::slice::Iter;
 
 pub trait SimpleData: Any + Debug + std::hash::Hash {
     fn get_type(&self) -> ExpressionDataType;
 }
 
 #[derive(Debug)]
-pub struct AnyData {
+pub(crate) struct AnyData {
     pub(crate) data: Box<dyn Any>,
+    data_type: ExpressionDataType,
 }
 
 impl AnyData {
-    pub(crate) fn new(data: Box<dyn Any>) -> Self {
-        AnyData { data }
+    pub(crate) fn new(data: Box<dyn Any>, data_type: ExpressionDataType) -> Self {
+        AnyData { data , data_type}
+    }
+
+    pub(crate) fn get_data_type(&self) -> ExpressionDataType {
+        self.data_type
     }
 }
 
@@ -30,7 +34,8 @@ pub(crate) trait AsAnyData {
 
 impl<T: SimpleData> AsAnyData for T {
     fn as_any_data(self) -> AnyData {
-        AnyData::new(Box::new(self))
+        let t = self.get_type();
+        AnyData::new(Box::new(self), t)
     }
 }
 
@@ -59,16 +64,12 @@ impl SimpleDataList {
         self.list.push(item.as_any_data());
     }
 
-    pub fn get(&self, index: usize) -> Option<&AnyData> {
+    pub(crate) fn get(&self, index: usize) -> Option<&AnyData> {
         self.list.get(index)
     }
 
     pub fn len(&self) -> usize {
         self.list.len()
-    }
-
-    pub fn iter(&self) -> Iter<'_, AnyData> {
-        self.list.iter()
     }
 }
 

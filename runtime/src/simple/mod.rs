@@ -4,9 +4,9 @@ use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
 use crate::{
-    symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, FalseData, GarnishLangRuntimeContext,
+    symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, GarnishLangRuntimeContext,
     GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, RuntimeError,
-    SimpleData, SimpleDataList, SymbolData, TrueData, UnitData, FloatData
+    SimpleData, SimpleDataList, SymbolData, FloatData
 };
 
 pub mod data;
@@ -45,7 +45,7 @@ impl SimpleRuntimeData {
         }
     }
 
-    pub fn get(&self, index: usize) -> Result<&AnyData, DataError> {
+    pub(crate) fn get(&self, index: usize) -> Result<&AnyData, DataError> {
         match self.simple_data.get(index) {
             None => Err(format!("No data at addr {:?}", index))?,
             Some(d) => Ok(d),
@@ -172,32 +172,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error> {
         let d = self.get(index)?;
-        let i = &d.data;
-        let t = if i.is::<UnitData>() {
-            ExpressionDataType::Unit
-        } else if i.is::<TrueData>() {
-            ExpressionDataType::True
-        } else if i.is::<FalseData>() {
-            ExpressionDataType::False
-        } else if i.is::<IntegerData>() {
-            ExpressionDataType::Integer
-        } else if i.is::<FloatData>() {
-            ExpressionDataType::Float
-        } else if i.is::<SymbolData>() {
-            ExpressionDataType::Symbol
-        } else if i.is::<ExternalData>() {
-            ExpressionDataType::External
-        } else if i.is::<ExpressionData>() {
-            ExpressionDataType::Expression
-        } else if i.is::<PairData>() {
-            ExpressionDataType::Pair
-        } else if i.is::<ListData>() {
-            ExpressionDataType::List
-        } else {
-            Err(format!("No data type for object at index {:?}.", index))?
-        };
 
-        Ok(t)
+        Ok(d.get_data_type())
     }
 
     fn get_integer(&self, index: usize) -> Result<i32, Self::Error> {
