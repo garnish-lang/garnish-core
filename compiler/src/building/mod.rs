@@ -555,7 +555,7 @@ mod general {
 
     #[test]
     fn drop_definition_is_err() {
-        let result = get_instruction_data(0, vec![(Definition::Drop, None, None, None, "5", TokenType::Number)]);
+        let result = get_instruction_data(0, vec![(Definition::Drop, None, None, None, "5", TokenType::Integer)]);
 
         assert!(result.is_err())
     }
@@ -573,7 +573,7 @@ mod values {
     fn put_number() {
         assert_instruction_data(
             0,
-            vec![(Definition::Number, None, None, None, "5", TokenType::Number)],
+            vec![(Definition::Number, None, None, None, "5", TokenType::Integer)],
             vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
             SimpleDataList::default().append(IntegerData::from(5)),
         );
@@ -657,7 +657,7 @@ mod metadata {
 
     #[test]
     fn created() {
-        let (_, metadata) = get_instruction_data(0, vec![(Definition::Number, None, None, None, "5", TokenType::Number)]).unwrap();
+        let (_, metadata) = get_instruction_data(0, vec![(Definition::Number, None, None, None, "5", TokenType::Integer)]).unwrap();
 
         assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
@@ -668,7 +668,7 @@ mod metadata {
             0,
             vec![
                 (Definition::Group, None, None, Some(1), "(", TokenType::StartGroup),
-                (Definition::Number, Some(0), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(0), None, None, "5", TokenType::Integer),
             ],
         )
         .unwrap();
@@ -681,11 +681,11 @@ mod metadata {
         let (_, metadata) = get_instruction_data(
             3,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::JumpIfTrue, Some(3), Some(0), Some(2), "?>", TokenType::JumpIfTrue),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
                 (Definition::ElseJump, None, Some(1), Some(4), "|>", TokenType::ElseJump),
-                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Integer),
             ],
         )
         .unwrap();
@@ -708,9 +708,9 @@ mod metadata {
         let (_, metadata) = get_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::Subexpression, None, Some(0), Some(2), "\n\n", TokenType::Subexpression),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
         )
         .unwrap();
@@ -793,9 +793,9 @@ mod operations {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::Addition, None, Some(0), Some(2), "+", TokenType::PlusSign),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -812,9 +812,9 @@ mod operations {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::Addition, None, Some(0), Some(2), "+", TokenType::PlusSign),
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -895,13 +895,13 @@ mod operations {
         assert_instruction_data(
             5,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::Addition, Some(3), Some(0), Some(2), "+", TokenType::EmptyApply),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
                 (Definition::Addition, Some(5), Some(1), Some(4), "+", TokenType::EmptyApply),
-                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Integer),
                 (Definition::Addition, None, Some(3), Some(6), "+", TokenType::EmptyApply),
-                (Definition::Number, Some(5), None, None, "20", TokenType::Number),
+                (Definition::Number, Some(5), None, None, "20", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -926,9 +926,9 @@ mod operations {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::Equality, None, Some(0), Some(2), "==", TokenType::Equality),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -945,9 +945,9 @@ mod operations {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::Pair, None, Some(0), Some(2), "=", TokenType::Pair),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -964,9 +964,9 @@ mod operations {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::Access, None, Some(0), Some(2), ".", TokenType::Period),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -984,7 +984,7 @@ mod operations {
             0,
             vec![
                 (Definition::AccessLeftInternal, None, None, Some(1), "_.", TokenType::LeftInternal),
-                (Definition::Number, Some(0), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(0), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1000,7 +1000,7 @@ mod operations {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
                 (Definition::AccessRightInternal, None, Some(0), None, "._", TokenType::RightInternal),
             ],
             vec![
@@ -1017,7 +1017,7 @@ mod operations {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
                 (Definition::AccessLengthInternal, None, Some(0), None, ".|", TokenType::LengthInternal),
             ],
             vec![
@@ -1034,9 +1034,9 @@ mod operations {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::Subexpression, None, Some(0), Some(2), "\n\n", TokenType::Subexpression),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1053,9 +1053,9 @@ mod operations {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::Apply, None, Some(0), Some(2), "~", TokenType::Apply),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1072,9 +1072,9 @@ mod operations {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::ApplyTo, None, Some(0), Some(2), "~>", TokenType::ApplyTo),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1091,9 +1091,9 @@ mod operations {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::Reapply, None, Some(0), Some(2), "^~", TokenType::Reapply),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1140,9 +1140,9 @@ mod lists {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::List, None, Some(0), Some(2), ",", TokenType::Comma),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1169,7 +1169,7 @@ mod lists {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::CommaList, None, Some(0), None, ",", TokenType::Comma),
             ],
             vec![
@@ -1187,7 +1187,7 @@ mod lists {
             0,
             vec![
                 (Definition::CommaList, None, None, Some(1), ",", TokenType::Comma),
-                (Definition::Number, Some(2), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(2), None, None, "5", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1203,13 +1203,13 @@ mod lists {
         assert_instruction_data(
             5,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::List, Some(3), Some(0), Some(2), ",", TokenType::Comma),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
                 (Definition::List, Some(5), Some(1), Some(4), ",", TokenType::Comma),
-                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Integer),
                 (Definition::List, None, Some(3), Some(6), ",", TokenType::Comma),
-                (Definition::Number, Some(5), None, None, "20", TokenType::Number),
+                (Definition::Number, Some(5), None, None, "20", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1232,18 +1232,18 @@ mod lists {
         assert_instruction_data(
             10,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::List, Some(3), Some(0), Some(2), ",", TokenType::Comma), // 1
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
                 (Definition::List, Some(8), Some(1), Some(4), ",", TokenType::Comma), // 3
                 (Definition::Group, None, None, Some(6), "(", TokenType::StartGroup),
-                (Definition::Number, Some(6), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(6), None, None, "15", TokenType::Integer),
                 (Definition::List, Some(4), Some(5), Some(7), ",", TokenType::Comma), // 6
-                (Definition::Number, Some(6), None, None, "20", TokenType::Number),
+                (Definition::Number, Some(6), None, None, "20", TokenType::Integer),
                 (Definition::List, Some(10), Some(3), Some(9), ",", TokenType::Comma), // 8
-                (Definition::Number, Some(8), None, None, "25", TokenType::Number),
+                (Definition::Number, Some(8), None, None, "25", TokenType::Integer),
                 (Definition::List, None, Some(8), Some(11), ",", TokenType::Comma), // 10
-                (Definition::Number, Some(10), None, None, "30", TokenType::Number),
+                (Definition::Number, Some(10), None, None, "30", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1271,19 +1271,19 @@ mod lists {
         assert_instruction_data(
             9,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::CommaList, Some(9), Some(0), Some(7), ",", TokenType::Comma),
                 //
-                (Definition::Number, Some(3), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(3), None, None, "10", TokenType::Integer),
                 (Definition::List, Some(5), Some(2), Some(4), " ", TokenType::Whitespace),
-                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Integer),
                 (Definition::List, Some(7), Some(3), Some(6), " ", TokenType::Whitespace),
-                (Definition::Number, Some(5), None, None, "20", TokenType::Number),
+                (Definition::Number, Some(5), None, None, "20", TokenType::Integer),
                 (Definition::List, Some(1), Some(5), Some(8), " ", TokenType::Whitespace),
-                (Definition::Number, Some(7), None, None, "25", TokenType::Number),
+                (Definition::Number, Some(7), None, None, "25", TokenType::Integer),
                 //
                 (Definition::CommaList, None, Some(1), Some(10), ",", TokenType::Comma),
-                (Definition::Number, Some(9), None, None, "30", TokenType::Number),
+                (Definition::Number, Some(9), None, None, "30", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1319,9 +1319,9 @@ mod groups {
             0,
             vec![
                 (Definition::Group, None, None, Some(2), "(", TokenType::StartGroup),
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::Addition, Some(0), Some(1), Some(3), "+", TokenType::PlusSign),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1346,9 +1346,9 @@ mod side_effects {
             0,
             vec![
                 (Definition::SideEffect, None, None, Some(2), "[", TokenType::StartSideEffect),
-                (Definition::Number, Some(2), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(2), None, None, "5", TokenType::Integer),
                 (Definition::Addition, Some(0), Some(1), Some(3), "+", TokenType::PlusSign),
-                (Definition::Number, Some(2), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(2), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::StartSideEffect, None),
@@ -1367,11 +1367,11 @@ mod side_effects {
         assert_instruction_data(
             0,
             vec![
-                (Definition::Number, None, None, Some(1), "5", TokenType::Number),
+                (Definition::Number, None, None, Some(1), "5", TokenType::Integer),
                 (Definition::SideEffect, Some(0), None, Some(3), "[", TokenType::StartSideEffect),
-                (Definition::Number, Some(3), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(3), None, None, "10", TokenType::Integer),
                 (Definition::Addition, Some(1), Some(2), Some(4), "+", TokenType::PlusSign),
-                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1395,10 +1395,10 @@ mod side_effects {
             4,
             vec![
                 (Definition::SideEffect, Some(4), None, Some(2), "[", TokenType::StartSideEffect),
-                (Definition::Number, Some(2), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(2), None, None, "5", TokenType::Integer),
                 (Definition::Addition, Some(0), Some(1), Some(3), "+", TokenType::PlusSign),
-                (Definition::Number, Some(2), None, None, "10", TokenType::Number),
-                (Definition::Number, None, Some(0), None, "15", TokenType::Number),
+                (Definition::Number, Some(2), None, None, "10", TokenType::Integer),
+                (Definition::Number, None, Some(0), None, "15", TokenType::Integer),
             ],
             vec![
                 (Instruction::StartSideEffect, None),
@@ -1421,13 +1421,13 @@ mod side_effects {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::List, None, Some(0), Some(2), " ", TokenType::Whitespace),
-                (Definition::Number, Some(1), None, Some(3), "10", TokenType::Number),
+                (Definition::Number, Some(1), None, Some(3), "10", TokenType::Integer),
                 (Definition::SideEffect, Some(2), None, Some(5), "[", TokenType::StartSideEffect),
-                (Definition::Number, Some(5), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(5), None, None, "15", TokenType::Integer),
                 (Definition::Addition, Some(3), Some(4), Some(6), "+", TokenType::PlusSign),
-                (Definition::Number, Some(5), None, None, "20", TokenType::Number),
+                (Definition::Number, Some(5), None, None, "20", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1453,12 +1453,12 @@ mod side_effects {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::CommaList, None, Some(0), Some(2), ",", TokenType::Comma),
                 (Definition::SideEffect, Some(1), None, Some(4), "[", TokenType::StartSideEffect),
-                (Definition::Number, Some(4), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(4), None, None, "10", TokenType::Integer),
                 (Definition::Addition, Some(2), Some(3), Some(5), "+", TokenType::PlusSign),
-                (Definition::Number, Some(4), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(4), None, None, "15", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1490,9 +1490,9 @@ mod nested_expressions {
             0,
             vec![
                 (Definition::NestedExpression, None, None, Some(2), "{", TokenType::StartExpression),
-                (Definition::Number, Some(2), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(2), None, None, "5", TokenType::Integer),
                 (Definition::Addition, Some(0), Some(1), Some(3), "+", TokenType::PlusSign),
-                (Definition::Number, Some(2), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(2), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1516,10 +1516,10 @@ mod nested_expressions {
             2,
             vec![
                 (Definition::NestedExpression, Some(2), None, Some(1), "{", TokenType::StartExpression),
-                (Definition::Number, Some(0), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(0), None, None, "5", TokenType::Integer),
                 (Definition::Pair, None, Some(0), Some(3), "=", TokenType::Pair),
                 (Definition::NestedExpression, Some(2), None, Some(4), "{", TokenType::StartExpression),
-                (Definition::Number, Some(3), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(3), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1546,13 +1546,13 @@ mod nested_expressions {
             0,
             vec![
                 (Definition::NestedExpression, None, None, Some(2), "{", TokenType::StartExpression),
-                (Definition::Number, Some(2), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(2), None, None, "5", TokenType::Integer),
                 (Definition::Apply, Some(0), Some(1), Some(3), "~", TokenType::Apply), // 2
                 (Definition::NestedExpression, Some(2), None, Some(5), "{", TokenType::StartExpression),
-                (Definition::Number, Some(5), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(5), None, None, "10", TokenType::Integer),
                 (Definition::Apply, Some(3), Some(4), Some(6), "~", TokenType::Apply), // 5
                 (Definition::NestedExpression, Some(5), None, Some(7), "{", TokenType::StartExpression),
-                (Definition::Number, Some(6), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(6), None, None, "15", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1591,9 +1591,9 @@ mod conditionals {
         assert_instruction_data_jumps(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::JumpIfTrue, None, Some(0), Some(2), "?>", TokenType::JumpIfTrue),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1612,9 +1612,9 @@ mod conditionals {
         assert_instruction_data_jumps(
             1,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::JumpIfFalse, None, Some(0), Some(2), "!>", TokenType::JumpIfFalse),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1633,13 +1633,13 @@ mod conditionals {
         assert_instruction_data_jumps(
             3,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::JumpIfTrue, Some(3), Some(0), Some(2), "?>", TokenType::JumpIfTrue),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
                 (Definition::ElseJump, None, Some(1), Some(5), "|>", TokenType::ElseJump),
-                (Definition::Number, Some(5), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(5), None, None, "15", TokenType::Integer),
                 (Definition::JumpIfTrue, Some(3), Some(4), Some(6), "?>", TokenType::JumpIfTrue),
-                (Definition::Number, Some(5), None, None, "20", TokenType::Number),
+                (Definition::Number, Some(5), None, None, "20", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1666,11 +1666,11 @@ mod conditionals {
         assert_instruction_data_jumps(
             3,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::JumpIfTrue, Some(3), Some(0), Some(2), "?>", TokenType::JumpIfTrue),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
                 (Definition::ElseJump, None, Some(1), Some(4), "|>", TokenType::ElseJump),
-                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1693,11 +1693,11 @@ mod conditionals {
         assert_instruction_data_jumps(
             3,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::Reapply, Some(3), Some(0), Some(2), "^~", TokenType::Reapply),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
                 (Definition::ElseJump, None, Some(1), Some(4), "|>", TokenType::ElseJump),
-                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),
@@ -1719,21 +1719,21 @@ mod conditionals {
         assert_instruction_data_jumps(
             7,
             vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Integer),
                 (Definition::JumpIfTrue, Some(3), Some(0), Some(2), "?>", TokenType::JumpIfTrue), // 1
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Integer),
                 // 1
                 (Definition::ElseJump, Some(7), Some(1), Some(5), "|>", TokenType::ElseJump), // 3
                 // 1
-                (Definition::Number, Some(5), None, None, "15", TokenType::Number),
+                (Definition::Number, Some(5), None, None, "15", TokenType::Integer),
                 (Definition::JumpIfTrue, Some(3), Some(4), Some(6), "?>", TokenType::JumpIfTrue), // 5
-                (Definition::Number, Some(5), None, None, "20", TokenType::Number),
+                (Definition::Number, Some(5), None, None, "20", TokenType::Integer),
                 // 2
                 (Definition::ElseJump, None, Some(3), Some(9), "|>", TokenType::ElseJump), // 7
                 // 2
-                (Definition::Number, Some(9), None, None, "25", TokenType::Number),
+                (Definition::Number, Some(9), None, None, "25", TokenType::Integer),
                 (Definition::JumpIfTrue, Some(7), Some(8), Some(10), "?>", TokenType::JumpIfTrue), // 9
-                (Definition::Number, Some(9), None, None, "30", TokenType::Number),
+                (Definition::Number, Some(9), None, None, "30", TokenType::Integer),
             ],
             vec![
                 (Instruction::Put, Some(3)),

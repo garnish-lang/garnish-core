@@ -19,7 +19,7 @@ pub enum TokenType {
     Value,
     Comma,
     Symbol,
-    Number,
+    Integer,
     Float,
     Identifier,
     Whitespace,
@@ -224,7 +224,7 @@ fn start_token<'a>(
     } else if c.is_numeric() {
         current_characters.push(c);
         *state = LexingState::Number;
-        *current_token_type = Some(TokenType::Number);
+        *current_token_type = Some(TokenType::Integer);
     } else if c == '\0' {
         *state = LexingState::NoToken;
         *current_token_type = None;
@@ -527,7 +527,7 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
                 Some(TokenType::Period),
                 // works alongside the above, the 1 is forced to be a number since it can't be a float
                 // forceing the next period to not be a float, etc
-                Some(TokenType::Number),
+                Some(TokenType::Integer),
                 // 3.14.1
                 // floats can only have one decimal, this can also cause the above cascade
                 Some(TokenType::Float),
@@ -1302,7 +1302,7 @@ mod tests {
             vec![
                 LexerToken {
                     text: "12345".to_string(),
-                    token_type: TokenType::Number,
+                    token_type: TokenType::Integer,
                     column: 0,
                     row: 0
                 },
@@ -1314,7 +1314,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "67890".to_string(),
-                    token_type: TokenType::Number,
+                    token_type: TokenType::Integer,
                     column: 6,
                     row: 0
                 },
@@ -1331,7 +1331,7 @@ mod tests {
             vec![
                 LexerToken {
                     text: "12345".to_string(),
-                    token_type: TokenType::Number,
+                    token_type: TokenType::Integer,
                     column: 0,
                     row: 0
                 },
@@ -1343,7 +1343,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "67890".to_string(),
-                    token_type: TokenType::Number,
+                    token_type: TokenType::Integer,
                     column: 6,
                     row: 0
                 },
@@ -1417,7 +1417,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "1".to_string(),
-                    token_type: TokenType::Number,
+                    token_type: TokenType::Integer,
                     column: 5,
                     row: 0
                 }
@@ -1446,7 +1446,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "1".to_string(),
-                    token_type: TokenType::Number,
+                    token_type: TokenType::Integer,
                     column: 6,
                     row: 0
                 }
@@ -1504,7 +1504,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "1".to_string(),
-                    token_type: TokenType::Number,
+                    token_type: TokenType::Integer,
                     column: 6,
                     row: 0
                 },
@@ -1516,7 +1516,7 @@ mod tests {
                 },
                 LexerToken {
                     text: "1".to_string(),
-                    token_type: TokenType::Number,
+                    token_type: TokenType::Integer,
                     column: 8,
                     row: 0
                 }
@@ -1577,7 +1577,7 @@ mod tests {
             vec![
                 LexerToken {
                     text: "3".to_string(),
-                    token_type: TokenType::Number,
+                    token_type: TokenType::Integer,
                     column: 0,
                     row: 0
                 },
