@@ -41,6 +41,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
         (ExpressionDataType::Expression, ExpressionDataType::Expression) => compare(this, left_addr, right_addr, Data::get_expression)?,
         (ExpressionDataType::External, ExpressionDataType::External) => compare(this, left_addr, right_addr, Data::get_external)?,
         (ExpressionDataType::Symbol, ExpressionDataType::Symbol) => compare(this, left_addr, right_addr, Data::get_symbol)?,
+        (ExpressionDataType::Char, ExpressionDataType::Char) => compare(this, left_addr, right_addr, Data::get_char)?,
         (ExpressionDataType::Float, ExpressionDataType::Float) => compare(this, left_addr, right_addr, Data::get_float)?,
         (ExpressionDataType::Integer, ExpressionDataType::Integer) => compare(this, left_addr, right_addr, Data::get_integer)?,
         (ExpressionDataType::Integer, ExpressionDataType::Float) => {
@@ -66,6 +67,50 @@ fn data_equal<Data: GarnishLangRuntimeData>(
             this.push_register(right2)?;
 
             true
+        }
+        (ExpressionDataType::Char, ExpressionDataType::CharList) => {
+            if this.get_char_list_len(right_addr)? == Data::Size::one() {
+                let c1 = this.get_char(left_addr)?;
+                let c2 = this.get_char_list_item(right_addr, Data::Integer::zero())?;
+
+                c1 == c2
+            } else {
+                false
+            }
+        }
+        (ExpressionDataType::CharList, ExpressionDataType::Char) => {
+            if this.get_char_list_len(left_addr)? == Data::Size::one() {
+                let c1 = this.get_char_list_item(left_addr, Data::Integer::zero())?;
+                let c2 = this.get_char(right_addr)?;
+
+                c1 == c2
+            } else {
+                false
+            }
+        }
+        (ExpressionDataType::CharList, ExpressionDataType::CharList) => {
+            let len1 = this.get_char_list_len(left_addr)?;
+            let len2 = this.get_char_list_len(right_addr)?;
+
+            if len1 != len2 {
+                false
+            } else {
+                let mut count = Data::Size::one();
+                let mut equal = true;
+                while count < len1 {
+                    let i = Data::size_to_integer(count);
+                    let c1 = this.get_char_list_item(left_addr, i)?;
+                    let c2 = this.get_char_list_item(right_addr, i)?;
+
+                    if c1 != c2 {
+                        equal = false;
+                    }
+
+                    count += Data::Size::one();
+                }
+
+                equal
+            }
         }
         (ExpressionDataType::List, ExpressionDataType::List) => {
             let association_len1 = this.get_list_associations_len(left_addr)?;
@@ -241,7 +286,7 @@ mod simple_types {
 
 #[cfg(test)]
 mod numbers {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, ExpressionDataType};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
     fn equality_integers_equal() {
@@ -267,8 +312,6 @@ mod numbers {
 
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
-
-        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
 
         runtime.equality_comparison().unwrap();
 
@@ -356,6 +399,163 @@ mod numbers {
 
         let int1 = runtime.add_float(10.0).unwrap();
         let int2 = runtime.add_integer(20).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+}
+
+#[cfg(test)]
+mod chars {
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, ExpressionDataType};
+
+    #[test]
+    fn equality_chars_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_char('a').unwrap();
+        let int2 = runtime.add_char('a').unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_chars_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_char('a').unwrap();
+        let int2 = runtime.add_char('b').unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn equality_char_lists_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.start_char_list().unwrap();
+        runtime.add_to_char_list('a').unwrap();
+        runtime.add_to_char_list('b').unwrap();
+        runtime.add_to_char_list('c').unwrap();
+        let int1 = runtime.end_char_list().unwrap();
+
+        runtime.start_char_list().unwrap();
+        runtime.add_to_char_list('a').unwrap();
+        runtime.add_to_char_list('b').unwrap();
+        runtime.add_to_char_list('c').unwrap();
+        let int2 = runtime.end_char_list().unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_char_lists_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.start_char_list().unwrap();
+        runtime.add_to_char_list('a').unwrap();
+        runtime.add_to_char_list('b').unwrap();
+        runtime.add_to_char_list('c').unwrap();
+        let int1 = runtime.end_char_list().unwrap();
+
+        runtime.start_char_list().unwrap();
+        runtime.add_to_char_list('a').unwrap();
+        runtime.add_to_char_list('b').unwrap();
+        runtime.add_to_char_list('d').unwrap();
+        let int2 = runtime.end_char_list().unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn equality_char_char_list_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_char('a').unwrap();
+
+        runtime.start_char_list().unwrap();
+        runtime.add_to_char_list('a').unwrap();
+        let int2 = runtime.end_char_list().unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_char_char_list_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_char('a').unwrap();
+
+        runtime.start_char_list().unwrap();
+        runtime.add_to_char_list('a').unwrap();
+        runtime.add_to_char_list('b').unwrap();
+        let int2 = runtime.end_char_list().unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn equality_char_list_char_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.start_char_list().unwrap();
+        runtime.add_to_char_list('a').unwrap();
+        let int1 = runtime.end_char_list().unwrap();
+
+        let int2 = runtime.add_char('a').unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_char_list_char_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.start_char_list().unwrap();
+        runtime.add_to_char_list('a').unwrap();
+        runtime.add_to_char_list('b').unwrap();
+        let int1 = runtime.end_char_list().unwrap();
+
+        let int2 = runtime.add_char('a').unwrap();
 
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();

@@ -127,6 +127,22 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
                 }
             }
         }
+        (ExpressionDataType::CharList, ExpressionDataType::Integer) => {
+            let i = this.get_integer(sym)?;
+
+            if i < Data::Integer::zero() {
+                Ok(None)
+            } else {
+                let i = i;
+                if i >= Data::size_to_integer(this.get_char_list_len(list)?) {
+                    Ok(None)
+                } else {
+                    let c = this.get_char_list_item(list, i)?;
+                    let addr = this.add_char(c)?;
+                    Ok(Some(addr))
+                }
+            }
+        }
         _ => Ok(None),
     }
 }
@@ -251,6 +267,29 @@ mod tests {
         runtime.access().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), i3);
+    }
+
+    #[test]
+    fn access_char_list_with_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.start_char_list().unwrap();
+        runtime.add_to_char_list('a').unwrap();
+        runtime.add_to_char_list('b').unwrap();
+        runtime.add_to_char_list('c').unwrap();
+        let d1 = runtime.end_char_list().unwrap();
+        let d2 = runtime.add_integer(2).unwrap();
+        let start = runtime.get_data_len();
+
+        runtime.push_instruction(Instruction::Access, None).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_register(0).unwrap(), start);
+        assert_eq!(runtime.get_char(start).unwrap(), 'c');
     }
 
     #[test]

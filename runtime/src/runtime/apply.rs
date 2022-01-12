@@ -79,6 +79,10 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                 },
             };
         }
+        ExpressionDataType::CharList =>  match get_access_addr(this, right_addr, left_addr)? {
+            None => push_unit(this)?,
+            Some(i) => this.push_register(i)?,
+        },
         ExpressionDataType::List => {
             match this.get_data_type(right_addr)? {
                 ExpressionDataType::List => {
@@ -197,6 +201,35 @@ mod tests {
 
     #[test]
     fn apply_integer_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.start_char_list().unwrap();
+        runtime.add_to_char_list('a').unwrap();
+        runtime.add_to_char_list('b').unwrap();
+        runtime.add_to_char_list('c').unwrap();
+        let d1 = runtime.end_char_list().unwrap();
+        let d2 = runtime.add_integer(2).unwrap();
+        let start = runtime.get_data_len();
+
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i1 = runtime.push_instruction(Instruction::Apply, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.set_instruction_cursor(i1).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_register(0).unwrap(), start);
+        assert_eq!(runtime.get_char(start).unwrap(), 'c');
+        assert_eq!(runtime.get_instruction_cursor(), i2);
+    }
+
+    #[test]
+    fn apply_integer_to_char_list() {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = runtime.add_integer(10).unwrap();
