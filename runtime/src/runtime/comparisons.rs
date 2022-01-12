@@ -1,18 +1,27 @@
 use log::trace;
 use std::fmt::Debug;
 
-use crate::{next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
+use crate::{next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, state_error};
 
 pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    let (right_addr, left_addr) = next_two_raw_ref(this)?;
+    // hope that can get reduced to a constant
+    let two = Data::Size::one() + Data::Size::one();
+    if this.get_register_len() < two {
+        state_error(format!("Not enough registers to perform comparison."))?;
+    }
 
-    let lease = this.lease_tmp_stack()?;
-    this.push_tmp_stack(lease, left_addr)?;
-    this.push_tmp_stack(lease, right_addr)?;
+    let start = this.get_register_len() - two;
 
-    while let (Some(right), Some(left)) = (this.pop_tmp_stack(lease)?, this.pop_tmp_stack(lease)?) {
-        if !data_equal(this, left, right, lease)? {
+    while this.get_register_len() > start {
+        let (right, left) = next_two_raw_ref(this)?;
+        if !data_equal(this, left, right)? {
+            // ending early need to remove any remaining values from registers
+            while this.get_register_len() > start {
+                this.pop_register();
+            }
+
             push_boolean(this, false)?;
+
             return Ok(());
         }
     }
@@ -23,8 +32,7 @@ pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data)
 fn data_equal<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     left_addr: Data::Size,
-    right_addr: Data::Size,
-    lease: Data::DataLease,
+    right_addr: Data::Size
 ) -> Result<bool, RuntimeError<Data::Error>> {
     let equal = match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {
         (ExpressionDataType::Unit, ExpressionDataType::Unit)
@@ -51,11 +59,11 @@ fn data_equal<Data: GarnishLangRuntimeData>(
             let (left1, right1) = this.get_pair(left_addr)?;
             let (left2, right2) = this.get_pair(right_addr)?;
 
-            this.push_tmp_stack(lease, left1)?;
-            this.push_tmp_stack(lease, left2)?;
+            this.push_register(left1)?;
+            this.push_register(left2)?;
 
-            this.push_tmp_stack(lease, right1)?;
-            this.push_tmp_stack(lease, right2)?;
+            this.push_register(right1)?;
+            this.push_register(right2)?;
 
             true
         }
@@ -101,8 +109,8 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                         match this.get_list_item_with_symbol(right_addr, pair_sym)? {
                             Some(right_item) => {
                                 // has same association, push both items for comparison
-                                this.push_tmp_stack(lease, pair_item)?;
-                                this.push_tmp_stack(lease, right_item)?;
+                                this.push_register(pair_item)?;
+                                this.push_register(right_item)?;
                             }
                             None => {
                                 // right does not have association
@@ -112,9 +120,8 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                         }
                     } else {
                         // not an association, push both for comparision
-
-                        this.push_tmp_stack(lease, left_item)?;
-                        this.push_tmp_stack(lease, right_item)?;
+                        this.push_register(left_item)?;
+                        this.push_register(right_item)?;
                     }
 
                     count += Data::Size::one();
