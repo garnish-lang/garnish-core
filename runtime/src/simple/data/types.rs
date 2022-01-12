@@ -1,6 +1,6 @@
-use std::hash::{Hash, Hasher};
 use crate::runtime::types::ExpressionDataType;
 use crate::simple::data::SimpleData;
+use std::hash::{Hash, Hasher};
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct UnitData {
@@ -98,6 +98,58 @@ impl Hash for FloatData {
 impl SimpleData for FloatData {
     fn get_type(&self) -> ExpressionDataType {
         ExpressionDataType::Float
+    }
+}
+
+#[derive(Clone, PartialEq, Debug, Hash)]
+pub struct CharData {
+    value: char,
+}
+
+impl CharData {
+    pub fn value(&self) -> char {
+        self.value
+    }
+}
+
+impl From<char> for CharData {
+    fn from(value: char) -> Self {
+        CharData { value }
+    }
+}
+
+impl SimpleData for CharData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::Char
+    }
+}
+
+#[derive(Clone, PartialEq, Debug, Hash)]
+pub struct CharListData {
+    value: String,
+}
+
+impl CharListData {
+    pub fn value(&self) -> String {
+        self.value.clone()
+    }
+}
+
+impl From<&str> for CharListData {
+    fn from(value: &str) -> Self {
+        CharListData { value: value.to_string() }
+    }
+}
+
+impl From<String> for CharListData {
+    fn from(value: String) -> Self {
+        CharListData { value }
+    }
+}
+
+impl SimpleData for CharListData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::CharList
     }
 }
 
@@ -226,10 +278,9 @@ impl SimpleData for ListData {
     }
 }
 
-
 #[cfg(test)]
 mod simple_tests {
-    use crate::{AnyData, AsAnyData, DataCoersion, ExpressionData, ExpressionDataType, ExternalData, FalseData, FloatData, IntegerData, ListData, PairData, SimpleData, SymbolData, TrueData, UnitData};
+    use crate::{AnyData, AsAnyData, CharData, CharListData, DataCoersion, ExpressionData, ExpressionDataType, ExternalData, FalseData, FloatData, IntegerData, ListData, PairData, SimpleData, SymbolData, TrueData, UnitData};
 
     fn all_data_list(remove: usize) -> Vec<AnyData> {
         let mut data: Vec<AnyData> = vec![
@@ -243,6 +294,7 @@ mod simple_tests {
             PairData::from((1, 2)).as_any_data(), // 7
             ListData::from_items(vec![1, 2, 3], vec![1, 2, 3]).as_any_data(),
             FloatData::from(3.14).as_any_data(), // 9
+            CharData::from('a').as_any_data(),
         ];
 
         data.remove(remove);
@@ -363,6 +415,56 @@ mod simple_tests {
 
         for d in data {
             assert!(d.as_float().is_err());
+        }
+    }
+
+    #[test]
+    fn char() {
+        assert_eq!(CharData::from('a').get_type(), ExpressionDataType::Char);
+    }
+
+    #[test]
+    fn char_value() {
+        assert_eq!(CharData::from('a').value(), 'a');
+    }
+
+    #[test]
+    fn char_coersion() {
+        let data = CharData::from('a').as_any_data().as_char();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_char_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(10);
+
+        for d in data {
+            assert!(d.as_char().is_err());
+        }
+    }
+
+    #[test]
+    fn char_list() {
+        assert_eq!(CharListData::from("test").get_type(), ExpressionDataType::CharList);
+    }
+
+    #[test]
+    fn char_list_value() {
+        assert_eq!(CharListData::from("test").value(), "test");
+    }
+
+    #[test]
+    fn char_list_coersion() {
+        let data = CharListData::from("test").as_any_data().as_char_list();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_char_list_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(10);
+
+        for d in data {
+            assert!(d.as_char_list().is_err());
         }
     }
 

@@ -4,6 +4,8 @@ pub enum ExpressionDataType {
     Unit = 1,
     Integer,
     Float,
+    Char,
+    CharList,
     Symbol,
     Pair,
     List,

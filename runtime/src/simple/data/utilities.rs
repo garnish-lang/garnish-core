@@ -2,10 +2,11 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::{hash::Hasher};
 use crate::simple::data::{
-     ExpressionData, ExternalData, FalseData, IntegerData, FloatData, ListData, PairData, SymbolData, TrueData, UnitData, SimpleData, AnyData
+     ExpressionData, ExternalData, FalseData, IntegerData, FloatData, CharData, ListData, PairData, SymbolData, TrueData, UnitData, SimpleData, AnyData
 };
 
 use std::any::Any;
+use crate::CharListData;
 
 pub type DataCoersionResult<T> = Result<T, String>;
 
@@ -15,6 +16,8 @@ pub trait DataCoersion {
     fn as_false(&self) -> DataCoersionResult<FalseData>;
     fn as_integer(&self) -> DataCoersionResult<IntegerData>;
     fn as_float(&self) -> DataCoersionResult<FloatData>;
+    fn as_char(&self) -> DataCoersionResult<CharData>;
+    fn as_char_list(&self) -> DataCoersionResult<CharListData>;
     fn as_symbol(&self) -> DataCoersionResult<SymbolData>;
     fn as_expression(&self) -> DataCoersionResult<ExpressionData>;
     fn as_external(&self) -> DataCoersionResult<ExternalData>;
@@ -47,6 +50,14 @@ impl DataCoersion for AnyData {
     }
 
     fn as_float(&self) -> DataCoersionResult<FloatData> {
+        downcast_result(self)
+    }
+
+    fn as_char(&self) -> DataCoersionResult<CharData> {
+        downcast_result(self)
+    }
+
+    fn as_char_list(&self) -> DataCoersionResult<CharListData> {
         downcast_result(self)
     }
 

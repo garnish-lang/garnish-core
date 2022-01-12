@@ -18,6 +18,7 @@ pub trait GarnishLangRuntimeData {
     type Error: std::error::Error + 'static;
     type DataLease: Copy;
     type Symbol: Display + Debug + PartialOrd + TypeConstants + Copy;
+    type Char: Display + Debug + PartialOrd + Copy;
     type Integer: Display + Debug + Overflowable + PartialOrd + TypeConstants + Copy + FromStr;
     type Float: Display + Debug + Add<Self::Float, Output=Self::Float> + PartialOrd + TypeConstants + Copy + FromStr;
     type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + SubAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
@@ -36,6 +37,7 @@ pub trait GarnishLangRuntimeData {
 
     fn get_integer(&self, addr: Self::Size) -> Result<Self::Integer, Self::Error>;
     fn get_float(&self, addr: Self::Size) -> Result<Self::Float, Self::Error>;
+    fn get_char(&self, addr: Self::Size) -> Result<Self::Char, Self::Error>;
     fn get_symbol(&self, addr: Self::Size) -> Result<Self::Symbol, Self::Error>;
     fn get_expression(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_external(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
@@ -47,12 +49,16 @@ pub trait GarnishLangRuntimeData {
     fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Integer) -> Result<Self::Size, Self::Error>;
     fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error>;
 
+    fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
+    fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Integer) -> Result<Self::Char, Self::Error>;
+
     fn add_unit(&mut self) -> Result<Self::Size, Self::Error>;
     fn add_true(&mut self) -> Result<Self::Size, Self::Error>;
     fn add_false(&mut self) -> Result<Self::Size, Self::Error>;
 
     fn add_integer(&mut self, value: Self::Integer) -> Result<Self::Size, Self::Error>;
     fn add_float(&mut self, value: Self::Float) -> Result<Self::Size, Self::Error>;
+    fn add_char(&mut self, value: Self::Char) -> Result<Self::Size, Self::Error>;
     fn add_symbol(&mut self, value: &str) -> Result<Self::Size, Self::Error>;
     fn add_expression(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_external(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error>;
@@ -61,6 +67,10 @@ pub trait GarnishLangRuntimeData {
     fn start_list(&mut self, len: Self::Size) -> Result<(), Self::Error>;
     fn add_to_list(&mut self, addr: Self::Size, is_associative: bool) -> Result<(), Self::Error>;
     fn end_list(&mut self) -> Result<Self::Size, Self::Error>;
+
+    fn start_char_list(&mut self) -> Result<(), Self::Error>;
+    fn add_to_char_list(&mut self, c: Self::Char) -> Result<(), Self::Error>;
+    fn end_char_list(&mut self) -> Result<Self::Size, Self::Error>;
 
     fn get_register_len(&self) -> Self::Size;
     fn push_register(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
