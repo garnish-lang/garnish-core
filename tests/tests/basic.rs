@@ -7,7 +7,7 @@ mod tests {
     fn basic_addition() {
         let input = "5 + 5";
 
-        let lexed = lex(&input.into()).unwrap();
+        let lexed = lex(input).unwrap();
         let parsed = parse(lexed).unwrap();
 
         let mut data = SimpleRuntimeData::new();

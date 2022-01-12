@@ -91,6 +91,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
         TokenType::Symbol => (Definition::Symbol, SecondaryDefinition::Value),
         TokenType::Number => (Definition::Number, SecondaryDefinition::Value),
+        TokenType::Float => todo!(),
         TokenType::Value => (Definition::Value, SecondaryDefinition::Value),
         TokenType::True => (Definition::True, SecondaryDefinition::Value),
         TokenType::False => (Definition::False, SecondaryDefinition::Value),

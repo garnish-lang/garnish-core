@@ -20,6 +20,7 @@ pub enum TokenType {
     Comma,
     Symbol,
     Number,
+    Float,
     Identifier,
     Whitespace,
     Subexpression,
@@ -170,6 +171,7 @@ enum LexingState {
     Spaces,
     Subexpression,
     Number,
+    Float,
     Indentifier,
     Annotation,
     LineAnnotation,
@@ -253,11 +255,11 @@ fn start_token<'a>(
     );
 }
 
-pub fn lex(input: &String) -> Result<Vec<LexerToken>, CompilerError> {
+pub fn lex(input: &str) -> Result<Vec<LexerToken>, CompilerError> {
     lex_with_processor(input)
 }
 
-pub fn lex_with_processor(input: &String) -> Result<Vec<LexerToken>, CompilerError> {
+pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError> {
     trace!("Beginning lexing");
 
     let mut tokens = vec![];
@@ -303,6 +305,7 @@ pub fn lex_with_processor(input: &String) -> Result<Vec<LexerToken>, CompilerErr
 
     let mut should_create = true;
     let mut state = LexingState::NoToken;
+    let mut can_float = true; // whether the next period can be a float
 
     for c in input.chars().chain(iter::once('\0')) {
         trace!("Character {:?} at ({:?}, {:?})", c, text_column, text_row);
@@ -334,6 +337,13 @@ pub fn lex_with_processor(input: &String) -> Result<Vec<LexerToken>, CompilerErr
                             current_token_type = Some(TokenType::Identifier);
                             state = LexingState::Indentifier;
 
+                            false
+                        } else if current_characters == "." && c.is_numeric() && can_float {
+                            // Another token (Float) can start with a period
+                            trace!("Found number after period. Switching to flaot.");
+                            current_characters.push(c);
+                            current_token_type = Some(TokenType::Float);
+                            state = LexingState::Float;
                             false
                         } else {
                             trace!("Ending operator");
@@ -368,8 +378,23 @@ pub fn lex_with_processor(input: &String) -> Result<Vec<LexerToken>, CompilerErr
                 if c.is_numeric() {
                     current_characters.push(c);
                     false
+                } else if c == '.' && can_float {
+                    trace!("Period found, switching to float");
+                    current_characters.push(c);
+                    current_token_type = Some(TokenType::Float);
+                    state = LexingState::Float;
+                    false
                 } else {
                     trace!("Ending number");
+                    true
+                }
+            }
+            LexingState::Float => {
+                if c.is_numeric() {
+                    current_characters.push(c);
+                    false
+                } else {
+                    trace!("Ending float");
                     true
                 }
             }
@@ -491,6 +516,24 @@ pub fn lex_with_processor(input: &String) -> Result<Vec<LexerToken>, CompilerErr
         trace!("Will start new: {:?}", start_new);
 
         if start_new {
+            // determine if the next token can be a float
+            // cannot immediately follow identifiers, a period, other floats
+            can_float = ![
+                // value.1
+                // the 1 will be an integer for access operation
+                Some(TokenType::Identifier),
+                // value.1.1
+                // since the period and 1 after value is for access, the next period is considered the same
+                Some(TokenType::Period),
+                // works alongside the above, the 1 is forced to be a number since it can't be a float
+                // forceing the next period to not be a float, etc
+                Some(TokenType::Number),
+                // 3.14.1
+                // floats can only have one decimal, this can also cause the above cascade
+                Some(TokenType::Float),
+            ]
+            .contains(&current_token_type);
+
             if state != LexingState::NoToken {
                 trace!("Pushing new token: {:?}", current_token_type);
 
@@ -1251,7 +1294,7 @@ mod tests {
     }
 
     #[test]
-    fn lex_numbers() {
+    fn lex_integers() {
         let result = lex(&"12345 67890".to_string()).unwrap();
 
         assert_eq!(
@@ -1280,7 +1323,7 @@ mod tests {
     }
 
     #[test]
-    fn lex_numbers_with_symbol() {
+    fn lex_integers_with_symbol() {
         let result = lex(&"12345+67890".to_string()).unwrap();
 
         assert_eq!(
@@ -1306,6 +1349,179 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn float() {
+        let result = lex("3.14").unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "3.14".to_string(),
+                token_type: TokenType::Float,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn float_start_with_period() {
+        let result = lex(".14").unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ".14".to_string(),
+                token_type: TokenType::Float,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn float_end_with_period() {
+        let result = lex("3.").unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "3.".to_string(),
+                token_type: TokenType::Float,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn float_period_integer() {
+        let result = lex("3.14.1").unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "3.14".to_string(),
+                    token_type: TokenType::Float,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: ".".to_string(),
+                    token_type: TokenType::Period,
+                    column: 4,
+                    row: 0
+                },
+                LexerToken {
+                    text: "1".to_string(),
+                    token_type: TokenType::Number,
+                    column: 5,
+                    row: 0
+                }
+            ]
+        )
+    }
+
+    #[test]
+    fn identifier_period_integer() {
+        let result = lex("value.1").unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "value".to_string(),
+                    token_type: TokenType::Identifier,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: ".".to_string(),
+                    token_type: TokenType::Period,
+                    column: 5,
+                    row: 0
+                },
+                LexerToken {
+                    text: "1".to_string(),
+                    token_type: TokenType::Number,
+                    column: 6,
+                    row: 0
+                }
+            ]
+        )
+    }
+
+    #[test]
+    fn identifier_space_float() {
+        let result = lex("value .1").unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "value".to_string(),
+                    token_type: TokenType::Identifier,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::Whitespace,
+                    column: 5,
+                    row: 0
+                },
+                LexerToken {
+                    text: ".1".to_string(),
+                    token_type: TokenType::Float,
+                    column: 6,
+                    row: 0
+                }
+            ]
+        )
+    }
+
+    #[test]
+    fn identifier_period_integer_period_integer() {
+        let result = lex("value.1.1").unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "value".to_string(),
+                    token_type: TokenType::Identifier,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: ".".to_string(),
+                    token_type: TokenType::Period,
+                    column: 5,
+                    row: 0
+                },
+                LexerToken {
+                    text: "1".to_string(),
+                    token_type: TokenType::Number,
+                    column: 6,
+                    row: 0
+                },
+                LexerToken {
+                    text: ".".to_string(),
+                    token_type: TokenType::Period,
+                    column: 7,
+                    row: 0
+                },
+                LexerToken {
+                    text: "1".to_string(),
+                    token_type: TokenType::Number,
+                    column: 8,
+                    row: 0
+                }
+            ]
+        )
     }
 
     #[test]
