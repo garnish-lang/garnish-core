@@ -93,6 +93,10 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
             let len = Data::size_to_integer(this.get_char_list_len(r)?);
             push_integer(this, len)?;
         }
+        ExpressionDataType::ByteList => {
+            let len = Data::size_to_integer(this.get_byte_list_len(r)?);
+            push_integer(this, len)?;
+        }
         _ => push_unit(this)?,
     }
 
@@ -139,6 +143,22 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
                 } else {
                     let c = this.get_char_list_item(list, i)?;
                     let addr = this.add_char(c)?;
+                    Ok(Some(addr))
+                }
+            }
+        }
+        (ExpressionDataType::ByteList, ExpressionDataType::Integer) => {
+            let i = this.get_integer(sym)?;
+
+            if i < Data::Integer::zero() {
+                Ok(None)
+            } else {
+                let i = i;
+                if i >= Data::size_to_integer(this.get_byte_list_len(list)?) {
+                    Ok(None)
+                } else {
+                    let c = this.get_byte_list_item(list, i)?;
+                    let addr = this.add_byte(c)?;
                     Ok(Some(addr))
                 }
             }
@@ -293,6 +313,29 @@ mod tests {
     }
 
     #[test]
+    fn access_byte_list_with_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.start_byte_list().unwrap();
+        runtime.add_to_byte_list(10).unwrap();
+        runtime.add_to_byte_list(20).unwrap();
+        runtime.add_to_byte_list(30).unwrap();
+        let d1 = runtime.end_byte_list().unwrap();
+        let d2 = runtime.add_integer(2).unwrap();
+        let start = runtime.get_data_len();
+
+        runtime.push_instruction(Instruction::Access, None).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_register(0).unwrap(), start);
+        assert_eq!(runtime.get_byte(start).unwrap(), 30);
+    }
+
+    #[test]
     fn access_with_integer_out_of_bounds_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
@@ -436,6 +479,27 @@ mod tests {
         runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
 
         runtime.push_register(i4).unwrap();
+
+        runtime.access_length_internal().unwrap();
+
+        assert_eq!(runtime.get_integer(start).unwrap(), 3);
+        assert_eq!(runtime.get_register(0).unwrap(), start);
+    }
+
+    #[test]
+    fn access_byte_list_length() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.start_byte_list().unwrap();
+        runtime.add_to_byte_list(10).unwrap();
+        runtime.add_to_byte_list(20).unwrap();
+        runtime.add_to_byte_list(30).unwrap();
+        let d1 = runtime.end_byte_list().unwrap();
+        let start = runtime.get_data_len();
+
+        runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
+
+        runtime.push_register(d1).unwrap();
 
         runtime.access_length_internal().unwrap();
 

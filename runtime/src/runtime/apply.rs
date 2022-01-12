@@ -1,7 +1,7 @@
+use super::context::GarnishLangRuntimeContext;
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
 use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
-use super::context::GarnishLangRuntimeContext;
 
 pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
@@ -70,16 +70,20 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             match context {
                 None => {
                     push_unit(this)?;
-                },
+                }
                 Some(c) => match c.apply(external_value, right_addr, this)? {
                     true => (),
                     false => {
                         push_unit(this)?;
-                    },
+                    }
                 },
             };
         }
-        ExpressionDataType::CharList =>  match get_access_addr(this, right_addr, left_addr)? {
+        ExpressionDataType::CharList => match get_access_addr(this, right_addr, left_addr)? {
+            None => push_unit(this)?,
+            Some(i) => this.push_register(i)?,
+        },
+        ExpressionDataType::ByteList => match get_access_addr(this, right_addr, left_addr)? {
             None => push_unit(this)?,
             Some(i) => this.push_register(i)?,
         },
@@ -112,15 +116,15 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                         };
 
                         let (value, is_associative) = match get_access_addr(this, item, left_addr)? {
-                            Some(addr) =>  match this.get_data_type(addr)? {
+                            Some(addr) => match this.get_data_type(addr)? {
                                 ExpressionDataType::Pair => {
                                     let (left, _right) = this.get_pair(addr)?;
                                     match this.get_data_type(left)? {
                                         ExpressionDataType::Symbol => (addr, true),
-                                        _ => (addr, false)
+                                        _ => (addr, false),
                                     }
                                 }
-                                _ => (addr, false)
+                                _ => (addr, false),
                             },
                             // make sure there is a unit value to use
                             None => (this.add_unit()?, false),
@@ -146,7 +150,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
         }
         _ => {
             push_unit(this)?;
-        },
+        }
     }
 
     this.set_instruction_cursor(next_instruction)?;
@@ -203,6 +207,36 @@ mod tests {
     fn apply_integer_to_list() {
         let mut runtime = SimpleRuntimeData::new();
 
+        let d1 = runtime.add_integer(10).unwrap();
+        let d2 = runtime.add_integer(20).unwrap();
+        let d3 = runtime.add_integer(30).unwrap();
+        runtime.start_list(3).unwrap();
+        runtime.add_to_list(d1, false).unwrap();
+        runtime.add_to_list(d2, false).unwrap();
+        runtime.add_to_list(d3, false).unwrap();
+        let d4 = runtime.end_list().unwrap();
+        let d5 = runtime.add_integer(2).unwrap();
+
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i1 = runtime.push_instruction(Instruction::Apply, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+
+        runtime.set_instruction_cursor(i1).unwrap();
+
+        runtime.push_register(d4).unwrap();
+        runtime.push_register(d5).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 30);
+        assert_eq!(runtime.get_instruction_cursor(), i2);
+    }
+
+    #[test]
+    fn apply_integer_to_char_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
         runtime.start_char_list().unwrap();
         runtime.add_to_char_list('a').unwrap();
         runtime.add_to_char_list('b').unwrap();
@@ -229,18 +263,16 @@ mod tests {
     }
 
     #[test]
-    fn apply_integer_to_char_list() {
+    fn apply_integer_to_byte_list() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_integer(10).unwrap();
-        let d2 = runtime.add_integer(20).unwrap();
-        let d3 = runtime.add_integer(30).unwrap();
-        runtime.start_list(3).unwrap();
-        runtime.add_to_list(d1, false).unwrap();
-        runtime.add_to_list(d2, false).unwrap();
-        runtime.add_to_list(d3, false).unwrap();
-        let d4 = runtime.end_list().unwrap();
-        let d5 = runtime.add_integer(2).unwrap();
+        runtime.start_byte_list().unwrap();
+        runtime.add_to_byte_list(10).unwrap();
+        runtime.add_to_byte_list(20).unwrap();
+        runtime.add_to_byte_list(30).unwrap();
+        let d1 = runtime.end_byte_list().unwrap();
+        let d2 = runtime.add_integer(2).unwrap();
+        let start = runtime.get_data_len();
 
         runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
         let i1 = runtime.push_instruction(Instruction::Apply, None).unwrap();
@@ -249,12 +281,13 @@ mod tests {
 
         runtime.set_instruction_cursor(i1).unwrap();
 
-        runtime.push_register(d4).unwrap();
-        runtime.push_register(d5).unwrap();
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 30);
+        assert_eq!(runtime.get_register(0).unwrap(), start);
+        assert_eq!(runtime.get_byte(start).unwrap(), 30);
         assert_eq!(runtime.get_instruction_cursor(), i2);
     }
 
@@ -312,10 +345,10 @@ mod tests {
         runtime.add_to_list(i9, true).unwrap();
         let i10 = runtime.end_list().unwrap();
 
-        let i11 = runtime.add_integer(2).unwrap();      // integer access
-        let i12 = runtime.add_symbol("val2").unwrap();  // symbol access
-        let i13 = runtime.add_integer(5).unwrap();      // access out of bounds
-        let i14 = runtime.add_expression(10).unwrap();  // invalid access type
+        let i11 = runtime.add_integer(2).unwrap(); // integer access
+        let i12 = runtime.add_symbol("val2").unwrap(); // symbol access
+        let i13 = runtime.add_integer(5).unwrap(); // access out of bounds
+        let i14 = runtime.add_expression(10).unwrap(); // invalid access type
 
         let i15 = runtime.add_symbol("new_key").unwrap();
         let i16 = runtime.add_symbol("val1").unwrap();
