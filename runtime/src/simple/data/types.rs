@@ -92,7 +92,6 @@ impl From<f64> for FloatData {
 impl Hash for FloatData {
     fn hash<H: Hasher>(&self, state: &mut H) {
         state.write(&self.value.to_le_bytes());
-        state.finish();
     }
 }
 
