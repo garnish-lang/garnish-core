@@ -89,6 +89,10 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
             let len = Data::size_to_integer(this.get_list_len(r)?);
             push_integer(this, len)?;
         }
+        ExpressionDataType::CharList => {
+            let len = Data::size_to_integer(this.get_char_list_len(r)?);
+            push_integer(this, len)?;
+        }
         _ => push_unit(this)?,
     }
 
@@ -376,6 +380,27 @@ mod tests {
         runtime.access_length_internal().unwrap();
 
         assert_eq!(runtime.get_integer(start).unwrap(), 1);
+        assert_eq!(runtime.get_register(0).unwrap(), start);
+    }
+
+    #[test]
+    fn access_char_list_length() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.start_char_list().unwrap();
+        runtime.add_to_char_list('a').unwrap();
+        runtime.add_to_char_list('b').unwrap();
+        runtime.add_to_char_list('c').unwrap();
+        let i4 = runtime.end_char_list().unwrap();
+        let start = runtime.get_data_len();
+
+        runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
+
+        runtime.push_register(i4).unwrap();
+
+        runtime.access_length_internal().unwrap();
+
+        assert_eq!(runtime.get_integer(start).unwrap(), 3);
         assert_eq!(runtime.get_register(0).unwrap(), start);
     }
 
