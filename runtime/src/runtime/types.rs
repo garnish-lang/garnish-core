@@ -10,6 +10,8 @@ pub enum ExpressionDataType {
     ByteList,
     Symbol,
     Pair,
+    Range,
+    Slice,
     List,
     Expression,
     External,

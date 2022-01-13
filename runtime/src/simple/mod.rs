@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
-use crate::{symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, RuntimeError, SimpleData, SimpleDataList, SymbolData, FloatData, CharData, CharListData, ByteData, ByteListData};
+use crate::{symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, RuntimeError, SimpleData, SimpleDataList, SymbolData, FloatData, CharData, CharListData, ByteData, ByteListData, RangeData, SliceData};
 
 pub mod data;
 
@@ -211,6 +211,16 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok((pair.left(), pair.right()))
     }
 
+    fn get_range(&self, addr: Self::Size) -> Result<(Self::Integer, Self::Integer, bool, bool), Self::Error> {
+        let range = self.get(addr)?.as_range()?;
+        Ok((range.start(), range.end(), range.exclude_start(), range.exclude_end()))
+    }
+
+    fn get_slice(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
+        let slice = self.get(addr)?.as_slice()?;
+        Ok((slice.list(), slice.range()))
+    }
+
     fn get_list_len(&self, index: usize) -> Result<usize, Self::Error> {
         Ok(self.get(index)?.as_list()?.items().len())
     }
@@ -299,6 +309,16 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error> {
         self.simple_data.push(PairData::from(value));
+        Ok(self.simple_data.len() - 1)
+    }
+
+    fn add_range(&mut self, start: Self::Integer, end: Self::Integer, excludes_start: bool, excludes_end: bool) -> Result<Self::Size, Self::Error> {
+        self.simple_data.push(RangeData::from((start, end, excludes_start, excludes_end)));
+        Ok(self.simple_data.len() - 1)
+    }
+
+    fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
+        self.simple_data.push(SliceData::from((list, range)));
         Ok(self.simple_data.len() - 1)
     }
 

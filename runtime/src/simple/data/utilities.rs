@@ -1,12 +1,11 @@
 use crate::simple::data::{
-    AnyData, CharData, ExpressionData, ExternalData, FalseData, FloatData, IntegerData, ListData, PairData, SimpleData, SymbolData, TrueData,
-    UnitData,
+    AnyData, ByteData, ByteListData, CharData, CharListData, ExpressionData, ExternalData, FalseData, FloatData, IntegerData, ListData, PairData,
+    RangeData, SimpleData, SliceData, SymbolData, TrueData, UnitData,
 };
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
 use std::hash::Hasher;
 
-use crate::{ByteData, ByteListData, CharListData};
 use std::any::Any;
 
 pub type DataCoersionResult<T> = Result<T, String>;
@@ -25,6 +24,8 @@ pub trait DataCoersion {
     fn as_expression(&self) -> DataCoersionResult<ExpressionData>;
     fn as_external(&self) -> DataCoersionResult<ExternalData>;
     fn as_pair(&self) -> DataCoersionResult<PairData>;
+    fn as_range(&self) -> DataCoersionResult<RangeData>;
+    fn as_slice(&self) -> DataCoersionResult<SliceData>;
     fn as_list(&self) -> DataCoersionResult<ListData>;
 }
 
@@ -88,6 +89,14 @@ impl DataCoersion for AnyData {
         downcast_result(self)
     }
 
+    fn as_range(&self) -> DataCoersionResult<RangeData> {
+        downcast_result(self)
+    }
+
+    fn as_slice(&self) -> DataCoersionResult<SliceData> {
+        downcast_result(self)
+    }
+
     fn as_list(&self) -> DataCoersionResult<ListData> {
         downcast_result(self)
     }
@@ -112,6 +121,8 @@ pub(crate) fn data_equal(left: &Box<dyn Any>, right: &Box<dyn Any>) -> bool {
         || cmp_any::<ExpressionData>(left, right)
         || cmp_any::<ExternalData>(left, right)
         || cmp_any::<PairData>(left, right)
+        || cmp_any::<RangeData>(left, right)
+        || cmp_any::<SliceData>(left, right)
         || cmp_any::<ListData>(left, right)
         || cmp_any::<CharData>(left, right)
         || cmp_any::<CharListData>(left, right)
@@ -130,7 +141,10 @@ pub fn symbol_value(value: &str) -> u64 {
 #[cfg(test)]
 mod comparisons {
     use crate::simple::data::utilities::cmp_any;
-    use crate::{data_equal, AsAnyData, ByteListData, CharListData, ExpressionData, ExternalData, FalseData, FloatData, IntegerData, ListData, PairData, SymbolData, TrueData, UnitData, CharData, ByteData};
+    use crate::{
+        data_equal, AsAnyData, ByteData, ByteListData, CharData, CharListData, ExpressionData, ExternalData, FalseData, FloatData, IntegerData,
+        ListData, PairData, RangeData, SliceData, SymbolData, TrueData, UnitData,
+    };
 
     #[test]
     fn same_type_equal() {
@@ -189,6 +203,20 @@ mod comparisons {
             // Pair
             (PairData::from((10, 20)).as_any_data(), PairData::from((10, 20)).as_any_data(), true),
             (PairData::from((10, 20)).as_any_data(), PairData::from((10, 10)).as_any_data(), false),
+            // Range
+            (
+                RangeData::from((10, 20, true, false)).as_any_data(),
+                RangeData::from((10, 20, true, false)).as_any_data(),
+                true,
+            ),
+            (
+                RangeData::from((10, 20, true, false)).as_any_data(),
+                RangeData::from((10, 10, true, false)).as_any_data(),
+                false,
+            ),
+            // Slice
+            (SliceData::from((10, 20)).as_any_data(), SliceData::from((10, 20)).as_any_data(), true),
+            (SliceData::from((10, 20)).as_any_data(), SliceData::from((10, 10)).as_any_data(), false),
             // List
             (
                 ListData::from_items(vec![1, 2, 3], vec![4, 5, 6]).as_any_data(),
@@ -201,16 +229,8 @@ mod comparisons {
                 false,
             ),
             // Char List
-            (
-                CharListData::from("abc").as_any_data(),
-                CharListData::from("abc").as_any_data(),
-                true,
-            ),
-            (
-                CharListData::from("abc").as_any_data(),
-                CharListData::from("abd").as_any_data(),
-                false,
-            ),
+            (CharListData::from("abc").as_any_data(), CharListData::from("abc").as_any_data(), true),
+            (CharListData::from("abc").as_any_data(), CharListData::from("abd").as_any_data(), false),
             // Byte List
             (
                 ByteListData::from(vec![1, 2, 3]).as_any_data(),
@@ -225,7 +245,13 @@ mod comparisons {
         ];
 
         for (left, right, expected_result) in cases {
-            assert_eq!(data_equal(&left.data, &right.data), expected_result, "{:?} == {:?}", left.get_data_type(), right.get_data_type());
+            assert_eq!(
+                data_equal(&left.data, &right.data),
+                expected_result,
+                "{:?} == {:?}",
+                left.get_data_type(),
+                right.get_data_type()
+            );
         }
     }
 }

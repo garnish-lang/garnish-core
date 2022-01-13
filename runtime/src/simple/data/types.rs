@@ -297,6 +297,73 @@ impl SimpleData for PairData {
 }
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
+pub struct RangeData {
+    start: i32,
+    end: i32,
+    exclude_start: bool,
+    exclude_end: bool
+}
+
+impl RangeData {
+    pub fn start(&self) -> i32 {
+        self.start
+    }
+
+    pub fn end(&self) -> i32 {
+        self.end
+    }
+
+    pub fn exclude_start(&self) -> bool {
+        self.exclude_start
+    }
+
+    pub fn exclude_end(&self) -> bool {
+        self.exclude_end
+    }
+}
+
+impl From<(i32, i32, bool, bool)> for RangeData {
+    fn from((start, end, exclude_start, exclude_end): (i32, i32, bool, bool)) -> Self {
+        RangeData { start, end, exclude_start, exclude_end }
+    }
+}
+
+impl SimpleData for RangeData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::Range
+    }
+}
+
+
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+pub struct SliceData {
+    list: usize,
+    range: usize,
+}
+
+impl SliceData {
+    pub fn list(&self) -> usize {
+        self.list
+    }
+
+    pub fn range(&self) -> usize {
+        self.range
+    }
+}
+
+impl From<(usize, usize)> for SliceData {
+    fn from((list, range): (usize, usize)) -> Self {
+        SliceData { list, range }
+    }
+}
+
+impl SimpleData for SliceData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::Slice
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct ListData {
     items: Vec<usize>,
     associations: Vec<usize>,
@@ -326,10 +393,7 @@ impl SimpleData for ListData {
 
 #[cfg(test)]
 mod simple_tests {
-    use crate::{
-        AnyData, AsAnyData, ByteData, ByteListData, CharData, CharListData, DataCoersion, ExpressionData, ExpressionDataType, ExternalData,
-        FalseData, FloatData, IntegerData, ListData, PairData, SimpleData, SymbolData, TrueData, UnitData,
-    };
+    use crate::{AnyData, AsAnyData, ByteData, ByteListData, CharData, CharListData, DataCoersion, ExpressionData, ExpressionDataType, ExternalData, FalseData, FloatData, IntegerData, ListData, PairData, RangeData, SimpleData, SliceData, SymbolData, TrueData, UnitData};
 
     fn all_data_list(remove: usize) -> Vec<AnyData> {
         let mut data: Vec<AnyData> = vec![
@@ -346,7 +410,9 @@ mod simple_tests {
             CharData::from('a').as_any_data(),
             CharListData::from("abc").as_any_data(), // 11
             ByteData::from(10).as_any_data(),
-            ByteListData::from(vec![10u8, 15u8, 20u8]).as_any_data(),
+            ByteListData::from(vec![10u8, 15u8, 20u8]).as_any_data(), // 13
+            RangeData::from((1, 2, true, true)).as_any_data(),
+            SliceData::from((1, 2)).as_any_data(), // 15
         ];
 
         data.remove(remove);
@@ -672,6 +738,78 @@ mod simple_tests {
 
         for d in data {
             assert!(d.as_pair().is_err());
+        }
+    }
+
+    #[test]
+    fn range() {
+        assert_eq!(RangeData::from((5, 10, true, false)).get_type(), ExpressionDataType::Range);
+    }
+
+    #[test]
+    fn range_start() {
+        assert_eq!(RangeData::from((5, 10, true, false)).start(), 5);
+    }
+
+    #[test]
+    fn range_end() {
+        assert_eq!(RangeData::from((5, 10, true, false)).end(), 10);
+    }
+
+    #[test]
+    fn range_excludes_start() {
+        assert_eq!(RangeData::from((5, 10, true, false)).exclude_start(), true);
+    }
+
+
+    #[test]
+    fn range_excludes_end() {
+        assert_eq!(RangeData::from((5, 10, true, false)).exclude_end(), false);
+    }
+
+
+    #[test]
+    fn range_coersion() {
+        let data = RangeData::from((5, 10, true, false)).as_any_data().as_range();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_range_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(14);
+
+        for d in data {
+            assert!(d.as_range().is_err());
+        }
+    }
+
+    #[test]
+    fn slice() {
+        assert_eq!(SliceData::from((5, 10)).get_type(), ExpressionDataType::Slice);
+    }
+
+    #[test]
+    fn slice_list() {
+        assert_eq!(SliceData::from((5, 10)).list(), 5);
+    }
+
+    #[test]
+    fn slice_range() {
+        assert_eq!(SliceData::from((5, 10)).range(), 10);
+    }
+
+    #[test]
+    fn slice_coersion() {
+        let data = SliceData::from((5, 10)).as_any_data().as_slice();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_slice_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(15);
+
+        for d in data {
+            assert!(d.as_slice().is_err());
         }
     }
 
