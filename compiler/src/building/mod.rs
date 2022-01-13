@@ -47,6 +47,7 @@ type DefinitionResolveInfo = (bool, Option<usize>);
 
 fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
+        Definition::CharList | Definition::ByteList => todo!(),
         Definition::Integer
         | Definition::Float
         | Definition::Identifier
@@ -92,6 +93,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
     nearest_expression_point: Data::Size,
 ) -> Result<bool, CompilerError<Data::Error>> {
     match node.get_definition() {
+        Definition::CharList | Definition::ByteList => todo!(),
         Definition::Float => {
             let addr = data.add_float(match node.get_lex_token().get_text().parse::<Data::Float>() {
                 Err(_) => data_parse_error(node.get_lex_token(), ExpressionDataType::Float)?,

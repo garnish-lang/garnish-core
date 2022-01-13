@@ -11,6 +11,8 @@ use crate::lexing::lexer::*;
 pub enum Definition {
     Integer,
     Float,
+    CharList,
+    ByteList,
     Identifier,
     Property,
     AbsoluteValue,
@@ -46,6 +48,8 @@ impl Definition {
     pub fn is_value_like(self) -> bool {
         self == Definition::Integer
             || self == Definition::Float
+            || self == Definition::CharList
+            || self == Definition::ByteList
             || self == Definition::Identifier
             || self == Definition::Property
             || self == Definition::Symbol
@@ -88,8 +92,6 @@ pub enum SecondaryDefinition {
 
 fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
     match token_type {
-        TokenType::CharList => todo!(),
-        TokenType::ByteList => todo!(),
         // Values
         TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
         TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
@@ -100,6 +102,8 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::True => (Definition::True, SecondaryDefinition::Value),
         TokenType::False => (Definition::False, SecondaryDefinition::Value),
         TokenType::Identifier => (Definition::Identifier, SecondaryDefinition::Identifier),
+        TokenType::CharList => (Definition::CharList, SecondaryDefinition::Value),
+        TokenType::ByteList => (Definition::ByteList, SecondaryDefinition::Value),
 
         // Groupings
         TokenType::StartExpression => (Definition::NestedExpression, SecondaryDefinition::StartGrouping),
@@ -221,6 +225,8 @@ fn make_priority_map() -> HashMap<Definition, usize> {
 
     map.insert(Definition::Integer, 10);
     map.insert(Definition::Float, 10);
+    map.insert(Definition::CharList, 10);
+    map.insert(Definition::ByteList, 10);
     map.insert(Definition::Identifier, 10);
     map.insert(Definition::Property, 10);
     map.insert(Definition::Symbol, 10);
@@ -1764,6 +1770,8 @@ mod tests {
         let value_like = [
             Definition::Integer,
             Definition::Float,
+            Definition::CharList,
+            Definition::ByteList,
             Definition::Identifier,
             Definition::Property,
             Definition::Symbol,
@@ -1858,6 +1866,26 @@ mod tests {
         let result = parse(tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::Float, None, None, None)]);
+    }
+
+
+    #[test]
+    fn single_char_list() {
+        let tokens = vec![LexerToken::new("value".to_string(), TokenType::CharList, 0, 0)];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::CharList, None, None, None)]);
+    }
+
+
+    #[test]
+    fn single_byte_list() {
+        let tokens = vec![LexerToken::new("value".to_string(), TokenType::ByteList, 0, 0)];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::ByteList, None, None, None)]);
     }
 
 
