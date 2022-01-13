@@ -88,6 +88,8 @@ pub enum SecondaryDefinition {
 
 fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
     match token_type {
+        TokenType::CharList => todo!(),
+        TokenType::ByteList => todo!(),
         // Values
         TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
         TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),

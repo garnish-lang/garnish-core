@@ -22,6 +22,8 @@ pub enum TokenType {
     Integer,
     Float,
     Identifier,
+    CharList,
+    ByteList,
     Whitespace,
     Subexpression,
     Annotation,
@@ -176,6 +178,8 @@ enum LexingState {
     Annotation,
     LineAnnotation,
     Symbol,
+    CharList,
+    ByteList
 }
 
 fn start_token<'a>(
@@ -245,6 +249,12 @@ fn start_token<'a>(
         current_characters.push(c);
         *state = LexingState::Symbol;
         *current_token_type = Some(TokenType::Symbol);
+    } else if c == '"' {
+        *state = LexingState::CharList;
+        *current_token_type = Some(TokenType::CharList);
+    } else if c == '\'' {
+        *state = LexingState::ByteList;
+        *current_token_type = Some(TokenType::ByteList);
     }
 
     trace!(
@@ -411,6 +421,26 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
                         current_token_type = None;
                     }
                     true
+                }
+            }
+            LexingState::CharList => {
+                if c == '"' {
+                    trace!("Ending CharList");
+                    true
+                } else {
+                    current_characters.push(c);
+
+                    false
+                }
+            }
+            LexingState::ByteList => {
+                if c == '\'' {
+                    trace!("Ending ByteList");
+                    true
+                } else {
+                    current_characters.push(c);
+
+                    false
                 }
             }
             LexingState::Spaces => {
@@ -1759,6 +1789,47 @@ mod tests {
                     token_type: TokenType::Identifier,
                     column: 0,
                     row: 1
+                }
+            ]
+        );
+    }
+}
+
+#[cfg(test)]
+mod chars_and_bytes {
+    use std::vec;
+
+    use crate::{lex, LexerToken, TokenType};
+
+    #[test]
+    fn character_list() {
+        let result = lex(&"\"Hello World!\"".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "Hello World!".to_string(),
+                    token_type: TokenType::CharList,
+                    column: 0,
+                    row: 0
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn byte_list() {
+        let result = lex(&"'Hello World!'".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "Hello World!".to_string(),
+                    token_type: TokenType::ByteList,
+                    column: 0,
+                    row: 0
                 }
             ]
         );
