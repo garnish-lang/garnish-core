@@ -145,6 +145,24 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 equal
             }
         }
+        (ExpressionDataType::Range, ExpressionDataType::Range) => {
+            let (start1, end1, start_ex1, end_ex1) = this.get_range(left_addr)?;
+            let (start2, end2, start_ex2, end_ex2) = this.get_range(right_addr)?;
+
+            let start_equal = match (this.get_data_type(start1)?, this.get_data_type(start2)?) {
+                (ExpressionDataType::Unit, ExpressionDataType::Unit) => true,
+                (ExpressionDataType::Integer, ExpressionDataType::Integer) => this.get_integer(start1)? == this.get_integer(start2)?,
+                _ => false,
+            };
+
+            let end_equal = match (this.get_data_type(end1)?, this.get_data_type(end2)?) {
+                (ExpressionDataType::Unit, ExpressionDataType::Unit) => true,
+                (ExpressionDataType::Integer, ExpressionDataType::Integer) => this.get_integer(end1)? == this.get_integer(end2)?,
+                _ => false,
+            };
+
+            start_equal && end_equal && start_ex1 == start_ex2 && end_ex1 == end_ex2
+        }
         (ExpressionDataType::Pair, ExpressionDataType::Pair) => {
             let (left1, right1) = this.get_pair(left_addr)?;
             let (left2, right2) = this.get_pair(right_addr)?;
@@ -965,6 +983,243 @@ mod pairs {
         runtime.push_register(i6).unwrap();
 
         runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
+    }
+}
+
+#[cfg(test)]
+mod ranges {
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn equality_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+
+        let i4 = runtime.add_integer(10).unwrap();
+        let i5 = runtime.add_integer(10).unwrap();
+        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+
+        runtime.push_register(i3).unwrap();
+        runtime.push_register(i6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_open_start_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_unit().unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+
+        let i4 = runtime.add_unit().unwrap();
+        let i5 = runtime.add_integer(10).unwrap();
+        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+
+        runtime.push_register(i3).unwrap();
+        runtime.push_register(i6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_open_start_integer_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_unit().unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+
+        let i4 = runtime.add_integer(5).unwrap();
+        let i5 = runtime.add_integer(10).unwrap();
+        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+
+        runtime.push_register(i3).unwrap();
+        runtime.push_register(i6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn equality_integer_open_start_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(5).unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+
+        let i4 = runtime.add_unit().unwrap();
+        let i5 = runtime.add_integer(10).unwrap();
+        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+
+        runtime.push_register(i3).unwrap();
+        runtime.push_register(i6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn equality_open_end_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_unit().unwrap();
+        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+
+        let i4 = runtime.add_integer(10).unwrap();
+        let i5 = runtime.add_unit().unwrap();
+        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+
+        runtime.push_register(i3).unwrap();
+        runtime.push_register(i6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn equality_open_end_integer_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_unit().unwrap();
+        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+
+        let i4 = runtime.add_integer(10).unwrap();
+        let i5 = runtime.add_integer(20).unwrap();
+        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+
+        runtime.push_register(i3).unwrap();
+        runtime.push_register(i6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn equality_integer_open_end_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(20).unwrap();
+        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+
+        let i4 = runtime.add_integer(10).unwrap();
+        let i5 = runtime.add_unit().unwrap();
+        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+
+        runtime.push_register(i3).unwrap();
+        runtime.push_register(i6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn equality_start_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+
+        let i4 = runtime.add_integer(5).unwrap();
+        let i5 = runtime.add_integer(10).unwrap();
+        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+
+        runtime.push_register(i3).unwrap();
+        runtime.push_register(i6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
+    }
+
+    #[test]
+    fn equality_end_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+
+        let i4 = runtime.add_integer(10).unwrap();
+        let i5 = runtime.add_integer(20).unwrap();
+        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+
+        runtime.push_register(i3).unwrap();
+        runtime.push_register(i6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
+    }
+
+    #[test]
+    fn equality_start_exclusive_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+
+        let i4 = runtime.add_integer(10).unwrap();
+        let i5 = runtime.add_integer(10).unwrap();
+        let i6 = runtime.add_range(i4, i5, true, false).unwrap();
+
+        runtime.push_register(i3).unwrap();
+        runtime.push_register(i6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
+    }
+
+    #[test]
+    fn equality_end_exclusive_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+
+        let i4 = runtime.add_integer(10).unwrap();
+        let i5 = runtime.add_integer(10).unwrap();
+        let i6 = runtime.add_range(i4, i5, false, true).unwrap();
+
+        runtime.push_register(i3).unwrap();
+        runtime.push_register(i6).unwrap();
 
         runtime.equality_comparison().unwrap();
 
