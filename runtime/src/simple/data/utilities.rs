@@ -94,23 +94,28 @@ impl DataCoersion for AnyData {
 
 // Comparison utilities
 
-fn cmp_any<T: 'static + PartialEq + Eq>(left: &Box<dyn Any>, right: &Box<dyn Any>) -> bool {
+fn cmp_any<T: 'static + PartialEq + PartialEq>(left: &Box<dyn Any>, right: &Box<dyn Any>) -> bool {
     match (left.downcast_ref::<T>(), right.downcast_ref::<T>()) {
         (Some(left), Some(right)) => left == right,
         _ => false,
     }
 }
 
-pub fn data_equal(left: &Box<dyn Any>, right: &Box<dyn Any>) -> bool {
+pub(crate) fn data_equal(left: &Box<dyn Any>, right: &Box<dyn Any>) -> bool {
     cmp_any::<UnitData>(left, right)
         || cmp_any::<TrueData>(left, right)
         || cmp_any::<FalseData>(left, right)
         || cmp_any::<IntegerData>(left, right)
+        || cmp_any::<FloatData>(left, right)
         || cmp_any::<SymbolData>(left, right)
         || cmp_any::<ExpressionData>(left, right)
         || cmp_any::<ExternalData>(left, right)
         || cmp_any::<PairData>(left, right)
         || cmp_any::<ListData>(left, right)
+        || cmp_any::<CharData>(left, right)
+        || cmp_any::<CharListData>(left, right)
+        || cmp_any::<ByteData>(left, right)
+        || cmp_any::<ByteListData>(left, right)
 }
 
 pub fn symbol_value(value: &str) -> u64 {

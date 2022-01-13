@@ -47,9 +47,10 @@ type DefinitionResolveInfo = (bool, Option<usize>);
 
 fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
-        Definition::CharList | Definition::ByteList => todo!(),
         Definition::Integer
         | Definition::Float
+        | Definition::CharList
+        | Definition::ByteList
         | Definition::Identifier
         | Definition::Property
         | Definition::Symbol
@@ -93,7 +94,6 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
     nearest_expression_point: Data::Size,
 ) -> Result<bool, CompilerError<Data::Error>> {
     match node.get_definition() {
-        Definition::CharList | Definition::ByteList => todo!(),
         Definition::Float => {
             let addr = data.add_float(match node.get_lex_token().get_text().parse::<Data::Float>() {
                 Err(_) => data_parse_error(node.get_lex_token(), ExpressionDataType::Float)?,
@@ -107,6 +107,28 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
                 Err(_) => data_parse_error(node.get_lex_token(), ExpressionDataType::Integer)?,
                 Ok(i) => i,
             })?;
+
+            data.push_instruction(Instruction::Put, Some(addr))?;
+        }
+        Definition::CharList => {
+            let items = Data::parse_char_list(node.get_lex_token().get_text());
+
+            data.start_char_list()?;
+            for c in items {
+                data.add_to_char_list(c)?;
+            }
+            let addr = data.end_char_list()?;
+
+            data.push_instruction(Instruction::Put, Some(addr))?;
+        }
+        Definition::ByteList => {
+            let items = Data::parse_byte_list(node.get_lex_token().get_text());
+
+            data.start_byte_list()?;
+            for c in items {
+                data.add_to_byte_list(c)?;
+            }
+            let addr = data.end_byte_list()?;
 
             data.push_instruction(Instruction::Put, Some(addr))?;
         }
@@ -592,25 +614,12 @@ mod values {
 
     #[test]
     fn put_float() {
-        let (data, _) = get_instruction_data(0, vec![(Definition::Float, None, None, None, "3.14", TokenType::Float)]).unwrap();
-
-        // for some reason the data comparison was failing
-        // but float value seemed equal, could be a floating point error or something with the dyn Any data
-        // should look into more, but below assertions are enough for now
-        // could also see about implementing a item wise comparison through SimpleDataRuntime instead of SimpleDataList
-
-        // assert_instruction_data(
-        //     0,
-        //     vec![(Definition::Float, None, None, None, "3.14", TokenType::Float)],
-        //     vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
-        //     SimpleDataList::default().append(FloatData::from(3.14)),
-        // );
-
-        let i1 = data.get_instruction(0).unwrap();
-        let i2 = data.get_instruction(1).unwrap();
-        assert_eq!(i1, (Instruction::Put, Some(3)));
-        assert_eq!(i2, (Instruction::EndExpression, None));
-        assert_eq!(data.get_float(3).unwrap(), 3.14);
+        assert_instruction_data(
+            0,
+            vec![(Definition::Float, None, None, None, "3.14", TokenType::Float)],
+            vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
+            SimpleDataList::default().append(FloatData::from(3.14)),
+        );
     }
 
     #[test]
@@ -660,6 +669,26 @@ mod values {
             vec![(Definition::Symbol, None, None, None, ":symbol", TokenType::Symbol)],
             vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
             SimpleDataList::default().append(SymbolData::from(symbol_value("symbol"))),
+        );
+    }
+
+    #[test]
+    fn put_char_list() {
+        assert_instruction_data(
+            0,
+            vec![(Definition::CharList, None, None, None, "characters", TokenType::CharList)],
+            vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
+            SimpleDataList::default().append(CharListData::from("characters")),
+        );
+    }
+
+    #[test]
+    fn put_byte_list() {
+        assert_instruction_data(
+            0,
+            vec![(Definition::ByteList, None, None, None, "abc", TokenType::ByteList)],
+            vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
+            SimpleDataList::default().append(ByteListData::from(vec!['a' as u8, 'b' as u8, 'c' as u8])),
         );
     }
 
