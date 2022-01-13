@@ -1,12 +1,13 @@
+use crate::simple::data::{
+    AnyData, CharData, ExpressionData, ExternalData, FalseData, FloatData, IntegerData, ListData, PairData, SimpleData, SymbolData, TrueData,
+    UnitData,
+};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::Hash;
-use std::{hash::Hasher};
-use crate::simple::data::{
-     ExpressionData, ExternalData, FalseData, IntegerData, FloatData, CharData, ListData, PairData, SymbolData, TrueData, UnitData, SimpleData, AnyData
-};
+use std::hash::Hasher;
 
-use std::any::Any;
 use crate::{ByteData, ByteListData, CharListData};
+use std::any::Any;
 
 pub type DataCoersionResult<T> = Result<T, String>;
 
@@ -129,7 +130,7 @@ pub fn symbol_value(value: &str) -> u64 {
 #[cfg(test)]
 mod comparisons {
     use crate::simple::data::utilities::cmp_any;
-    use crate::{data_equal, AsAnyData, ExpressionData, ExternalData, FalseData, IntegerData, ListData, PairData, SymbolData, TrueData, UnitData};
+    use crate::{data_equal, AsAnyData, ByteListData, CharListData, ExpressionData, ExternalData, FalseData, FloatData, IntegerData, ListData, PairData, SymbolData, TrueData, UnitData, CharData, ByteData};
 
     #[test]
     fn same_type_equal() {
@@ -167,6 +168,15 @@ mod comparisons {
             // Integer
             (IntegerData::from(10).as_any_data(), IntegerData::from(10).as_any_data(), true),
             (IntegerData::from(10).as_any_data(), IntegerData::from(20).as_any_data(), false),
+            // Float
+            (FloatData::from(10.5).as_any_data(), FloatData::from(10.5).as_any_data(), true),
+            (FloatData::from(10.5).as_any_data(), FloatData::from(20.5).as_any_data(), false),
+            // Char
+            (CharData::from('a').as_any_data(), CharData::from('a').as_any_data(), true),
+            (CharData::from('a').as_any_data(), CharData::from('b').as_any_data(), false),
+            // Byte
+            (ByteData::from(10).as_any_data(), ByteData::from(10).as_any_data(), true),
+            (ByteData::from(10).as_any_data(), ByteData::from(20).as_any_data(), false),
             // Symbol
             (SymbolData::from(10).as_any_data(), SymbolData::from(10).as_any_data(), true),
             (SymbolData::from(10).as_any_data(), SymbolData::from(20).as_any_data(), false),
@@ -190,10 +200,32 @@ mod comparisons {
                 ListData::from_items(vec![1, 2], vec![4, 5]).as_any_data(),
                 false,
             ),
+            // Char List
+            (
+                CharListData::from("abc").as_any_data(),
+                CharListData::from("abc").as_any_data(),
+                true,
+            ),
+            (
+                CharListData::from("abc").as_any_data(),
+                CharListData::from("abd").as_any_data(),
+                false,
+            ),
+            // Byte List
+            (
+                ByteListData::from(vec![1, 2, 3]).as_any_data(),
+                ByteListData::from(vec![1, 2, 3]).as_any_data(),
+                true,
+            ),
+            (
+                ByteListData::from(vec![1, 2, 3]).as_any_data(),
+                ByteListData::from(vec![1, 2, 4]).as_any_data(),
+                false,
+            ),
         ];
 
         for (left, right, expected_result) in cases {
-            assert_eq!(data_equal(&left.data, &right.data), expected_result);
+            assert_eq!(data_equal(&left.data, &right.data), expected_result, "{:?} == {:?}", left.get_data_type(), right.get_data_type());
         }
     }
 }
