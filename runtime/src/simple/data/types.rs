@@ -298,18 +298,18 @@ impl SimpleData for PairData {
 
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct RangeData {
-    start: i32,
-    end: i32,
+    start: usize,
+    end: usize,
     exclude_start: bool,
     exclude_end: bool
 }
 
 impl RangeData {
-    pub fn start(&self) -> i32 {
+    pub fn start(&self) -> usize {
         self.start
     }
 
-    pub fn end(&self) -> i32 {
+    pub fn end(&self) -> usize {
         self.end
     }
 
@@ -322,8 +322,8 @@ impl RangeData {
     }
 }
 
-impl From<(i32, i32, bool, bool)> for RangeData {
-    fn from((start, end, exclude_start, exclude_end): (i32, i32, bool, bool)) -> Self {
+impl From<(usize, usize, bool, bool)> for RangeData {
+    fn from((start, end, exclude_start, exclude_end): (usize, usize, bool, bool)) -> Self {
         RangeData { start, end, exclude_start, exclude_end }
     }
 }

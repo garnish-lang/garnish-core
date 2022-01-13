@@ -23,6 +23,10 @@ pub enum Instruction {
     Resolve,
     StartSideEffect,
     EndSideEffect,
+    MakeRange,
+    MakeStartExclusiveRange,
+    MakeEndExclusiveRange,
+    MakeExclusiveRange,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]

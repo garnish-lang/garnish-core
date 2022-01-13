@@ -11,6 +11,7 @@ mod pair;
 mod put;
 mod resolve;
 mod sideeffect;
+mod range;
 pub mod result;
 pub mod types;
 mod utilities;
@@ -32,6 +33,7 @@ use instruction::*;
 use list::*;
 use result::*;
 use sideeffect::*;
+use crate::runtime::range::{make_end_exclusive_range, make_exclusive_range, make_range, make_start_exclusive_range};
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
@@ -57,6 +59,11 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn access_left_internal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn access_right_internal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn access_length_internal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+
+    fn make_range(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn make_start_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn make_end_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn make_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
     fn make_pair(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
@@ -101,6 +108,10 @@ where
             Instruction::AccessLeftInternal => self.access_left_internal()?,
             Instruction::AccessRightInternal => self.access_right_internal()?,
             Instruction::AccessLengthInternal => self.access_length_internal()?,
+            Instruction::MakeRange => todo!(),
+            Instruction::MakeStartExclusiveRange => todo!(),
+            Instruction::MakeEndExclusiveRange => todo!(),
+            Instruction::MakeExclusiveRange => todo!(),
             Instruction::Put => match data {
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
                 Some(i) => self.put(i)?,
@@ -237,6 +248,26 @@ where
 
     fn access_length_internal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
         access_length_internal(self)
+    }
+
+    //
+    // Range
+    //
+
+    fn make_range(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        make_range(self)
+    }
+
+    fn make_start_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        make_start_exclusive_range(self)
+    }
+
+    fn make_end_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        make_end_exclusive_range(self)
+    }
+
+    fn make_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        make_exclusive_range(self)
     }
 
     //

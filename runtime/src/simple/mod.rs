@@ -211,7 +211,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok((pair.left(), pair.right()))
     }
 
-    fn get_range(&self, addr: Self::Size) -> Result<(Self::Integer, Self::Integer, bool, bool), Self::Error> {
+    fn get_range(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size, bool, bool), Self::Error> {
         let range = self.get(addr)?.as_range()?;
         Ok((range.start(), range.end(), range.exclude_start(), range.exclude_end()))
     }
@@ -312,7 +312,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.simple_data.len() - 1)
     }
 
-    fn add_range(&mut self, start: Self::Integer, end: Self::Integer, excludes_start: bool, excludes_end: bool) -> Result<Self::Size, Self::Error> {
+    fn add_range(&mut self, start: Self::Size, end: Self::Size, excludes_start: bool, excludes_end: bool) -> Result<Self::Size, Self::Error> {
         self.simple_data.push(RangeData::from((start, end, excludes_start, excludes_end)));
         Ok(self.simple_data.len() - 1)
     }
