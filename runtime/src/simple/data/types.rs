@@ -300,8 +300,6 @@ impl SimpleData for PairData {
 pub struct RangeData {
     start: usize,
     end: usize,
-    exclude_start: bool,
-    exclude_end: bool
 }
 
 impl RangeData {
@@ -312,19 +310,11 @@ impl RangeData {
     pub fn end(&self) -> usize {
         self.end
     }
-
-    pub fn exclude_start(&self) -> bool {
-        self.exclude_start
-    }
-
-    pub fn exclude_end(&self) -> bool {
-        self.exclude_end
-    }
 }
 
-impl From<(usize, usize, bool, bool)> for RangeData {
-    fn from((start, end, exclude_start, exclude_end): (usize, usize, bool, bool)) -> Self {
-        RangeData { start, end, exclude_start, exclude_end }
+impl From<(usize, usize)> for RangeData {
+    fn from((start, end): (usize, usize)) -> Self {
+        RangeData { start, end }
     }
 }
 
@@ -443,7 +433,7 @@ mod simple_tests {
             CharListData::from("abc").as_any_data(), // 11
             ByteData::from(10).as_any_data(),
             ByteListData::from(vec![10u8, 15u8, 20u8]).as_any_data(), // 13
-            RangeData::from((1, 2, true, true)).as_any_data(),
+            RangeData::from((1, 2)).as_any_data(),
             SliceData::from((1, 2)).as_any_data(), // 15
             LinkData::from((1, 2, true)).as_any_data(),
         ];
@@ -776,34 +766,22 @@ mod simple_tests {
 
     #[test]
     fn range() {
-        assert_eq!(RangeData::from((5, 10, true, false)).get_type(), ExpressionDataType::Range);
+        assert_eq!(RangeData::from((5, 10)).get_type(), ExpressionDataType::Range);
     }
 
     #[test]
     fn range_start() {
-        assert_eq!(RangeData::from((5, 10, true, false)).start(), 5);
+        assert_eq!(RangeData::from((5, 10)).start(), 5);
     }
 
     #[test]
     fn range_end() {
-        assert_eq!(RangeData::from((5, 10, true, false)).end(), 10);
+        assert_eq!(RangeData::from((5, 10)).end(), 10);
     }
-
-    #[test]
-    fn range_excludes_start() {
-        assert_eq!(RangeData::from((5, 10, true, false)).exclude_start(), true);
-    }
-
-
-    #[test]
-    fn range_excludes_end() {
-        assert_eq!(RangeData::from((5, 10, true, false)).exclude_end(), false);
-    }
-
 
     #[test]
     fn range_coersion() {
-        let data = RangeData::from((5, 10, true, false)).as_any_data().as_range();
+        let data = RangeData::from((5, 10)).as_any_data().as_range();
         assert!(data.is_ok(), "{:?}", data);
     }
 

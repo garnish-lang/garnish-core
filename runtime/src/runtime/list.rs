@@ -1,4 +1,5 @@
 use crate::{next_ref, push_integer, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
+use crate::runtime::range::range_len;
 
 pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
     if len > this.get_register_len() {
@@ -64,16 +65,10 @@ pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData>(this: &mut Data
             this.push_register(left)?;
         }
         ExpressionDataType::Range => {
-            let (start, _, start_ex, _) = this.get_range(r)?;
+            let (start, _) = this.get_range(r)?;
             match this.get_data_type(start)? {
                 ExpressionDataType::Integer => {
-                    let int = this.get_integer(start)?;
-                    let addr = if start_ex {
-                        this.add_integer(int + Data::Integer::one())?
-                    } else {
-                        start
-                    };
-                    this.push_register(addr)?;
+                    this.push_register(start)?;
                 }
                 _ => push_unit(this)?,
             }
@@ -92,12 +87,10 @@ pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData>(this: &mut Dat
             this.push_register(right)?;
         }
         ExpressionDataType::Range => {
-            let (_, end, _, end_ex) = this.get_range(r)?;
+            let (_, end) = this.get_range(r)?;
             match this.get_data_type(end)? {
                 ExpressionDataType::Integer => {
-                    let int = this.get_integer(end)?;
-                    let addr = if end_ex { this.add_integer(int - Data::Integer::one())? } else { end };
-                    this.push_register(addr)?;
+                    this.push_register(end)?;
                 }
                 _ => push_unit(this)?,
             }
@@ -124,12 +117,12 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
             push_integer(this, len)?;
         }
         ExpressionDataType::Range => {
-            let (start, end, start_ex, end_ex) = this.get_range(r)?;
+            let (start, end) = this.get_range(r)?;
             match (this.get_data_type(end)?, this.get_data_type(start)?) {
                 (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
                     let start_int = this.get_integer(start)?;
                     let end_int = this.get_integer(end)?;
-                    let result = range_len::<Data>(start_int, end_int, start_ex, end_ex);
+                    let result = range_len::<Data>(start_int, end_int);
 
                     let addr = this.add_integer(result)?;
                     this.push_register(addr)?;
@@ -201,61 +194,18 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
             }
         }
         (ExpressionDataType::Range, ExpressionDataType::Integer) => {
-            let (start, end, start_ex, end_ex) = this.get_range(left)?;
+            let (start, end) = this.get_range(left)?;
             match (this.get_data_type(start)?, this.get_data_type(end)?) {
                 (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
                     let start_int = this.get_integer(start)?;
                     let end_int = this.get_integer(end)?;
                     let index = this.get_integer(right)?;
-                    let len = range_len::<Data>(start_int, end_int, start_ex, end_ex);
+                    let len = range_len::<Data>(start_int, end_int);
 
                     if index >= len {
                         return Ok(None);
                     } else {
-                        let mut result = start_int + index;
-
-                        if start_ex {
-                            result += Data::Integer::one();
-                        }
-
-                        let addr = this.add_integer(result)?;
-                        Ok(Some(addr))
-                    }
-                }
-                (ExpressionDataType::Unit, ExpressionDataType::Integer) => {
-                    let start_int = Data::Integer::zero();
-                    let end_int = this.get_integer(end)?;
-                    let index = this.get_integer(right)?;
-                    let len = range_len::<Data>(start_int, end_int, start_ex, end_ex);
-
-                    if index >= len {
-                        return Ok(None);
-                    } else {
-                        let mut result = start_int + index;
-
-                        if start_ex {
-                            result += Data::Integer::one();
-                        }
-
-                        let addr = this.add_integer(result)?;
-                        Ok(Some(addr))
-                    }
-                }
-                (ExpressionDataType::Integer, ExpressionDataType::Unit) => {
-                    let start_int = this.get_integer(start)?;
-                    let end_int = Data::Integer::max();
-                    let index = this.get_integer(right)?;
-                    let len = range_len::<Data>(start_int, end_int, start_ex, end_ex);
-
-                    if index >= len {
-                        return Ok(None);
-                    } else {
-                        let mut result = start_int + index;
-
-                        if start_ex {
-                            result += Data::Integer::one();
-                        }
-
+                        let result = start_int + index;
                         let addr = this.add_integer(result)?;
                         Ok(Some(addr))
                     }
@@ -264,22 +214,6 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
             }
         }
         _ => Ok(None),
-    }
-}
-
-fn range_len<Data: GarnishLangRuntimeData>(start: Data::Integer, end: Data::Integer, start_ex: bool, end_ex: bool) -> Data::Integer {
-    // example range 10..20
-    // dif              20 - 10 = 10
-    // regular  len = 11, add 1
-    // start ex len = 10
-    // end ex   len = 10
-    // ex       len = 9, sub 1
-
-    let dif = end - start;
-    match (start_ex, end_ex) {
-        (true, true) => dif - Data::Integer::one(),
-        (false, false) => dif + Data::Integer::one(),
-        (true, false) | (false, true) => dif
     }
 }
 
@@ -729,7 +663,7 @@ mod ranges {
 
         let i1 = runtime.add_integer(10).unwrap();
         let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
 
         runtime.push_instruction(Instruction::AccessLeftInternal, None).unwrap();
 
@@ -741,29 +675,12 @@ mod ranges {
     }
 
     #[test]
-    fn start_exclusive_range_start() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, true, false).unwrap();
-
-        runtime.push_instruction(Instruction::AccessLeftInternal, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-
-        runtime.access_left_internal().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 11);
-    }
-
-    #[test]
     fn range_end() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_integer(10).unwrap();
         let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
 
         runtime.push_instruction(Instruction::AccessRightInternal, None).unwrap();
 
@@ -775,29 +692,12 @@ mod ranges {
     }
 
     #[test]
-    fn end_exclusive_range_end() {
+    fn range_len() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_integer(10).unwrap();
         let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, true).unwrap();
-
-        runtime.push_instruction(Instruction::AccessRightInternal, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-
-        runtime.access_right_internal().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 19);
-    }
-
-    #[test]
-    fn range_length() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
 
         runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
 
@@ -809,97 +709,12 @@ mod ranges {
     }
 
     #[test]
-    fn range_length_unit_if_start_is_unit() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_unit().unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
-
-        runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-
-        runtime.access_length_internal().unwrap();
-
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
-    }
-
-    #[test]
-    fn range_length_unit_if_end_is_unit() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_integer(20).unwrap();
-        let i2 = runtime.add_unit().unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
-
-        runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-
-        runtime.access_length_internal().unwrap();
-
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
-    }
-
-    #[test]
-    fn start_exclusive_range_length() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, true, false).unwrap();
-
-        runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-
-        runtime.access_length_internal().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 10);
-    }
-
-    #[test]
-    fn end_exclusive_range_length() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, true).unwrap();
-
-        runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-
-        runtime.access_length_internal().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 10);
-    }
-
-    #[test]
-    fn exclusive_range_length() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, true, true).unwrap();
-
-        runtime.push_instruction(Instruction::AccessLengthInternal, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-
-        runtime.access_length_internal().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 9);
-    }
-
-    #[test]
     fn access_with_integer() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_integer(10).unwrap();
         let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
         let i4 = runtime.add_integer(5).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
@@ -913,127 +728,13 @@ mod ranges {
     }
 
     #[test]
-    fn access_start_exclusive_with_integer() {
+    fn access_with_integer_out_of_range() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_integer(10).unwrap();
         let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, true, false).unwrap();
-        let i4 = runtime.add_integer(5).unwrap();
-
-        runtime.push_instruction(Instruction::Access, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-        runtime.push_register(i4).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 16);
-    }
-
-    #[test]
-    fn access_unit_start_first_is_zero() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_unit().unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
-        let i4 = runtime.add_integer(0).unwrap();
-
-        runtime.push_instruction(Instruction::Access, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-        runtime.push_register(i4).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 0);
-    }
-
-    #[test]
-    fn access_unit_start_exclusive_first_is_one() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_unit().unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, true, false).unwrap();
-        let i4 = runtime.add_integer(0).unwrap();
-
-        runtime.push_instruction(Instruction::Access, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-        runtime.push_register(i4).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 1);
-    }
-
-    #[test]
-    fn access_unit_end_max_is_max() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_integer(100).unwrap();
-        let i2 = runtime.add_unit().unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
-        let i4 = runtime.add_integer(i32::MAX - 100).unwrap();
-
-        runtime.push_instruction(Instruction::Access, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-        runtime.push_register(i4).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), i32::MAX);
-    }
-
-    #[test]
-    fn access_unit_end_exclusive_minus_start_is_max() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_integer(100).unwrap();
-        let i2 = runtime.add_unit().unwrap();
-        let i3 = runtime.add_range(i1, i2, false, true).unwrap();
-        let i4 = runtime.add_integer(i32::MAX - 101).unwrap();
-
-        runtime.push_instruction(Instruction::Access, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-        runtime.push_register(i4).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), i32::MAX - 1);
-    }
-
-    #[test]
-    fn access_start_exclusive_with_integer_zero() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, true, false).unwrap();
-        let i4 = runtime.add_integer(0).unwrap();
-
-        runtime.push_instruction(Instruction::Access, None).unwrap();
-
-        runtime.push_register(i3).unwrap();
-        runtime.push_register(i4).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 11);
-    }
-
-    #[test]
-    fn access_end_exclusive_with_integer() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, true).unwrap();
-        let i4 = runtime.add_integer(10).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
+        let i4 = runtime.add_integer(30).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 

@@ -1,4 +1,4 @@
-use crate::{next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
+use crate::{next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 
 pub(crate) fn make_range<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     make_range_internal(this, false, false)
@@ -16,16 +16,29 @@ pub(crate) fn make_exclusive_range<Data: GarnishLangRuntimeData>(this: &mut Data
     make_range_internal(this, true, true)
 }
 
+pub(crate) fn range_len<Data: GarnishLangRuntimeData>(start: Data::Integer, end: Data::Integer) -> Data::Integer {
+    (end - start) + Data::Integer::one()
+}
+
 fn make_range_internal<Data: GarnishLangRuntimeData>(this: &mut Data, start_exclusive: bool, end_exclusive: bool) -> Result<(), RuntimeError<Data::Error>> {
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
     let types = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
 
     match types {
-        (ExpressionDataType::Integer, ExpressionDataType::Integer)
-        | (ExpressionDataType::Integer, ExpressionDataType::Unit)
-        | (ExpressionDataType::Unit, ExpressionDataType::Integer)
-        | (ExpressionDataType::Unit, ExpressionDataType::Unit) => {
-            let addr = this.add_range(left_addr, right_addr, start_exclusive, end_exclusive)?;
+        (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+            let left_addr = if start_exclusive {
+                this.add_integer(this.get_integer(left_addr)? + Data::Integer::one())?
+            } else {
+                left_addr
+            };
+
+            let right_addr = if end_exclusive {
+                this.add_integer(this.get_integer(right_addr)? - Data::Integer::one())?
+            } else {
+                right_addr
+            };
+
+            let addr = this.add_range(left_addr, right_addr)?;
             this.push_register(addr)?;
         }
         _ => {
@@ -52,52 +65,9 @@ mod tests {
 
         runtime.make_range().unwrap();
 
-        assert_eq!(runtime.get_range(runtime.get_register(0).unwrap()).unwrap(), (d1, d2, false, false))
-    }
-
-    #[test]
-    fn range_integer_unit() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let d1 = runtime.add_integer(10).unwrap();
-        let d2 = runtime.add_unit().unwrap();
-
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
-
-        runtime.make_range().unwrap();
-
-        assert_eq!(runtime.get_range(runtime.get_register(0).unwrap()).unwrap(), (d1, d2, false, false))
-    }
-
-    #[test]
-    fn range_unit_integer() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let d1 = runtime.add_unit().unwrap();
-        let d2 = runtime.add_integer(10).unwrap();
-
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
-
-        runtime.make_range().unwrap();
-
-        assert_eq!(runtime.get_range(runtime.get_register(0).unwrap()).unwrap(), (d1, d2, false, false))
-    }
-
-    #[test]
-    fn range_unit_unit() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let d1 = runtime.add_unit().unwrap();
-        let d2 = runtime.add_unit().unwrap();
-
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
-
-        runtime.make_range().unwrap();
-
-        assert_eq!(runtime.get_range(runtime.get_register(0).unwrap()).unwrap(), (d1, d2, false, false))
+        let (start, end) = runtime.get_range(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_integer(start).unwrap(), 10);
+        assert_eq!(runtime.get_integer(end).unwrap(), 20);
     }
 
     #[test]
@@ -127,7 +97,9 @@ mod tests {
 
         runtime.make_start_exclusive_range().unwrap();
 
-        assert_eq!(runtime.get_range(runtime.get_register(0).unwrap()).unwrap(), (d1, d2, true, false))
+        let (start, end) = runtime.get_range(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_integer(start).unwrap(), 11);
+        assert_eq!(runtime.get_integer(end).unwrap(), 20);
     }
 
     #[test]
@@ -142,7 +114,9 @@ mod tests {
 
         runtime.make_end_exclusive_range().unwrap();
 
-        assert_eq!(runtime.get_range(runtime.get_register(0).unwrap()).unwrap(), (d1, d2, false, true))
+        let (start, end) = runtime.get_range(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_integer(start).unwrap(), 10);
+        assert_eq!(runtime.get_integer(end).unwrap(), 19);
     }
 
     #[test]
@@ -157,6 +131,8 @@ mod tests {
 
         runtime.make_exclusive_range().unwrap();
 
-        assert_eq!(runtime.get_range(runtime.get_register(0).unwrap()).unwrap(), (d1, d2, true, true))
+        let (start, end) = runtime.get_range(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_integer(start).unwrap(), 11);
+        assert_eq!(runtime.get_integer(end).unwrap(), 19);
     }
 }

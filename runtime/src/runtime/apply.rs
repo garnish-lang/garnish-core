@@ -132,12 +132,30 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
 
             this.end_list().and_then(|r| this.push_register(r))?;
         }
-        (ExpressionDataType::List, _)
-        | (ExpressionDataType::CharList, _)
-        | (ExpressionDataType::ByteList, _)
-        | (ExpressionDataType::Range, _) => match get_access_addr(this, right_addr, left_addr)? {
-            None => push_unit(this)?,
-            Some(i) => this.push_register(i)?,
+        (ExpressionDataType::Range, ExpressionDataType::Range) => {
+            let addr = narrow_range(this, left_addr, right_addr)?;
+            this.push_register(addr)?;
+        }
+        (ExpressionDataType::Slice, ExpressionDataType::Range) => {
+            // create new slice by narrowing this give range
+            let (value, slice_range) = this.get_slice(left_addr)?;
+            let range_addr = narrow_range(this, slice_range, right_addr)?;
+            let addr = this.add_slice(value, range_addr)?;
+            this.push_register(addr)?;
+        }
+        (ExpressionDataType::List, ExpressionDataType::Range)
+        | (ExpressionDataType::CharList, ExpressionDataType::Range)
+        | (ExpressionDataType::ByteList, ExpressionDataType::Range)
+        | (ExpressionDataType::Link, ExpressionDataType::Range) => {
+            // create slice
+            let addr = this.add_slice(left_addr, right_addr)?;
+            this.push_register(addr)?;
+        }
+        (ExpressionDataType::List, _) | (ExpressionDataType::CharList, _) | (ExpressionDataType::ByteList, _) | (ExpressionDataType::Range, _) => {
+            match get_access_addr(this, right_addr, left_addr)? {
+                None => push_unit(this)?,
+                Some(i) => this.push_register(i)?,
+            }
         }
         _ => {
             push_unit(this)?;
@@ -147,6 +165,37 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
     this.set_instruction_cursor(next_instruction)?;
 
     Ok(())
+}
+
+pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    to_narrow: Data::Size,
+    by: Data::Size,
+) -> Result<Data::Size, RuntimeError<Data::Error>> {
+    let (start, end) = this.get_range(by)?;
+    let (old_start, _) = this.get_range(to_narrow)?;
+
+    match (this.get_data_type(start)?, this.get_data_type(end)?, this.get_data_type(old_start)?) {
+        (ExpressionDataType::Integer, ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+            let (start_int, end_int, old_start_int) = (this.get_integer(start)?, this.get_integer(end)?, this.get_integer(old_start)?);
+
+            let new_start = old_start_int + start_int;
+
+            // end is always len away from start
+            // offset end by same amount as start
+            let new_end = new_start + (end_int - start_int);
+
+            let start_addr = this.add_integer(new_start)?;
+            let end_addr = this.add_integer(new_end)?;
+            let range_addr = this.add_range(start_addr, end_addr)?;
+
+            Ok(range_addr)
+        }
+        (s1, e1, s2) => state_error(format!(
+            "Attempting to create slice from slice with an invalid range. Slice range starting with {:?}. Range {:?} {:?}",
+            s2, s1, e1
+        ))?,
+    }
 }
 
 #[cfg(test)]
@@ -288,7 +337,7 @@ mod tests {
 
         let i1 = runtime.add_integer(10).unwrap();
         let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
         let i4 = runtime.add_integer(5).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
@@ -642,5 +691,155 @@ mod tests {
         assert_eq!(runtime.get_integer(context.new_addr).unwrap(), 200);
         assert_eq!(runtime.get_register(0).unwrap(), context.new_addr);
         assert_eq!(runtime.get_instruction_cursor(), i2);
+    }
+}
+
+#[cfg(test)]
+mod slices {
+    use crate::{
+        runtime::{context::EmptyContext, GarnishRuntime},
+        GarnishLangRuntimeData, SimpleRuntimeData,
+    };
+
+    fn add_pair(runtime: &mut SimpleRuntimeData, key: &str, value: i32) -> usize {
+        let i1 = runtime.add_symbol(key).unwrap();
+        let i2 = runtime.add_integer(value).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
+
+        return i3;
+    }
+
+    fn add_list(runtime: &mut SimpleRuntimeData, count: usize) -> usize {
+        runtime.start_list(count).unwrap();
+        for i in 0..count {
+            let d = add_pair(runtime, format!("val{}", i).as_str(), (i as i32 + 1) * 10);
+            runtime.add_to_list(d, true).unwrap();
+        }
+        runtime.end_list().unwrap()
+    }
+
+    fn add_range(runtime: &mut SimpleRuntimeData, start: i32, end: i32) -> usize {
+        let d1 = runtime.add_integer(start).unwrap();
+        let d2 = runtime.add_integer(end).unwrap();
+        let d3 = runtime.add_range(d1, d2).unwrap();
+        return d3;
+    }
+
+    #[test]
+    fn create_with_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list(&mut runtime, 10);
+        let d2 = add_range(&mut runtime, 1, 5);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        let (list, range) = runtime.get_slice(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(list, d1);
+        assert_eq!(range, d2);
+    }
+
+    #[test]
+    fn create_with_slice() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list(&mut runtime, 10);
+        let d2 = add_range(&mut runtime, 1, 8);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let d4 = add_range(&mut runtime, 2, 4);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d4).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        let (list, range) = runtime.get_slice(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(list, d1);
+
+        let (start, end) = runtime.get_range(range).unwrap();
+        assert_eq!(runtime.get_integer(start).unwrap(), 3);
+        assert_eq!(runtime.get_integer(end).unwrap(), 5);
+    }
+
+    #[test]
+    fn create_with_char_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.start_char_list().unwrap();
+        runtime.add_to_char_list('a').unwrap();
+        runtime.add_to_char_list('b').unwrap();
+        runtime.add_to_char_list('c').unwrap();
+        let d1 = runtime.end_char_list().unwrap();
+        let d2 = add_range(&mut runtime, 1, 5);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        let (list, range) = runtime.get_slice(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(list, d1);
+        assert_eq!(range, d2);
+    }
+
+    #[test]
+    fn create_with_byte_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.start_byte_list().unwrap();
+        runtime.add_to_byte_list(10).unwrap();
+        runtime.add_to_byte_list(20).unwrap();
+        runtime.add_to_byte_list(30).unwrap();
+        let d1 = runtime.end_byte_list().unwrap();
+        let d2 = add_range(&mut runtime, 1, 5);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        let (list, range) = runtime.get_slice(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(list, d1);
+        assert_eq!(range, d2);
+    }
+
+    #[test]
+    fn apply_range_to_range_narrows_it() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_range(&mut runtime, 5, 15);
+        let d2 = add_range(&mut runtime, 1, 9);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        let (start, end) = runtime.get_range(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_integer(start).unwrap(), 6);
+        assert_eq!(runtime.get_integer(end).unwrap(), 14);
+    }
+
+    #[test]
+    fn create_with_link() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = runtime.add_integer(10).unwrap();
+        let d2 = runtime.add_link(d1, unit, true).unwrap();
+
+        let d3 = add_range(&mut runtime, 1, 5);
+
+        runtime.push_register(d2).unwrap();
+        runtime.push_register(d3).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        let (list, range) = runtime.get_slice(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(list, d2);
+        assert_eq!(range, d3);
     }
 }

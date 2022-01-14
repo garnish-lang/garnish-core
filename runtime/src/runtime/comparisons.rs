@@ -146,8 +146,8 @@ fn data_equal<Data: GarnishLangRuntimeData>(
             }
         }
         (ExpressionDataType::Range, ExpressionDataType::Range) => {
-            let (start1, end1, start_ex1, end_ex1) = this.get_range(left_addr)?;
-            let (start2, end2, start_ex2, end_ex2) = this.get_range(right_addr)?;
+            let (start1, end1) = this.get_range(left_addr)?;
+            let (start2, end2) = this.get_range(right_addr)?;
 
             let start_equal = match (this.get_data_type(start1)?, this.get_data_type(start2)?) {
                 (ExpressionDataType::Unit, ExpressionDataType::Unit) => true,
@@ -161,7 +161,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 _ => false,
             };
 
-            start_equal && end_equal && start_ex1 == start_ex2 && end_ex1 == end_ex2
+            start_equal && end_equal
         }
         (ExpressionDataType::Pair, ExpressionDataType::Pair) => {
             let (left1, right1) = this.get_pair(left_addr)?;
@@ -1003,11 +1003,11 @@ mod ranges {
 
         let i1 = runtime.add_integer(10).unwrap();
         let i2 = runtime.add_integer(10).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
 
         let i4 = runtime.add_integer(10).unwrap();
         let i5 = runtime.add_integer(10).unwrap();
-        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+        let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
@@ -1023,11 +1023,11 @@ mod ranges {
 
         let i1 = runtime.add_unit().unwrap();
         let i2 = runtime.add_integer(10).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
 
         let i4 = runtime.add_unit().unwrap();
         let i5 = runtime.add_integer(10).unwrap();
-        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+        let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
@@ -1043,11 +1043,11 @@ mod ranges {
 
         let i1 = runtime.add_unit().unwrap();
         let i2 = runtime.add_integer(10).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
 
         let i4 = runtime.add_integer(5).unwrap();
         let i5 = runtime.add_integer(10).unwrap();
-        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+        let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
@@ -1063,11 +1063,11 @@ mod ranges {
 
         let i1 = runtime.add_integer(5).unwrap();
         let i2 = runtime.add_integer(10).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
 
         let i4 = runtime.add_unit().unwrap();
         let i5 = runtime.add_integer(10).unwrap();
-        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+        let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
@@ -1083,11 +1083,11 @@ mod ranges {
 
         let i1 = runtime.add_integer(10).unwrap();
         let i2 = runtime.add_unit().unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
 
         let i4 = runtime.add_integer(10).unwrap();
         let i5 = runtime.add_unit().unwrap();
-        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+        let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
@@ -1103,11 +1103,11 @@ mod ranges {
 
         let i1 = runtime.add_integer(10).unwrap();
         let i2 = runtime.add_unit().unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
 
         let i4 = runtime.add_integer(10).unwrap();
         let i5 = runtime.add_integer(20).unwrap();
-        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+        let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
@@ -1123,11 +1123,11 @@ mod ranges {
 
         let i1 = runtime.add_integer(10).unwrap();
         let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
 
         let i4 = runtime.add_integer(10).unwrap();
         let i5 = runtime.add_unit().unwrap();
-        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+        let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
@@ -1143,11 +1143,11 @@ mod ranges {
 
         let i1 = runtime.add_integer(10).unwrap();
         let i2 = runtime.add_integer(10).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
 
         let i4 = runtime.add_integer(5).unwrap();
         let i5 = runtime.add_integer(10).unwrap();
-        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
+        let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
@@ -1166,57 +1166,11 @@ mod ranges {
 
         let i1 = runtime.add_integer(10).unwrap();
         let i2 = runtime.add_integer(10).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i3 = runtime.add_range(i1, i2).unwrap();
 
         let i4 = runtime.add_integer(10).unwrap();
         let i5 = runtime.add_integer(20).unwrap();
-        let i6 = runtime.add_range(i4, i5, false, false).unwrap();
-
-        runtime.push_register(i3).unwrap();
-        runtime.push_register(i6).unwrap();
-
-        runtime.equality_comparison().unwrap();
-
-        assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
-            ExpressionDataType::False
-        );
-    }
-
-    #[test]
-    fn equality_start_exclusive_not_equal() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
-
-        let i4 = runtime.add_integer(10).unwrap();
-        let i5 = runtime.add_integer(10).unwrap();
-        let i6 = runtime.add_range(i4, i5, true, false).unwrap();
-
-        runtime.push_register(i3).unwrap();
-        runtime.push_register(i6).unwrap();
-
-        runtime.equality_comparison().unwrap();
-
-        assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
-            ExpressionDataType::False
-        );
-    }
-
-    #[test]
-    fn equality_end_exclusive_not_equal() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
-        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
-
-        let i4 = runtime.add_integer(10).unwrap();
-        let i5 = runtime.add_integer(10).unwrap();
-        let i6 = runtime.add_range(i4, i5, false, true).unwrap();
+        let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();

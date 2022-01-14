@@ -212,13 +212,13 @@ mod comparisons {
             (LinkData::from((10, 20, true)).as_any_data(), LinkData::from((10, 10, true)).as_any_data(), false),
             // Range
             (
-                RangeData::from((10, 20, true, false)).as_any_data(),
-                RangeData::from((10, 20, true, false)).as_any_data(),
+                RangeData::from((10, 20)).as_any_data(),
+                RangeData::from((10, 20)).as_any_data(),
                 true,
             ),
             (
-                RangeData::from((10, 20, true, false)).as_any_data(),
-                RangeData::from((10, 10, true, false)).as_any_data(),
+                RangeData::from((10, 20)).as_any_data(),
+                RangeData::from((10, 10)).as_any_data(),
                 false,
             ),
             // Slice
