@@ -87,6 +87,10 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             None => push_unit(this)?,
             Some(i) => this.push_register(i)?,
         },
+        ExpressionDataType::Range => match get_access_addr(this, right_addr, left_addr)? {
+            None => push_unit(this)?,
+            Some(i) => this.push_register(i)?,
+        },
         ExpressionDataType::List => {
             match this.get_data_type(right_addr)? {
                 ExpressionDataType::List => {
@@ -289,6 +293,25 @@ mod tests {
         assert_eq!(runtime.get_register(0).unwrap(), start);
         assert_eq!(runtime.get_byte(start).unwrap(), 30);
         assert_eq!(runtime.get_instruction_cursor(), i2);
+    }
+
+    #[test]
+    fn range_with_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i1 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_integer(20).unwrap();
+        let i3 = runtime.add_range(i1, i2, false, false).unwrap();
+        let i4 = runtime.add_integer(5).unwrap();
+
+        runtime.push_instruction(Instruction::Access, None).unwrap();
+
+        runtime.push_register(i3).unwrap();
+        runtime.push_register(i4).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 15);
     }
 
     #[test]
