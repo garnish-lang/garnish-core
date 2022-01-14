@@ -6,26 +6,28 @@ mod data;
 mod error;
 pub mod instruction;
 mod jumps;
+mod link;
 mod list;
 mod pair;
 mod put;
-mod resolve;
-mod sideeffect;
 mod range;
+mod resolve;
 pub mod result;
+mod sideeffect;
 pub mod types;
 mod utilities;
 
-use log::trace;
 pub use context::{EmptyContext, GarnishLangRuntimeContext};
 pub use data::{GarnishLangRuntimeData, TypeConstants};
 pub use error::*;
+use log::trace;
 pub(crate) use utilities::*;
 
 use crate::runtime::arithmetic::perform_addition;
 use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
 use crate::runtime::pair::make_pair;
 use crate::runtime::put::{push_input, push_result, put, put_input};
+use crate::runtime::range::{make_end_exclusive_range, make_exclusive_range, make_range, make_start_exclusive_range};
 use crate::GarnishLangRuntimeInfo;
 use apply::*;
 use comparisons::equality_comparison;
@@ -33,7 +35,7 @@ use instruction::*;
 use list::*;
 use result::*;
 use sideeffect::*;
-use crate::runtime::range::{make_end_exclusive_range, make_exclusive_range, make_range, make_start_exclusive_range};
+use crate::runtime::link::{append_link, prepend_link};
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
@@ -65,6 +67,9 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn make_end_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn make_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
+    fn append_link(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn prepend_link(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+
     fn make_pair(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
     fn put(&mut self, i: Data::Size) -> Result<(), RuntimeError<Data::Error>>;
@@ -91,7 +96,12 @@ where
             Some(v) => v,
         };
 
-        trace!("Executing instruction {:?} at {:?} with data {:?}", instruction, self.get_instruction_cursor(),  data);
+        trace!(
+            "Executing instruction {:?} at {:?} with data {:?}",
+            instruction,
+            self.get_instruction_cursor(),
+            data
+        );
 
         let mut next_instruction = self.get_instruction_cursor() + Data::Size::one();
 
@@ -101,7 +111,7 @@ where
             Instruction::PushValue => self.push_value()?,
             Instruction::UpdateValue => self.update_value()?,
             Instruction::StartSideEffect => self.start_side_effect()?,
-            Instruction::EndSideEffect =>self.end_side_effect()?,
+            Instruction::EndSideEffect => self.end_side_effect()?,
             Instruction::EqualityComparison => self.equality_comparison()?,
             Instruction::MakePair => self.make_pair()?,
             Instruction::Access => self.access()?,
@@ -110,8 +120,10 @@ where
             Instruction::AccessLengthInternal => self.access_length_internal()?,
             Instruction::MakeRange => self.make_range()?,
             Instruction::MakeStartExclusiveRange => self.make_start_exclusive_range()?,
-            Instruction::MakeEndExclusiveRange =>self.make_end_exclusive_range()?,
+            Instruction::MakeEndExclusiveRange => self.make_end_exclusive_range()?,
             Instruction::MakeExclusiveRange => self.make_exclusive_range()?,
+            Instruction::AppendLink => self.append_link()?,
+            Instruction::PrependLink => self.prepend_link()?,
             Instruction::Put => match data {
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
                 Some(i) => self.put(i)?,
@@ -127,7 +139,7 @@ where
             Instruction::EndExpression => {
                 self.end_expression()?;
                 next_instruction = self.get_instruction_cursor();
-            },
+            }
             Instruction::Apply => {
                 // sets instruction cursor for us
                 self.apply(context)?;
@@ -136,13 +148,13 @@ where
             Instruction::EmptyApply => {
                 self.empty_apply(context)?;
                 next_instruction = self.get_instruction_cursor();
-            },
+            }
             Instruction::Reapply => match data {
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
                 Some(i) => {
                     self.reapply(i)?;
                     next_instruction = self.get_instruction_cursor();
-                },
+                }
             },
             Instruction::JumpIfTrue => match data {
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
@@ -268,6 +280,18 @@ where
 
     fn make_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>> {
         make_exclusive_range(self)
+    }
+
+    //
+    // Link
+    //
+
+    fn append_link(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        append_link(self)
+    }
+
+    fn prepend_link(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        prepend_link(self)
     }
 
     //
