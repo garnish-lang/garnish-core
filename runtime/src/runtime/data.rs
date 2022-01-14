@@ -6,6 +6,7 @@ use std::str::FromStr;
 pub trait TypeConstants {
     fn zero() -> Self;
     fn one() -> Self;
+    fn max() -> Self;
 }
 
 pub trait Overflowable {
@@ -20,7 +21,17 @@ pub trait GarnishLangRuntimeData {
     type Symbol: Display + Debug + PartialOrd + TypeConstants + Copy;
     type Byte: Display + Debug + PartialOrd + Copy;
     type Char: Display + Debug + PartialOrd + Copy;
-    type Integer: Display + Debug + Overflowable + PartialOrd + TypeConstants + Copy + FromStr;
+    type Integer: Display
+        + Debug
+        + Overflowable
+        + Add<Self::Integer, Output = Self::Integer>
+        + AddAssign<Self::Integer>
+        + Sub<Self::Integer, Output = Self::Integer>
+        + SubAssign<Self::Integer>
+        + PartialOrd
+        + TypeConstants
+        + Copy
+        + FromStr;
     type Float: Display + Debug + Add<Self::Float, Output = Self::Float> + PartialOrd + TypeConstants + Copy + FromStr;
     type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + SubAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
 
@@ -139,6 +150,8 @@ impl TypeConstants for i8 {
     fn one() -> Self {
         1
     }
+
+    fn max() -> Self { i8::MAX }
 }
 
 impl TypeConstants for i16 {
@@ -149,6 +162,8 @@ impl TypeConstants for i16 {
     fn one() -> Self {
         1
     }
+
+    fn max() -> Self { i16::MAX }
 }
 
 impl TypeConstants for i32 {
@@ -159,6 +174,8 @@ impl TypeConstants for i32 {
     fn one() -> Self {
         1
     }
+
+    fn max() -> Self { i32::MAX }
 }
 
 impl TypeConstants for i64 {
@@ -169,6 +186,8 @@ impl TypeConstants for i64 {
     fn one() -> Self {
         1
     }
+
+    fn max() -> Self { i64::MAX }
 }
 
 impl TypeConstants for i128 {
@@ -179,6 +198,8 @@ impl TypeConstants for i128 {
     fn one() -> Self {
         1
     }
+
+    fn max() -> Self { i128::MAX }
 }
 
 impl TypeConstants for u8 {
@@ -189,6 +210,8 @@ impl TypeConstants for u8 {
     fn one() -> Self {
         1
     }
+
+    fn max() -> Self { u8::MAX }
 }
 
 impl TypeConstants for u16 {
@@ -199,6 +222,8 @@ impl TypeConstants for u16 {
     fn one() -> Self {
         1
     }
+
+    fn max() -> Self { u16::MAX }
 }
 
 impl TypeConstants for u32 {
@@ -209,6 +234,8 @@ impl TypeConstants for u32 {
     fn one() -> Self {
         1
     }
+
+    fn max() -> Self { u32::MAX }
 }
 
 impl TypeConstants for u64 {
@@ -219,6 +246,8 @@ impl TypeConstants for u64 {
     fn one() -> Self {
         1
     }
+
+    fn max() -> Self { u64::MAX }
 }
 
 impl TypeConstants for u128 {
@@ -229,6 +258,8 @@ impl TypeConstants for u128 {
     fn one() -> Self {
         1
     }
+
+    fn max() -> Self { u128::MAX }
 }
 
 impl TypeConstants for isize {
@@ -239,6 +270,8 @@ impl TypeConstants for isize {
     fn one() -> Self {
         1
     }
+
+    fn max() -> Self { isize::MAX }
 }
 
 impl TypeConstants for usize {
@@ -249,6 +282,8 @@ impl TypeConstants for usize {
     fn one() -> Self {
         1
     }
+
+    fn max() -> Self { usize::MAX }
 }
 
 impl TypeConstants for f32 {
@@ -259,6 +294,8 @@ impl TypeConstants for f32 {
     fn one() -> Self {
         1.0
     }
+
+    fn max() -> Self { f32::MAX }
 }
 
 impl TypeConstants for f64 {
@@ -269,6 +306,8 @@ impl TypeConstants for f64 {
     fn one() -> Self {
         1.0
     }
+
+    fn max() -> Self { f64::MAX }
 }
 
 impl TypeConstants for char {
@@ -279,4 +318,6 @@ impl TypeConstants for char {
     fn one() -> Self {
         1 as char
     }
+
+    fn max() -> Self { char::MAX }
 }
