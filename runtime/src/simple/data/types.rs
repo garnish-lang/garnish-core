@@ -334,7 +334,6 @@ impl SimpleData for RangeData {
     }
 }
 
-
 #[derive(Clone, PartialEq, Eq, Debug, Hash)]
 pub struct SliceData {
     list: usize,
@@ -360,6 +359,39 @@ impl From<(usize, usize)> for SliceData {
 impl SimpleData for SliceData {
     fn get_type(&self) -> ExpressionDataType {
         ExpressionDataType::Slice
+    }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug, Hash)]
+pub struct LinkData {
+    value: usize,
+    linked: usize,
+    is_append: bool
+}
+
+impl LinkData {
+    pub fn value(&self) -> usize {
+        self.value
+    }
+
+    pub fn linked(&self) -> usize {
+        self.linked
+    }
+
+    pub fn is_append(&self) -> bool {
+        self.is_append
+    }
+}
+
+impl From<(usize, usize, bool)> for LinkData {
+    fn from((value, linked, is_append): (usize, usize, bool)) -> Self {
+        LinkData { value, linked, is_append }
+    }
+}
+
+impl SimpleData for LinkData {
+    fn get_type(&self) -> ExpressionDataType {
+        ExpressionDataType::Link
     }
 }
 
@@ -393,7 +425,7 @@ impl SimpleData for ListData {
 
 #[cfg(test)]
 mod simple_tests {
-    use crate::{AnyData, AsAnyData, ByteData, ByteListData, CharData, CharListData, DataCoersion, ExpressionData, ExpressionDataType, ExternalData, FalseData, FloatData, IntegerData, ListData, PairData, RangeData, SimpleData, SliceData, SymbolData, TrueData, UnitData};
+    use crate::{AnyData, AsAnyData, ByteData, ByteListData, CharData, CharListData, DataCoersion, ExpressionData, ExpressionDataType, ExternalData, FalseData, FloatData, IntegerData, LinkData, ListData, PairData, RangeData, SimpleData, SliceData, SymbolData, TrueData, UnitData};
 
     fn all_data_list(remove: usize) -> Vec<AnyData> {
         let mut data: Vec<AnyData> = vec![
@@ -413,6 +445,7 @@ mod simple_tests {
             ByteListData::from(vec![10u8, 15u8, 20u8]).as_any_data(), // 13
             RangeData::from((1, 2, true, true)).as_any_data(),
             SliceData::from((1, 2)).as_any_data(), // 15
+            LinkData::from((1, 2, true)).as_any_data(),
         ];
 
         data.remove(remove);
@@ -810,6 +843,41 @@ mod simple_tests {
 
         for d in data {
             assert!(d.as_slice().is_err());
+        }
+    }
+
+    #[test]
+    fn link() {
+        assert_eq!(LinkData::from((5, 10, true)).get_type(), ExpressionDataType::Link);
+    }
+
+    #[test]
+    fn link_value() {
+        assert_eq!(LinkData::from((5, 10, true)).value(), 5);
+    }
+
+    #[test]
+    fn link_linked() {
+        assert_eq!(LinkData::from((5, 10, true)).linked(), 10);
+    }
+
+    #[test]
+    fn link_is_append() {
+        assert_eq!(LinkData::from((5, 10, true)).is_append(), true);
+    }
+
+    #[test]
+    fn link_coersion() {
+        let data = LinkData::from((5, 10, true)).as_any_data().as_link();
+        assert!(data.is_ok(), "{:?}", data);
+    }
+
+    #[test]
+    fn not_link_coersion_fails() {
+        let data: Vec<AnyData> = all_data_list(16);
+
+        for d in data {
+            assert!(d.as_link().is_err());
         }
     }
 

@@ -3,7 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
-use crate::{symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, RuntimeError, SimpleData, SimpleDataList, SymbolData, FloatData, CharData, CharListData, ByteData, ByteListData, RangeData, SliceData};
+use crate::{symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, RuntimeError, SimpleData, SimpleDataList, SymbolData, FloatData, CharData, CharListData, ByteData, ByteListData, RangeData, SliceData, LinkData};
 
 pub mod data;
 
@@ -221,6 +221,11 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok((slice.list(), slice.range()))
     }
 
+    fn get_link(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size, bool), Self::Error> {
+        let link = self.get(addr)?.as_link()?;
+        Ok((link.value(), link.linked(), link.is_append()))
+    }
+
     fn get_list_len(&self, index: usize) -> Result<usize, Self::Error> {
         Ok(self.get(index)?.as_list()?.items().len())
     }
@@ -319,6 +324,11 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
         self.simple_data.push(SliceData::from((list, range)));
+        Ok(self.simple_data.len() - 1)
+    }
+
+    fn add_link(&mut self, value: Self::Size, linked: Self::Size, is_append: bool) -> Result<Self::Size, Self::Error> {
+        self.simple_data.push(LinkData::from((value, linked, is_append)));
         Ok(self.simple_data.len() - 1)
     }
 

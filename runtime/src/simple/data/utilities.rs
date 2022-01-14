@@ -7,6 +7,7 @@ use std::hash::Hash;
 use std::hash::Hasher;
 
 use std::any::Any;
+use crate::LinkData;
 
 pub type DataCoersionResult<T> = Result<T, String>;
 
@@ -26,6 +27,7 @@ pub trait DataCoersion {
     fn as_pair(&self) -> DataCoersionResult<PairData>;
     fn as_range(&self) -> DataCoersionResult<RangeData>;
     fn as_slice(&self) -> DataCoersionResult<SliceData>;
+    fn as_link(&self) -> DataCoersionResult<LinkData>;
     fn as_list(&self) -> DataCoersionResult<ListData>;
 }
 
@@ -97,6 +99,10 @@ impl DataCoersion for AnyData {
         downcast_result(self)
     }
 
+    fn as_link(&self) -> DataCoersionResult<LinkData> {
+        downcast_result(self)
+    }
+
     fn as_list(&self) -> DataCoersionResult<ListData> {
         downcast_result(self)
     }
@@ -123,6 +129,7 @@ pub(crate) fn data_equal(left: &Box<dyn Any>, right: &Box<dyn Any>) -> bool {
         || cmp_any::<PairData>(left, right)
         || cmp_any::<RangeData>(left, right)
         || cmp_any::<SliceData>(left, right)
+        || cmp_any::<LinkData>(left, right)
         || cmp_any::<ListData>(left, right)
         || cmp_any::<CharData>(left, right)
         || cmp_any::<CharListData>(left, right)
@@ -141,10 +148,7 @@ pub fn symbol_value(value: &str) -> u64 {
 #[cfg(test)]
 mod comparisons {
     use crate::simple::data::utilities::cmp_any;
-    use crate::{
-        data_equal, AsAnyData, ByteData, ByteListData, CharData, CharListData, ExpressionData, ExternalData, FalseData, FloatData, IntegerData,
-        ListData, PairData, RangeData, SliceData, SymbolData, TrueData, UnitData,
-    };
+    use crate::{data_equal, AsAnyData, ByteData, ByteListData, CharData, CharListData, ExpressionData, ExternalData, FalseData, FloatData, IntegerData, ListData, PairData, RangeData, SliceData, SymbolData, TrueData, UnitData, LinkData};
 
     #[test]
     fn same_type_equal() {
@@ -203,6 +207,9 @@ mod comparisons {
             // Pair
             (PairData::from((10, 20)).as_any_data(), PairData::from((10, 20)).as_any_data(), true),
             (PairData::from((10, 20)).as_any_data(), PairData::from((10, 10)).as_any_data(), false),
+            // Pair
+            (LinkData::from((10, 20, true)).as_any_data(), LinkData::from((10, 20, true)).as_any_data(), true),
+            (LinkData::from((10, 20, true)).as_any_data(), LinkData::from((10, 10, true)).as_any_data(), false),
             // Range
             (
                 RangeData::from((10, 20, true, false)).as_any_data(),

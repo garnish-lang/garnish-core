@@ -12,6 +12,7 @@ pub enum ExpressionDataType {
     Pair,
     Range,
     Slice,
+    Link,
     List,
     Expression,
     External,
