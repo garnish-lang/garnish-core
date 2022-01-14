@@ -649,3 +649,34 @@ mod tests {
         assert_eq!(runtime.get_instruction_cursor(), 4);
     }
 }
+
+#[cfg(test)]
+pub mod testing_utilites {
+    use crate::{
+        GarnishLangRuntimeData, SimpleRuntimeData,
+    };
+
+    pub fn add_pair(runtime: &mut SimpleRuntimeData, key: &str, value: i32) -> usize {
+        let i1 = runtime.add_symbol(key).unwrap();
+        let i2 = runtime.add_integer(value).unwrap();
+        let i3 = runtime.add_pair((i1, i2)).unwrap();
+
+        return i3;
+    }
+
+    pub fn add_list(runtime: &mut SimpleRuntimeData, count: usize) -> usize {
+        runtime.start_list(count).unwrap();
+        for i in 0..count {
+            let d = add_pair(runtime, format!("val{}", i).as_str(), (i as i32 + 1) * 10);
+            runtime.add_to_list(d, true).unwrap();
+        }
+        runtime.end_list().unwrap()
+    }
+
+    pub fn add_range(runtime: &mut SimpleRuntimeData, start: i32, end: i32) -> usize {
+        let d1 = runtime.add_integer(start).unwrap();
+        let d2 = runtime.add_integer(end).unwrap();
+        let d3 = runtime.add_range(d1, d2).unwrap();
+        return d3;
+    }
+}

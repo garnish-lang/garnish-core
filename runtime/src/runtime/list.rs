@@ -73,6 +73,14 @@ pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData>(this: &mut Data
                 _ => push_unit(this)?,
             }
         }
+        ExpressionDataType::Slice => {
+            let (value, _) = this.get_slice(r)?;
+            this.push_register(value)?;
+        }
+        ExpressionDataType::Link => {
+            let (value, ..) = this.get_link(r)?;
+            this.push_register(value)?;
+        }
         _ => push_unit(this)?,
     }
 
@@ -94,6 +102,14 @@ pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData>(this: &mut Dat
                 }
                 _ => push_unit(this)?,
             }
+        }
+        ExpressionDataType::Slice => {
+            let (_, range) = this.get_slice(r)?;
+            this.push_register(range)?;
+        }
+        ExpressionDataType::Link => {
+            let (_, linked, _) = this.get_link(r)?;
+            this.push_register(linked)?;
         }
         _ => push_unit(this)?,
     }
@@ -129,6 +145,37 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
                 }
                 _ => push_unit(this)?,
             }
+        }
+        ExpressionDataType::Slice => {
+            let (_, range_addr) = this.get_slice(r)?;
+            let (start, end) = this.get_range(range_addr)?;
+            match (this.get_data_type(start)?, this.get_data_type(end)?) {
+                (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+                    let start = this.get_integer(start)?;
+                    let end = this.get_integer(end)?;
+                    let addr = this.add_integer(range_len::<Data>(start, end))?;
+                    this.push_register(addr)?;
+                }
+                (s, e) => state_error(format!("Non integer values used for range {:?} {:?}", s, e))?
+            }
+        }
+        ExpressionDataType::Link => {
+            let (_, mut linked, _) = this.get_link(r)?;
+            let mut count = Data::Integer::one();
+            loop {
+                match this.get_data_type(linked)? {
+                    ExpressionDataType::Link => {
+                        let next = this.get_link(linked)?;
+                        linked = next.1;
+                        count += Data::Integer::one();
+                    }
+                    ExpressionDataType::Unit => break,
+                    l => state_error(format!("Invalid linked type {:?}", l))?
+                }
+            }
+
+            let addr = this.add_integer(count)?;
+            this.push_register(addr)?;
         }
         _ => push_unit(this)?,
     }
@@ -744,5 +791,118 @@ mod ranges {
         runtime.access().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+    }
+}
+
+#[cfg(test)]
+mod slices {
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::testing_utilites::add_list;
+
+    #[test]
+    fn left_internal_gives_value() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list(&mut runtime, 10);
+        let d2 = runtime.add_integer(1).unwrap();
+        let d3 = runtime.add_integer(4).unwrap();
+        let d4 = runtime.add_range(d2, d3).unwrap();
+        let d5 = runtime.add_slice(d1, d4).unwrap();
+
+        runtime.push_register(d5).unwrap();
+
+        runtime.access_left_internal().unwrap();
+
+        assert_eq!(runtime.get_register(0).unwrap(), d1);
+    }
+
+    #[test]
+    fn right_internal_gives_range() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list(&mut runtime, 10);
+        let d2 = runtime.add_integer(1).unwrap();
+        let d3 = runtime.add_integer(4).unwrap();
+        let d4 = runtime.add_range(d2, d3).unwrap();
+        let d5 = runtime.add_slice(d1, d4).unwrap();
+
+        runtime.push_register(d5).unwrap();
+
+        runtime.access_right_internal().unwrap();
+
+        assert_eq!(runtime.get_register(0).unwrap(), d4);
+    }
+
+    #[test]
+    fn len() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list(&mut runtime, 10);
+        let d2 = runtime.add_integer(1).unwrap();
+        let d3 = runtime.add_integer(4).unwrap();
+        let d4 = runtime.add_range(d2, d3).unwrap();
+        let d5 = runtime.add_slice(d1, d4).unwrap();
+
+        runtime.push_register(d5).unwrap();
+
+        runtime.access_length_internal().unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 4);
+    }
+}
+
+#[cfg(test)]
+mod links {
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn left_internal_gives_value() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = runtime.add_integer(10).unwrap();
+        let d2 = runtime.add_link(d1, unit, true).unwrap();
+        let d3 = runtime.add_integer(20).unwrap();
+        let d4 = runtime.add_link(d3, d2, true).unwrap();
+
+        runtime.push_register(d4).unwrap();
+
+        runtime.access_left_internal().unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 20);
+    }
+
+    #[test]
+    fn right_internal_gives_next_link() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = runtime.add_integer(10).unwrap();
+        let d2 = runtime.add_link(d1, unit, true).unwrap();
+        let d3 = runtime.add_integer(20).unwrap();
+        let d4 = runtime.add_link(d3, d2, true).unwrap();
+
+        runtime.push_register(d4).unwrap();
+
+        runtime.access_right_internal().unwrap();
+
+        assert_eq!(runtime.get_register(0).unwrap(), d2);
+    }
+
+    #[test]
+    fn len() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = runtime.add_integer(10).unwrap();
+        let d2 = runtime.add_link(d1, unit, true).unwrap();
+        let d3 = runtime.add_integer(20).unwrap();
+        let d4 = runtime.add_link(d3, d2, true).unwrap();
+
+        runtime.push_register(d4).unwrap();
+
+        runtime.access_length_internal().unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 2);
     }
 }
