@@ -51,8 +51,8 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
     // assume default, apply expression will update to its value
     let mut next_instruction = this.get_instruction_cursor() + Data::Size::one();
 
-    match this.get_data_type(left_addr)? {
-        ExpressionDataType::Expression => {
+    match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {
+        (ExpressionDataType::Expression, _) => {
             let expression_index = this.get_expression(left_addr)?;
 
             // Expression stores index of expression table, look up actual instruction index
@@ -64,7 +64,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             this.push_jump_path(this.get_instruction_cursor() + Data::Size::one())?;
             this.push_value_stack(right_addr)?;
         }
-        ExpressionDataType::External => {
+        (ExpressionDataType::External, _) => {
             let external_value = this.get_external(left_addr)?;
 
             match context {
@@ -79,78 +79,65 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                 },
             };
         }
-        ExpressionDataType::CharList => match get_access_addr(this, right_addr, left_addr)? {
-            None => push_unit(this)?,
-            Some(i) => this.push_register(i)?,
-        },
-        ExpressionDataType::ByteList => match get_access_addr(this, right_addr, left_addr)? {
-            None => push_unit(this)?,
-            Some(i) => this.push_register(i)?,
-        },
-        ExpressionDataType::Range => match get_access_addr(this, right_addr, left_addr)? {
-            None => push_unit(this)?,
-            Some(i) => this.push_register(i)?,
-        },
-        ExpressionDataType::List => {
-            match this.get_data_type(right_addr)? {
-                ExpressionDataType::List => {
-                    let len = this.get_list_len(right_addr)?;
+        (ExpressionDataType::List, ExpressionDataType::List) => {
+            let len = this.get_list_len(right_addr)?;
 
-                    let mut count = Data::Size::zero();
+            let mut count = Data::Size::zero();
 
-                    this.start_list(len)?;
+            this.start_list(len)?;
 
-                    while count < len {
-                        let i = Data::size_to_integer(count);
-                        let mut item = this.get_list_item(right_addr, i)?;
+            while count < len {
+                let i = Data::size_to_integer(count);
+                let mut item = this.get_list_item(right_addr, i)?;
 
-                        let (is_pair_mapping, sym_addr) = match this.get_data_type(item)? {
-                            ExpressionDataType::Pair => {
-                                let (left, right) = this.get_pair(item)?;
-                                match this.get_data_type(left)? {
-                                    ExpressionDataType::Symbol => {
-                                        // update item to be mapping pair's right
-                                        item = right;
-                                        (true, left)
-                                    }
-                                    _ => (false, Data::Size::zero()),
-                                }
+                let (is_pair_mapping, sym_addr) = match this.get_data_type(item)? {
+                    ExpressionDataType::Pair => {
+                        let (left, right) = this.get_pair(item)?;
+                        match this.get_data_type(left)? {
+                            ExpressionDataType::Symbol => {
+                                // update item to be mapping pair's right
+                                item = right;
+                                (true, left)
                             }
                             _ => (false, Data::Size::zero()),
-                        };
-
-                        let (value, is_associative) = match get_access_addr(this, item, left_addr)? {
-                            Some(addr) => match this.get_data_type(addr)? {
-                                ExpressionDataType::Pair => {
-                                    let (left, _right) = this.get_pair(addr)?;
-                                    match this.get_data_type(left)? {
-                                        ExpressionDataType::Symbol => (addr, true),
-                                        _ => (addr, false),
-                                    }
-                                }
-                                _ => (addr, false),
-                            },
-                            // make sure there is a unit value to use
-                            None => (this.add_unit()?, false),
-                        };
-
-                        if is_pair_mapping {
-                            let value = this.add_pair((sym_addr, value))?;
-                            this.add_to_list(value, true)?;
-                        } else {
-                            this.add_to_list(value, is_associative)?;
                         }
-
-                        count += Data::Size::one();
                     }
+                    _ => (false, Data::Size::zero()),
+                };
 
-                    this.end_list().and_then(|r| this.push_register(r))?;
+                let (value, is_associative) = match get_access_addr(this, item, left_addr)? {
+                    Some(addr) => match this.get_data_type(addr)? {
+                        ExpressionDataType::Pair => {
+                            let (left, _right) = this.get_pair(addr)?;
+                            match this.get_data_type(left)? {
+                                ExpressionDataType::Symbol => (addr, true),
+                                _ => (addr, false),
+                            }
+                        }
+                        _ => (addr, false),
+                    },
+                    // make sure there is a unit value to use
+                    None => (this.add_unit()?, false),
+                };
+
+                if is_pair_mapping {
+                    let value = this.add_pair((sym_addr, value))?;
+                    this.add_to_list(value, true)?;
+                } else {
+                    this.add_to_list(value, is_associative)?;
                 }
-                _ => match get_access_addr(this, right_addr, left_addr)? {
-                    None => push_unit(this)?,
-                    Some(i) => this.push_register(i)?,
-                },
-            };
+
+                count += Data::Size::one();
+            }
+
+            this.end_list().and_then(|r| this.push_register(r))?;
+        }
+        (ExpressionDataType::List, _)
+        | (ExpressionDataType::CharList, _)
+        | (ExpressionDataType::ByteList, _)
+        | (ExpressionDataType::Range, _) => match get_access_addr(this, right_addr, left_addr)? {
+            None => push_unit(this)?,
+            Some(i) => this.push_register(i)?,
         }
         _ => {
             push_unit(this)?;
