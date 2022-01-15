@@ -157,6 +157,7 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
     }
 }
 
+
 fn access_with_symbol<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     sym: Data::Symbol,
@@ -166,45 +167,98 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
         ExpressionDataType::List => Ok(this.get_list_item_with_symbol(value, sym)?),
         ExpressionDataType::Slice => {
             let (value, _) = this.get_slice(value)?;
-            Ok(this.get_list_item_with_symbol(value, sym)?)
+            sym_access_links_slices(this, Data::Integer::zero(), value, sym)
         }
         ExpressionDataType::Link => {
-            let (mut value, mut linked, _) = this.get_link(value)?;
-            loop {
-                match this.get_data_type(value)? {
-                    ExpressionDataType::Pair => {
-                        let (left, right) = this.get_pair(value)?;
-                        match this.get_data_type(left)? {
-                            ExpressionDataType::Symbol => {
-                                let value_sym = this.get_symbol(left)?;
-                                if value_sym == sym {
-                                    value = right;
-                                    break;
-                                } else {
-                                    let (next_val, next_linked, _) = this.get_link(linked)?;
-                                    value = next_val;
-                                    linked = next_linked;
-                                }
-                            }
-                            _ => {
-                                let (next_val, next_linked, _) = this.get_link(linked)?;
-                                value = next_val;
-                                linked = next_linked;
-                            }
-                        }
-                    }
-                    _ => {
-                        let (next_val, next_linked, _) = this.get_link(linked)?;
-                        value = next_val;
-                        linked = next_linked;
-                    }
-                }
-            }
-
-            Ok(Some(value))
+            sym_access_links_slices(this, Data::Integer::zero(), value, sym)
         }
         _ => Ok(None),
     }
+}
+
+fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    start_count: Data::Integer,
+    start_value: Data::Size,
+    sym: Data::Symbol,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    let mut item: Option<Data::Size> = None;
+    let mut count = start_count;
+    // keep track of starting point to any pushed values later
+    let start_register = this.get_register_len();
+
+    this.push_register(start_value)?;
+
+    while this.get_register_len() > start_register {
+        match this.pop_register() {
+            None => state_error(format!("Popping more registers than placed during linking indexing."))?,
+            Some(r) => match this.get_data_type(r)? {
+                ExpressionDataType::Link => {
+                    let (val, linked, is_append) = this.get_link(r)?;
+
+                    match this.get_data_type(linked)? {
+                        ExpressionDataType::Unit => {
+                            // linked of type unit means, only push value
+                            this.push_register(val)?;
+                        }
+                        ExpressionDataType::Link => {
+                            if is_append {
+                                // linked value is previous, gets checked first, pushed last
+                                this.push_register(val)?;
+                                this.push_register(linked)?;
+                            } else {
+                                // linked value is next, gets resolved last, pushed first
+                                this.push_register(linked)?;
+                                this.push_register(val)?;
+                            }
+                        }
+                        t => state_error(format!("Invalid linked type {:?}", t))?,
+                    }
+                }
+                ExpressionDataType::Slice => {
+                    let (val, range) = this.get_slice(r)?;
+                    let (start, end, len) = get_range(this, range)?;
+
+                    count -= start;
+                    this.push_register(val)?;
+                }
+                ExpressionDataType::List => {
+                    // return item if its in the list, else continue checking remaining items
+                    match this.get_list_item_with_symbol(r, sym)? {
+                        None => (), // continue on
+                        Some(r) => {
+                            item = Some(r);
+                            break;
+                        }
+                    }
+                }
+                ExpressionDataType::Pair => {
+                    let (left, right) = this.get_pair(r)?;
+                    match this.get_data_type(left)? {
+                        ExpressionDataType::Symbol => {
+                            // if this sym equals search sym, return 'right' value
+                            // else, continue checking
+                            if this.get_symbol(left)? == sym {
+                                item = Some(right);
+                                break;
+                            }
+                        }
+                        // not an associations, continue on
+                        _ => ()
+                    }
+                }
+                // nothing to do for any other values
+                _ => ()
+            },
+        }
+    }
+
+    // remove remaining registers added during operation
+    while this.get_register_len() > start_register {
+        this.pop_register();
+    }
+
+    Ok(item)
 }
 
 fn integer_access_links_slices<Data: GarnishLangRuntimeData>(
@@ -686,6 +740,25 @@ mod slice {
     }
 
     #[test]
+    fn sym_index_slice_of_links() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links(&mut runtime, 10, true);
+        let d2 = runtime.add_integer(2).unwrap();
+        let d3 = runtime.add_integer(8).unwrap();
+        let d4 = runtime.add_range(d2, d3).unwrap();
+        let d5 = runtime.add_slice(d1, d4).unwrap();
+        let d6 = runtime.add_symbol("val4").unwrap();
+
+        runtime.push_register(d5).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 50);
+    }
+
+    #[test]
     fn index_slice_of_links_of_list() {
         let mut runtime = SimpleRuntimeData::new();
 
@@ -710,6 +783,31 @@ mod slice {
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val14"));
         assert_eq!(runtime.get_integer(right).unwrap(), 14);
+    }
+
+    #[test]
+    fn sym_index_slice_of_links_of_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = add_list_with_start(&mut runtime, 5, 10);
+        let d2 = add_list_with_start(&mut runtime, 5, 20);
+
+        let d3 = runtime.add_link(d1, unit, true).unwrap();
+        let d4 = runtime.add_link(d2, d3, true).unwrap();
+
+        let d5 = runtime.add_integer(2).unwrap();
+        let d6 = runtime.add_integer(8).unwrap();
+        let d7 = runtime.add_range(d5, d6).unwrap();
+        let d8 = runtime.add_slice(d4, d7).unwrap();
+        let d9 = runtime.add_symbol("val14").unwrap();
+
+        runtime.push_register(d8).unwrap();
+        runtime.push_register(d9).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 14);
     }
 }
 
@@ -804,6 +902,25 @@ mod link {
     }
 
     #[test]
+    fn sym_index_prepend_link_of_lists_with() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = add_list_with_start(&mut runtime, 5, 50);
+        let d2 = runtime.add_link(d1, unit, false).unwrap();
+        let d3 = add_list_with_start(&mut runtime, 5, 100);
+        let d4 = runtime.add_link(d3, d2, false).unwrap();
+        let d5 = runtime.add_symbol("val52").unwrap();
+
+        runtime.push_register(d4).unwrap();
+        runtime.push_register(d5).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 52);
+    }
+
+    #[test]
     fn index_append_link_of_lists_with_integer() {
         let mut runtime = SimpleRuntimeData::new();
 
@@ -822,6 +939,25 @@ mod link {
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val102"));
         assert_eq!(runtime.get_integer(right).unwrap(), 102);
+    }
+
+    #[test]
+    fn sym_index_append_link_of_lists_with_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = add_list_with_start(&mut runtime, 5, 50);
+        let d2 = runtime.add_link(d1, unit, true).unwrap();
+        let d3 = add_list_with_start(&mut runtime, 5, 100);
+        let d4 = runtime.add_link(d3, d2, true).unwrap();
+        let d5 = runtime.add_symbol("val102").unwrap();
+
+        runtime.push_register(d4).unwrap();
+        runtime.push_register(d5).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 102);
     }
 
     #[test]
@@ -854,5 +990,35 @@ mod link {
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val16"));
         assert_eq!(runtime.get_integer(right).unwrap(), 16);
+    }
+
+    #[test]
+    fn sym_index_link_of_slices_of_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = add_list_with_start(&mut runtime, 20, 10);
+
+        let d2 = add_range(&mut runtime, 2, 8);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+
+        let d4 = add_range(&mut runtime, 14, 19);
+        let d5 = runtime.add_slice(d1, d4).unwrap();
+
+        let d6 = runtime.add_link(d3, unit, true).unwrap();
+        let d7 = runtime.add_link(d5, d6, true).unwrap();
+
+        // resulting list should look like this
+        // 0   1   2   3   4   5   6   7   8   9   10  11  12
+        // 12, 13, 14, 15, 16, 17, 18, 24, 25, 26, 27, 28, 29
+
+        let d8 = runtime.add_symbol("val16").unwrap();
+
+        runtime.push_register(d7).unwrap();
+        runtime.push_register(d8).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 16);
     }
 }
