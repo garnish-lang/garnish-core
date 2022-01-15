@@ -242,14 +242,32 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
                         match this.pop_register() {
                             None => state_error(format!("Popping more registers than placed during linking indexing."))?,
                             Some(r) => {
-                                if count == index {
-                                    let (next_val, _, _) = this.get_link(r)?;
-                                    value = Some(next_val);
-                                    // no break, this branch should only happen once because of equality
-                                    // continue to clean up remaining registers
-                                }
+                                // only links right now
+                                let (next_val, _, _) = this.get_link(r)?;
 
-                                count += Data::Integer::one();
+                                match this.get_data_type(next_val)? {
+                                    ExpressionDataType::List => {
+                                        let list_len = Data::size_to_integer(this.get_list_len(next_val)?);
+                                        if count + list_len >= index {
+                                            // item is in list
+                                            let list_index = index - count;
+                                            value = Some(this.get_list_item(next_val, list_index)?);
+                                            break;
+                                        } else {
+                                            // not in list, advance count by list len and continue to next item
+                                            count += list_len;
+                                        }
+                                    }
+                                    _ => {
+                                        if count == index {
+                                            value = Some(next_val);
+                                            break;
+                                        } else {
+                                            // adavance to next value
+                                            count += Data::Integer::one();
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -768,5 +786,26 @@ mod link {
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val52"));
         assert_eq!(runtime.get_integer(right).unwrap(), 52);
+    }
+
+    #[test]
+    fn index_append_link_of_lists_with_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = add_list_with_start(&mut runtime, 5, 50);
+        let d2 = runtime.add_link(d1, unit, true).unwrap();
+        let d3 = add_list_with_start(&mut runtime, 5, 100);
+        let d4 = runtime.add_link(d3, d2, true).unwrap();
+        let d5 = runtime.add_integer(7).unwrap();
+
+        runtime.push_register(d4).unwrap();
+        runtime.push_register(d5).unwrap();
+
+        runtime.access().unwrap();
+
+        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val102"));
+        assert_eq!(runtime.get_integer(right).unwrap(), 102);
     }
 }
