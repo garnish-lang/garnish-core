@@ -7,7 +7,7 @@ use std::hash::Hash;
 use std::hash::Hasher;
 
 use std::any::Any;
-use crate::LinkData;
+use crate::{ExpressionDataType, LinkData};
 
 pub type DataCoersionResult<T> = Result<T, String>;
 
@@ -31,80 +31,80 @@ pub trait DataCoersion {
     fn as_list(&self) -> DataCoersionResult<ListData>;
 }
 
-fn downcast_result<T: SimpleData + Clone>(b: &AnyData) -> DataCoersionResult<T> {
+fn downcast_result<T: SimpleData + Clone>(b: &AnyData, t: ExpressionDataType) -> DataCoersionResult<T> {
     match b.data.downcast_ref::<T>() {
         Some(value) => Ok(value.clone()),
-        None => Err(format!("Could not cast from {:?}.", b)),
+        None => Err(format!("Could not cast to {:?} from {:?}.", t, b)),
     }
 }
 
 impl DataCoersion for AnyData {
     fn as_unit(&self) -> DataCoersionResult<UnitData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::Unit)
     }
 
     fn as_true(&self) -> DataCoersionResult<TrueData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::True)
     }
 
     fn as_false(&self) -> DataCoersionResult<FalseData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::False)
     }
 
     fn as_integer(&self) -> DataCoersionResult<IntegerData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::Integer)
     }
 
     fn as_float(&self) -> DataCoersionResult<FloatData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::Float)
     }
 
     fn as_char(&self) -> DataCoersionResult<CharData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::Char)
     }
 
     fn as_char_list(&self) -> DataCoersionResult<CharListData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::CharList)
     }
 
     fn as_byte(&self) -> DataCoersionResult<ByteData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::Byte)
     }
 
     fn as_byte_list(&self) -> DataCoersionResult<ByteListData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::ByteList)
     }
 
     fn as_symbol(&self) -> DataCoersionResult<SymbolData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::Symbol)
     }
 
     fn as_expression(&self) -> DataCoersionResult<ExpressionData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::Expression)
     }
 
     fn as_external(&self) -> DataCoersionResult<ExternalData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::External)
     }
 
     fn as_pair(&self) -> DataCoersionResult<PairData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::Pair)
     }
 
     fn as_range(&self) -> DataCoersionResult<RangeData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::Range)
     }
 
     fn as_slice(&self) -> DataCoersionResult<SliceData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::Slice)
     }
 
     fn as_link(&self) -> DataCoersionResult<LinkData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::Link)
     }
 
     fn as_list(&self) -> DataCoersionResult<ListData> {
-        downcast_result(self)
+        downcast_result(self, ExpressionDataType::List)
     }
 }
 

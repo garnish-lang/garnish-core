@@ -1,4 +1,4 @@
-use crate::{next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
+use crate::{next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, state_error};
 
 pub(crate) fn make_range<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     make_range_internal(this, false, false)
@@ -18,6 +18,19 @@ pub(crate) fn make_exclusive_range<Data: GarnishLangRuntimeData>(this: &mut Data
 
 pub(crate) fn range_len<Data: GarnishLangRuntimeData>(start: Data::Integer, end: Data::Integer) -> Data::Integer {
     (end - start) + Data::Integer::one()
+}
+
+pub(crate) fn get_range_len<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Integer, RuntimeError<Data::Error>> {
+    let (start, end) = this.get_range(addr)?;
+    let count = match (this.get_data_type(start)?, this.get_data_type(end)?) {
+        (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+            let (start, end) = (this.get_integer(start)?, this.get_integer(end)?);
+            range_len::<Data>(start, end)
+        }
+        (s, e) => state_error(format!("Invalid range types {:?} {:?}", s, e))?
+    };
+
+    Ok(count)
 }
 
 fn make_range_internal<Data: GarnishLangRuntimeData>(this: &mut Data, start_exclusive: bool, end_exclusive: bool) -> Result<(), RuntimeError<Data::Error>> {
