@@ -188,7 +188,7 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
                     let index = this.get_integer(right)?;
                     let mut count = Data::Integer::zero();
                     // keep track of starting point to any pushed values later
-                    let mut start_register = this.get_register_len();
+                    let start_register = this.get_register_len();
 
                     loop {
                         match this.get_data_type(link)? {
@@ -200,13 +200,30 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
                                     link = next_linked;
                                 } else {
                                     // all prepend links are in order of visitation, check immediatly
-                                    if count == index {
-                                        value = Some(next_val);
-                                        break;
-                                    } else {
-                                        // adavance to next value
-                                        link = next_linked;
-                                        count += Data::Integer::one();
+                                    match this.get_data_type(next_val)? {
+                                        ExpressionDataType::List => {
+                                            let list_len = Data::size_to_integer(this.get_list_len(next_val)?);
+                                            if count + list_len >= index {
+                                                // item is in list
+                                                let list_index = index - count;
+                                                value = Some(this.get_list_item(next_val, list_index)?);
+                                                break;
+                                            } else {
+                                                // not in list, advance count by list len and continue to next item
+                                                count += list_len;
+                                                link = next_linked;
+                                            }
+                                        }
+                                        _ => {
+                                            if count == index {
+                                                value = Some(next_val);
+                                                break;
+                                            } else {
+                                                // adavance to next value
+                                                link = next_linked;
+                                                count += Data::Integer::one();
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -240,7 +257,7 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
                     Ok(value)
                 }
                 ExpressionDataType::Symbol => {
-                    let (mut value, mut linked, is_append) = this.get_link(left)?;
+                    let (mut value, mut linked, _) = this.get_link(left)?;
                     let sym = this.get_symbol(right)?;
 
                     loop {
@@ -621,7 +638,7 @@ mod ranges {
 
 #[cfg(test)]
 mod slice {
-    use crate::testing_utilites::{add_integer_list, add_links, add_list};
+    use crate::testing_utilites::{add_integer_list, add_list};
     use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
@@ -666,7 +683,7 @@ mod slice {
 #[cfg(test)]
 mod link {
     use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, symbol_value};
-    use crate::testing_utilites::add_links;
+    use crate::testing_utilites::{add_links, add_list_with_start};
 
     #[test]
     fn index_prepend_link_with_integer() {
@@ -730,5 +747,26 @@ mod link {
         runtime.access().unwrap();
 
         assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 30);
+    }
+
+    #[test]
+    fn index_prepend_link_of_lists_with_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = add_list_with_start(&mut runtime, 5, 50);
+        let d2 = runtime.add_link(d1, unit, false).unwrap();
+        let d3 = add_list_with_start(&mut runtime, 5, 100);
+        let d4 = runtime.add_link(d3, d2, false).unwrap();
+        let d5 = runtime.add_integer(7).unwrap();
+
+        runtime.push_register(d4).unwrap();
+        runtime.push_register(d5).unwrap();
+
+        runtime.access().unwrap();
+
+        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val52"));
+        assert_eq!(runtime.get_integer(right).unwrap(), 52);
     }
 }
