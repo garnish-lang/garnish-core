@@ -678,7 +678,7 @@ mod ranges {
 #[cfg(test)]
 mod slice {
     use crate::testing_utilites::{add_integer_list, add_links, add_list, add_list_with_start};
-    use crate::{runtime::GarnishRuntime, symbol_value, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, symbol_value, GarnishLangRuntimeData, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
     fn index_slice_of_list() {
@@ -786,6 +786,31 @@ mod slice {
     }
 
     #[test]
+    fn index_slice_of_links_of_list_not_found() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = add_list_with_start(&mut runtime, 5, 10);
+        let d2 = add_list_with_start(&mut runtime, 5, 20);
+
+        let d3 = runtime.add_link(d1, unit, true).unwrap();
+        let d4 = runtime.add_link(d2, d3, true).unwrap();
+
+        let d5 = runtime.add_integer(2).unwrap();
+        let d6 = runtime.add_integer(8).unwrap();
+        let d7 = runtime.add_range(d5, d6).unwrap();
+        let d8 = runtime.add_slice(d4, d7).unwrap();
+        let d9 = runtime.add_integer(100).unwrap();
+
+        runtime.push_register(d8).unwrap();
+        runtime.push_register(d9).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+    }
+
+    #[test]
     fn sym_index_slice_of_links_of_list() {
         let mut runtime = SimpleRuntimeData::new();
 
@@ -809,12 +834,37 @@ mod slice {
 
         assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 14);
     }
+
+    #[test]
+    fn sym_index_slice_of_links_of_list_not_found() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = add_list_with_start(&mut runtime, 5, 10);
+        let d2 = add_list_with_start(&mut runtime, 5, 20);
+
+        let d3 = runtime.add_link(d1, unit, true).unwrap();
+        let d4 = runtime.add_link(d2, d3, true).unwrap();
+
+        let d5 = runtime.add_integer(2).unwrap();
+        let d6 = runtime.add_integer(8).unwrap();
+        let d7 = runtime.add_range(d5, d6).unwrap();
+        let d8 = runtime.add_slice(d4, d7).unwrap();
+        let d9 = runtime.add_symbol("val1000").unwrap();
+
+        runtime.push_register(d8).unwrap();
+        runtime.push_register(d9).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+    }
 }
 
 #[cfg(test)]
 mod link {
     use crate::testing_utilites::{add_links, add_list_with_start, add_range};
-    use crate::{symbol_value, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData};
+    use crate::{symbol_value, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
     fn index_prepend_link_with_integer() {
@@ -993,6 +1043,36 @@ mod link {
     }
 
     #[test]
+    fn index_link_of_slices_of_list_not_found() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = add_list_with_start(&mut runtime, 20, 10);
+
+        let d2 = add_range(&mut runtime, 2, 8);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+
+        let d4 = add_range(&mut runtime, 14, 19);
+        let d5 = runtime.add_slice(d1, d4).unwrap();
+
+        let d6 = runtime.add_link(d3, unit, true).unwrap();
+        let d7 = runtime.add_link(d5, d6, true).unwrap();
+
+        // resulting list should look like this
+        // 0   1   2   3   4   5   6   7   8   9   10  11  12
+        // 12, 13, 14, 15, 16, 17, 18, 24, 25, 26, 27, 28, 29
+
+        let d8 = runtime.add_integer(100).unwrap();
+
+        runtime.push_register(d7).unwrap();
+        runtime.push_register(d8).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+    }
+
+    #[test]
     fn sym_index_link_of_slices_of_list() {
         let mut runtime = SimpleRuntimeData::new();
 
@@ -1020,5 +1100,35 @@ mod link {
         runtime.access().unwrap();
 
         assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 16);
+    }
+
+    #[test]
+    fn sym_index_link_of_slices_of_list_not_found() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = add_list_with_start(&mut runtime, 20, 10);
+
+        let d2 = add_range(&mut runtime, 2, 8);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+
+        let d4 = add_range(&mut runtime, 14, 19);
+        let d5 = runtime.add_slice(d1, d4).unwrap();
+
+        let d6 = runtime.add_link(d3, unit, true).unwrap();
+        let d7 = runtime.add_link(d5, d6, true).unwrap();
+
+        // resulting list should look like this
+        // 0   1   2   3   4   5   6   7   8   9   10  11  12
+        // 12, 13, 14, 15, 16, 17, 18, 24, 25, 26, 27, 28, 29
+
+        let d8 = runtime.add_symbol("val1000").unwrap();
+
+        runtime.push_register(d7).unwrap();
+        runtime.push_register(d8).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
 }
