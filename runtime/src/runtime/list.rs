@@ -716,4 +716,19 @@ mod link {
 
         assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 30);
     }
+
+    #[test]
+    fn index_append_link_with_symbol() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links(&mut runtime, 10, true);
+        let d2 = runtime.add_symbol("val2").unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 30);
+    }
 }
