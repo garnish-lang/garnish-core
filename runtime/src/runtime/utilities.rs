@@ -1,6 +1,7 @@
 // use log::trace;
 
-use crate::{GarnishLangRuntimeData, RuntimeError, state_error};
+use crate::{GarnishLangRuntimeData, RuntimeError, state_error, ExpressionDataType};
+use crate::runtime::range::range_len;
 
 pub(crate) fn next_ref<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Data::Size, RuntimeError<Data::Error>> {
     match this.pop_register() {
@@ -14,6 +15,16 @@ pub(crate) fn next_two_raw_ref<Data: GarnishLangRuntimeData>(this: &mut Data) ->
     let second_ref = next_ref(this)?;
 
     Ok((first_ref, second_ref))
+}
+
+pub(crate) fn get_range<Data: GarnishLangRuntimeData>(this: &mut Data, addr: Data::Size) -> Result<(Data::Integer, Data::Integer, Data::Integer), RuntimeError<Data::Error>> {
+    let (start, end) = this.get_range(addr)?;
+    let (start, end) = match (this.get_data_type(start)?, this.get_data_type(end)?) {
+        (ExpressionDataType::Integer, ExpressionDataType::Integer) => (this.get_integer(start)?, this.get_integer(end)?),
+        (s, e) => state_error(format!("Invalid range values {:?} {:?}", s, e))?,
+    };
+
+    Ok((start, end, range_len::<Data>(start, end)))
 }
 
 // push utilities

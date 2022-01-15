@@ -1,5 +1,5 @@
 use crate::runtime::range::range_len;
-use crate::{next_ref, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
+use crate::{get_range, next_ref, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 
 pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
     if len > this.get_register_len() {
@@ -70,7 +70,7 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
         ExpressionDataType::Symbol => {
             let sym = this.get_symbol(right)?;
             access_with_symbol(this, sym, left)
-        },
+        }
         _ => Ok(None),
     }
 }
@@ -142,33 +142,9 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
         }
         ExpressionDataType::Slice => {
             let (value, range) = this.get_slice(value)?;
-            let (start, end) = this.get_range(range)?;
-            let (start, end) = match (this.get_data_type(start)?, this.get_data_type(end)?) {
-                (ExpressionDataType::Integer, ExpressionDataType::Integer) => (this.get_integer(start)?, this.get_integer(end)?),
-                (s, e) => state_error(format!("Invalid range values {:?} {:?}", s, e))?,
-            };
+            let (start, end, _) = get_range(this, range)?;
 
-            if index > end {
-                return Ok(None);
-            }
-
-            match this.get_data_type(value)? {
-                ExpressionDataType::List => {
-                    let i = start + index;
-
-                    if i < Data::Integer::zero() {
-                        Ok(None)
-                    } else {
-                        let i = i;
-                        if i >= Data::size_to_integer(this.get_list_len(value)?) {
-                            Ok(None)
-                        } else {
-                            Ok(Some(this.get_list_item(value, i)?))
-                        }
-                    }
-                }
-                _ => Ok(None),
-            }
+            index_slice(this, index, start, end, value)
         }
         ExpressionDataType::Link => {
             let mut item: Option<Data::Size> = None;
@@ -201,7 +177,18 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                                         this.push_register(val)?;
                                     }
                                 }
-                                t => state_error(format!("Invalid linked type {:?}", t))?
+                                t => state_error(format!("Invalid linked type {:?}", t))?,
+                            }
+                        }
+                        ExpressionDataType::Slice => {
+                            let (val, range) = this.get_slice(r)?;
+                            let (start, end, len) = get_range(this, range)?;
+                            if count + len >= index {
+                                let slice_index = index - count;
+                                item = index_slice(this, slice_index, start, end, val)?;
+                                break;
+                            } else {
+                                count += len;
                             }
                         }
                         ExpressionDataType::List => {
@@ -224,7 +211,7 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                                 count += Data::Integer::one();
                             }
                         }
-                    }
+                    },
                 }
             }
 
@@ -239,15 +226,43 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
     }
 }
 
+fn index_slice<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    index: Data::Integer,
+    start: Data::Integer,
+    end: Data::Integer,
+    value: Data::Size,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    if index > end {
+        return Ok(None);
+    }
+
+    match this.get_data_type(value)? {
+        ExpressionDataType::List => {
+            let i = start + index;
+
+            if i < Data::Integer::zero() {
+                Ok(None)
+            } else {
+                let i = i;
+                if i >= Data::size_to_integer(this.get_list_len(value)?) {
+                    Ok(None)
+                } else {
+                    Ok(Some(this.get_list_item(value, i)?))
+                }
+            }
+        }
+        _ => Ok(None),
+    }
+}
+
 fn access_with_symbol<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     sym: Data::Symbol,
     value: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_data_type(value)? {
-        ExpressionDataType::List => {
-            Ok(this.get_list_item_with_symbol(value, sym)?)
-        }
+        ExpressionDataType::List => Ok(this.get_list_item_with_symbol(value, sym)?),
         ExpressionDataType::Slice => {
             let (value, _) = this.get_slice(value)?;
             Ok(this.get_list_item_with_symbol(value, sym)?)
@@ -673,7 +688,7 @@ mod slice {
 
 #[cfg(test)]
 mod link {
-    use crate::testing_utilites::{add_links, add_list_with_start};
+    use crate::testing_utilites::{add_links, add_list_with_start, add_range};
     use crate::{symbol_value, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData};
 
     #[test]
@@ -780,5 +795,37 @@ mod link {
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val102"));
         assert_eq!(runtime.get_integer(right).unwrap(), 102);
+    }
+
+    #[test]
+    fn index_link_of_slices_of_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+        let d1 = add_list_with_start(&mut runtime, 20, 10);
+
+        let d2 = add_range(&mut runtime, 2, 8);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+
+        let d4 = add_range(&mut runtime, 14, 19);
+        let d5 = runtime.add_slice(d1, d4).unwrap();
+
+        let d6 = runtime.add_link(d3, unit, true).unwrap();
+        let d7 = runtime.add_link(d5, d6, true).unwrap();
+
+        // resulting list should look like this
+        // 0   1   2   3   4   5   6   7   8   9   10  11  12
+        // 12, 13, 14, 15, 16, 17, 18, 24, 25, 26, 27, 28, 29
+
+        let d8 = runtime.add_integer(4).unwrap();
+
+        runtime.push_register(d7).unwrap();
+        runtime.push_register(d8).unwrap();
+
+        runtime.access().unwrap();
+
+        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val16"));
+        assert_eq!(runtime.get_integer(right).unwrap(), 16);
     }
 }

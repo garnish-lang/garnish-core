@@ -677,6 +677,11 @@ pub mod testing_utilites {
         runtime.start_list(count).unwrap();
         for i in 0..count {
             let v = start_value + i as i32;
+
+            // use crate::symbol_value;
+            // let sym = format!("val{}", v);
+            // println!("{} = {}", sym, symbol_value(sym.as_str()));
+
             let d = add_pair(runtime, format!("val{}", v).as_str(), v);
             runtime.add_to_list(d, true).unwrap();
         }
