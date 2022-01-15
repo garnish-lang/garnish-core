@@ -1,6 +1,6 @@
 use crate::{ExpressionDataType, Instruction};
 use std::fmt::{Debug, Display};
-use std::ops::{Add, AddAssign, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Rem, Sub, SubAssign};
 use std::str::FromStr;
 
 pub trait TypeConstants {
@@ -28,6 +28,7 @@ pub trait GarnishLangRuntimeData {
         + AddAssign<Self::Integer>
         + Sub<Self::Integer, Output = Self::Integer>
         + SubAssign<Self::Integer>
+        + Rem<Self::Integer, Output = Self::Integer>
         + PartialOrd
         + TypeConstants
         + Copy
