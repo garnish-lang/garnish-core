@@ -134,40 +134,50 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
                 _ => Ok(None),
             }
         }
-        (ExpressionDataType::Slice, ExpressionDataType::Integer) => {
+        (ExpressionDataType::Slice, r) => {
             let (value, range) = this.get_slice(left)?;
-            let (start, end) = this.get_range(range)?;
-            let (start, end) = match (this.get_data_type(start)?, this.get_data_type(end)?) {
-                (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
-                    (this.get_integer(start)?, this.get_integer(end)?)
+            match r {
+                ExpressionDataType::Symbol => {
+                    let sym_val = this.get_symbol(right)?;
+
+                    Ok(this.get_list_item_with_symbol(value, sym_val)?)
                 }
-                (s, e) => state_error(format!("Invalid range values {:?} {:?}", s, e))?,
-            };
-
-            let index = this.get_integer(right)?;
-            if index > end {
-                return Ok(None);
-            }
-
-            match this.get_data_type(value)? {
-                ExpressionDataType::List => {
-                    let i = start + index;
-
-                    if i < Data::Integer::zero() {
-                        Ok(None)
-                    } else {
-                        let i = i;
-                        if i >= Data::size_to_integer(this.get_list_len(value)?) {
-                            Ok(None)
-                        } else {
-                            Ok(Some(this.get_list_item(value, i)?))
+                ExpressionDataType::Integer => {
+                    let (start, end) = this.get_range(range)?;
+                    let (start, end) = match (this.get_data_type(start)?, this.get_data_type(end)?) {
+                        (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+                            (this.get_integer(start)?, this.get_integer(end)?)
                         }
+                        (s, e) => state_error(format!("Invalid range values {:?} {:?}", s, e))?,
+                    };
+
+                    let index = this.get_integer(right)?;
+                    if index > end {
+                        return Ok(None);
+                    }
+
+                    match this.get_data_type(value)? {
+                        ExpressionDataType::List => {
+                            let i = start + index;
+
+                            if i < Data::Integer::zero() {
+                                Ok(None)
+                            } else {
+                                let i = i;
+                                if i >= Data::size_to_integer(this.get_list_len(value)?) {
+                                    Ok(None)
+                                } else {
+                                    Ok(Some(this.get_list_item(value, i)?))
+                                }
+                            }
+                        }
+                        _ => Ok(None)
                     }
                 }
-                _ => Ok(None)
+                _ => Ok(None),
             }
         }
-        _ => Ok(None),
+        _ => Ok(None)
     }
 }
 
@@ -529,6 +539,25 @@ mod slice {
         runtime.access().unwrap();
 
         assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 40);
+    }
+
+    #[test]
+    fn sym_index_slice_of_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list(&mut runtime, 10);
+        let d2 = runtime.add_integer(1).unwrap();
+        let d3 = runtime.add_integer(4).unwrap();
+        let d4 = runtime.add_range(d2, d3).unwrap();
+        let d5 = runtime.add_slice(d1, d4).unwrap();
+        let d6 = runtime.add_symbol("val4").unwrap();
+
+        runtime.push_register(d5).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 50);
     }
 }
 
