@@ -148,152 +148,91 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 return Ok(None);
             }
 
-            let mut item: Option<Data::Size> = None;
-            let mut count = Data::Integer::zero() - start;
-
-            // keep track of starting point to any pushed values later
-            let start_register = this.get_register_len();
-
-            this.push_register(value)?;
-
-            while this.get_register_len() > start_register {
-                match this.pop_register() {
-                    None => state_error(format!("Popping more registers than placed during linking indexing."))?,
-                    Some(r) => match this.get_data_type(r)? {
-                        ExpressionDataType::Link => {
-                            let (val, linked, is_append) = this.get_link(r)?;
-
-                            match this.get_data_type(linked)? {
-                                ExpressionDataType::Unit => {
-                                    // linked of type unit means, only push value
-                                    this.push_register(val)?;
-                                }
-                                ExpressionDataType::Link => {
-                                    if is_append {
-                                        // linked value is previous, gets checked first, pushed last
-                                        this.push_register(val)?;
-                                        this.push_register(linked)?;
-                                    } else {
-                                        // linked value is next, gets resolved last, pushed first
-                                        this.push_register(linked)?;
-                                        this.push_register(val)?;
-                                    }
-                                }
-                                t => state_error(format!("Invalid linked type {:?}", t))?,
-                            }
-                        }
-                        ExpressionDataType::Slice => {
-                            let (val, range) = this.get_slice(r)?;
-                            let (start, end, len) = get_range(this, range)?;
-
-                            count -= start;
-                            this.push_register(val)?;
-                        }
-                        ExpressionDataType::List => {
-                            let list_len = Data::size_to_integer(this.get_list_len(r)?);
-                            if count + list_len >= index {
-                                // item is in list
-                                let list_index = index - count;
-                                item = Some(this.get_list_item(r, list_index)?);
-                                break;
-                            } else {
-                                // not in list, advance count by list len and continue to next item
-                                count += list_len;
-                            }
-                        }
-                        _ => {
-                            if count == index {
-                                item = Some(r);
-                                break;
-                            } else {
-                                count += Data::Integer::one();
-                            }
-                        }
-                    },
-                }
-            }
-
-            // remove remaining registers added during operation
-            while this.get_register_len() > start_register {
-                this.pop_register();
-            }
-
-            Ok(item)
+            integer_access_links_slices(this, Data::Integer::zero() - start, value, index)
         }
         ExpressionDataType::Link => {
-            let mut item: Option<Data::Size> = None;
-            let mut count = Data::Integer::zero();
-            // keep track of starting point to any pushed values later
-            let start_register = this.get_register_len();
-
-            this.push_register(value)?;
-
-            while this.get_register_len() > start_register {
-                match this.pop_register() {
-                    None => state_error(format!("Popping more registers than placed during linking indexing."))?,
-                    Some(r) => match this.get_data_type(r)? {
-                        ExpressionDataType::Link => {
-                            let (val, linked, is_append) = this.get_link(r)?;
-
-                            match this.get_data_type(linked)? {
-                                ExpressionDataType::Unit => {
-                                    // linked of type unit means, only push value
-                                    this.push_register(val)?;
-                                }
-                                ExpressionDataType::Link => {
-                                    if is_append {
-                                        // linked value is previous, gets checked first, pushed last
-                                        this.push_register(val)?;
-                                        this.push_register(linked)?;
-                                    } else {
-                                        // linked value is next, gets resolved last, pushed first
-                                        this.push_register(linked)?;
-                                        this.push_register(val)?;
-                                    }
-                                }
-                                t => state_error(format!("Invalid linked type {:?}", t))?,
-                            }
-                        }
-                        ExpressionDataType::Slice => {
-                            let (val, range) = this.get_slice(r)?;
-                            let (start, end, len) = get_range(this, range)?;
-
-                            count -= start;
-                            this.push_register(val)?;
-                        }
-                        ExpressionDataType::List => {
-                            let list_len = Data::size_to_integer(this.get_list_len(r)?);
-                            if count + list_len >= index {
-                                // item is in list
-                                let list_index = index - count;
-                                item = Some(this.get_list_item(r, list_index)?);
-                                break;
-                            } else {
-                                // not in list, advance count by list len and continue to next item
-                                count += list_len;
-                            }
-                        }
-                        _ => {
-                            if count == index {
-                                item = Some(r);
-                                break;
-                            } else {
-                                count += Data::Integer::one();
-                            }
-                        }
-                    },
-                }
-            }
-
-            // remove remaining registers added during operation
-            while this.get_register_len() > start_register {
-                this.pop_register();
-            }
-
-            Ok(item)
+            integer_access_links_slices(this, Data::Integer::zero(), value, index)
         }
         _ => Ok(None),
     }
+}
+
+fn integer_access_links_slices<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    start_count: Data::Integer,
+    start_value: Data::Size,
+    index: Data::Integer
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    let mut item: Option<Data::Size> = None;
+    let mut count = start_count;
+    // keep track of starting point to any pushed values later
+    let start_register = this.get_register_len();
+
+    this.push_register(start_value)?;
+
+    while this.get_register_len() > start_register {
+        match this.pop_register() {
+            None => state_error(format!("Popping more registers than placed during linking indexing."))?,
+            Some(r) => match this.get_data_type(r)? {
+                ExpressionDataType::Link => {
+                    let (val, linked, is_append) = this.get_link(r)?;
+
+                    match this.get_data_type(linked)? {
+                        ExpressionDataType::Unit => {
+                            // linked of type unit means, only push value
+                            this.push_register(val)?;
+                        }
+                        ExpressionDataType::Link => {
+                            if is_append {
+                                // linked value is previous, gets checked first, pushed last
+                                this.push_register(val)?;
+                                this.push_register(linked)?;
+                            } else {
+                                // linked value is next, gets resolved last, pushed first
+                                this.push_register(linked)?;
+                                this.push_register(val)?;
+                            }
+                        }
+                        t => state_error(format!("Invalid linked type {:?}", t))?,
+                    }
+                }
+                ExpressionDataType::Slice => {
+                    let (val, range) = this.get_slice(r)?;
+                    let (start, end, len) = get_range(this, range)?;
+
+                    count -= start;
+                    this.push_register(val)?;
+                }
+                ExpressionDataType::List => {
+                    let list_len = Data::size_to_integer(this.get_list_len(r)?);
+                    if count + list_len >= index {
+                        // item is in list
+                        let list_index = index - count;
+                        item = Some(this.get_list_item(r, list_index)?);
+                        break;
+                    } else {
+                        // not in list, advance count by list len and continue to next item
+                        count += list_len;
+                    }
+                }
+                _ => {
+                    if count == index {
+                        item = Some(r);
+                        break;
+                    } else {
+                        count += Data::Integer::one();
+                    }
+                }
+            },
+        }
+    }
+
+    // remove remaining registers added during operation
+    while this.get_register_len() > start_register {
+        this.pop_register();
+    }
+
+    Ok(item)
 }
 
 fn access_with_symbol<Data: GarnishLangRuntimeData>(
