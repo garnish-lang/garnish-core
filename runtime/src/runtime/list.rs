@@ -251,13 +251,9 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                         ExpressionDataType::Slice => {
                             let (val, range) = this.get_slice(r)?;
                             let (start, end, len) = get_range(this, range)?;
-                            if count + len >= index {
-                                let slice_index = index - count;
-                                item = index_slice(this, slice_index, start, end, val)?;
-                                break;
-                            } else {
-                                count += len;
-                            }
+
+                            count -= start;
+                            this.push_register(val)?;
                         }
                         ExpressionDataType::List => {
                             let list_len = Data::size_to_integer(this.get_list_len(r)?);
@@ -289,36 +285,6 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
             }
 
             Ok(item)
-        }
-        _ => Ok(None),
-    }
-}
-
-fn index_slice<Data: GarnishLangRuntimeData>(
-    this: &mut Data,
-    index: Data::Integer,
-    start: Data::Integer,
-    end: Data::Integer,
-    value: Data::Size,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    if index > end {
-        return Ok(None);
-    }
-
-    match this.get_data_type(value)? {
-        ExpressionDataType::List => {
-            let i = start + index;
-
-            if i < Data::Integer::zero() {
-                Ok(None)
-            } else {
-                let i = i;
-                if i >= Data::size_to_integer(this.get_list_len(value)?) {
-                    Ok(None)
-                } else {
-                    Ok(Some(this.get_list_item(value, i)?))
-                }
-            }
         }
         _ => Ok(None),
     }
