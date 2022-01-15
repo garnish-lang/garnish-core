@@ -171,8 +171,6 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
                 _ => Data::Integer::one()
             };
 
-            println!("initial count {:?}", count);
-
             loop {
                 match this.get_data_type(linked)? {
                     ExpressionDataType::Link => {
@@ -187,8 +185,6 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
                             ExpressionDataType::Link => state_error(format!("Linked found as value of link at addr {:?}", next_val))?,
                             _ => Data::Integer::one()
                         };
-
-                        println!("New count after {:?} {:?}", this.get_data_type(next_val), count);
                     }
                     ExpressionDataType::Unit => break,
                     l => state_error(format!("Invalid linked type {:?}", l))?
