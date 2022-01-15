@@ -157,6 +157,56 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
     }
 }
 
+fn access_with_symbol<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    sym: Data::Symbol,
+    value: Data::Size,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    match this.get_data_type(value)? {
+        ExpressionDataType::List => Ok(this.get_list_item_with_symbol(value, sym)?),
+        ExpressionDataType::Slice => {
+            let (value, _) = this.get_slice(value)?;
+            Ok(this.get_list_item_with_symbol(value, sym)?)
+        }
+        ExpressionDataType::Link => {
+            let (mut value, mut linked, _) = this.get_link(value)?;
+            loop {
+                match this.get_data_type(value)? {
+                    ExpressionDataType::Pair => {
+                        let (left, right) = this.get_pair(value)?;
+                        match this.get_data_type(left)? {
+                            ExpressionDataType::Symbol => {
+                                let value_sym = this.get_symbol(left)?;
+                                if value_sym == sym {
+                                    value = right;
+                                    break;
+                                } else {
+                                    let (next_val, next_linked, _) = this.get_link(linked)?;
+                                    value = next_val;
+                                    linked = next_linked;
+                                }
+                            }
+                            _ => {
+                                let (next_val, next_linked, _) = this.get_link(linked)?;
+                                value = next_val;
+                                linked = next_linked;
+                            }
+                        }
+                    }
+                    _ => {
+                        let (next_val, next_linked, _) = this.get_link(linked)?;
+                        value = next_val;
+                        linked = next_linked;
+                    }
+                }
+            }
+
+            Ok(Some(value))
+        }
+        _ => Ok(None),
+    }
+}
+
 fn integer_access_links_slices<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     start_count: Data::Integer,
@@ -233,56 +283,6 @@ fn integer_access_links_slices<Data: GarnishLangRuntimeData>(
     }
 
     Ok(item)
-}
-
-fn access_with_symbol<Data: GarnishLangRuntimeData>(
-    this: &mut Data,
-    sym: Data::Symbol,
-    value: Data::Size,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    match this.get_data_type(value)? {
-        ExpressionDataType::List => Ok(this.get_list_item_with_symbol(value, sym)?),
-        ExpressionDataType::Slice => {
-            let (value, _) = this.get_slice(value)?;
-            Ok(this.get_list_item_with_symbol(value, sym)?)
-        }
-        ExpressionDataType::Link => {
-            let (mut value, mut linked, _) = this.get_link(value)?;
-            loop {
-                match this.get_data_type(value)? {
-                    ExpressionDataType::Pair => {
-                        let (left, right) = this.get_pair(value)?;
-                        match this.get_data_type(left)? {
-                            ExpressionDataType::Symbol => {
-                                let value_sym = this.get_symbol(left)?;
-                                if value_sym == sym {
-                                    value = right;
-                                    break;
-                                } else {
-                                    let (next_val, next_linked, _) = this.get_link(linked)?;
-                                    value = next_val;
-                                    linked = next_linked;
-                                }
-                            }
-                            _ => {
-                                let (next_val, next_linked, _) = this.get_link(linked)?;
-                                value = next_val;
-                                linked = next_linked;
-                            }
-                        }
-                    }
-                    _ => {
-                        let (next_val, next_linked, _) = this.get_link(linked)?;
-                        value = next_val;
-                        linked = next_linked;
-                    }
-                }
-            }
-
-            Ok(Some(value))
-        }
-        _ => Ok(None),
-    }
 }
 
 #[cfg(test)]
