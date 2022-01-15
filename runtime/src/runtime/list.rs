@@ -178,36 +178,69 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
             }
         }
         (ExpressionDataType::Link, r) => {
-            let (mut value, mut linked, is_append) = this.get_link(left)?;
+            // let (mut value, mut linked, is_append) = this.get_link(left)?;
+
             match r {
                 ExpressionDataType::Integer => {
+                    let mut link = left;
+                    let mut value: Option<Data::Size> = None;
+
                     let index = this.get_integer(right)?;
                     let mut count = Data::Integer::zero();
+                    // keep track of starting point to any pushed values later
+                    let mut start_register = this.get_register_len();
 
                     loop {
-                        match this.get_data_type(linked)? {
+                        match this.get_data_type(link)? {
                             ExpressionDataType::Link => {
-                                if count == index {
-                                    break;
+                                let (next_val, next_linked, is_append) = this.get_link(link)?;
+                                if is_append {
+                                    // if append link, need to push to registers to get in proper order
+                                    this.push_register(link)?;
+                                    link = next_linked;
                                 } else {
-                                    // adavance to next value
-                                    let (next_val, next_linked, _) = this.get_link(linked)?;
-                                    value = next_val;
-                                    linked = next_linked;
-
-                                    count += Data::Integer::one();
+                                    // all prepend links are in order of visitation, check immediatly
+                                    if count == index {
+                                        value = Some(next_val);
+                                        break;
+                                    } else {
+                                        // adavance to next value
+                                        link = next_linked;
+                                        count += Data::Integer::one();
+                                    }
                                 }
                             }
                             ExpressionDataType::Unit => {
-                                return Ok(None);
+                                // end iteration of link
+                                // to check any pushed registers
+                                break;
                             }
                             t => state_error(format!("Invalid linked type {:?}", t))?
                         }
                     }
 
-                    Ok(Some(value))
+                    // registers now contain append links in correct order
+                    // pop back to starting point and perform same check
+                    while this.get_register_len() > start_register {
+                        match this.pop_register() {
+                            None => state_error(format!("Popping more registers than placed during linking indexing."))?,
+                            Some(r) => {
+                                if count == index {
+                                    let (next_val, _, _) = this.get_link(r)?;
+                                    value = Some(next_val);
+                                    // no break, this branch should only happen once because of equality
+                                    // continue to clean up remaining registers
+                                }
+
+                                count += Data::Integer::one();
+                            }
+                        }
+                    }
+
+                    Ok(value)
                 }
                 ExpressionDataType::Symbol => {
+                    let (mut value, mut linked, is_append) = this.get_link(left)?;
                     let sym = this.get_symbol(right)?;
 
                     loop {
@@ -588,7 +621,7 @@ mod ranges {
 
 #[cfg(test)]
 mod slice {
-    use crate::testing_utilites::{add_integer_list, add_list};
+    use crate::testing_utilites::{add_integer_list, add_links, add_list};
     use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
@@ -640,6 +673,23 @@ mod link {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = add_links(&mut runtime, 10, false);
+        let d2 = runtime.add_integer(3).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.access().unwrap();
+
+        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val3"));
+        assert_eq!(runtime.get_integer(right).unwrap(), 40);
+    }
+
+    #[test]
+    fn index_append_link_with_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links(&mut runtime, 10, true);
         let d2 = runtime.add_integer(3).unwrap();
 
         runtime.push_register(d1).unwrap();
