@@ -142,9 +142,77 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
         }
         ExpressionDataType::Slice => {
             let (value, range) = this.get_slice(value)?;
-            let (start, end, _) = get_range(this, range)?;
+            let (start, end, len) = get_range(this, range)?;
 
-            index_slice(this, index, start, end, value)
+            if index >= len {
+                return Ok(None);
+            }
+
+            let mut item: Option<Data::Size> = None;
+            let mut count = Data::Integer::zero() - start;
+            // keep track of starting point to any pushed values later
+            let start_register = this.get_register_len();
+
+            this.push_register(value)?;
+
+            while this.get_register_len() > start_register {
+                match this.pop_register() {
+                    None => state_error(format!("Popping more registers than placed during linking indexing."))?,
+                    Some(r) => match this.get_data_type(r)? {
+                        ExpressionDataType::List => {
+                            let i = start + index;
+
+                            if i < Data::Integer::zero() {
+                                item = None;
+                            } else {
+                                let i = i;
+                                if i >= Data::size_to_integer(this.get_list_len(value)?) {
+                                    item = None;
+                                } else {
+                                    item = Some(this.get_list_item(value, i)?);
+                                }
+                            }
+                        }
+                        ExpressionDataType::Link => {
+                            let (val, linked, is_append) = this.get_link(r)?;
+
+                            match this.get_data_type(linked)? {
+                                ExpressionDataType::Unit => {
+                                    // linked of type unit means, only push value
+                                    this.push_register(val)?;
+                                }
+                                ExpressionDataType::Link => {
+                                    if is_append {
+                                        // linked value is previous, gets checked first, pushed last
+                                        this.push_register(val)?;
+                                        this.push_register(linked)?;
+                                    } else {
+                                        // linked value is next, gets resolved last, pushed first
+                                        this.push_register(linked)?;
+                                        this.push_register(val)?;
+                                    }
+                                }
+                                t => state_error(format!("Invalid linked type {:?}", t))?,
+                            }
+                        }
+                        _ => {
+                            if count == index {
+                                item = Some(r);
+                                break;
+                            } else {
+                                count += Data::Integer::one();
+                            }
+                        },
+                    }
+                }
+            }
+
+            // remove remaining registers added during operation
+            while this.get_register_len() > start_register {
+                this.pop_register();
+            }
+
+            Ok(item)
         }
         ExpressionDataType::Link => {
             let mut item: Option<Data::Size> = None;
@@ -644,8 +712,8 @@ mod ranges {
 
 #[cfg(test)]
 mod slice {
-    use crate::testing_utilites::{add_integer_list, add_list};
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::testing_utilites::{add_integer_list, add_links, add_list};
+    use crate::{runtime::GarnishRuntime, symbol_value, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn index_slice_of_list() {
@@ -683,6 +751,27 @@ mod slice {
         runtime.access().unwrap();
 
         assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 50);
+    }
+
+    #[test]
+    fn index_slice_of_links() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links(&mut runtime, 10, true);
+        let d2 = runtime.add_integer(2).unwrap();
+        let d3 = runtime.add_integer(8).unwrap();
+        let d4 = runtime.add_range(d2, d3).unwrap();
+        let d5 = runtime.add_slice(d1, d4).unwrap();
+        let d6 = runtime.add_integer(2).unwrap();
+
+        runtime.push_register(d5).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.access().unwrap();
+
+        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val4"));
+        assert_eq!(runtime.get_integer(right).unwrap(), 50);
     }
 }
 

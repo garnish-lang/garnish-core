@@ -711,6 +711,7 @@ pub mod testing_utilites {
             // Prepend: 10 <- 20 <- 30 | 10 is the current value
             // if not append we make reversed the creation to match ex above
             let i = if is_append { i } else { count - 1 - i  };
+
             // use crate::symbol_value;
             // let sym = format!("val{}", i);
             // println!("{} = {}", sym, symbol_value(sym.as_str()));
