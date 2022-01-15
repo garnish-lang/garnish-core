@@ -675,6 +675,15 @@ pub mod testing_utilites {
         runtime.end_list().unwrap()
     }
 
+    pub fn add_integer_list(runtime: &mut SimpleRuntimeData, count: usize) -> usize {
+        runtime.start_list(count).unwrap();
+        for i in 0..count {
+            let d = runtime.add_integer((i as i32 + 1) * 10).unwrap();
+            runtime.add_to_list(d, false).unwrap();
+        }
+        runtime.end_list().unwrap()
+    }
+
     pub fn add_range(runtime: &mut SimpleRuntimeData, start: i32, end: i32) -> usize {
         let d1 = runtime.add_integer(start).unwrap();
         let d2 = runtime.add_integer(end).unwrap();
