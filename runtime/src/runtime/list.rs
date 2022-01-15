@@ -177,6 +177,75 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
                 _ => Ok(None),
             }
         }
+        (ExpressionDataType::Link, r) => {
+            let (mut value, mut linked, is_append) = this.get_link(left)?;
+            match r {
+                ExpressionDataType::Integer => {
+                    let index = this.get_integer(right)?;
+                    let mut count = Data::Integer::zero();
+
+                    loop {
+                        match this.get_data_type(linked)? {
+                            ExpressionDataType::Link => {
+                                if count == index {
+                                    break;
+                                } else {
+                                    // adavance to next value
+                                    let (next_val, next_linked, _) = this.get_link(linked)?;
+                                    value = next_val;
+                                    linked = next_linked;
+
+                                    count += Data::Integer::one();
+                                }
+                            }
+                            ExpressionDataType::Unit => {
+                                return Ok(None);
+                            }
+                            t => state_error(format!("Invalid linked type {:?}", t))?
+                        }
+                    }
+
+                    Ok(Some(value))
+                }
+                ExpressionDataType::Symbol => {
+                    let sym = this.get_symbol(right)?;
+
+                    loop {
+                        match this.get_data_type(value)? {
+                            ExpressionDataType::Pair => {
+                                let (left, right) = this.get_pair(value)?;
+                                match this.get_data_type(left)? {
+                                    ExpressionDataType::Symbol => {
+                                        let value_sym = this.get_symbol(left)?;
+                                        if value_sym == sym {
+                                            value = right;
+                                            break;
+                                        } else {
+                                            let (next_val, next_linked, _) = this.get_link(linked)?;
+                                            value = next_val;
+                                            linked = next_linked;
+                                        }
+                                    }
+                                    _ => {
+                                        let (next_val, next_linked, _) = this.get_link(linked)?;
+                                        value = next_val;
+                                        linked = next_linked;
+                                    }
+                                }
+                            }
+                            _ => {
+                                let (next_val, next_linked, _) = this.get_link(linked)?;
+                                value = next_val;
+                                linked = next_linked;
+                            }
+                        }
+                    }
+
+                    Ok(Some(value))
+                }
+                _ => Ok(None)
+            }
+        }
         _ => Ok(None)
     }
 }
@@ -563,4 +632,38 @@ mod slice {
 
 #[cfg(test)]
 mod link {
+    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, symbol_value};
+    use crate::testing_utilites::add_links;
+
+    #[test]
+    fn index_prepend_link_with_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links(&mut runtime, 10, false);
+        let d2 = runtime.add_integer(3).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.access().unwrap();
+
+        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val3"));
+        assert_eq!(runtime.get_integer(right).unwrap(), 40);
+    }
+
+    #[test]
+    fn index_prepend_link_with_symbol() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links(&mut runtime, 10, false);
+        let d2 = runtime.add_symbol("val2").unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 30);
+    }
 }
