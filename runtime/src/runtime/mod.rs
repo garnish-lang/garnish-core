@@ -12,6 +12,7 @@ mod pair;
 mod put;
 mod range;
 mod resolve;
+mod internals;
 pub mod result;
 mod sideeffect;
 pub mod types;
@@ -35,6 +36,7 @@ use instruction::*;
 use list::*;
 use result::*;
 use sideeffect::*;
+use crate::runtime::internals::{access_left_internal, access_length_internal, access_right_internal};
 use crate::runtime::link::{append_link, prepend_link};
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
