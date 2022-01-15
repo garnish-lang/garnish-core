@@ -171,88 +171,57 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
             }
         }
         ExpressionDataType::Link => {
-            let mut link = value;
-            let mut value: Option<Data::Size> = None;
+            let mut item: Option<Data::Size> = None;
             let mut count = Data::Integer::zero();
             // keep track of starting point to any pushed values later
             let start_register = this.get_register_len();
 
-            loop {
-                match this.get_data_type(link)? {
-                    ExpressionDataType::Link => {
-                        let (next_val, next_linked, is_append) = this.get_link(link)?;
-                        if is_append {
-                            // if append link, need to push to registers to get in proper order
-                            this.push_register(link)?;
-                            link = next_linked;
-                        } else {
-                            // all prepend links are in order of visitation, check immediatly
-                            match this.get_data_type(next_val)? {
-                                ExpressionDataType::List => {
-                                    let list_len = Data::size_to_integer(this.get_list_len(next_val)?);
-                                    if count + list_len >= index {
-                                        // item is in list
-                                        let list_index = index - count;
-                                        value = Some(this.get_list_item(next_val, list_index)?);
-                                        break;
-                                    } else {
-                                        // not in list, advance count by list len and continue to next item
-                                        count += list_len;
-                                        link = next_linked;
-                                    }
-                                }
-                                _ => {
-                                    if count == index {
-                                        value = Some(next_val);
-                                        break;
-                                    } else {
-                                        // adavance to next value
-                                        link = next_linked;
-                                        count += Data::Integer::one();
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    ExpressionDataType::Unit => {
-                        // end iteration of link
-                        // to check any pushed registers
-                        break;
-                    }
-                    t => state_error(format!("Invalid linked type {:?}", t))?,
-                }
-            }
+            this.push_register(value)?;
 
-            // registers now contain append links in correct order
-            // pop back to starting point and perform same check
             while this.get_register_len() > start_register {
                 match this.pop_register() {
                     None => state_error(format!("Popping more registers than placed during linking indexing."))?,
-                    Some(r) => {
-                        // only links right now
-                        let (next_val, _, _) = this.get_link(r)?;
+                    Some(r) => match this.get_data_type(r)? {
+                        ExpressionDataType::Link => {
+                            let (val, linked, is_append) = this.get_link(r)?;
 
-                        match this.get_data_type(next_val)? {
-                            ExpressionDataType::List => {
-                                let list_len = Data::size_to_integer(this.get_list_len(next_val)?);
-                                if count + list_len >= index {
-                                    // item is in list
-                                    let list_index = index - count;
-                                    value = Some(this.get_list_item(next_val, list_index)?);
-                                    break;
-                                } else {
-                                    // not in list, advance count by list len and continue to next item
-                                    count += list_len;
+                            match this.get_data_type(linked)? {
+                                ExpressionDataType::Unit => {
+                                    // linked of type unit means, only push value
+                                    this.push_register(val)?;
                                 }
+                                ExpressionDataType::Link => {
+                                    if is_append {
+                                        // linked value is previous, gets checked first, pushed last
+                                        this.push_register(val)?;
+                                        this.push_register(linked)?;
+                                    } else {
+                                        // linked value is next, gets resolved last, pushed first
+                                        this.push_register(linked)?;
+                                        this.push_register(val)?;
+                                    }
+                                }
+                                t => state_error(format!("Invalid linked type {:?}", t))?
                             }
-                            _ => {
-                                if count == index {
-                                    value = Some(next_val);
-                                    break;
-                                } else {
-                                    // adavance to next value
-                                    count += Data::Integer::one();
-                                }
+                        }
+                        ExpressionDataType::List => {
+                            let list_len = Data::size_to_integer(this.get_list_len(r)?);
+                            if count + list_len >= index {
+                                // item is in list
+                                let list_index = index - count;
+                                item = Some(this.get_list_item(r, list_index)?);
+                                break;
+                            } else {
+                                // not in list, advance count by list len and continue to next item
+                                count += list_len;
+                            }
+                        }
+                        _ => {
+                            if count == index {
+                                item = Some(r);
+                                break;
+                            } else {
+                                count += Data::Integer::one();
                             }
                         }
                     }
@@ -264,7 +233,7 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 this.pop_register();
             }
 
-            Ok(value)
+            Ok(item)
         }
         _ => Ok(None),
     }
