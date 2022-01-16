@@ -141,17 +141,17 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
             }
         }
         ExpressionDataType::Slice => {
-            let (value, range) = this.get_slice(value)?;
-            let (start, _, len) = get_range(this, range)?;
+            // let (value, range) = this.get_slice(value)?;
+            // let (start, _, len) = get_range(this, range)?;
+            //
+            // if index >= len {
+            //     return Ok(None);
+            // }
 
-            if index >= len {
-                return Ok(None);
-            }
-
-            integer_access_links_slices(this, Data::Integer::zero() - start, value, index)
+            integer_access_links_slices(this, value, index)
         }
         ExpressionDataType::Link => {
-            integer_access_links_slices(this, Data::Integer::zero(), value, index)
+            integer_access_links_slices(this,value, index)
         }
         _ => Ok(None),
     }
@@ -292,12 +292,12 @@ fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
 
 fn integer_access_links_slices<Data: GarnishLangRuntimeData>(
     this: &mut Data,
-    start_count: Data::Integer,
     start_value: Data::Size,
-    index: Data::Integer
+    search_index: Data::Integer
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    let mut skip = Data::Integer::zero();
     let mut item: Option<Data::Size> = None;
-    let mut count = start_count;
+    let mut current_index = Data::Integer::zero();
     // keep track of starting point to any pushed values later
     let start_register = this.get_register_len();
 
@@ -333,27 +333,32 @@ fn integer_access_links_slices<Data: GarnishLangRuntimeData>(
                     let (val, range) = this.get_slice(r)?;
                     let (start, _, _) = get_range(this, range)?;
 
-                    count -= start;
+                    // val will always the next to be popped
+                    // set skip to start of slice
+                    skip = start;
                     this.push_register(val)?;
                 }
                 ExpressionDataType::List => {
-                    let list_len = Data::size_to_integer(this.get_list_len(r)?);
-                    if count + list_len >= index {
+                    let list_len = Data::size_to_integer(this.get_list_len(r)?) - skip;
+                    if search_index < current_index + list_len {
                         // item is in list
-                        let list_index = index - count;
+                        let list_index = search_index - current_index + skip;
                         item = Some(this.get_list_item(r, list_index)?);
                         break;
                     } else {
                         // not in list, advance count by list len and continue to next item
-                        count += list_len;
+                        current_index += list_len;
                     }
+                    skip = Data::Integer::zero();
                 }
                 _ => {
-                    if count == index {
+                    if skip > Data::Integer::zero() {
+                        skip -= Data::Integer::one();
+                    } else if current_index == search_index {
                         item = Some(r);
                         break;
                     } else {
-                        count += Data::Integer::one();
+                        current_index += Data::Integer::one();
                     }
                 }
             },

@@ -712,9 +712,9 @@ pub mod testing_utilites {
             // if not append we make reversed the creation to match ex above
             let i = if is_append { i } else { count - 1 - i  };
 
-            // use crate::symbol_value;
-            // let sym = format!("val{}", i);
-            // println!("{} = {}", sym, symbol_value(sym.as_str()));
+            use crate::symbol_value;
+            let sym = format!("val{}", i);
+            println!("{} = {}", sym, symbol_value(sym.as_str()));
 
             let v = add_pair(runtime, format!("val{}", i).as_str(), (i as i32 + 1) * 10);
             last = runtime.add_link(v, last, is_append).unwrap();
