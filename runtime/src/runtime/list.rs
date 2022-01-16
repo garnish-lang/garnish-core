@@ -133,7 +133,7 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
         }
         ExpressionDataType::Slice => {
             let (value, range) = this.get_slice(value)?;
-            let (start, end, len) = get_range(this, range)?;
+            let (start, _, _) = get_range(this, range)?;
             let adjusted_index = start + index;
 
             match this.get_data_type(value)? {
@@ -237,8 +237,43 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
         ExpressionDataType::List => Ok(this.get_list_item_with_symbol(value, sym)?),
         ExpressionDataType::Slice => {
             let (value, range) = this.get_slice(value)?;
-            let (start, _, len) = get_range(this, range)?;
-            sym_access_links_slices(this,  start, value, sym, len + Data::Integer::one())
+            let (start, end, _) = get_range(this, range)?;
+
+            match this.get_data_type(value)? {
+                ExpressionDataType::Link => {
+                    sym_access_links_slices(this, start, value, sym, end)
+                }
+                ExpressionDataType::List => {
+                    // in order to limit to slice range need to check items manually
+                    // can't push, in case any of the items are a Link or Slice
+                    let mut i = start;
+                    let mut item: Option<Data::Size> = None;
+                    while i <= end {
+                        let list_item = this.get_list_item(value, i)?;
+                        match this.get_data_type(list_item)? {
+                            ExpressionDataType::Pair => {
+                                let (left, right) = this.get_pair(list_item)?;
+                                match this.get_data_type(left)? {
+                                    ExpressionDataType::Symbol => {
+                                        if this.get_symbol(left)? == sym {
+                                            item = Some(right);
+                                            // found item break both loops
+                                            break;
+                                        }
+                                    }
+                                    _ => ()
+                                }
+                            }
+                            _ => ()
+                        }
+
+                        i += Data::Integer::one();
+                    }
+
+                    Ok(item)
+                }
+                t => state_error(format!("Invalid value for slice {:?}", t))
+            }
         }
         ExpressionDataType::Link => {
             sym_access_links_slices(this, Data::Integer::zero(), value, sym, Data::Integer::max())
@@ -255,14 +290,15 @@ fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
     limit: Data::Integer
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let mut item: Option<Data::Size> = None;
-    let mut count = start_count;
+    let mut skip = start_count;
+    let mut count = Data::Integer::zero();
     // keep track of starting point to any pushed values later
     let start_register = this.get_register_len();
 
     this.push_register(start_value)?;
 
-    'outer: while this.get_register_len() > start_register {
-        if count >= limit {
+    while this.get_register_len() > start_register {
+        if count > limit {
             break;
         }
 
@@ -291,41 +327,13 @@ fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
                         t => state_error(format!("Invalid linked type {:?}", t))?,
                     }
                 }
-                ExpressionDataType::Slice => {
-                    let (val, _range) = this.get_slice(r)?;
-                    // let (start, end, len) = get_range(this, range)?;
-
-                    this.push_register(val)?;
-                }
-                ExpressionDataType::List => {
-                    // in order to limit to slice range need to check items manually
-                    // can't push, in case any of the items are a Link or Slice
-                    let len = Data::size_to_integer(this.get_list_len(r)?);
-                    let mut i = count % len; // ??
-                    while i < len && count < limit {
-                        let list_item = this.get_list_item(r, i)?;
-                        match this.get_data_type(list_item)? {
-                            ExpressionDataType::Pair => {
-                                let (left, right) = this.get_pair(list_item)?;
-                                match this.get_data_type(left)? {
-                                    ExpressionDataType::Symbol => {
-                                        if this.get_symbol(left)? == sym {
-                                            item = Some(right);
-                                            // found item break both loops
-                                            break 'outer;
-                                        }
-                                    }
-                                    _ => ()
-                                }
-                            }
-                            _ => ()
-                        }
-
-                        i += Data::Integer::one();
-                        count += Data::Integer::one();
-                    }
-                }
                 ExpressionDataType::Pair => {
+                    // skip values
+                    if skip > Data::Integer::zero() {
+                        skip -= Data::Integer::one();
+                        continue;
+                    }
+
                     let (left, right) = this.get_pair(r)?;
                     match this.get_data_type(left)? {
                         ExpressionDataType::Symbol => {
@@ -346,6 +354,12 @@ fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
                 }
                 // nothing to do for any other values
                 _ => {
+                    // skip values
+                    if skip > Data::Integer::zero() {
+                        skip -= Data::Integer::one();
+                        continue;
+                    }
+
                     count += Data::Integer::one();
                 }
             },
@@ -698,7 +712,7 @@ mod ranges {
 
 #[cfg(test)]
 mod slice {
-    use crate::testing_utilites::{add_integer_list, add_links, add_list, add_list_with_start};
+    use crate::testing_utilites::{add_integer_list, add_links, add_list, add_pair};
     use crate::{runtime::GarnishRuntime, symbol_value, GarnishLangRuntimeData, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
@@ -807,6 +821,25 @@ mod slice {
         let d3 = runtime.add_integer(5).unwrap();
         let d4 = runtime.add_range(d2, d3).unwrap();
         let d5 = runtime.add_slice(d1, d4).unwrap();
+        let d6 = runtime.add_symbol("val4").unwrap();
+
+        runtime.push_register(d5).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 5);
+    }
+
+    #[test]
+    fn sym_index_slice_of_links_not_found() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links(&mut runtime, 10, true);
+        let d2 = runtime.add_integer(2).unwrap();
+        let d3 = runtime.add_integer(5).unwrap();
+        let d4 = runtime.add_range(d2, d3).unwrap();
+        let d5 = runtime.add_slice(d1, d4).unwrap();
         let d6 = runtime.add_symbol("val8").unwrap();
 
         runtime.push_register(d5).unwrap();
@@ -818,29 +851,40 @@ mod slice {
     }
 
     #[test]
-    fn sym_index_slice_of_links_sym_not_in_slice() {
+    fn sym_index_slice_of_links_mixed() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = add_links(&mut runtime, 10, true);
-        let d2 = runtime.add_integer(2).unwrap();
-        let d3 = runtime.add_integer(8).unwrap();
-        let d4 = runtime.add_range(d2, d3).unwrap();
-        let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol("val4").unwrap();
+        let unit = runtime.add_unit().unwrap();
+        let d1 = runtime.add_integer(100).unwrap();
+        let d2 = add_pair(&mut runtime, "pair", 200);
+        let d3 = runtime.add_integer(300).unwrap();
+        let d4 = runtime.add_pair((d1, d3)).unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        let link1 = runtime.add_link(d1, unit, true).unwrap();
+        let link2 = runtime.add_link(d4, link1, true).unwrap();
+        let link3 = runtime.add_link(d2, link2, true).unwrap();
+        let link4 = runtime.add_link(d3, link3, true).unwrap();
+        let link5 = runtime.add_link(d4, link4, true).unwrap();
+
+        let start = runtime.add_integer(1).unwrap();
+        let end = runtime.add_integer(4).unwrap();
+        let range = runtime.add_range(start, end).unwrap();
+        let slice = runtime.add_slice(link5, range).unwrap();
+        let sym = runtime.add_symbol("pair").unwrap();
+
+        runtime.push_register(slice).unwrap();
+        runtime.push_register(sym).unwrap();
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 5);
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 200);
     }
 }
 
 #[cfg(test)]
 mod link {
-    use crate::testing_utilites::{add_links, add_list_with_start, add_range};
-    use crate::{symbol_value, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, ExpressionDataType};
+    use crate::testing_utilites::{add_links};
+    use crate::{symbol_value, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData};
 
     #[test]
     fn index_prepend_link_with_integer() {
