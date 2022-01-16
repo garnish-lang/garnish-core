@@ -18,6 +18,8 @@ mod sideeffect;
 pub mod types;
 mod utilities;
 
+pub use utilities::{iterate_link, link_count};
+
 pub use context::{EmptyContext, GarnishLangRuntimeContext};
 pub use data::{GarnishLangRuntimeData, TypeConstants};
 pub use error::*;

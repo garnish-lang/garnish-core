@@ -81,15 +81,9 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
     value: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_data_type(value)? {
-        ExpressionDataType::List => {
-            index_list(this, value, index)
-        }
-        ExpressionDataType::CharList => {
-            index_char_list(this, value, index)
-        }
-        ExpressionDataType::ByteList => {
-            index_byte_list(this, value, index)
-        }
+        ExpressionDataType::List => index_list(this, value, index),
+        ExpressionDataType::CharList => index_char_list(this, value, index),
+        ExpressionDataType::ByteList => index_byte_list(this, value, index),
         ExpressionDataType::Range => {
             let (start, end) = this.get_range(value)?;
             match (this.get_data_type(start)?, this.get_data_type(end)?) {
@@ -110,29 +104,19 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
             }
         }
         ExpressionDataType::Slice => {
-            let (value, range) = this.get_slice(value)?;
-            let (start, _, _) = get_range(this, range)?;
-            let adjusted_index = start + index;
+                let (value, range) = this.get_slice(value)?;
+                let (start, _, _) = get_range(this, range)?;
+                let adjusted_index = start + index;
 
-            match this.get_data_type(value)? {
-                ExpressionDataType::Link => {
-                    index_link(this, value, adjusted_index)
+                match this.get_data_type(value)? {
+                    ExpressionDataType::Link => index_link(this, value, adjusted_index),
+                    ExpressionDataType::List => index_list(this, value, adjusted_index),
+                    ExpressionDataType::CharList => index_char_list(this, value, adjusted_index),
+                    ExpressionDataType::ByteList => index_byte_list(this, value, adjusted_index),
+                    t => state_error(format!("Invalid value for slice {:?}", t)),
                 }
-                ExpressionDataType::List => {
-                    index_list(this, value, adjusted_index)
-                }
-                ExpressionDataType::CharList => {
-                    index_char_list(this, value, adjusted_index)
-                }
-                ExpressionDataType::ByteList => {
-                    index_byte_list(this, value, adjusted_index)
-                }
-                t => state_error(format!("Invalid value for slice {:?}", t))
-            }
         }
-        ExpressionDataType::Link => {
-            index_link(this, value, index)
-        }
+        ExpressionDataType::Link => index_link(this, value, index),
         _ => Ok(None),
     }
 }
@@ -189,12 +173,14 @@ fn index_byte_list<Data: GarnishLangRuntimeData>(
     }
 }
 
-pub(crate) fn index_link<Data: GarnishLangRuntimeData>(
+pub(crate) fn iterate_link_internal<Data: GarnishLangRuntimeData, Callback>(
     this: &mut Data,
     link: Data::Size,
-    index: Data::Integer,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let mut item: Option<Data::Size> = None;
+    mut func: Callback,
+) -> Result<(), RuntimeError<Data::Error>>
+where
+    Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> bool,
+{
     let mut current_index = Data::Integer::zero();
     // keep track of starting point to any pushed values later
     let start_register = this.get_register_len();
@@ -230,8 +216,7 @@ pub(crate) fn index_link<Data: GarnishLangRuntimeData>(
                     }
                 }
                 _ => {
-                    if current_index == index {
-                        item = Some(r);
+                    if func(this, r, current_index) {
                         break;
                     } else {
                         current_index += Data::Integer::one();
@@ -244,6 +229,24 @@ pub(crate) fn index_link<Data: GarnishLangRuntimeData>(
     while this.get_register_len() > start_register {
         this.pop_register();
     }
+
+    Ok(())
+}
+
+pub(crate) fn index_link<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    link: Data::Size,
+    index: Data::Integer,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    let mut item: Option<Data::Size> = None;
+    iterate_link_internal(this, link, |_runtime, item_addr, current_index| {
+        if current_index == index {
+            item = Some(item_addr);
+            true
+        } else {
+            false
+        }
+    })?;
 
     Ok(item)
 }
@@ -260,9 +263,7 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
             let (start, end, _) = get_range(this, range)?;
 
             match this.get_data_type(value)? {
-                ExpressionDataType::Link => {
-                    sym_access_links_slices(this, start, value, sym, end)
-                }
+                ExpressionDataType::Link => sym_access_links_slices(this, start, value, sym, end),
                 ExpressionDataType::List => {
                     // in order to limit to slice range need to check items manually
                     // can't push, in case any of the items are a Link or Slice
@@ -281,10 +282,10 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                                             break;
                                         }
                                     }
-                                    _ => ()
+                                    _ => (),
                                 }
                             }
-                            _ => ()
+                            _ => (),
                         }
 
                         i += Data::Integer::one();
@@ -292,12 +293,10 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
 
                     Ok(item)
                 }
-                t => state_error(format!("Invalid value for slice {:?}", t))
+                t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
-        ExpressionDataType::Link => {
-            sym_access_links_slices(this, Data::Integer::zero(), value, sym, Data::Integer::max())
-        }
+        ExpressionDataType::Link => sym_access_links_slices(this, Data::Integer::zero(), value, sym, Data::Integer::max()),
         _ => Ok(None),
     }
 }
@@ -307,7 +306,7 @@ fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
     start_count: Data::Integer,
     start_value: Data::Size,
     sym: Data::Symbol,
-    limit: Data::Integer
+    limit: Data::Integer,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let mut item: Option<Data::Size> = None;
     let mut skip = start_count;
@@ -733,7 +732,7 @@ mod ranges {
 #[cfg(test)]
 mod slice {
     use crate::testing_utilites::{add_integer_list, add_links, add_list, add_pair, add_range};
-    use crate::{runtime::GarnishRuntime, symbol_value, GarnishLangRuntimeData, SimpleRuntimeData, ExpressionDataType};
+    use crate::{runtime::GarnishRuntime, symbol_value, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn index_slice_of_list() {
@@ -951,7 +950,7 @@ mod slice {
 
 #[cfg(test)]
 mod link {
-    use crate::testing_utilites::{add_links};
+    use crate::testing_utilites::add_links;
     use crate::{symbol_value, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData};
 
     #[test]
