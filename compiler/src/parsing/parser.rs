@@ -275,7 +275,10 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::List, 229);
     map.insert(Definition::CommaList, 230);
 
-    map.insert(Definition::AppendLink, 240);
+    // since these two are opposite associations
+    // this would be the implicit priority if they were the same priority
+    // choosing to make it explicit
+    map.insert(Definition::AppendLink, 239);
     map.insert(Definition::PrependLink, 240);
 
     map.insert(Definition::Apply, 250);
