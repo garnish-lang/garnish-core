@@ -1,7 +1,7 @@
 use log::trace;
 use std::fmt::Debug;
 
-use crate::{next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
+use crate::{next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, get_range};
 
 pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     // hope that can get reduced to a constant
@@ -175,6 +175,29 @@ fn data_equal<Data: GarnishLangRuntimeData>(
 
             true
         }
+        // (ExpressionDataType::Slice, ExpressionDataType::Slice) => {
+        //     let (value1, range1) = this.get_slice(left_addr)?;
+        //     let (value2, range2) = this.get_slice(right_addr)?;
+        //
+        //     let (start1, end1, len1) = get_range(this, range1)?;
+        //     let (start2, end2, len2) = get_range(this, range2)?;
+        //
+        //     // slices need same len of range
+        //     // if so, run through list and push to register
+        //
+        //     if len1 != len2 {
+        //         false
+        //     } else {
+        //         let mut count = Data::Integer::zero();
+        //         while count < len1 {
+        //             let i = start1 + count;
+        //
+        //             count += Data::Integer::one();
+        //         }
+        //
+        //         false
+        //     }
+        // }
         (ExpressionDataType::List, ExpressionDataType::List) => {
             let association_len1 = this.get_list_associations_len(left_addr)?;
             let associations_len2 = this.get_list_associations_len(right_addr)?;
@@ -1440,6 +1463,58 @@ mod lists {
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
             ExpressionDataType::False
+        );
+    }
+}
+
+#[cfg(test)]
+mod slices {
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::testing_utilites::{add_links_with_start, add_list, add_list_with_start, add_range};
+
+    #[test]
+    fn slice_of_list_slice_of_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 15);
+        let d2 = add_range(&mut runtime, 0, 4);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+
+        let d4 = add_list_with_start(&mut runtime, 10, 10);
+        let d5 = add_range(&mut runtime, 5, 9);
+        let d6 = runtime.add_slice(d4, d5).unwrap();
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::True
+        );
+    }
+
+    #[test]
+    fn slice_of_link_slice_of_link() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links_with_start(&mut runtime, 10, true, 15);
+        let d2 = add_range(&mut runtime, 0, 4);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+
+        let d4 = add_links_with_start(&mut runtime, 10, true, 10);
+        let d5 = add_range(&mut runtime, 5, 9);
+        let d6 = runtime.add_slice(d4, d5).unwrap();
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::True
         );
     }
 }

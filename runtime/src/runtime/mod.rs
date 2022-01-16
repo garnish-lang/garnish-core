@@ -678,9 +678,9 @@ pub mod testing_utilites {
         for i in 0..count {
             let v = start_value + i as i32;
 
-            // use crate::symbol_value;
-            // let sym = format!("val{}", v);
-            // println!("{} = {}", sym, symbol_value(sym.as_str()));
+            use crate::symbol_value;
+            let sym = format!("val{}", v);
+            println!("{} = {}", sym, symbol_value(sym.as_str()));
 
             let d = add_pair(runtime, format!("val{}", v).as_str(), v);
             runtime.add_to_list(d, true).unwrap();
@@ -717,6 +717,25 @@ pub mod testing_utilites {
             // println!("{} = {}", sym, symbol_value(sym.as_str()));
 
             let v = add_pair(runtime, format!("val{}", i).as_str(), (i as i32 + 1) * 10);
+            last = runtime.add_link(v, last, is_append).unwrap();
+        }
+        last
+    }
+
+    pub fn add_links_with_start(runtime: &mut SimpleRuntimeData, count: usize, is_append: bool, start: i32) -> usize {
+        let mut last = runtime.add_unit().unwrap();
+        for i in 0..count {
+            // Append:  10 -> 20 -> 30 | 30 is the current value
+            // Prepend: 10 <- 20 <- 30 | 10 is the current value
+            // if not append we make reversed the creation to match ex above
+            let i = if is_append { i } else { count - 1 - i  };
+            let v = start + i as i32;
+
+            // use crate::symbol_value;
+            // let sym = format!("val{}", i);
+            // println!("{} = {}", sym, symbol_value(sym.as_str()));
+
+            let v = add_pair(runtime, format!("val{}", v).as_str(), v);
             last = runtime.add_link(v, last, is_append).unwrap();
         }
         last
