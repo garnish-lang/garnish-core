@@ -169,7 +169,7 @@ fn index_list<Data: GarnishLangRuntimeData>(
     }
 }
 
-fn index_link<Data: GarnishLangRuntimeData>(
+pub(crate) fn index_link<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     link: Data::Size,
     index: Data::Integer,

@@ -1,7 +1,8 @@
 use log::trace;
 use std::fmt::Debug;
 
-use crate::{next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
+use crate::{next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, get_range};
+use crate::runtime::list::index_link;
 
 pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     // hope that can get reduced to a constant
@@ -175,29 +176,69 @@ fn data_equal<Data: GarnishLangRuntimeData>(
 
             true
         }
-        // (ExpressionDataType::Slice, ExpressionDataType::Slice) => {
-        //     let (value1, range1) = this.get_slice(left_addr)?;
-        //     let (value2, range2) = this.get_slice(right_addr)?;
-        //
-        //     let (start1, end1, len1) = get_range(this, range1)?;
-        //     let (start2, end2, len2) = get_range(this, range2)?;
-        //
-        //     // slices need same len of range
-        //     // if so, run through list and push to register
-        //
-        //     if len1 != len2 {
-        //         false
-        //     } else {
-        //         let mut count = Data::Integer::zero();
-        //         while count < len1 {
-        //             let i = start1 + count;
-        //
-        //             count += Data::Integer::one();
-        //         }
-        //
-        //         false
-        //     }
-        // }
+        (ExpressionDataType::Slice, ExpressionDataType::Slice) => {
+            let (value1, range1) = this.get_slice(left_addr)?;
+            let (value2, range2) = this.get_slice(right_addr)?;
+
+            let (start1, end1, len1) = get_range(this, range1)?;
+            let (start2, end2, len2) = get_range(this, range2)?;
+
+            // slices need same len of range
+            // if so, run through list and push to register
+
+            if len1 != len2 {
+                false
+            } else {
+                match (this.get_data_type(value1)?, this.get_data_type(value2)?) {
+                    (ExpressionDataType::List, ExpressionDataType::List) => {
+                        let mut index1 = start1;
+                        let mut index2 = start2;
+                        let mut count = Data::Integer::zero();
+
+                        while count < len1 {
+                            let item1 = this.get_list_item(value1, index1)?;
+                            let item2 = this.get_list_item(value2, index2)?;
+
+                            this.push_register(item1)?;
+                            this.push_register(item2)?;
+
+                            index1 += Data::Integer::one();
+                            index2 += Data::Integer::one();
+                            count += Data::Integer::one();
+                        }
+
+                        true
+                    }
+                    (ExpressionDataType::Link, ExpressionDataType::Link) => {
+                        // worth revisiting, to find more efficiant solution
+
+                        let mut index1 = start1;
+                        let mut index2 = start2;
+                        let mut count = Data::Integer::zero();
+
+                        while count < len1 {
+                            match (index_link(this, value1, index1)?, index_link(this, value2, index2)?) {
+                                (Some(item1), Some(item2)) => {
+                                    this.push_register(item1)?;
+                                    this.push_register(item2)?;
+                                }
+                                _ => {
+                                    // neither have this item which means they're both Unit and equal
+                                    // true is default, nothing to compare
+                                }
+                            }
+
+                            index1 += Data::Integer::one();
+                            index2 += Data::Integer::one();
+                            count += Data::Integer::one();
+                        }
+
+                        true
+                    }
+                    _ => false,
+                }
+            }
+        }
         (ExpressionDataType::List, ExpressionDataType::List) => {
             let association_len1 = this.get_list_associations_len(left_addr)?;
             let associations_len2 = this.get_list_associations_len(right_addr)?;
