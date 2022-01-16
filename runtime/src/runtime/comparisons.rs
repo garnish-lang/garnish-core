@@ -222,6 +222,18 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                                     this.push_register(item1)?;
                                     this.push_register(item2)?;
                                 }
+                                (Some(item1), None) => {
+                                    let a = this.add_unit()?;
+
+                                    this.push_register(item1)?;
+                                    this.push_register(a)?;
+                                }
+                                (None, Some(item2)) => {
+                                    let a = this.add_unit()?;
+
+                                    this.push_register(a)?;
+                                    this.push_register(item2)?;
+                                }
                                 _ => {
                                     // neither have this item which means they're both Unit and equal
                                     // true is default, nothing to compare
@@ -1556,6 +1568,124 @@ mod slices {
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
             ExpressionDataType::True
+        );
+    }
+
+    #[test]
+    fn slice_of_link_slice_of_incomplete_link_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+
+        let d1 = runtime.add_integer(10).unwrap();
+
+        let link1 = runtime.add_link(d1, unit, true).unwrap();
+        let link2 = runtime.add_link(unit, link1, true).unwrap();
+        let link3 = runtime.add_link(unit, link2, true).unwrap();
+
+        let link4 = runtime.add_link(d1, unit, true).unwrap();
+
+        let range1 = add_range(&mut runtime, 0, 2);
+        let slice1 = runtime.add_slice(link3, range1).unwrap();
+        let slice2 = runtime.add_slice(link4, range1).unwrap();
+
+        runtime.push_register(slice1).unwrap();
+        runtime.push_register(slice2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::True
+        );
+    }
+
+    #[test]
+    fn slice_of_link_slice_of_incomplete_link_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+
+        let d1 = runtime.add_integer(10).unwrap();
+        let d2 = runtime.add_integer(20).unwrap();
+
+        let link1 = runtime.add_link(d1, unit, true).unwrap();
+        let link2 = runtime.add_link(d2, link1, true).unwrap();
+        let link3 = runtime.add_link(unit, link2, true).unwrap();
+
+        let link4 = runtime.add_link(d1, unit, true).unwrap();
+
+        let range1 = add_range(&mut runtime, 0, 2);
+        let slice1 = runtime.add_slice(link3, range1).unwrap();
+        let slice2 = runtime.add_slice(link4, range1).unwrap();
+
+        runtime.push_register(slice1).unwrap();
+        runtime.push_register(slice2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
+    }
+
+    #[test]
+    fn slice_of_incomplete_link_slice_of_link_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+
+        let d1 = runtime.add_integer(10).unwrap();
+
+        let link1 = runtime.add_link(d1, unit, true).unwrap();
+        let link2 = runtime.add_link(unit, link1, true).unwrap();
+        let link3 = runtime.add_link(unit, link2, true).unwrap();
+
+        let link4 = runtime.add_link(d1, unit, true).unwrap();
+
+        let range1 = add_range(&mut runtime, 0, 2);
+        let slice1 = runtime.add_slice(link3, range1).unwrap();
+        let slice2 = runtime.add_slice(link4, range1).unwrap();
+
+        runtime.push_register(slice2).unwrap();
+        runtime.push_register(slice1).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::True
+        );
+    }
+
+    #[test]
+    fn slice_of_incomplete_link_slice_of_link_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let unit = runtime.add_unit().unwrap();
+
+        let d1 = runtime.add_integer(10).unwrap();
+        let d2 = runtime.add_integer(20).unwrap();
+
+        let link1 = runtime.add_link(d1, unit, true).unwrap();
+        let link2 = runtime.add_link(d2, link1, true).unwrap();
+        let link3 = runtime.add_link(unit, link2, true).unwrap();
+
+        let link4 = runtime.add_link(d1, unit, true).unwrap();
+
+        let range1 = add_range(&mut runtime, 0, 2);
+        let slice1 = runtime.add_slice(link3, range1).unwrap();
+        let slice2 = runtime.add_slice(link4, range1).unwrap();
+
+        runtime.push_register(slice2).unwrap();
+        runtime.push_register(slice1).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
         );
     }
 }
