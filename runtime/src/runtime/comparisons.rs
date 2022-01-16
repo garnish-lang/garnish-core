@@ -1,7 +1,7 @@
 use log::trace;
 use std::fmt::Debug;
 
-use crate::{next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, get_range};
+use crate::{next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 
 pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     // hope that can get reduced to a constant
@@ -1470,7 +1470,7 @@ mod lists {
 #[cfg(test)]
 mod slices {
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
-    use crate::testing_utilites::{add_links_with_start, add_list, add_list_with_start, add_range};
+    use crate::testing_utilites::{add_links_with_start, add_list_with_start, add_range};
 
     #[test]
     fn slice_of_list_slice_of_list() {
