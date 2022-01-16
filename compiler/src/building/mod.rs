@@ -69,7 +69,13 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         | Definition::Access
         | Definition::Subexpression // Same order for child resolution but has special check, might need to move out of here eventually
         | Definition::Reapply
-        | Definition::Apply => {
+        | Definition::Apply
+        | Definition::Range
+        | Definition::EndExclusiveRange
+        | Definition::StartExclusiveRange
+        | Definition::ExclusiveRange
+        | Definition::AppendLink
+        | Definition::PrependLink => {
             ((true, node.get_left()), (true, node.get_right()))
         }
         Definition::ApplyTo => ((true, node.get_right()), (true, node.get_left())),
@@ -173,6 +179,24 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         }
         Definition::Pair => {
             data.push_instruction(Instruction::MakePair, None)?;
+        }
+        Definition::Range => {
+            data.push_instruction(Instruction::MakeRange, None)?;
+        }
+        Definition::EndExclusiveRange => {
+            data.push_instruction(Instruction::MakeEndExclusiveRange, None)?;
+        }
+        Definition::StartExclusiveRange => {
+            data.push_instruction(Instruction::MakeStartExclusiveRange, None)?;
+        }
+        Definition::ExclusiveRange => {
+            data.push_instruction(Instruction::MakeExclusiveRange, None)?;
+        }
+        Definition::AppendLink => {
+            data.push_instruction(Instruction::AppendLink, None)?;
+        }
+        Definition::PrependLink => {
+            data.push_instruction(Instruction::PrependLink, None)?;
         }
         Definition::Access => {
             data.push_instruction(Instruction::Access, None)?;
@@ -1105,6 +1129,120 @@ mod operations {
                 (Instruction::Put, Some(3)),
                 (Instruction::UpdateValue, None),
                 (Instruction::Put, Some(4)),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn prepend_link() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Integer),
+                (Definition::PrependLink, None, Some(0), Some(2), "<-", TokenType::PrependLink),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Integer),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::PrependLink, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn append_link() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Integer),
+                (Definition::AppendLink, None, Some(0), Some(2), "->", TokenType::AppendLink),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Integer),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::AppendLink, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn range() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Integer),
+                (Definition::Range, None, Some(0), Some(2), "..", TokenType::Range),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Integer),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::MakeRange, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn start_exclusive_range() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Integer),
+                (Definition::StartExclusiveRange, None, Some(0), Some(2), ">..", TokenType::StartExclusiveRange),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Integer),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::MakeStartExclusiveRange, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn end_exclusive_range() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Integer),
+                (Definition::EndExclusiveRange, None, Some(0), Some(2), "..<", TokenType::EndExclusiveRange),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Integer),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::MakeEndExclusiveRange, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn exclusive_range() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Integer),
+                (Definition::ExclusiveRange, None, Some(0), Some(2), ">..<", TokenType::ExclusiveRange),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Integer),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::MakeExclusiveRange, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),

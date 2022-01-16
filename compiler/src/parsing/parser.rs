@@ -20,6 +20,12 @@ pub enum Definition {
     Addition,
     Equality,
     Pair,
+    Range,
+    StartExclusiveRange,
+    EndExclusiveRange,
+    ExclusiveRange,
+    AppendLink,
+    PrependLink,
     Access,
     AccessLeftInternal,
     AccessRightInternal,
@@ -92,12 +98,6 @@ pub enum SecondaryDefinition {
 
 fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
     match token_type {
-        TokenType::AppendLink
-        | TokenType::PrependLink
-        | TokenType::Range
-        | TokenType::EndExclusiveRange
-        | TokenType::StartExclusiveRange
-        | TokenType::ExclusiveRange => todo!(),
         // Values
         TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
         TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
@@ -132,6 +132,12 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::Equality => (Definition::Equality, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Period => (Definition::Access, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Pair => (Definition::Pair, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Range => (Definition::Range, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::StartExclusiveRange => (Definition::StartExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::EndExclusiveRange => (Definition::EndExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::ExclusiveRange => (Definition::ExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::AppendLink => (Definition::AppendLink, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::PrependLink => (Definition::PrependLink, SecondaryDefinition::BinaryLeftToRight),
         TokenType::MultiplicationSign => todo!(),
         TokenType::ExponentialSign => todo!(),
         TokenType::Apply => (Definition::Apply, SecondaryDefinition::BinaryLeftToRight),
@@ -258,10 +264,18 @@ fn make_priority_map() -> HashMap<Definition, usize> {
 
     map.insert(Definition::Equality, 140);
 
+    map.insert(Definition::Range, 200);
+    map.insert(Definition::StartExclusiveRange, 200);
+    map.insert(Definition::EndExclusiveRange, 200);
+    map.insert(Definition::ExclusiveRange, 200);
+
     map.insert(Definition::Pair, 210);
 
     map.insert(Definition::List, 229);
     map.insert(Definition::CommaList, 230);
+
+    map.insert(Definition::AppendLink, 240);
+    map.insert(Definition::PrependLink, 240);
 
     map.insert(Definition::Apply, 250);
     map.insert(Definition::ApplyTo, 250);
@@ -1984,6 +1998,132 @@ mod tests {
             &[
                 (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Equality, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn append_link() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("->".to_string(), TokenType::AppendLink, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::AppendLink, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn prepend_link() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::PrependLink, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn range() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("..".to_string(), TokenType::Range, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::Range, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn start_exclusive_range() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new(">..".to_string(), TokenType::StartExclusiveRange, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::StartExclusiveRange, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn end_exclusive_range() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("..<".to_string(), TokenType::EndExclusiveRange, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::EndExclusiveRange, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn exclusive_range() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new(">..<".to_string(), TokenType::ExclusiveRange, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::ExclusiveRange, None, Some(0), Some(2)),
                 (2, Definition::Integer, Some(1), None, None),
             ],
         );
