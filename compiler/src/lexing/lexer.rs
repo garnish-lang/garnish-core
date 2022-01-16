@@ -41,6 +41,12 @@ pub enum TokenType {
     RightInternal,
     LengthInternal,
     Pair,
+    AppendLink,
+    PrependLink,
+    Range,
+    StartExclusiveRange,
+    EndExclusiveRange,
+    ExclusiveRange,
     False,
     True,
 }
@@ -304,6 +310,12 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
         ("._", TokenType::RightInternal),
         ("_.", TokenType::LeftInternal),
         (".|", TokenType::LengthInternal),
+        ("->", TokenType::AppendLink),
+        ("<-", TokenType::PrependLink),
+        ("..", TokenType::Range),
+        (">..", TokenType::StartExclusiveRange),
+        ("..<", TokenType::EndExclusiveRange),
+        (">..<", TokenType::ExclusiveRange),
     ]);
     let mut current_operator = &operator_tree;
     let mut current_token_type = None;
@@ -941,6 +953,96 @@ mod tests {
             vec![LexerToken {
                 text: "~>".to_string(),
                 token_type: TokenType::ApplyTo,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn append_link() {
+        let result = lex(&"->".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "->".to_string(),
+                token_type: TokenType::AppendLink,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn prepend_link() {
+        let result = lex(&"<-".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "<-".to_string(),
+                token_type: TokenType::PrependLink,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn range() {
+        let result = lex(&"..".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "..".to_string(),
+                token_type: TokenType::Range,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn exclusive_start_range() {
+        let result = lex(&">..".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ">..".to_string(),
+                token_type: TokenType::StartExclusiveRange,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn exclusive_end_range() {
+        let result = lex(&"..<".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "..<".to_string(),
+                token_type: TokenType::EndExclusiveRange,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn exclusive_range() {
+        let result = lex(&">..<".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ">..<".to_string(),
+                token_type: TokenType::ExclusiveRange,
                 column: 0,
                 row: 0
             }]

@@ -92,6 +92,12 @@ pub enum SecondaryDefinition {
 
 fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
     match token_type {
+        TokenType::AppendLink
+        | TokenType::PrependLink
+        | TokenType::Range
+        | TokenType::EndExclusiveRange
+        | TokenType::StartExclusiveRange
+        | TokenType::ExclusiveRange => todo!(),
         // Values
         TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
         TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
@@ -494,7 +500,12 @@ fn setup_space_list_check(
 // binary ops must be preceded by a value or unary suffix and succeded by value or unary prefix
 // unary prefix must be preceded by unary prefix or binary and succeded by value or unary prefix
 // unary suffix must be preceded by value or unary suffix, and succeded by unary suffix or binary
-fn check_composition(previous: SecondaryDefinition, current: SecondaryDefinition, check_for_list: bool, token: &LexerToken) -> Result<(), CompilerError> {
+fn check_composition(
+    previous: SecondaryDefinition,
+    current: SecondaryDefinition,
+    check_for_list: bool,
+    token: &LexerToken,
+) -> Result<(), CompilerError> {
     trace!("Composition check between previous {:?} and current {:?}", previous, current);
     match (previous, current) {
         (SecondaryDefinition::Value, SecondaryDefinition::Value) if !check_for_list => composition_error(previous, current, &token),
@@ -656,13 +667,9 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 
         let (definition, parent, left, right) = match secondary_definition {
             SecondaryDefinition::None => implementation_error("Secondary definition of none shouldn't reach check.".to_string())?,
-            SecondaryDefinition::Whitespace => setup_space_list_check(
-                last_left,
-                under_group,
-                &mut nodes,
-                &mut check_for_list,
-                &mut &mut next_last_left,
-            )?,
+            SecondaryDefinition::Whitespace => {
+                setup_space_list_check(last_left, under_group, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?
+            }
             SecondaryDefinition::Annotation => {
                 next_last_left = last_left;
                 (definition, None, None, None)
@@ -828,7 +835,11 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                     Some((left, need_list_check)) => match nodes.get(left) {
                         None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", left), token)?,
                         Some(start_group_node) => {
-                            trace!("Ending grouping starting with {:?}. Will check for list {:?}", start_group_node.get_definition(), need_list_check);
+                            trace!(
+                                "Ending grouping starting with {:?}. Will check for list {:?}",
+                                start_group_node.get_definition(),
+                                need_list_check
+                            );
 
                             next_last_left = Some(left);
                             check_for_list = need_list_check;
@@ -844,10 +855,12 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 
                             // Check that end group matches start group
                             if token.get_token_type() != expected_token {
-                                Err(
-                                    CompilerError::new_message(format!("Syntax Error: Expected {:?} token, found {:?}", expected_token, token.get_token_type()))
-                                        .append_token_details(&token),
-                                )?;
+                                Err(CompilerError::new_message(format!(
+                                    "Syntax Error: Expected {:?} token, found {:?}",
+                                    expected_token,
+                                    token.get_token_type()
+                                ))
+                                .append_token_details(&token))?;
                             }
                         }
                     },
@@ -891,13 +904,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 
                 if in_group {
                     trace!("Inside of a group, treating as white space");
-                    setup_space_list_check(
-                        last_left,
-                        under_group,
-                        &mut nodes,
-                        &mut check_for_list,
-                        &mut &mut next_last_left,
-                    )?
+                    setup_space_list_check(last_left, under_group, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?
                 } else {
                     // only one in a row
                     // check if last parser node is a subexpression
@@ -1868,7 +1875,6 @@ mod tests {
         assert_result(&result, 0, &[(0, Definition::Float, None, None, None)]);
     }
 
-
     #[test]
     fn single_char_list() {
         let tokens = vec![LexerToken::new("value".to_string(), TokenType::CharList, 0, 0)];
@@ -1878,7 +1884,6 @@ mod tests {
         assert_result(&result, 0, &[(0, Definition::CharList, None, None, None)]);
     }
 
-
     #[test]
     fn single_byte_list() {
         let tokens = vec![LexerToken::new("value".to_string(), TokenType::ByteList, 0, 0)];
@@ -1887,7 +1892,6 @@ mod tests {
 
         assert_result(&result, 0, &[(0, Definition::ByteList, None, None, None)]);
     }
-
 
     #[test]
     fn single_identifier() {
