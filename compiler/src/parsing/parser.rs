@@ -2712,6 +2712,10 @@ mod tests {
 
 #[cfg(test)]
 mod links {
+    use super::tests::*;
+    use crate::lexing::lexer::*;
+    use crate::*;
+
     #[test]
     fn append_link() {
         let tokens = vec![
