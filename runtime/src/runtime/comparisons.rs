@@ -352,6 +352,58 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 true
             }
         }
+        (ExpressionDataType::Link, ExpressionDataType::List) => {
+            let len1 = link_len(this, left_addr)?;
+            let len2 = Data::size_to_integer(this.get_list_len(right_addr)?);
+
+            if len1 != len2 {
+                false
+            } else {
+                let mut count = Data::Integer::zero();
+
+                while count < len1 {
+                    let item1 = match index_link(this, left_addr,count)? {
+                        Some(r) => r,
+                        None => state_error(format!("Items not found during link comparison"))?
+                    };
+
+                    let item2 = this.get_list_item(right_addr, count)?;
+
+                    this.push_register(item1)?;
+                    this.push_register(item2)?;
+
+                    count += Data::Integer::one();
+                }
+
+                true
+            }
+        }
+        (ExpressionDataType::List, ExpressionDataType::Link) => {
+            let len1 = link_len(this, right_addr)?;
+            let len2 = Data::size_to_integer(this.get_list_len(left_addr)?);
+
+            if len1 != len2 {
+                false
+            } else {
+                let mut count = Data::Integer::zero();
+
+                while count < len1 {
+                    let item1 = match index_link(this, right_addr,count)? {
+                        Some(r) => r,
+                        None => state_error(format!("Items not found during link comparison"))?
+                    };
+
+                    let item2 = this.get_list_item(left_addr, count)?;
+
+                    this.push_register(item1)?;
+                    this.push_register(item2)?;
+
+                    count += Data::Integer::one();
+                }
+
+                true
+            }
+        }
         (ExpressionDataType::List, ExpressionDataType::List) => {
             let association_len1 = this.get_list_associations_len(left_addr)?;
             let associations_len2 = this.get_list_associations_len(right_addr)?;
@@ -1895,7 +1947,7 @@ mod slices {
 
 #[cfg(test)]
 mod links {
-    use crate::testing_utilites::add_links_with_start;
+    use crate::testing_utilites::{add_links_with_start, add_list_with_start};
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
@@ -1922,6 +1974,156 @@ mod links {
 
         runtime.push_register(list1).unwrap();
         runtime.push_register(list2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn append_link_prepend_link_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_links_with_start(&mut runtime, 10, true, 20);
+        let list2 = add_links_with_start(&mut runtime, 10, false, 20);
+
+        runtime.push_register(list1).unwrap();
+        runtime.push_register(list2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn append_link_prepend_link_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_links_with_start(&mut runtime, 10, true, 20);
+        let list2 = add_links_with_start(&mut runtime, 10, false, 15);
+
+        runtime.push_register(list1).unwrap();
+        runtime.push_register(list2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn prepend_link_append_link_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_links_with_start(&mut runtime, 10, false, 20);
+        let list2 = add_links_with_start(&mut runtime, 10, true, 20);
+
+        runtime.push_register(list1).unwrap();
+        runtime.push_register(list2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn prepend_link_append_link_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_links_with_start(&mut runtime, 10, false, 20);
+        let list2 = add_links_with_start(&mut runtime, 10, true, 15);
+
+        runtime.push_register(list1).unwrap();
+        runtime.push_register(list2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn prepend_link_prepend_link_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_links_with_start(&mut runtime, 10, false, 20);
+        let list2 = add_links_with_start(&mut runtime, 10, false, 20);
+
+        runtime.push_register(list1).unwrap();
+        runtime.push_register(list2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn prepend_link_prepend_link_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_links_with_start(&mut runtime, 10, false, 20);
+        let list2 = add_links_with_start(&mut runtime, 10, false, 15);
+
+        runtime.push_register(list1).unwrap();
+        runtime.push_register(list2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn link_list_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_links_with_start(&mut runtime, 10, true, 20);
+        let list2 = add_list_with_start(&mut runtime, 10, 20);
+
+        runtime.push_register(list1).unwrap();
+        runtime.push_register(list2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn link_list_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_links_with_start(&mut runtime, 10, true, 20);
+        let list2 = add_list_with_start(&mut runtime, 10, 15);
+
+        runtime.push_register(list1).unwrap();
+        runtime.push_register(list2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn list_link_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_links_with_start(&mut runtime, 10, true, 20);
+        let list2 = add_list_with_start(&mut runtime, 10, 20);
+
+        runtime.push_register(list2).unwrap();
+        runtime.push_register(list1).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn list_link_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_links_with_start(&mut runtime, 10, true, 20);
+        let list2 = add_list_with_start(&mut runtime, 10, 15);
+
+        runtime.push_register(list2).unwrap();
+        runtime.push_register(list1).unwrap();
 
         runtime.equality_comparison().unwrap();
 
