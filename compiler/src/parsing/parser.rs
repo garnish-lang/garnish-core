@@ -2004,48 +2004,6 @@ mod tests {
     }
 
     #[test]
-    fn append_link() {
-        let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
-            LexerToken::new("->".to_string(), TokenType::AppendLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
-        ];
-
-        let result = parse(tokens).unwrap();
-
-        assert_result(
-            &result,
-            1,
-            &[
-                (0, Definition::Integer, Some(1), None, None),
-                (1, Definition::AppendLink, None, Some(0), Some(2)),
-                (2, Definition::Integer, Some(1), None, None),
-            ],
-        );
-    }
-
-    #[test]
-    fn prepend_link() {
-        let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
-            LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
-        ];
-
-        let result = parse(tokens).unwrap();
-
-        assert_result(
-            &result,
-            1,
-            &[
-                (0, Definition::Integer, Some(1), None, None),
-                (1, Definition::PrependLink, None, Some(0), Some(2)),
-                (2, Definition::Integer, Some(1), None, None),
-            ],
-        );
-    }
-
-    #[test]
     fn range() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
@@ -2747,6 +2705,51 @@ mod tests {
                 (3, Definition::Access, Some(5), Some(2), Some(4)),
                 (4, Definition::Property, Some(3), None, None),
                 (5, Definition::EmptyApply, Some(1), Some(3), None),
+            ],
+        );
+    }
+}
+
+#[cfg(test)]
+mod links {
+    #[test]
+    fn append_link() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("->".to_string(), TokenType::AppendLink, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::AppendLink, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn prepend_link() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::PrependLink, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
             ],
         );
     }
