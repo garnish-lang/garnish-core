@@ -740,4 +740,26 @@ pub mod testing_utilites {
         }
         last
     }
+
+    pub fn add_char_list(runtime: &mut SimpleRuntimeData, s: &str) -> usize {
+        let chars = SimpleRuntimeData::parse_char_list(s);
+
+        runtime.start_char_list().unwrap();
+        for c in chars {
+            runtime.add_to_char_list(c).unwrap();
+        }
+
+        runtime.end_char_list().unwrap()
+    }
+
+    pub fn add_byte_list(runtime: &mut SimpleRuntimeData, s: &str) -> usize {
+        let bytes = SimpleRuntimeData::parse_byte_list(s);
+
+        runtime.start_byte_list().unwrap();
+        for b in bytes {
+            runtime.add_to_byte_list(b).unwrap();
+        }
+
+        runtime.end_byte_list().unwrap()
+    }
 }

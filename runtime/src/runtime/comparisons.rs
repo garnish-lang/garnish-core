@@ -221,6 +221,70 @@ fn data_equal<Data: GarnishLangRuntimeData>(
 
                         true
                     }
+                    (ExpressionDataType::CharList, ExpressionDataType::CharList) => {
+                        let mut index1 = start1;
+                        let mut index2 = start2;
+                        let mut count = Data::Integer::zero();
+
+                        let list_len1 = Data::size_to_integer(this.get_char_list_len(value1)?);
+                        let list_len2 = Data::size_to_integer(this.get_char_list_len(value2)?);
+
+                        while count < len1 {
+                            let item1 = if index1 < list_len1 {
+                                this.get_char_list_item(value1, index1)?
+                            } else {
+                                return Ok(false);
+                            };
+
+                            let item2 = if index2 < list_len2 {
+                                this.get_char_list_item(value2, index2)?
+                            } else {
+                                return Ok(false);
+                            };
+
+                            if item1 != item2 {
+                                return Ok(false);
+                            }
+
+                            index1 += Data::Integer::one();
+                            index2 += Data::Integer::one();
+                            count += Data::Integer::one();
+                        }
+
+                        true
+                    }
+                    (ExpressionDataType::ByteList, ExpressionDataType::ByteList) => {
+                        let mut index1 = start1;
+                        let mut index2 = start2;
+                        let mut count = Data::Integer::zero();
+
+                        let list_len1 = Data::size_to_integer(this.get_byte_list_len(value1)?);
+                        let list_len2 = Data::size_to_integer(this.get_byte_list_len(value2)?);
+
+                        while count < len1 {
+                            let item1 = if index1 < list_len1 {
+                                this.get_byte_list_item(value1, index1)?
+                            } else {
+                                return Ok(false);
+                            };
+
+                            let item2 = if index2 < list_len2 {
+                                this.get_byte_list_item(value2, index2)?
+                            } else {
+                                return Ok(false);
+                            };
+
+                            if item1 != item2 {
+                                return Ok(false);
+                            }
+
+                            index1 += Data::Integer::one();
+                            index2 += Data::Integer::one();
+                            count += Data::Integer::one();
+                        }
+
+                        true
+                    }
                     (ExpressionDataType::Link, ExpressionDataType::Link) => {
                         // worth revisiting, to find more efficiant solution
 
@@ -1535,7 +1599,7 @@ mod lists {
 #[cfg(test)]
 mod slices {
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
-    use crate::testing_utilites::{add_links_with_start, add_list_with_start, add_range};
+    use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
 
     #[test]
     fn slice_of_list_slice_of_list() {
@@ -1551,6 +1615,52 @@ mod slices {
 
         runtime.push_register(d3).unwrap();
         runtime.push_register(d6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::True
+        );
+    }
+
+    #[test]
+    fn slice_of_char_list_slice_of_char_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_char_list(&mut runtime, "abcde");
+        let range1 = add_range(&mut runtime, 1, 3);
+        let slice1 = runtime.add_slice(list1, range1).unwrap();
+
+        let list2 = add_char_list(&mut runtime, "abcde");
+        let range2 = add_range(&mut runtime, 1, 3);
+        let slice2 = runtime.add_slice(list2, range2).unwrap();
+
+        runtime.push_register(slice1).unwrap();
+        runtime.push_register(slice2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::True
+        );
+    }
+
+    #[test]
+    fn slice_of_byte_list_slice_of_byte_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_byte_list(&mut runtime, "abcde");
+        let range1 = add_range(&mut runtime, 1, 3);
+        let slice1 = runtime.add_slice(list1, range1).unwrap();
+
+        let list2 = add_byte_list(&mut runtime, "abcde");
+        let range2 = add_range(&mut runtime, 1, 3);
+        let slice2 = runtime.add_slice(list2, range2).unwrap();
+
+        runtime.push_register(slice1).unwrap();
+        runtime.push_register(slice2).unwrap();
 
         runtime.equality_comparison().unwrap();
 
