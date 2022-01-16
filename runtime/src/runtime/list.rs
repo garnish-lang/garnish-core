@@ -85,32 +85,10 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
             index_list(this, value, index)
         }
         ExpressionDataType::CharList => {
-            if index < Data::Integer::zero() {
-                Ok(None)
-            } else {
-                let i = index;
-                if i >= Data::size_to_integer(this.get_char_list_len(value)?) {
-                    Ok(None)
-                } else {
-                    let c = this.get_char_list_item(value, i)?;
-                    let addr = this.add_char(c)?;
-                    Ok(Some(addr))
-                }
-            }
+            index_char_list(this, value, index)
         }
         ExpressionDataType::ByteList => {
-            if index < Data::Integer::zero() {
-                Ok(None)
-            } else {
-                let i = index;
-                if i >= Data::size_to_integer(this.get_byte_list_len(value)?) {
-                    Ok(None)
-                } else {
-                    let c = this.get_byte_list_item(value, i)?;
-                    let addr = this.add_byte(c)?;
-                    Ok(Some(addr))
-                }
-            }
+            index_byte_list(this, value, index)
         }
         ExpressionDataType::Range => {
             let (start, end) = this.get_range(value)?;
@@ -143,6 +121,12 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 ExpressionDataType::List => {
                     index_list(this, value, adjusted_index)
                 }
+                ExpressionDataType::CharList => {
+                    index_char_list(this, value, adjusted_index)
+                }
+                ExpressionDataType::ByteList => {
+                    index_byte_list(this, value, adjusted_index)
+                }
                 t => state_error(format!("Invalid value for slice {:?}", t))
             }
         }
@@ -165,6 +149,42 @@ fn index_list<Data: GarnishLangRuntimeData>(
             Ok(None)
         } else {
             Ok(Some(this.get_list_item(list, index)?))
+        }
+    }
+}
+
+fn index_char_list<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    list: Data::Size,
+    index: Data::Integer,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    if index < Data::Integer::zero() {
+        Ok(None)
+    } else {
+        if index >= Data::size_to_integer(this.get_char_list_len(list)?) {
+            Ok(None)
+        } else {
+            let c = this.get_char_list_item(list, index)?;
+            let addr = this.add_char(c)?;
+            Ok(Some(addr))
+        }
+    }
+}
+
+fn index_byte_list<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    list: Data::Size,
+    index: Data::Integer,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    if index < Data::Integer::zero() {
+        Ok(None)
+    } else {
+        if index >= Data::size_to_integer(this.get_byte_list_len(list)?) {
+            Ok(None)
+        } else {
+            let c = this.get_byte_list_item(list, index)?;
+            let addr = this.add_byte(c)?;
+            Ok(Some(addr))
         }
     }
 }
@@ -712,7 +732,7 @@ mod ranges {
 
 #[cfg(test)]
 mod slice {
-    use crate::testing_utilites::{add_integer_list, add_links, add_list, add_pair};
+    use crate::testing_utilites::{add_integer_list, add_links, add_list, add_pair, add_range};
     use crate::{runtime::GarnishRuntime, symbol_value, GarnishLangRuntimeData, SimpleRuntimeData, ExpressionDataType};
 
     #[test]
@@ -732,6 +752,54 @@ mod slice {
         runtime.access().unwrap();
 
         assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 40);
+    }
+
+    #[test]
+    fn index_slice_of_char_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let chars = SimpleRuntimeData::parse_char_list("abcde");
+
+        runtime.start_char_list().unwrap();
+        for c in chars {
+            runtime.add_to_char_list(c).unwrap();
+        }
+        let list = runtime.end_char_list().unwrap();
+
+        let range = add_range(&mut runtime, 1, 3);
+        let slice = runtime.add_slice(list, range).unwrap();
+        let d6 = runtime.add_integer(2).unwrap();
+
+        runtime.push_register(slice).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), 'd');
+    }
+
+    #[test]
+    fn index_slice_of_byte_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let bytes = SimpleRuntimeData::parse_byte_list("abcde");
+
+        runtime.start_byte_list().unwrap();
+        for b in bytes {
+            runtime.add_to_byte_list(b).unwrap();
+        }
+        let list = runtime.end_byte_list().unwrap();
+
+        let range = add_range(&mut runtime, 1, 3);
+        let slice = runtime.add_slice(list, range).unwrap();
+        let d6 = runtime.add_integer(2).unwrap();
+
+        runtime.push_register(slice).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.access().unwrap();
+
+        assert_eq!(runtime.get_byte(runtime.get_register(0).unwrap()).unwrap(), 'd' as u8);
     }
 
     #[test]
