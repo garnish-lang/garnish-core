@@ -85,6 +85,7 @@ pub enum SecondaryDefinition {
     Value,
     OptionalBinaryLeftToRight,
     BinaryLeftToRight,
+    BinaryRightToLeft,
     UnaryPrefix,
     UnarySuffix,
     StartSideEffect,
@@ -137,7 +138,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::EndExclusiveRange => (Definition::EndExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
         TokenType::ExclusiveRange => (Definition::ExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
         TokenType::AppendLink => (Definition::AppendLink, SecondaryDefinition::BinaryLeftToRight),
-        TokenType::PrependLink => (Definition::PrependLink, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::PrependLink => (Definition::PrependLink, SecondaryDefinition::BinaryRightToLeft),
         TokenType::MultiplicationSign => todo!(),
         TokenType::ExponentialSign => todo!(),
         TokenType::Apply => (Definition::Apply, SecondaryDefinition::BinaryLeftToRight),
@@ -343,8 +344,14 @@ fn parse_token(
                         Some(group_index) => group_index == left_index,
                     };
 
+                let stop = if n.definition == Definition::PrependLink {
+                    my_priority <= their_priority
+                } else {
+                    my_priority < their_priority
+                };
+
                 // need to find node with higher priority and stop before it
-                if my_priority < their_priority || is_our_group {
+                if stop || is_our_group {
                     trace!("Stopping walk with true left {:?}", true_left);
 
                     parent = Some(left_index);
@@ -733,7 +740,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                     under_group,
                 )?
             }
-            SecondaryDefinition::BinaryLeftToRight | SecondaryDefinition::OptionalBinaryLeftToRight => {
+            SecondaryDefinition::BinaryLeftToRight | SecondaryDefinition::OptionalBinaryLeftToRight | SecondaryDefinition::BinaryRightToLeft => {
                 next_parent = Some(id);
                 parse_token(
                     id,
@@ -2754,6 +2761,43 @@ mod links {
                 (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::PrependLink, None, Some(0), Some(2)),
                 (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn prepend_and_append_links() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("->".to_string(), TokenType::AppendLink, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("->".to_string(), TokenType::AppendLink, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::PrependLink, None, Some(0), Some(5)),
+                (2, Definition::Integer, Some(3), None, None),
+                (3, Definition::AppendLink, Some(5), Some(2), Some(4)),
+                (4, Definition::Integer, Some(3), None, None),
+                (5, Definition::PrependLink, Some(1), Some(3), Some(9)),
+                (6, Definition::Integer, Some(7), None, None),
+                (7, Definition::AppendLink, Some(9), Some(6), Some(8)),
+                (8, Definition::Integer, Some(7), None, None),
+                (9, Definition::PrependLink, Some(5), Some(7), Some(10)),
+                (10, Definition::Integer, Some(9), None, None),
             ],
         );
     }
