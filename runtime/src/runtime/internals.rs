@@ -1,4 +1,4 @@
-use crate::runtime::range::{get_range_len, range_len};
+use crate::runtime::range::range_len;
 use crate::{next_ref, push_integer, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 
 pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
@@ -104,37 +104,7 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
             }
         }
         ExpressionDataType::Link => {
-            let (value, mut linked, _) = this.get_link(r)?;
-            let mut count = match this.get_data_type(value)? {
-                ExpressionDataType::List => Data::size_to_integer(this.get_list_len(value)?),
-                ExpressionDataType::Slice => {
-                    let (_, range) = this.get_slice(value)?;
-                    get_range_len(this, range)?
-                }
-                ExpressionDataType::Link => state_error(format!("Linked found as value of link at addr {:?}", value))?,
-                _ => Data::Integer::one(),
-            };
-
-            loop {
-                match this.get_data_type(linked)? {
-                    ExpressionDataType::Link => {
-                        let (next_val, next, _) = this.get_link(linked)?;
-                        linked = next;
-                        count += match this.get_data_type(next_val)? {
-                            ExpressionDataType::List => Data::size_to_integer(this.get_list_len(next_val)?),
-                            ExpressionDataType::Slice => {
-                                let (_, range) = this.get_slice(next_val)?;
-                                get_range_len(this, range)?
-                            }
-                            ExpressionDataType::Link => state_error(format!("Linked found as value of link at addr {:?}", next_val))?,
-                            _ => Data::Integer::one(),
-                        };
-                    }
-                    ExpressionDataType::Unit => break,
-                    l => state_error(format!("Invalid linked type {:?}", l))?,
-                }
-            }
-
+            let count = link_len(this, r)?;
             let addr = this.add_integer(count)?;
             this.push_register(addr)?;
         }
@@ -142,6 +112,32 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
     }
 
     Ok(())
+}
+
+pub(crate) fn link_len<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Integer, RuntimeError<Data::Error>> {
+    let (value, mut linked, _) = this.get_link(addr)?;
+    let mut count = match this.get_data_type(value)? {
+        ExpressionDataType::Link => state_error(format!("Linked found as value of link at addr {:?}", value))?,
+        _ => Data::Integer::one(),
+    };
+
+    // order doesn't matter, just loop through and count
+    loop {
+        match this.get_data_type(linked)? {
+            ExpressionDataType::Link => {
+                let (next_val, next, _) = this.get_link(linked)?;
+                linked = next;
+                count += match this.get_data_type(next_val)? {
+                    ExpressionDataType::Link => state_error(format!("Linked found as value of link at addr {:?}", next_val))?,
+                    _ => Data::Integer::one(),
+                };
+            }
+            ExpressionDataType::Unit => break,
+            l => state_error(format!("Invalid linked type {:?}", l))?,
+        }
+    }
+
+    Ok(count)
 }
 
 #[cfg(test)]
@@ -348,7 +344,6 @@ mod ranges {
     }
 }
 
-
 #[cfg(test)]
 mod slices {
     use crate::testing_utilites::add_list;
@@ -408,7 +403,7 @@ mod slices {
 
 #[cfg(test)]
 mod links {
-    use crate::testing_utilites::{add_list, add_range};
+    use crate::testing_utilites::{add_links_with_start, add_list, add_range};
     use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
@@ -449,17 +444,13 @@ mod links {
     fn len() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let unit = runtime.add_unit().unwrap();
-        let d1 = runtime.add_integer(10).unwrap();
-        let d2 = runtime.add_link(d1, unit, true).unwrap();
-        let d3 = runtime.add_integer(20).unwrap();
-        let d4 = runtime.add_link(d3, d2, true).unwrap();
+        let list = add_links_with_start(&mut runtime, 10, true, 15);
 
-        runtime.push_register(d4).unwrap();
+        runtime.push_register(list).unwrap();
 
         runtime.access_length_internal().unwrap();
 
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 2);
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 10);
     }
 
     #[test]
@@ -482,6 +473,6 @@ mod links {
 
         runtime.access_length_internal().unwrap();
 
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 14);
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 3);
     }
 }

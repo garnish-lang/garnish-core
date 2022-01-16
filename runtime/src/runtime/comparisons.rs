@@ -1,8 +1,9 @@
 use log::trace;
 use std::fmt::Debug;
 
-use crate::{next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, get_range};
 use crate::runtime::list::index_link;
+use crate::{get_range, next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
+use crate::runtime::internals::link_len;
 
 pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     // hope that can get reduced to a constant
@@ -180,8 +181,8 @@ fn data_equal<Data: GarnishLangRuntimeData>(
             let (value1, range1) = this.get_slice(left_addr)?;
             let (value2, range2) = this.get_slice(right_addr)?;
 
-            let (start1, end1, len1) = get_range(this, range1)?;
-            let (start2, end2, len2) = get_range(this, range2)?;
+            let (start1, _, len1) = get_range(this, range1)?;
+            let (start2, _, len2) = get_range(this, range2)?;
 
             // slices need same len of range
             // if so, run through list and push to register
@@ -325,6 +326,30 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                     }
                     _ => false,
                 }
+            }
+        }
+        (ExpressionDataType::Link, ExpressionDataType::Link) => {
+            let len1 = link_len(this, left_addr)?;
+            let len2 = link_len(this, right_addr)?;
+
+            if len1 != len2 {
+                false
+            } else {
+                let mut count = Data::Integer::zero();
+
+                while count < len1 {
+                    match (index_link(this, left_addr, count)?, index_link(this, right_addr, count)?) {
+                        (Some(item1), Some(item2)) => {
+                            this.push_register(item1)?;
+                            this.push_register(item2)?;
+                        }
+                        _ => state_error(format!("Items not found during link comparison"))?
+                    }
+
+                    count += Data::Integer::one();
+                }
+
+                true
             }
         }
         (ExpressionDataType::List, ExpressionDataType::List) => {
@@ -1206,7 +1231,10 @@ mod ranges {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 
     #[test]
@@ -1226,7 +1254,10 @@ mod ranges {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 
     #[test]
@@ -1266,7 +1297,10 @@ mod ranges {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 
     #[test]
@@ -1286,7 +1320,10 @@ mod ranges {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 
     #[test]
@@ -1598,8 +1635,8 @@ mod lists {
 
 #[cfg(test)]
 mod slices {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
     use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn slice_of_list_slice_of_list() {
@@ -1618,10 +1655,7 @@ mod slices {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
-            ExpressionDataType::True
-        );
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
@@ -1641,10 +1675,7 @@ mod slices {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
-            ExpressionDataType::True
-        );
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
@@ -1664,10 +1695,7 @@ mod slices {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
-            ExpressionDataType::True
-        );
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
@@ -1696,10 +1724,7 @@ mod slices {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
-            ExpressionDataType::True
-        );
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
@@ -1752,10 +1777,7 @@ mod slices {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
-            ExpressionDataType::True
-        );
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
@@ -1781,10 +1803,7 @@ mod slices {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
-            ExpressionDataType::True
-        );
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
@@ -1840,10 +1859,7 @@ mod slices {
 
         runtime.equality_comparison().unwrap();
 
-        assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
-            ExpressionDataType::True
-        );
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
@@ -1874,5 +1890,41 @@ mod slices {
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
             ExpressionDataType::False
         );
+    }
+}
+
+#[cfg(test)]
+mod links {
+    use crate::testing_utilites::add_links_with_start;
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn append_link_append_link_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_links_with_start(&mut runtime, 10, true, 20);
+        let list2 = add_links_with_start(&mut runtime, 10, true, 20);
+
+        runtime.push_register(list1).unwrap();
+        runtime.push_register(list2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn append_link_append_link_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list1 = add_links_with_start(&mut runtime, 10, true, 20);
+        let list2 = add_links_with_start(&mut runtime, 10, true, 15);
+
+        runtime.push_register(list1).unwrap();
+        runtime.push_register(list2).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
 }
