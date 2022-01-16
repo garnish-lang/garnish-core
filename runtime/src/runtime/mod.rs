@@ -716,7 +716,7 @@ pub mod testing_utilites {
             // let sym = format!("val{}", i);
             // println!("{} = {}", sym, symbol_value(sym.as_str()));
 
-            let v = add_pair(runtime, format!("val{}", i).as_str(), (i as i32 + 1) * 10);
+            let v = add_pair(runtime, format!("val{}", i).as_str(), i as i32 + 1);
             last = runtime.add_link(v, last, is_append).unwrap();
         }
         last

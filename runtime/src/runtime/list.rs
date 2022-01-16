@@ -82,16 +82,7 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_data_type(value)? {
         ExpressionDataType::List => {
-            if index < Data::Integer::zero() {
-                Ok(None)
-            } else {
-                let i = index;
-                if i >= Data::size_to_integer(this.get_list_len(value)?) {
-                    Ok(None)
-                } else {
-                    Ok(Some(this.get_list_item(value, i)?))
-                }
-            }
+            index_list(this, value, index)
         }
         ExpressionDataType::CharList => {
             if index < Data::Integer::zero() {
@@ -141,22 +132,101 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
             }
         }
         ExpressionDataType::Slice => {
-            // let (value, range) = this.get_slice(value)?;
-            // let (start, _, len) = get_range(this, range)?;
-            //
-            // if index >= len {
-            //     return Ok(None);
-            // }
+            let (value, range) = this.get_slice(value)?;
+            let (start, end, len) = get_range(this, range)?;
+            let adjusted_index = start + index;
 
-            integer_access_links_slices(this, value, index)
+            match this.get_data_type(value)? {
+                ExpressionDataType::Link => {
+                    index_link(this, value, adjusted_index)
+                }
+                ExpressionDataType::List => {
+                    index_list(this, value, adjusted_index)
+                }
+                t => state_error(format!("Invalid value for slice {:?}", t))
+            }
         }
         ExpressionDataType::Link => {
-            integer_access_links_slices(this,value, index)
+            index_link(this, value, index)
         }
         _ => Ok(None),
     }
 }
 
+fn index_list<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    list: Data::Size,
+    index: Data::Integer,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    if index < Data::Integer::zero() {
+        Ok(None)
+    } else {
+        if index >= Data::size_to_integer(this.get_list_len(list)?) {
+            Ok(None)
+        } else {
+            Ok(Some(this.get_list_item(list, index)?))
+        }
+    }
+}
+
+fn index_link<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    link: Data::Size,
+    index: Data::Integer,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    let mut item: Option<Data::Size> = None;
+    let mut current_index = Data::Integer::zero();
+    // keep track of starting point to any pushed values later
+    let start_register = this.get_register_len();
+
+    this.push_register(link)?;
+
+    while this.get_register_len() > start_register {
+        match this.pop_register() {
+            None => state_error(format!("Popping more registers than placed during linking indexing."))?,
+            Some(r) => match this.get_data_type(r)? {
+                // flatten all links, pushing their vals to the register
+                // val of link should never be another link
+                ExpressionDataType::Link => {
+                    let (val, linked, is_append) = this.get_link(r)?;
+
+                    match this.get_data_type(linked)? {
+                        ExpressionDataType::Unit => {
+                            // linked of type unit means, only push value
+                            this.push_register(val)?;
+                        }
+                        ExpressionDataType::Link => {
+                            if is_append {
+                                // linked value is previous, gets checked first, pushed last
+                                this.push_register(val)?;
+                                this.push_register(linked)?;
+                            } else {
+                                // linked value is next, gets resolved last, pushed first
+                                this.push_register(linked)?;
+                                this.push_register(val)?;
+                            }
+                        }
+                        t => state_error(format!("Invalid linked type {:?}", t))?,
+                    }
+                }
+                _ => {
+                    if current_index == index {
+                        item = Some(r);
+                        break;
+                    } else {
+                        current_index += Data::Integer::one();
+                    }
+                }
+            },
+        }
+    }
+
+    while this.get_register_len() > start_register {
+        this.pop_register();
+    }
+
+    Ok(item)
+}
 
 fn access_with_symbol<Data: GarnishLangRuntimeData>(
     this: &mut Data,
@@ -277,89 +347,6 @@ fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
                 // nothing to do for any other values
                 _ => {
                     count += Data::Integer::one();
-                }
-            },
-        }
-    }
-
-    // remove remaining registers added during operation
-    while this.get_register_len() > start_register {
-        this.pop_register();
-    }
-
-    Ok(item)
-}
-
-fn integer_access_links_slices<Data: GarnishLangRuntimeData>(
-    this: &mut Data,
-    start_value: Data::Size,
-    search_index: Data::Integer
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let mut skip = Data::Integer::zero();
-    let mut item: Option<Data::Size> = None;
-    let mut current_index = Data::Integer::zero();
-    // keep track of starting point to any pushed values later
-    let start_register = this.get_register_len();
-
-    this.push_register(start_value)?;
-
-    while this.get_register_len() > start_register {
-        match this.pop_register() {
-            None => state_error(format!("Popping more registers than placed during linking indexing."))?,
-            Some(r) => match this.get_data_type(r)? {
-                ExpressionDataType::Link => {
-                    let (val, linked, is_append) = this.get_link(r)?;
-
-                    match this.get_data_type(linked)? {
-                        ExpressionDataType::Unit => {
-                            // linked of type unit means, only push value
-                            this.push_register(val)?;
-                        }
-                        ExpressionDataType::Link => {
-                            if is_append {
-                                // linked value is previous, gets checked first, pushed last
-                                this.push_register(val)?;
-                                this.push_register(linked)?;
-                            } else {
-                                // linked value is next, gets resolved last, pushed first
-                                this.push_register(linked)?;
-                                this.push_register(val)?;
-                            }
-                        }
-                        t => state_error(format!("Invalid linked type {:?}", t))?,
-                    }
-                }
-                ExpressionDataType::Slice => {
-                    let (val, range) = this.get_slice(r)?;
-                    let (start, _, _) = get_range(this, range)?;
-
-                    // val will always the next to be popped
-                    // set skip to start of slice
-                    skip = start;
-                    this.push_register(val)?;
-                }
-                ExpressionDataType::List => {
-                    let list_len = Data::size_to_integer(this.get_list_len(r)?) - skip;
-                    if search_index < current_index + list_len {
-                        // item is in list
-                        let list_index = search_index - current_index + skip;
-                        item = Some(this.get_list_item(r, list_index)?);
-                        break;
-                    } else {
-                        // not in list, advance count by list len and continue to next item
-                        current_index += list_len;
-                    }
-                    skip = Data::Integer::zero();
-                }
-                _ => {
-                    if skip > Data::Integer::zero() {
-                        skip -= Data::Integer::one();
-                    } else if current_index == search_index {
-                        item = Some(r);
-                        break;
-                    } else {
-                        current_index += Data::Integer::one();
-                    }
                 }
             },
         }
@@ -808,7 +795,7 @@ mod slice {
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val4"));
-        assert_eq!(runtime.get_integer(right).unwrap(), 50);
+        assert_eq!(runtime.get_integer(right).unwrap(), 5);
     }
 
     #[test]
@@ -846,109 +833,7 @@ mod slice {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 50);
-    }
-
-    #[test]
-    fn index_slice_of_links_of_list() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let unit = runtime.add_unit().unwrap();
-        let d1 = add_list_with_start(&mut runtime, 5, 10);
-        let d2 = add_list_with_start(&mut runtime, 5, 20);
-
-        let d3 = runtime.add_link(d1, unit, true).unwrap();
-        let d4 = runtime.add_link(d2, d3, true).unwrap();
-
-        let d5 = runtime.add_integer(2).unwrap();
-        let d6 = runtime.add_integer(8).unwrap();
-        let d7 = runtime.add_range(d5, d6).unwrap();
-        let d8 = runtime.add_slice(d4, d7).unwrap();
-        let d9 = runtime.add_integer(2).unwrap();
-
-        runtime.push_register(d8).unwrap();
-        runtime.push_register(d9).unwrap();
-
-        runtime.access().unwrap();
-
-        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val14"));
-        assert_eq!(runtime.get_integer(right).unwrap(), 14);
-    }
-
-    #[test]
-    fn index_slice_of_links_of_list_not_found() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let unit = runtime.add_unit().unwrap();
-        let d1 = add_list_with_start(&mut runtime, 5, 10);
-        let d2 = add_list_with_start(&mut runtime, 5, 20);
-
-        let d3 = runtime.add_link(d1, unit, true).unwrap();
-        let d4 = runtime.add_link(d2, d3, true).unwrap();
-
-        let d5 = runtime.add_integer(2).unwrap();
-        let d6 = runtime.add_integer(8).unwrap();
-        let d7 = runtime.add_range(d5, d6).unwrap();
-        let d8 = runtime.add_slice(d4, d7).unwrap();
-        let d9 = runtime.add_integer(100).unwrap();
-
-        runtime.push_register(d8).unwrap();
-        runtime.push_register(d9).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
-    }
-
-    #[test]
-    fn sym_index_slice_of_links_of_list() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let unit = runtime.add_unit().unwrap();
-        let d1 = add_list_with_start(&mut runtime, 5, 10);
-        let d2 = add_list_with_start(&mut runtime, 5, 20);
-
-        let d3 = runtime.add_link(d1, unit, true).unwrap();
-        let d4 = runtime.add_link(d2, d3, true).unwrap();
-
-        let d5 = runtime.add_integer(2).unwrap();
-        let d6 = runtime.add_integer(8).unwrap();
-        let d7 = runtime.add_range(d5, d6).unwrap();
-        let d8 = runtime.add_slice(d4, d7).unwrap();
-        let d9 = runtime.add_symbol("val14").unwrap();
-
-        runtime.push_register(d8).unwrap();
-        runtime.push_register(d9).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 14);
-    }
-
-    #[test]
-    fn sym_index_slice_of_links_of_list_not_found() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let unit = runtime.add_unit().unwrap();
-        let d1 = add_list_with_start(&mut runtime, 5, 10);
-        let d2 = add_list_with_start(&mut runtime, 5, 20);
-
-        let d3 = runtime.add_link(d1, unit, true).unwrap();
-        let d4 = runtime.add_link(d2, d3, true).unwrap();
-
-        let d5 = runtime.add_integer(2).unwrap();
-        let d6 = runtime.add_integer(8).unwrap();
-        let d7 = runtime.add_range(d5, d6).unwrap();
-        let d8 = runtime.add_slice(d4, d7).unwrap();
-        let d9 = runtime.add_symbol("val1000").unwrap();
-
-        runtime.push_register(d8).unwrap();
-        runtime.push_register(d9).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 5);
     }
 }
 
@@ -970,8 +855,8 @@ mod link {
         runtime.access().unwrap();
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_integer(right).unwrap(), 4);
         assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val3"));
-        assert_eq!(runtime.get_integer(right).unwrap(), 40);
     }
 
     #[test]
@@ -987,8 +872,8 @@ mod link {
         runtime.access().unwrap();
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_integer(right).unwrap(), 4);
         assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val3"));
-        assert_eq!(runtime.get_integer(right).unwrap(), 40);
     }
 
     #[test]
@@ -1003,7 +888,7 @@ mod link {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 30);
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 3);
     }
 
     #[test]
@@ -1018,208 +903,6 @@ mod link {
 
         runtime.access().unwrap();
 
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 30);
-    }
-
-    #[test]
-    fn index_prepend_link_of_lists_with_integer() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let unit = runtime.add_unit().unwrap();
-        let d1 = add_list_with_start(&mut runtime, 5, 50);
-        let d2 = runtime.add_link(d1, unit, false).unwrap();
-        let d3 = add_list_with_start(&mut runtime, 5, 100);
-        let d4 = runtime.add_link(d3, d2, false).unwrap();
-        let d5 = runtime.add_integer(7).unwrap();
-
-        runtime.push_register(d4).unwrap();
-        runtime.push_register(d5).unwrap();
-
-        runtime.access().unwrap();
-
-        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val52"));
-        assert_eq!(runtime.get_integer(right).unwrap(), 52);
-    }
-
-    #[test]
-    fn sym_index_prepend_link_of_lists_with() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let unit = runtime.add_unit().unwrap();
-        let d1 = add_list_with_start(&mut runtime, 5, 50);
-        let d2 = runtime.add_link(d1, unit, false).unwrap();
-        let d3 = add_list_with_start(&mut runtime, 5, 100);
-        let d4 = runtime.add_link(d3, d2, false).unwrap();
-        let d5 = runtime.add_symbol("val52").unwrap();
-
-        runtime.push_register(d4).unwrap();
-        runtime.push_register(d5).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 52);
-    }
-
-    #[test]
-    fn index_append_link_of_lists_with_integer() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let unit = runtime.add_unit().unwrap();
-        let d1 = add_list_with_start(&mut runtime, 5, 50);
-        let d2 = runtime.add_link(d1, unit, true).unwrap();
-        let d3 = add_list_with_start(&mut runtime, 5, 100);
-        let d4 = runtime.add_link(d3, d2, true).unwrap();
-        let d5 = runtime.add_integer(7).unwrap();
-
-        runtime.push_register(d4).unwrap();
-        runtime.push_register(d5).unwrap();
-
-        runtime.access().unwrap();
-
-        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val102"));
-        assert_eq!(runtime.get_integer(right).unwrap(), 102);
-    }
-
-    #[test]
-    fn sym_index_append_link_of_lists_with_integer() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let unit = runtime.add_unit().unwrap();
-        let d1 = add_list_with_start(&mut runtime, 5, 50);
-        let d2 = runtime.add_link(d1, unit, true).unwrap();
-        let d3 = add_list_with_start(&mut runtime, 5, 100);
-        let d4 = runtime.add_link(d3, d2, true).unwrap();
-        let d5 = runtime.add_symbol("val102").unwrap();
-
-        runtime.push_register(d4).unwrap();
-        runtime.push_register(d5).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 102);
-    }
-
-    #[test]
-    fn index_link_of_slices_of_list() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let unit = runtime.add_unit().unwrap();
-        let d1 = add_list_with_start(&mut runtime, 20, 10);
-
-        let d2 = add_range(&mut runtime, 2, 8);
-        let d3 = runtime.add_slice(d1, d2).unwrap();
-
-        let d4 = add_range(&mut runtime, 14, 19);
-        let d5 = runtime.add_slice(d1, d4).unwrap();
-
-        let d6 = runtime.add_link(d3, unit, true).unwrap();
-        let d7 = runtime.add_link(d5, d6, true).unwrap();
-
-        // resulting list should look like this
-        // 0   1   2   3   4   5   6   7   8   9   10  11  12
-        // 12, 13, 14, 15, 16, 17, 18, 24, 25, 26, 27, 28, 29
-
-        let d8 = runtime.add_integer(4).unwrap();
-
-        runtime.push_register(d7).unwrap();
-        runtime.push_register(d8).unwrap();
-
-        runtime.access().unwrap();
-
-        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val16"));
-        assert_eq!(runtime.get_integer(right).unwrap(), 16);
-    }
-
-    #[test]
-    fn index_link_of_slices_of_list_not_found() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let unit = runtime.add_unit().unwrap();
-        let d1 = add_list_with_start(&mut runtime, 20, 10);
-
-        let d2 = add_range(&mut runtime, 2, 8);
-        let d3 = runtime.add_slice(d1, d2).unwrap();
-
-        let d4 = add_range(&mut runtime, 14, 19);
-        let d5 = runtime.add_slice(d1, d4).unwrap();
-
-        let d6 = runtime.add_link(d3, unit, true).unwrap();
-        let d7 = runtime.add_link(d5, d6, true).unwrap();
-
-        // resulting list should look like this
-        // 0   1   2   3   4   5   6   7   8   9   10  11  12
-        // 12, 13, 14, 15, 16, 17, 18, 24, 25, 26, 27, 28, 29
-
-        let d8 = runtime.add_integer(100).unwrap();
-
-        runtime.push_register(d7).unwrap();
-        runtime.push_register(d8).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
-    }
-
-    #[test]
-    fn sym_index_link_of_slices_of_list() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let unit = runtime.add_unit().unwrap();
-        let d1 = add_list_with_start(&mut runtime, 20, 10);
-
-        let d2 = add_range(&mut runtime, 2, 8);
-        let d3 = runtime.add_slice(d1, d2).unwrap();
-
-        let d4 = add_range(&mut runtime, 14, 19);
-        let d5 = runtime.add_slice(d1, d4).unwrap();
-
-        let d6 = runtime.add_link(d3, unit, true).unwrap();
-        let d7 = runtime.add_link(d5, d6, true).unwrap();
-
-        // resulting list should look like this
-        // 0   1   2   3   4   5   6   7   8   9   10  11  12
-        // 12, 13, 14, 15, 16, 17, 18, 24, 25, 26, 27, 28, 29
-
-        let d8 = runtime.add_symbol("val16").unwrap();
-
-        runtime.push_register(d7).unwrap();
-        runtime.push_register(d8).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 16);
-    }
-
-    #[test]
-    fn sym_index_link_of_slices_of_list_not_found() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let unit = runtime.add_unit().unwrap();
-        let d1 = add_list_with_start(&mut runtime, 20, 10);
-
-        let d2 = add_range(&mut runtime, 2, 8);
-        let d3 = runtime.add_slice(d1, d2).unwrap();
-
-        let d4 = add_range(&mut runtime, 14, 19);
-        let d5 = runtime.add_slice(d1, d4).unwrap();
-
-        let d6 = runtime.add_link(d3, unit, true).unwrap();
-        let d7 = runtime.add_link(d5, d6, true).unwrap();
-
-        // resulting list should look like this
-        // 0   1   2   3   4   5   6   7   8   9   10  11  12
-        // 12, 13, 14, 15, 16, 17, 18, 24, 25, 26, 27, 28, 29
-
-        let d8 = runtime.add_symbol("val1000").unwrap();
-
-        runtime.push_register(d7).unwrap();
-        runtime.push_register(d8).unwrap();
-
-        runtime.access().unwrap();
-
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 3);
     }
 }
