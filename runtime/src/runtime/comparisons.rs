@@ -191,37 +191,6 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 false
             } else {
                 match (this.get_data_type(value1)?, this.get_data_type(value2)?) {
-                    (ExpressionDataType::List, ExpressionDataType::List) => {
-                        let mut index1 = start1;
-                        let mut index2 = start2;
-                        let mut count = Data::Integer::zero();
-
-                        let list_len1 = Data::size_to_integer(this.get_list_len(value1)?);
-                        let list_len2 = Data::size_to_integer(this.get_list_len(value2)?);
-
-                        while count < len1 {
-                            let item1 = if index1 < list_len1 {
-                                this.get_list_item(value1, index1)?
-                            } else {
-                                this.add_unit()?
-                            };
-
-                            let item2 = if index2 < list_len2 {
-                                this.get_list_item(value2, index2)?
-                            } else {
-                                this.add_unit()?
-                            };
-
-                            this.push_register(item1)?;
-                            this.push_register(item2)?;
-
-                            index1 += Data::Integer::one();
-                            index2 += Data::Integer::one();
-                            count += Data::Integer::one();
-                        }
-
-                        true
-                    }
                     (ExpressionDataType::CharList, ExpressionDataType::CharList) => {
                         let mut index1 = start1;
                         let mut index2 = start2;
@@ -278,6 +247,99 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                             if item1 != item2 {
                                 return Ok(false);
                             }
+
+                            index1 += Data::Integer::one();
+                            index2 += Data::Integer::one();
+                            count += Data::Integer::one();
+                        }
+
+                        true
+                    }
+                    (ExpressionDataType::List, ExpressionDataType::List) => {
+                        let mut index1 = start1;
+                        let mut index2 = start2;
+                        let mut count = Data::Integer::zero();
+
+                        let list_len1 = Data::size_to_integer(this.get_list_len(value1)?);
+                        let list_len2 = Data::size_to_integer(this.get_list_len(value2)?);
+
+                        while count < len1 {
+                            let item1 = if index1 < list_len1 {
+                                this.get_list_item(value1, index1)?
+                            } else {
+                                this.add_unit()?
+                            };
+
+                            let item2 = if index2 < list_len2 {
+                                this.get_list_item(value2, index2)?
+                            } else {
+                                this.add_unit()?
+                            };
+
+                            this.push_register(item1)?;
+                            this.push_register(item2)?;
+
+                            index1 += Data::Integer::one();
+                            index2 += Data::Integer::one();
+                            count += Data::Integer::one();
+                        }
+
+                        true
+                    }
+                    (ExpressionDataType::List, ExpressionDataType::Link) => {
+                        let mut index1 = start1;
+                        let mut index2 = start2;
+                        let mut count = Data::Integer::zero();
+
+                        let list_len1 = Data::size_to_integer(this.get_list_len(value1)?);
+
+                        while count < len1 {
+                            let item1 = if index1 < list_len1 {
+                                this.get_list_item(value1, index1)?
+                            } else {
+                                this.add_unit()?
+                            };
+
+                            let item2 = match index_link(this, value2,index2)? {
+                                Some(r) => r,
+                                None => {
+                                    this.add_unit()?
+                                }
+                            };
+
+                            this.push_register(item1)?;
+                            this.push_register(item2)?;
+
+                            index1 += Data::Integer::one();
+                            index2 += Data::Integer::one();
+                            count += Data::Integer::one();
+                        }
+
+                        true
+                    }
+                    (ExpressionDataType::Link, ExpressionDataType::List) => {
+                        let mut index1 = start1;
+                        let mut index2 = start2;
+                        let mut count = Data::Integer::zero();
+
+                        let list_len2 = Data::size_to_integer(this.get_list_len(value2)?);
+
+                        while count < len1 {
+                            let item1 = match index_link(this, value1,index1)? {
+                                Some(r) => r,
+                                None => {
+                                    this.add_unit()?
+                                }
+                            };
+
+                            let item2 = if index2 < list_len2 {
+                                this.get_list_item(value2, index2)?
+                            } else {
+                                this.add_unit()?
+                            };
+
+                            this.push_register(item1)?;
+                            this.push_register(item2)?;
 
                             index1 += Data::Integer::one();
                             index2 += Data::Integer::one();
@@ -1830,6 +1892,86 @@ mod slices {
         runtime.equality_comparison().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn slice_of_link_slice_of_list_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links_with_start(&mut runtime, 10,true, 15);
+        let d2 = add_range(&mut runtime, 0, 4);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+
+        let d4 = add_list_with_start(&mut runtime, 10,10);
+        let d5 = add_range(&mut runtime, 5, 9);
+        let d6 = runtime.add_slice(d4, d5).unwrap();
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn slice_of_link_slice_of_list_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links_with_start(&mut runtime, 10,true, 15);
+        let d2 = add_range(&mut runtime, 0, 4);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+
+        let d4 = add_list_with_start(&mut runtime, 10,11);
+        let d5 = add_range(&mut runtime, 5, 9);
+        let d6 = runtime.add_slice(d4, d5).unwrap();
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn slice_of_list_slice_of_link_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 15);
+        let d2 = add_range(&mut runtime, 0, 4);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+
+        let d4 = add_links_with_start(&mut runtime, 10, true, 10);
+        let d5 = add_range(&mut runtime, 5, 9);
+        let d6 = runtime.add_slice(d4, d5).unwrap();
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn slice_of_list_slice_of_link_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 15);
+        let d2 = add_range(&mut runtime, 0, 4);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+
+        let d4 = add_links_with_start(&mut runtime, 10, true, 11);
+        let d5 = add_range(&mut runtime, 5, 9);
+        let d6 = runtime.add_slice(d4, d5).unwrap();
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.equality_comparison().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
 
     #[test]
