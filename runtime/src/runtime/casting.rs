@@ -102,6 +102,21 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 _ => push_unit(this)?,
             }
         }
+        (ExpressionDataType::List, ExpressionDataType::Link) => {
+            let (_, _, is_append) = this.get_link(right)?;
+            let len = Data::size_to_integer(this.get_list_len(left)?);
+            let mut i = Data::Integer::zero();
+
+            let mut last = this.add_unit()?;
+
+            while i < len {
+                let item = this.get_list_item(left, i)?;
+                last = this.add_link(item, last, is_append)?;
+                i += Data::Integer::one();
+            }
+
+            this.push_register(last)?;
+        }
         // Unit and Boolean
         (ExpressionDataType::Unit, ExpressionDataType::True) | (ExpressionDataType::False, ExpressionDataType::True) => {
             this.add_false().and_then(|r| this.push_register(r))?;
@@ -729,5 +744,38 @@ mod lists {
         }
 
         assert_eq!(result, expected);
+    }
+}
+
+#[cfg(test)]
+mod links {
+    use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
+    use crate::{runtime::GarnishRuntime, symbol_value, GarnishLangRuntimeData, SimpleRuntimeData, iterate_link};
+    use crate::runtime::internals::link_len_size;
+
+    #[test]
+    fn list_to_link() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 20);
+        let list = add_links_with_start(&mut runtime, 1, true, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = link_len_size(&mut runtime, addr).unwrap();
+        assert_eq!(len, 10);
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            let (left, right) = runtime.get_pair(addr).unwrap();
+            let s = symbol_value(format!("val{}", 20 + current_index).as_ref());
+
+            assert_eq!(runtime.get_symbol(left).unwrap(), s);
+            assert_eq!(runtime.get_integer(right).unwrap(), 20 + current_index);
+            Ok(false)
+        }).unwrap();
     }
 }
