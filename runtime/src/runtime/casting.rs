@@ -103,55 +103,16 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
             }
         }
         (ExpressionDataType::List, ExpressionDataType::Link) => {
-            let (_, _, is_append) = this.get_link(right)?;
             let len = Data::size_to_integer(this.get_list_len(left)?);
-            let mut last = this.add_unit()?;
-
-            if is_append {
-                let mut i = Data::Integer::zero();
-
-                while i < len {
-                    let item = this.get_list_item(left, i)?;
-                    last = this.add_link(item, last, is_append)?;
-                    i += Data::Integer::one();
-                }
-            } else {
-                let mut i = len - Data::Integer::one();
-
-                while i >= Data::Integer::zero() {
-                    let item = this.get_list_item(left, i)?;
-                    last = this.add_link(item, last, is_append)?;
-                    i -= Data::Integer::one();
-                }
-            }
-
-            this.push_register(last)?;
+            create_link(this, right, Data::Integer::zero(), len, |this, index| {
+                Ok(this.get_list_item(left, index)?)
+            })?;
         }
         (ExpressionDataType::Range, ExpressionDataType::Link) => {
-            let (_, _, is_append) = this.get_link(right)?;
-            let (start, end) = this.get_range(left)?;
-            let mut last = this.add_unit()?;
             let (start, end, _) = get_range(this, left)?;
-
-            if is_append {
-                let mut i = start;
-
-                while i <= end {
-                    let addr = this.add_integer(i)?;
-                    last = this.add_link(addr, last, is_append)?;
-                    i += Data::Integer::one();
-                }
-            } else {
-                let mut i = end;
-
-                while i >= start {
-                    let addr = this.add_integer(i)?;
-                    last = this.add_link(addr, last, is_append)?;
-                    i -= Data::Integer::one();
-                }
-            }
-
-            this.push_register(last)?;
+            create_link(this, right, start, end + Data::Integer::one(), |this, index| {
+                Ok(this.add_integer(index)?)
+            })?;
         }
         // Unit and Boolean
         (ExpressionDataType::Unit, ExpressionDataType::True) | (ExpressionDataType::False, ExpressionDataType::True) => {
@@ -165,6 +126,42 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         (_, ExpressionDataType::True) => this.add_true().and_then(|r| this.push_register(r))?,
         _ => push_unit(this)?,
     }
+
+    Ok(())
+}
+
+pub(crate) fn create_link<Data: GarnishLangRuntimeData, GetFunc>(
+    this: &mut Data,
+    link_addr: Data::Size,
+    start: Data::Integer,
+    end: Data::Integer,
+    mut get_item: GetFunc,
+) -> Result<(), RuntimeError<Data::Error>>
+where
+    GetFunc: FnMut(&mut Data, Data::Integer) -> Result<Data::Size, RuntimeError<Data::Error>>,
+{
+    let (_, _, is_append) = this.get_link(link_addr)?;
+    let mut last = this.add_unit()?;
+
+    if is_append {
+        let mut i = start;
+
+        while i < end {
+            let addr = get_item(this, i)?;
+            last = this.add_link(addr, last, is_append)?;
+            i += Data::Integer::one();
+        }
+    } else {
+        let mut i = end - Data::Integer::one();
+
+        while i >= start {
+            let addr = get_item(this, i)?;
+            last = this.add_link(addr, last, is_append)?;
+            i -= Data::Integer::one();
+        }
+    }
+
+    this.push_register(last)?;
 
     Ok(())
 }
@@ -785,9 +782,9 @@ mod lists {
 
 #[cfg(test)]
 mod links {
-    use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
-    use crate::{runtime::GarnishRuntime, symbol_value, GarnishLangRuntimeData, SimpleRuntimeData, iterate_link};
     use crate::runtime::internals::link_len_size;
+    use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
+    use crate::{iterate_link, runtime::GarnishRuntime, symbol_value, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn list_to_link_append() {
@@ -812,7 +809,8 @@ mod links {
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
             assert_eq!(runtime.get_integer(right).unwrap(), 20 + current_index);
             Ok(false)
-        }).unwrap();
+        })
+        .unwrap();
     }
 
     #[test]
@@ -838,7 +836,8 @@ mod links {
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
             assert_eq!(runtime.get_integer(right).unwrap(), 20 + current_index);
             Ok(false)
-        }).unwrap();
+        })
+        .unwrap();
     }
 
     #[test]
@@ -860,7 +859,8 @@ mod links {
         iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
             assert_eq!(runtime.get_integer(addr).unwrap(), current_index);
             Ok(false)
-        }).unwrap();
+        })
+        .unwrap();
     }
 
     #[test]
@@ -882,6 +882,7 @@ mod links {
         iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
             assert_eq!(runtime.get_integer(addr).unwrap(), current_index);
             Ok(false)
-        }).unwrap();
+        })
+        .unwrap();
     }
 }
