@@ -122,7 +122,10 @@ pub trait GarnishLangRuntimeData {
 
     // deferred conversions
     fn size_to_integer(from: Self::Size) -> Self::Integer;
-    fn integer_to_float(from: Self::Integer) -> Self::Float;
+    fn integer_to_float(from: Self::Integer) -> Option<Self::Float>;
+    fn integer_to_char(from: Self::Integer) -> Option<Self::Char>;
+    fn integer_to_byte(from: Self::Integer) -> Option<Self::Byte>;
+    fn float_to_integer(from: Self::Float) -> Option<Self::Integer>;
 
     // parsing, to be moved to separate object
     // will require moving simple data to its own crate

@@ -28,21 +28,27 @@ pub fn perform_addition<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
             let left = this.get_integer(left_addr)?;
             let right = this.get_float(right_addr)?;
 
-            let sum = Data::integer_to_float(left) + right;
-
-            this.add_float(sum).and_then(|r| this.push_register(r))?;
-
-            Ok(())
+            match Data::integer_to_float(left) {
+                Some(left) => {
+                    let sum = left + right;
+                    this.add_float(sum).and_then(|r| this.push_register(r))?;
+                    Ok(())
+                }
+                None => push_unit(this)
+            }
         }
         (ExpressionDataType::Float, ExpressionDataType::Integer) => {
             let left = this.get_float(left_addr)?;
             let right = this.get_integer(right_addr)?;
 
-            let sum = left + Data::integer_to_float(right);
-
-            this.add_float(sum).and_then(|r| this.push_register(r))?;
-
-            Ok(())
+            match Data::integer_to_float(right) {
+                Some(right) => {
+                    let sum = left + right;
+                    this.add_float(sum).and_then(|r| this.push_register(r))?;
+                    Ok(())
+                }
+                None => push_unit(this)
+            }
         }
         (ExpressionDataType::Float, ExpressionDataType::Float) => {
             let left = this.get_float(left_addr)?;

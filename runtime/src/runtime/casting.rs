@@ -4,9 +4,48 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
     let (right, left) = next_two_raw_ref(this)?;
 
     match (this.get_data_type(left)?, this.get_data_type(right)?) {
+        // NoOp re-push left to register
+        (l, r) if l == r => this.push_register(left)?,
+        // Numbers
+        (ExpressionDataType::Integer, ExpressionDataType::Float) => {
+            let i = this.get_integer(left)?;
+            match Data::integer_to_float(i) {
+                Some(i) => {
+                    this.add_float(i).and_then(|r| this.push_register(r))?;
+                }
+                None => push_unit(this)?
+            }
+        }
+        (ExpressionDataType::Integer, ExpressionDataType::Char) => {
+            let i = this.get_integer(left)?;
+            match Data::integer_to_char(i) {
+                Some(i) => {
+                    this.add_char(i).and_then(|r| this.push_register(r))?;
+                }
+                None => push_unit(this)?
+            }
+        }
+        (ExpressionDataType::Integer, ExpressionDataType::Byte) => {
+            let i = this.get_integer(left)?;
+            match Data::integer_to_byte(i) {
+                Some(i) => {
+                    this.add_byte(i).and_then(|r| this.push_register(r))?;
+                }
+                None => push_unit(this)?
+            }
+        }
+        (ExpressionDataType::Float, ExpressionDataType::Integer) => {
+            let f = this.get_float(left)?;
+            match Data::float_to_integer(f) {
+                Some(f) => {
+                    this.add_integer(f).and_then(|r| this.push_register(r))?;
+                }
+                None => push_unit(this)?
+            }
+        }
         // Unit and Boolean
         (ExpressionDataType::Unit, ExpressionDataType::True) | (ExpressionDataType::False, ExpressionDataType::True) => {
-            this.add_false().and_then(|r| this.push_register(r))?
+            this.add_false().and_then(|r| this.push_register(r))?;
         }
         (ExpressionDataType::Unit, ExpressionDataType::False) => this.add_true().and_then(|r| this.push_register(r))?,
 
@@ -21,8 +60,23 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
 }
 
 #[cfg(test)]
-mod tests {
+mod simple {
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn no_op_cast_expression() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_expression(10).unwrap();
+        let d2 = runtime.add_expression(10).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        assert_eq!(runtime.get_expression(runtime.get_register(0).unwrap()).unwrap(), 10);
+    }
 
     #[test]
     fn cast_to_unit() {
@@ -139,5 +193,78 @@ mod tests {
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
             ExpressionDataType::False
         );
+    }
+}
+
+#[cfg(test)]
+mod primitive {
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn integer_to_float() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_integer(10).unwrap();
+        let d2 = runtime.add_float(0.0).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let expected = SimpleRuntimeData::integer_to_float(10).unwrap();
+
+        assert_eq!(runtime.get_float(runtime.get_register(0).unwrap()).unwrap(), expected);
+    }
+
+    #[test]
+    fn integer_to_char() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_integer('a' as i32).unwrap();
+        let d2 = runtime.add_char('\0').unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let expected = SimpleRuntimeData::integer_to_char('a' as i32).unwrap();
+
+        assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), expected);
+    }
+
+    #[test]
+    fn integer_to_byte() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_integer(10).unwrap();
+        let d2 = runtime.add_byte(0).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let expected = SimpleRuntimeData::integer_to_byte(10).unwrap();
+
+        assert_eq!(runtime.get_byte(runtime.get_register(0).unwrap()).unwrap(), expected);
+    }
+
+    #[test]
+    fn float_to_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_float(3.14).unwrap();
+        let d2 = runtime.add_integer(0).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let expected = SimpleRuntimeData::float_to_integer(3.14).unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
 }

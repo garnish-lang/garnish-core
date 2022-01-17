@@ -2,6 +2,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
+use std::convert::TryInto;
 
 use crate::{symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, RuntimeError, SimpleData, SimpleDataList, SymbolData, FloatData, CharData, CharListData, ByteData, ByteListData, RangeData, SliceData, LinkData};
 
@@ -592,15 +593,39 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.expression_table.get_mut(index)
     }
 
+    //
+    // Casting
+    //
+
     fn size_to_integer(from: Self::Size) -> Self::Integer {
         from as Self::Integer
     }
 
-    fn integer_to_float(from: Self::Integer) -> Self::Float {
-        from as Self::Float
+    fn integer_to_float(from: Self::Integer) -> Option<Self::Float> {
+        Some(from as Self::Float)
     }
 
+    fn integer_to_char(from: Self::Integer) -> Option<Self::Char> {
+        match (from as u8).try_into() {
+            Ok(c) => Some(c),
+            Err(_) => None
+        }
+    }
+
+    fn integer_to_byte(from: Self::Integer) -> Option<Self::Byte> {
+        match from.try_into() {
+            Ok(b) => Some(b),
+            Err(_) => None
+        }
+    }
+
+    fn float_to_integer(from: Self::Float) -> Option<Self::Integer> {
+        Some(from as Self::Integer)
+    }
+
+    //
     // Parsing
+    //
 
     fn parse_char_list(from: &str) -> Vec<Self::Char> {
         from.trim_matches('"').chars().collect()

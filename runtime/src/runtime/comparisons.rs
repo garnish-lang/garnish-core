@@ -51,13 +51,23 @@ fn data_equal<Data: GarnishLangRuntimeData>(
             let left = this.get_integer(left_addr)?;
             let right = this.get_float(right_addr)?;
 
-            Data::integer_to_float(left) == right
+            match Data::integer_to_float(left) {
+                Some(left) => {
+                    left == right
+                }
+                None => false
+            }
         }
         (ExpressionDataType::Float, ExpressionDataType::Integer) => {
             let left = this.get_float(left_addr)?;
             let right = this.get_integer(right_addr)?;
 
-            left == Data::integer_to_float(right)
+            match Data::integer_to_float(right) {
+                Some(right) => {
+                    left == right
+                }
+                None => false
+            }
         }
         (ExpressionDataType::Char, ExpressionDataType::CharList) => {
             if this.get_char_list_len(right_addr)? == Data::Size::one() {
