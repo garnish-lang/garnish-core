@@ -118,6 +118,36 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
 
             this.end_list().and_then(|r| this.push_register(r))?
         }
+        (ExpressionDataType::CharList, ExpressionDataType::List) => {
+            let len = this.get_char_list_len(left)?;
+            let mut count = Data::Size::zero();
+
+            this.start_list(len)?;
+            while count < len {
+                let c = this.get_char_list_item(left, Data::size_to_integer(count))?;
+                let addr = this.add_char(c)?;
+                this.add_to_list(addr, false)?;
+
+                count += Data::Size::one();
+            }
+
+            this.end_list().and_then(|r| this.push_register(r))?
+        }
+        (ExpressionDataType::ByteList, ExpressionDataType::List) => {
+            let len = this.get_byte_list_len(left)?;
+            let mut count = Data::Size::zero();
+
+            this.start_list(len)?;
+            while count < len {
+                let c = this.get_byte_list_item(left, Data::size_to_integer(count))?;
+                let addr = this.add_byte(c)?;
+                this.add_to_list(addr, false)?;
+
+                count += Data::Size::one();
+            }
+
+            this.end_list().and_then(|r| this.push_register(r))?
+        }
         // Unit and Boolean
         (ExpressionDataType::Unit, ExpressionDataType::True) | (ExpressionDataType::False, ExpressionDataType::True) => {
             this.add_false().and_then(|r| this.push_register(r))?;
@@ -414,7 +444,7 @@ mod primitive {
 
 #[cfg(test)]
 mod lists {
-    use crate::testing_utilites::{add_links_with_start, add_list_with_start, add_range};
+    use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
     use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, symbol_value};
 
     #[test]
@@ -465,5 +495,57 @@ mod lists {
             let item_addr = runtime.get_list_item(addr, i).unwrap();
             assert_eq!(runtime.get_integer(item_addr).unwrap(), 10 + i);
         }
+    }
+
+    #[test]
+    fn char_list_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let input = "characters";
+        let d1 = add_char_list(&mut runtime, input);
+        let list = add_list_with_start(&mut runtime, 1, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let expected = SimpleRuntimeData::parse_char_list(input);
+        let mut result = vec![];
+
+        for i in 0..input.len() {
+            let item_addr = runtime.get_list_item(addr, i as i32).unwrap();
+            let item = runtime.get_char(item_addr).unwrap();
+            result.push(item);
+        }
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn byte_list_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let input = "characters";
+        let d1 = add_byte_list(&mut runtime, input);
+        let list = add_list_with_start(&mut runtime, 1, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let expected = SimpleRuntimeData::parse_byte_list(input);
+        let mut result = vec![];
+
+        for i in 0..input.len() {
+            let item_addr = runtime.get_list_item(addr, i as i32).unwrap();
+            let item = runtime.get_byte(item_addr).unwrap();
+            result.push(item);
+        }
+
+        assert_eq!(result, expected);
     }
 }
