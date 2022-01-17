@@ -233,6 +233,66 @@ where
     Ok(())
 }
 
+pub(crate) fn iterate_link_internal_rev<Data: GarnishLangRuntimeData, Callback>(
+    this: &mut Data,
+    link: Data::Size,
+    mut func: Callback,
+) -> Result<(), RuntimeError<Data::Error>>
+    where
+        Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> Result<bool, RuntimeError<Data::Error>>,
+{
+    let mut current_index = Data::Integer::zero();
+    // keep track of starting point to any pushed values later
+    let start_register = this.get_register_len();
+
+    this.push_register(link)?;
+
+    while this.get_register_len() > start_register {
+        match this.pop_register() {
+            None => state_error(format!("Popping more registers than placed during linking indexing."))?,
+            Some(r) => match this.get_data_type(r)? {
+                // flatten all links, pushing their vals to the register
+                // val of link should never be another link
+                ExpressionDataType::Link => {
+                    let (val, linked, is_append) = this.get_link(r)?;
+
+                    match this.get_data_type(linked)? {
+                        ExpressionDataType::Unit => {
+                            // linked of type unit means, only push value
+                            this.push_register(val)?;
+                        }
+                        ExpressionDataType::Link => {
+                            if is_append {
+                                // linked value is previous, gets checked first, pushed last
+                                this.push_register(linked)?;
+                                this.push_register(val)?;
+                            } else {
+                                // linked value is next, gets resolved last, pushed first
+                                this.push_register(val)?;
+                                this.push_register(linked)?;
+                            }
+                        }
+                        t => state_error(format!("Invalid linked type {:?}", t))?,
+                    }
+                }
+                _ => {
+                    if func(this, r, current_index)? {
+                        break;
+                    } else {
+                        current_index += Data::Integer::one();
+                    }
+                }
+            },
+        }
+    }
+
+    while this.get_register_len() > start_register {
+        this.pop_register();
+    }
+
+    Ok(())
+}
+
 pub(crate) fn index_link<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     link: Data::Size,

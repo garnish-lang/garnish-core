@@ -1,11 +1,38 @@
-use crate::runtime::internals::link_len_size;
-use crate::runtime::list::iterate_link_internal;
+use crate::runtime::internals::{link_len, link_len_size};
+use crate::runtime::list::{iterate_link_internal, iterate_link_internal_rev};
 use crate::{get_range, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
 
 pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
 
     match (this.get_data_type(left)?, this.get_data_type(right)?) {
+        (ExpressionDataType::Link, ExpressionDataType::Link) => {
+            let (_, _, from_is_append) = this.get_link(left)?;
+            let (_, _, to_is_append) = this.get_link(right)?;
+
+            if from_is_append == to_is_append {
+                // NoOp
+                this.push_register(left)?;
+            } else {
+                // reverse link
+                let len = link_len(this, left)?;
+                let mut last = this.add_unit()?;
+
+                if to_is_append {
+                    iterate_link_start_end_internal(this, left, Data::Integer::zero(), len, |this, addr, _index| {
+                        last = this.add_link(addr, last, to_is_append)?;
+                        Ok(false)
+                    })?;
+                } else {
+                    iterate_link_start_end_internal_rev(this, left, Data::Integer::zero(), len, |this, addr, _index| {
+                        last = this.add_link(addr, last, to_is_append)?;
+                        Ok(false)
+                    })?;
+                }
+
+                this.push_register(last)?;
+            }
+        }
         // NoOp re-push left to register
         (l, r) if l == r => this.push_register(left)?,
         // Numbers
@@ -180,6 +207,58 @@ where
     this.push_register(last)?;
 
     Ok(())
+}
+
+pub(crate) fn iterate_link_start_end_internal<Data: GarnishLangRuntimeData, Callback>(
+    this: &mut Data,
+    link_addr: Data::Size,
+    start: Data::Integer,
+    end: Data::Integer,
+    mut func: Callback,
+) -> Result<(), RuntimeError<Data::Error>>
+where
+    Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> Result<bool, RuntimeError<Data::Error>>,
+{
+    let mut skip = start;
+
+    iterate_link_internal(this, link_addr, |this, addr, current_index| {
+        if skip > Data::Integer::zero() {
+            skip -= Data::Integer::one();
+            return Ok(false);
+        }
+
+        if current_index >= end {
+            return Ok(true);
+        }
+
+        func(this, addr, current_index)
+    })
+}
+
+pub(crate) fn iterate_link_start_end_internal_rev<Data: GarnishLangRuntimeData, Callback>(
+    this: &mut Data,
+    link_addr: Data::Size,
+    start: Data::Integer,
+    end: Data::Integer,
+    mut func: Callback,
+) -> Result<(), RuntimeError<Data::Error>>
+    where
+        Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> Result<bool, RuntimeError<Data::Error>>,
+{
+    let mut skip = start;
+
+    iterate_link_internal_rev(this, link_addr, |this, addr, current_index| {
+        if skip > Data::Integer::zero() {
+            skip -= Data::Integer::one();
+            return Ok(false);
+        }
+
+        if current_index >= end {
+            return Ok(true);
+        }
+
+        func(this, addr, current_index)
+    })
 }
 
 pub(crate) fn list_from_link<Data: GarnishLangRuntimeData>(
@@ -971,7 +1050,7 @@ mod links {
             assert_eq!(runtime.get_byte(addr).unwrap(), input.chars().nth(current_index as usize).unwrap() as u8);
             Ok(false)
         })
-            .unwrap();
+        .unwrap();
     }
 
     #[test]
@@ -995,6 +1074,60 @@ mod links {
             assert_eq!(runtime.get_byte(addr).unwrap(), input.chars().nth(current_index as usize).unwrap() as u8);
             Ok(false)
         })
-            .unwrap();
+        .unwrap();
+    }
+
+    #[test]
+    fn link_prepend_to_link_append() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links_with_start(&mut runtime, 10, false, 20);
+        let list = add_links_with_start(&mut runtime, 1, true, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = link_len_size(&mut runtime, addr).unwrap();
+        assert_eq!(len, 10);
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            let (left, right) = runtime.get_pair(addr).unwrap();
+            let s = symbol_value(format!("val{}", 20 + current_index).as_ref());
+
+            assert_eq!(runtime.get_symbol(left).unwrap(), s);
+            assert_eq!(runtime.get_integer(right).unwrap(), 20 + current_index);
+            Ok(false)
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn link_append_to_link_prepend() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links_with_start(&mut runtime, 10, true, 20);
+        let list = add_links_with_start(&mut runtime, 1, false, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = link_len_size(&mut runtime, addr).unwrap();
+        assert_eq!(len, 10);
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            let (left, right) = runtime.get_pair(addr).unwrap();
+            let s = symbol_value(format!("val{}", 20 + current_index).as_ref());
+
+            assert_eq!(runtime.get_symbol(left).unwrap(), s);
+            assert_eq!(runtime.get_integer(right).unwrap(), 20 + current_index);
+            Ok(false)
+        })
+        .unwrap();
     }
 }
