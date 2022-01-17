@@ -185,7 +185,7 @@ enum LexingState {
     LineAnnotation,
     Symbol,
     CharList,
-    ByteList
+    ByteList,
 }
 
 fn start_token<'a>(
@@ -417,6 +417,53 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
                 if c.is_numeric() {
                     current_characters.push(c);
                     false
+                } else if c == '.' && current_characters.ends_with(".") {
+                    // split current token into just an integer
+                    // and new Range token
+                    let s = current_characters.trim_matches('.');
+                    let token = LexerToken::new(
+                        s.to_string(),
+                        TokenType::Integer,
+                        token_start_row,
+                        // actual token is determined after current, minus 1 to make accurate
+                        token_start_column,
+                    );
+
+                    tokens.push(token);
+
+                    token_start_row = text_row;
+
+                    let correct_start_column = text_column - 1;
+
+                    start_token(
+                        '.',
+                        &mut current_operator,
+                        &operator_tree,
+                        &mut state,
+                        &mut current_characters,
+                        &mut current_token_type,
+                        &mut token_start_column,
+                        &mut &mut token_start_row,
+                        &mut text_column,
+                        &mut text_row,
+                    );
+
+                    // set to two back for exisitng period
+                    token_start_column = correct_start_column;
+
+                    match current_operator.get_child(&c) {
+                        Some(node) => {
+                            // set 'current' values
+                            current_characters.push(c);
+                            current_token_type = node.token_type;
+                            current_operator = node;
+
+                            trace!("Switched to operator token '{:?}'", current_token_type);
+
+                            false
+                        }
+                        None => Err(CompilerError::new("Could not setup range token.", token_start_row, token_start_column))?,
+                    }
                 } else {
                     trace!("Ending float");
                     true
@@ -1533,6 +1580,52 @@ mod tests {
     }
 
     #[test]
+    fn integer_range() {
+        let result = lex("3..").unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "3".to_string(),
+                    token_type: TokenType::Integer,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "..".to_string(),
+                    token_type: TokenType::Range,
+                    column: 1,
+                    row: 0
+                }
+            ]
+        )
+    }
+
+    #[test]
+    fn integer_end_exclusive_range() {
+        let result = lex("3..<").unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "3".to_string(),
+                    token_type: TokenType::Integer,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "..<".to_string(),
+                    token_type: TokenType::EndExclusiveRange,
+                    column: 1,
+                    row: 0
+                }
+            ]
+        )
+    }
+
+    #[test]
     fn float_period_integer() {
         let result = lex("3.14.1").unwrap();
 
@@ -1913,14 +2006,12 @@ mod chars_and_bytes {
 
         assert_eq!(
             result,
-            vec![
-                LexerToken {
-                    text: "\"Hello World!\"".to_string(),
-                    token_type: TokenType::CharList,
-                    column: 0,
-                    row: 0
-                }
-            ]
+            vec![LexerToken {
+                text: "\"Hello World!\"".to_string(),
+                token_type: TokenType::CharList,
+                column: 0,
+                row: 0
+            }]
         );
     }
 
@@ -1971,14 +2062,12 @@ mod chars_and_bytes {
 
         assert_eq!(
             result,
-            vec![
-                LexerToken {
-                    text: "'Hello World!'".to_string(),
-                    token_type: TokenType::ByteList,
-                    column: 0,
-                    row: 0
-                }
-            ]
+            vec![LexerToken {
+                text: "'Hello World!'".to_string(),
+                token_type: TokenType::ByteList,
+                column: 0,
+                row: 0
+            }]
         );
     }
 
