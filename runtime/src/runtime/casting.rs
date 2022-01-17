@@ -105,14 +105,50 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         (ExpressionDataType::List, ExpressionDataType::Link) => {
             let (_, _, is_append) = this.get_link(right)?;
             let len = Data::size_to_integer(this.get_list_len(left)?);
-            let mut i = Data::Integer::zero();
-
             let mut last = this.add_unit()?;
 
-            while i < len {
-                let item = this.get_list_item(left, i)?;
-                last = this.add_link(item, last, is_append)?;
-                i += Data::Integer::one();
+            if is_append {
+                let mut i = Data::Integer::zero();
+
+                while i < len {
+                    let item = this.get_list_item(left, i)?;
+                    last = this.add_link(item, last, is_append)?;
+                    i += Data::Integer::one();
+                }
+            } else {
+                let mut i = len - Data::Integer::one();
+
+                while i >= Data::Integer::zero() {
+                    let item = this.get_list_item(left, i)?;
+                    last = this.add_link(item, last, is_append)?;
+                    i -= Data::Integer::one();
+                }
+            }
+
+            this.push_register(last)?;
+        }
+        (ExpressionDataType::Range, ExpressionDataType::Link) => {
+            let (_, _, is_append) = this.get_link(right)?;
+            let (start, end) = this.get_range(left)?;
+            let mut last = this.add_unit()?;
+            let (start, end, _) = get_range(this, left)?;
+
+            if is_append {
+                let mut i = start;
+
+                while i <= end {
+                    let addr = this.add_integer(i)?;
+                    last = this.add_link(addr, last, is_append)?;
+                    i += Data::Integer::one();
+                }
+            } else {
+                let mut i = end;
+
+                while i >= start {
+                    let addr = this.add_integer(i)?;
+                    last = this.add_link(addr, last, is_append)?;
+                    i -= Data::Integer::one();
+                }
             }
 
             this.push_register(last)?;
@@ -754,7 +790,7 @@ mod links {
     use crate::runtime::internals::link_len_size;
 
     #[test]
-    fn list_to_link() {
+    fn list_to_link_append() {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = add_list_with_start(&mut runtime, 10, 20);
@@ -775,6 +811,76 @@ mod links {
 
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
             assert_eq!(runtime.get_integer(right).unwrap(), 20 + current_index);
+            Ok(false)
+        }).unwrap();
+    }
+
+    #[test]
+    fn list_to_link_prepend() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 20);
+        let list = add_links_with_start(&mut runtime, 1, false, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = link_len_size(&mut runtime, addr).unwrap();
+        assert_eq!(len, 10);
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            let (left, right) = runtime.get_pair(addr).unwrap();
+            let s = symbol_value(format!("val{}", 20 + current_index).as_ref());
+
+            assert_eq!(runtime.get_symbol(left).unwrap(), s);
+            assert_eq!(runtime.get_integer(right).unwrap(), 20 + current_index);
+            Ok(false)
+        }).unwrap();
+    }
+
+    #[test]
+    fn range_to_link_append() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_range(&mut runtime, 0, 10);
+        let list = add_links_with_start(&mut runtime, 1, true, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = link_len_size(&mut runtime, addr).unwrap();
+        assert_eq!(len, 11);
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            assert_eq!(runtime.get_integer(addr).unwrap(), current_index);
+            Ok(false)
+        }).unwrap();
+    }
+
+    #[test]
+    fn range_to_link_prepend() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_range(&mut runtime, 0, 10);
+        let list = add_links_with_start(&mut runtime, 1, false, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = link_len_size(&mut runtime, addr).unwrap();
+        assert_eq!(len, 11);
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            assert_eq!(runtime.get_integer(addr).unwrap(), current_index);
             Ok(false)
         }).unwrap();
     }
