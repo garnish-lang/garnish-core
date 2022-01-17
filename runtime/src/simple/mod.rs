@@ -603,11 +603,11 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     // Parsing
 
     fn parse_char_list(from: &str) -> Vec<Self::Char> {
-        from.chars().collect()
+        from.trim_matches('"').chars().collect()
     }
 
     fn parse_byte_list(from: &str) -> Vec<Self::Byte> {
-        from.bytes().collect()
+        from.trim_matches('\'').bytes().collect()
     }
 
     fn lease_tmp_stack(&mut self) -> Result<Self::DataLease, Self::Error> {

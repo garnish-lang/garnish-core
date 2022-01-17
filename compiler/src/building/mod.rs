@@ -700,7 +700,7 @@ mod values {
     fn put_char_list() {
         assert_instruction_data(
             0,
-            vec![(Definition::CharList, None, None, None, "characters", TokenType::CharList)],
+            vec![(Definition::CharList, None, None, None, "\"characters\"", TokenType::CharList)],
             vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
             SimpleDataList::default().append(CharListData::from("characters")),
         );
@@ -710,7 +710,7 @@ mod values {
     fn put_byte_list() {
         assert_instruction_data(
             0,
-            vec![(Definition::ByteList, None, None, None, "abc", TokenType::ByteList)],
+            vec![(Definition::ByteList, None, None, None, "'abc'", TokenType::ByteList)],
             vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
             SimpleDataList::default().append(ByteListData::from(vec!['a' as u8, 'b' as u8, 'c' as u8])),
         );
