@@ -959,16 +959,14 @@ mod leases {
 mod to_char_list {
     use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
 
-    #[test]
-    fn unit() {
+    fn assert_to_char_list<Func>(expected: &str, setup: Func) where Func: FnOnce(&mut SimpleRuntimeData) -> usize {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_unit().unwrap();
+        let d1 = setup(&mut runtime);
 
         let addr = runtime.add_char_list_from(d1).unwrap();
         let len = runtime.get_char_list_len(addr).unwrap();
 
-        let expected = "()";
         let mut chars = String::new();
 
         for i in 0..len {
@@ -976,26 +974,20 @@ mod to_char_list {
             chars.push(c);
         }
 
-        assert_eq!(chars, expected);
+        assert_eq!(chars, expected, "{:?} != {:?}", chars, expected);
+    }
+
+    #[test]
+    fn unit() {
+        assert_to_char_list("()", |runtime| {
+            runtime.add_unit().unwrap()
+        })
     }
 
     #[test]
     fn integer() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let d1 = runtime.add_integer(123).unwrap();
-
-        let addr = runtime.add_char_list_from(d1).unwrap();
-        let len = runtime.get_char_list_len(addr).unwrap();
-
-        let expected = "123";
-        let mut chars = String::new();
-
-        for i in 0..len {
-            let c = runtime.get_char_list_item(addr, i as i32).unwrap();
-            chars.push(c);
-        }
-
-        assert_eq!(chars, expected);
+        assert_to_char_list("10", |runtime| {
+            runtime.add_integer(10).unwrap()
+        })
     }
 }
