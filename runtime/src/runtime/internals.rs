@@ -115,10 +115,14 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
 }
 
 pub(crate) fn link_len<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Integer, RuntimeError<Data::Error>> {
+    Ok(Data::size_to_integer(link_len_size(this, addr)?))
+}
+
+pub(crate) fn link_len_size<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Size, RuntimeError<Data::Error>> {
     let (value, mut linked, _) = this.get_link(addr)?;
     let mut count = match this.get_data_type(value)? {
         ExpressionDataType::Link => state_error(format!("Linked found as value of link at addr {:?}", value))?,
-        _ => Data::Integer::one(),
+        _ => Data::Size::one(),
     };
 
     // order doesn't matter, just loop through and count
@@ -129,7 +133,7 @@ pub(crate) fn link_len<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Si
                 linked = next;
                 count += match this.get_data_type(next_val)? {
                     ExpressionDataType::Link => state_error(format!("Linked found as value of link at addr {:?}", next_val))?,
-                    _ => Data::Integer::one(),
+                    _ => Data::Size::one(),
                 };
             }
             ExpressionDataType::Unit => break,

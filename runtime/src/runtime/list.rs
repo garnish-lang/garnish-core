@@ -179,7 +179,7 @@ pub(crate) fn iterate_link_internal<Data: GarnishLangRuntimeData, Callback>(
     mut func: Callback,
 ) -> Result<(), RuntimeError<Data::Error>>
 where
-    Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> bool,
+    Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> Result<bool, RuntimeError<Data::Error>>,
 {
     let mut current_index = Data::Integer::zero();
     // keep track of starting point to any pushed values later
@@ -216,7 +216,7 @@ where
                     }
                 }
                 _ => {
-                    if func(this, r, current_index) {
+                    if func(this, r, current_index)? {
                         break;
                     } else {
                         current_index += Data::Integer::one();
@@ -242,9 +242,9 @@ pub(crate) fn index_link<Data: GarnishLangRuntimeData>(
     iterate_link_internal(this, link, |_runtime, item_addr, current_index| {
         if current_index == index {
             item = Some(item_addr);
-            true
+            Ok(true)
         } else {
-            false
+            Ok(false)
         }
     })?;
 

@@ -64,7 +64,7 @@ pub fn iterate_link<Data: GarnishLangRuntimeData, Callback>(
     func: Callback,
 ) -> Result<(), RuntimeError<Data::Error>>
     where
-        Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> bool,
+        Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> Result<bool, RuntimeError<Data::Error>>,
 {
     iterate_link_internal(this, link, func)
 }
@@ -76,7 +76,7 @@ pub fn link_count<Data: GarnishLangRuntimeData>(
 
     iterate_link_internal(this, link, |_, _, _| {
         count += Data::Integer::one();
-        false
+        Ok(false)
     })?;
 
     Ok(count)

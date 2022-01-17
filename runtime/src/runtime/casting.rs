@@ -1,4 +1,6 @@
+use crate::runtime::internals::link_len_size;
 use crate::{next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
+use crate::runtime::list::iterate_link_internal;
 
 pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
@@ -13,7 +15,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 Some(i) => {
                     this.add_float(i).and_then(|r| this.push_register(r))?;
                 }
-                None => push_unit(this)?
+                None => push_unit(this)?,
             }
         }
         (ExpressionDataType::Integer, ExpressionDataType::Char) => {
@@ -22,7 +24,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 Some(i) => {
                     this.add_char(i).and_then(|r| this.push_register(r))?;
                 }
-                None => push_unit(this)?
+                None => push_unit(this)?,
             }
         }
         (ExpressionDataType::Integer, ExpressionDataType::Byte) => {
@@ -31,7 +33,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 Some(i) => {
                     this.add_byte(i).and_then(|r| this.push_register(r))?;
                 }
-                None => push_unit(this)?
+                None => push_unit(this)?,
             }
         }
         (ExpressionDataType::Float, ExpressionDataType::Integer) => {
@@ -40,7 +42,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 Some(f) => {
                     this.add_integer(f).and_then(|r| this.push_register(r))?;
                 }
-                None => push_unit(this)?
+                None => push_unit(this)?,
             }
         }
         (ExpressionDataType::Char, ExpressionDataType::Integer) => {
@@ -49,7 +51,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 Some(i) => {
                     this.add_integer(i).and_then(|r| this.push_register(r))?;
                 }
-                None => push_unit(this)?
+                None => push_unit(this)?,
             }
         }
         (ExpressionDataType::Char, ExpressionDataType::Byte) => {
@@ -58,7 +60,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 Some(i) => {
                     this.add_byte(i).and_then(|r| this.push_register(r))?;
                 }
-                None => push_unit(this)?
+                None => push_unit(this)?,
             }
         }
         (ExpressionDataType::Byte, ExpressionDataType::Integer) => {
@@ -67,7 +69,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 Some(i) => {
                     this.add_integer(i).and_then(|r| this.push_register(r))?;
                 }
-                None => push_unit(this)?
+                None => push_unit(this)?,
             }
         }
         (ExpressionDataType::Byte, ExpressionDataType::Char) => {
@@ -76,8 +78,30 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 Some(i) => {
                     this.add_char(i).and_then(|r| this.push_register(r))?;
                 }
-                None => push_unit(this)?
+                None => push_unit(this)?,
             }
+        }
+        (ExpressionDataType::Link, ExpressionDataType::List) => {
+            let len = link_len_size(this, left)?;
+            this.start_list(len)?;
+
+            iterate_link_internal(this, left, |this, addr, _current_index| {
+                let is_associative = match this.get_data_type(addr)? {
+                    ExpressionDataType::Pair => {
+                        let (left, _) = this.get_pair(addr)?;
+                        match this.get_data_type(left)? {
+                            ExpressionDataType::Symbol => true,
+                            _ => false
+                        }
+                    }
+                    _ => false
+                };
+
+                this.add_to_list(addr, is_associative)?;
+                Ok(false)
+            })?;
+
+            this.end_list().and_then(|r| this.push_register(r))?
         }
         // Unit and Boolean
         (ExpressionDataType::Unit, ExpressionDataType::True) | (ExpressionDataType::False, ExpressionDataType::True) => {
@@ -370,5 +394,39 @@ mod primitive {
         let expected = SimpleRuntimeData::float_to_integer(3.14).unwrap();
 
         assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), expected);
+    }
+}
+
+#[cfg(test)]
+mod lists {
+    use crate::testing_utilites::{add_links_with_start, add_list_with_start};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, symbol_value};
+
+    #[test]
+    fn link_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links_with_start(&mut runtime, 10, true, 20);
+        let d2 = add_list_with_start(&mut runtime, 1, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = runtime.get_list_len(addr).unwrap();
+        assert_eq!(len, 10);
+
+        for i in 0..10 {
+            let item_addr = runtime.get_list_item(addr, i).unwrap();
+            let (left, right) = runtime.get_pair(item_addr).unwrap();
+            let s = symbol_value(format!("val{}", 20 + i).as_ref());
+            assert_eq!(runtime.get_symbol(left).unwrap(), s);
+            assert_eq!(runtime.get_integer(right).unwrap(), 20 + i);
+
+            let association = runtime.get_list_item_with_symbol(addr, s).unwrap().unwrap();
+            assert_eq!(runtime.get_integer(association).unwrap(), 20 + i)
+        }
     }
 }
