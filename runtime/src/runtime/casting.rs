@@ -165,6 +165,36 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
 
                     this.end_list().and_then(|r| this.push_register(r))?
                 }
+                ExpressionDataType::CharList => {
+                    let len = this.get_char_list_len(value)?;
+                    let mut count = start;
+
+                    this.start_list(len)?;
+                    while count <= end {
+                        let c = this.get_char_list_item(value, count)?;
+                        let addr = this.add_char(c)?;
+                        this.add_to_list(addr, false)?;
+
+                        count += Data::Integer::one();
+                    }
+
+                    this.end_list().and_then(|r| this.push_register(r))?
+                }
+                ExpressionDataType::ByteList => {
+                    let len = this.get_byte_list_len(value)?;
+                    let mut count = start;
+
+                    this.start_list(len)?;
+                    while count <= end {
+                        let c = this.get_byte_list_item(value, count)?;
+                        let addr = this.add_byte(c)?;
+                        this.add_to_list(addr, false)?;
+
+                        count += Data::Integer::one();
+                    }
+
+                    this.end_list().and_then(|r| this.push_register(r))?
+                }
                 _ => push_unit(this)?
             }
         }
@@ -674,5 +704,61 @@ mod lists {
             let association = runtime.get_list_item_with_symbol(addr, s).unwrap().unwrap();
             assert_eq!(runtime.get_integer(association).unwrap(), value)
         }
+    }
+
+    #[test]
+    fn slice_of_char_list_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let input = "characters";
+        let d1 = add_char_list(&mut runtime, input);
+        let d2 = add_range(&mut runtime, 2, 7); // "aracte"
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let list = add_list_with_start(&mut runtime, 1, 0);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let expected: Vec<char> = SimpleRuntimeData::parse_char_list(input).iter().skip(2).take(6).map(|c| *c).collect();
+        let mut result = vec![];
+
+        for i in 0..expected.len() {
+            let item_addr = runtime.get_list_item(addr, i as i32).unwrap();
+            let item = runtime.get_char(item_addr).unwrap();
+            result.push(item);
+        }
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn slice_of_byte_list_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let input = "characters";
+        let d1 = add_byte_list(&mut runtime, input);
+        let d2 = add_range(&mut runtime, 2, 7);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let list = add_list_with_start(&mut runtime, 1, 0);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let expected: Vec<u8> = SimpleRuntimeData::parse_byte_list(input).iter().skip(2).take(6).map(|c| *c).collect();
+        let mut result = vec![];
+
+        for i in 0..expected.len() {
+            let item_addr = runtime.get_list_item(addr, i as i32).unwrap();
+            let item = runtime.get_byte(item_addr).unwrap();
+            result.push(item);
+        }
+
+        assert_eq!(result, expected);
     }
 }
