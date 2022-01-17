@@ -256,9 +256,11 @@ fn start_token<'a>(
         *state = LexingState::Symbol;
         *current_token_type = Some(TokenType::Symbol);
     } else if c == '"' {
+        current_characters.push(c);
         *state = LexingState::CharList;
         *current_token_type = Some(TokenType::CharList);
     } else if c == '\'' {
+        current_characters.push(c);
         *state = LexingState::ByteList;
         *current_token_type = Some(TokenType::ByteList);
     }
@@ -438,20 +440,22 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
             LexingState::CharList => {
                 if c == '"' {
                     trace!("Ending CharList");
+                    current_characters.push(c);
+                    should_create = false;
                     true
                 } else {
                     current_characters.push(c);
-
                     false
                 }
             }
             LexingState::ByteList => {
                 if c == '\'' {
                     trace!("Ending ByteList");
+                    current_characters.push(c);
+                    should_create = false;
                     true
                 } else {
                     current_characters.push(c);
-
                     false
                 }
             }
@@ -1911,9 +1915,50 @@ mod chars_and_bytes {
             result,
             vec![
                 LexerToken {
-                    text: "Hello World!".to_string(),
+                    text: "\"Hello World!\"".to_string(),
                     token_type: TokenType::CharList,
                     column: 0,
+                    row: 0
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn character_list_followed_by_operations() {
+        let result = lex(&"\"Hello World!\" ~ 10".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "\"Hello World!\"".to_string(),
+                    token_type: TokenType::CharList,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::Whitespace,
+                    column: 14,
+                    row: 0
+                },
+                LexerToken {
+                    text: "~".to_string(),
+                    token_type: TokenType::Apply,
+                    column: 15,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::Whitespace,
+                    column: 16,
+                    row: 0
+                },
+                LexerToken {
+                    text: "10".to_string(),
+                    token_type: TokenType::Integer,
+                    column: 17,
                     row: 0
                 }
             ]
@@ -1928,9 +1973,50 @@ mod chars_and_bytes {
             result,
             vec![
                 LexerToken {
-                    text: "Hello World!".to_string(),
+                    text: "'Hello World!'".to_string(),
                     token_type: TokenType::ByteList,
                     column: 0,
+                    row: 0
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn byte_list_followed_by_operations() {
+        let result = lex(&"'Hello World!' ~ 10".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "'Hello World!'".to_string(),
+                    token_type: TokenType::ByteList,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::Whitespace,
+                    column: 14,
+                    row: 0
+                },
+                LexerToken {
+                    text: "~".to_string(),
+                    token_type: TokenType::Apply,
+                    column: 15,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::Whitespace,
+                    column: 16,
+                    row: 0
+                },
+                LexerToken {
+                    text: "10".to_string(),
+                    token_type: TokenType::Integer,
+                    column: 17,
                     row: 0
                 }
             ]
