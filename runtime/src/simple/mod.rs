@@ -623,6 +623,22 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Some(from as Self::Integer)
     }
 
+    fn char_to_integer(from: Self::Char) -> Option<Self::Integer> {
+        Some(from as i32)
+    }
+
+    fn char_to_byte(from: Self::Char) -> Option<Self::Byte> {
+        Some(from as u8)
+    }
+
+    fn byte_to_integer(from: Self::Byte) -> Option<Self::Integer> {
+        Some(from as i32)
+    }
+
+    fn byte_to_char(from: Self::Byte) -> Option<Self::Char> {
+        Some(from.into())
+    }
+
     //
     // Parsing
     //

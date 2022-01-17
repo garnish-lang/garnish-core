@@ -126,6 +126,10 @@ pub trait GarnishLangRuntimeData {
     fn integer_to_char(from: Self::Integer) -> Option<Self::Char>;
     fn integer_to_byte(from: Self::Integer) -> Option<Self::Byte>;
     fn float_to_integer(from: Self::Float) -> Option<Self::Integer>;
+    fn char_to_integer(from: Self::Char) -> Option<Self::Integer>;
+    fn char_to_byte(from: Self::Char) -> Option<Self::Byte>;
+    fn byte_to_integer(from: Self::Byte) -> Option<Self::Integer>;
+    fn byte_to_char(from: Self::Byte) -> Option<Self::Char>;
 
     // parsing, to be moved to separate object
     // will require moving simple data to its own crate

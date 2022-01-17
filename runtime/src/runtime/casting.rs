@@ -43,6 +43,42 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 None => push_unit(this)?
             }
         }
+        (ExpressionDataType::Char, ExpressionDataType::Integer) => {
+            let c = this.get_char(left)?;
+            match Data::char_to_integer(c) {
+                Some(i) => {
+                    this.add_integer(i).and_then(|r| this.push_register(r))?;
+                }
+                None => push_unit(this)?
+            }
+        }
+        (ExpressionDataType::Char, ExpressionDataType::Byte) => {
+            let c = this.get_char(left)?;
+            match Data::char_to_byte(c) {
+                Some(i) => {
+                    this.add_byte(i).and_then(|r| this.push_register(r))?;
+                }
+                None => push_unit(this)?
+            }
+        }
+        (ExpressionDataType::Byte, ExpressionDataType::Integer) => {
+            let c = this.get_byte(left)?;
+            match Data::byte_to_integer(c) {
+                Some(i) => {
+                    this.add_integer(i).and_then(|r| this.push_register(r))?;
+                }
+                None => push_unit(this)?
+            }
+        }
+        (ExpressionDataType::Byte, ExpressionDataType::Char) => {
+            let i = this.get_byte(left)?;
+            match Data::byte_to_char(i) {
+                Some(i) => {
+                    this.add_char(i).and_then(|r| this.push_register(r))?;
+                }
+                None => push_unit(this)?
+            }
+        }
         // Unit and Boolean
         (ExpressionDataType::Unit, ExpressionDataType::True) | (ExpressionDataType::False, ExpressionDataType::True) => {
             this.add_false().and_then(|r| this.push_register(r))?;
@@ -249,6 +285,74 @@ mod primitive {
         let expected = SimpleRuntimeData::integer_to_byte(10).unwrap();
 
         assert_eq!(runtime.get_byte(runtime.get_register(0).unwrap()).unwrap(), expected);
+    }
+
+    #[test]
+    fn char_to_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_char('a').unwrap();
+        let d2 = runtime.add_integer(0).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let expected = SimpleRuntimeData::char_to_integer('a').unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), expected);
+    }
+
+    #[test]
+    fn char_to_byte() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_char('a').unwrap();
+        let d2 = runtime.add_byte(0).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let expected = SimpleRuntimeData::char_to_byte('a').unwrap();
+
+        assert_eq!(runtime.get_byte(runtime.get_register(0).unwrap()).unwrap(), expected);
+    }
+
+    #[test]
+    fn byte_to_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_byte('a' as u8).unwrap();
+        let d2 = runtime.add_integer(0).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let expected = SimpleRuntimeData::byte_to_integer('a' as u8).unwrap();
+
+        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), expected);
+    }
+
+    #[test]
+    fn byte_to_char() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_byte('a' as u8).unwrap();
+        let d2 = runtime.add_char('a').unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let expected = SimpleRuntimeData::byte_to_char('a' as u8).unwrap();
+
+        assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
 
     #[test]
