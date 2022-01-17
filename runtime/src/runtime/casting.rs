@@ -1,5 +1,5 @@
 use crate::runtime::internals::link_len_size;
-use crate::{next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
+use crate::{next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, get_range, TypeConstants};
 use crate::runtime::list::iterate_link_internal;
 
 pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
@@ -100,6 +100,21 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 this.add_to_list(addr, is_associative)?;
                 Ok(false)
             })?;
+
+            this.end_list().and_then(|r| this.push_register(r))?
+        }
+        (ExpressionDataType::Range, ExpressionDataType::List) => {
+            let (start, end) = this.get_range(left)?;
+            let len = end - start + Data::Size::one();
+            let (start, end, _) = get_range(this, left)?;
+            let mut count = start;
+
+            this.start_list(len)?;
+            while count <= end {
+                let addr = this.add_integer(count)?;
+                this.add_to_list(addr, false)?;
+                count += Data::Integer::one();
+            }
 
             this.end_list().and_then(|r| this.push_register(r))?
         }
@@ -399,7 +414,7 @@ mod primitive {
 
 #[cfg(test)]
 mod lists {
-    use crate::testing_utilites::{add_links_with_start, add_list_with_start};
+    use crate::testing_utilites::{add_links_with_start, add_list_with_start, add_range};
     use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, symbol_value};
 
     #[test]
@@ -407,10 +422,10 @@ mod lists {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = add_links_with_start(&mut runtime, 10, true, 20);
-        let d2 = add_list_with_start(&mut runtime, 1, 0);
+        let list = add_list_with_start(&mut runtime, 1, 0);
 
         runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
+        runtime.push_register(list).unwrap();
 
         runtime.type_cast().unwrap();
 
@@ -427,6 +442,28 @@ mod lists {
 
             let association = runtime.get_list_item_with_symbol(addr, s).unwrap().unwrap();
             assert_eq!(runtime.get_integer(association).unwrap(), 20 + i)
+        }
+    }
+
+    #[test]
+    fn range_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_range(&mut runtime, 10, 20);
+        let list = add_list_with_start(&mut runtime, 1, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = runtime.get_list_len(addr).unwrap();
+        assert_eq!(len, 11);
+
+        for i in 0..10 {
+            let item_addr = runtime.get_list_item(addr, i).unwrap();
+            assert_eq!(runtime.get_integer(item_addr).unwrap(), 10 + i);
         }
     }
 }
