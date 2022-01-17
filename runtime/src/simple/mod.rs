@@ -146,6 +146,116 @@ impl SimpleRuntimeData {
             }
         }
     }
+
+    fn add_to_current_char_list(&mut self, from: usize) -> Result<(), DataError> {
+        match self.get_data_type(from)? {
+            ExpressionDataType::Unit => {
+                self.add_to_char_list('(')?;
+                self.add_to_char_list(')')?;
+            }
+            ExpressionDataType::True => {
+                self.add_to_char_list('t')?;
+                self.add_to_char_list('r')?;
+                self.add_to_char_list('u')?;
+                self.add_to_char_list('e')?;
+            }
+            ExpressionDataType::False => {
+                self.add_to_char_list('f')?;
+                self.add_to_char_list('a')?;
+                self.add_to_char_list('l')?;
+                self.add_to_char_list('s')?;
+                self.add_to_char_list('e')?;
+            }
+            ExpressionDataType::Integer => {
+                let x = self.get_integer(from)?;
+                let s = x.to_string();
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::Float => {
+                let x = self.get_float(from)?;
+                let s = x.to_string();
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::Char => {
+                let c = self.get_char(from)?;
+                self.add_to_char_list(c)?;
+            }
+            ExpressionDataType::Byte => {
+                let b = self.get_byte(from)?;
+                let s = b.to_string();
+                self.start_char_list()?;
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::ByteList => {
+                let len = self.get_byte_list_len(from)?;
+                let mut strs = vec![];
+                for i in 0..len {
+                    let b = self.get_byte_list_item(from, i as i32)?;
+                    strs.push(format!("'{}'", b));
+                }
+                let s = strs.join(" ");
+                self.start_char_list()?;
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::Symbol => {
+                let sym = self.get_symbol(from)?;
+                let s = match self.symbols.get(&sym) {
+                    None => sym.to_string(),
+                    Some(s) => s.clone(),
+                };
+
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::Expression => {
+                let e = self.get_expression(from)?;
+                let s = format!("Expression({})", e);
+
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::External => {
+                let e = self.get_external(from)?;
+                let s = format!("External({})", e);
+
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::Range => {
+                let (start, end) = self
+                    .get_range(from)
+                    .and_then(|(start, end)| Ok((self.get_integer(start)?, self.get_integer(end)?)))?;
+
+                let s = format!("{}..{}", start, end);
+
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::Pair => {
+                let (left, right) = self.get_pair(from)?;
+                self.add_to_current_char_list(left)?;
+                self.add_to_char_list(' ')?;
+                self.add_to_char_list('=')?;
+                self.add_to_char_list(' ')?;
+                self.add_to_current_char_list(right)?;
+            }
+            _ => unimplemented!(),
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug)]
@@ -649,104 +759,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         self.start_char_list()?;
-        match self.get_data_type(from)? {
-            ExpressionDataType::Unit => {
-                self.add_to_char_list('(')?;
-                self.add_to_char_list(')')?;
-            }
-            ExpressionDataType::True => {
-                self.add_to_char_list('t')?;
-                self.add_to_char_list('r')?;
-                self.add_to_char_list('u')?;
-                self.add_to_char_list('e')?;
-            }
-            ExpressionDataType::False => {
-                self.add_to_char_list('f')?;
-                self.add_to_char_list('a')?;
-                self.add_to_char_list('l')?;
-                self.add_to_char_list('s')?;
-                self.add_to_char_list('e')?;
-            }
-            ExpressionDataType::Integer => {
-                let x = self.get_integer(from)?;
-                let s = x.to_string();
-                self.start_char_list()?;
-                for c in s.chars() {
-                    self.add_to_char_list(c)?;
-                }
-            }
-            ExpressionDataType::Float => {
-                let x = self.get_float(from)?;
-                let s = x.to_string();
-                for c in s.chars() {
-                    self.add_to_char_list(c)?;
-                }
-            }
-            ExpressionDataType::Char => {
-                let c = self.get_char(from)?;
-                self.add_to_char_list(c)?;
-            }
-            ExpressionDataType::Byte => {
-                let b = self.get_byte(from)?;
-                let s = b.to_string();
-                self.start_char_list()?;
-                for c in s.chars() {
-                    self.add_to_char_list(c)?;
-                }
-            }
-            ExpressionDataType::ByteList => {
-                let len = self.get_byte_list_len(from)?;
-                let mut strs = vec![];
-                for i in 0..len {
-                    let b = self.get_byte_list_item(from, i as i32)?;
-                    strs.push(format!("'{}'", b));
-                }
-                let s = strs.join(" ");
-                self.start_char_list()?;
-                for c in s.chars() {
-                    self.add_to_char_list(c)?;
-                }
-            }
-            ExpressionDataType::Symbol => {
-                let sym = self.get_symbol(from)?;
-                let s = match self.symbols.get(&sym) {
-                    None => sym.to_string(),
-                    Some(s) => s.clone(),
-                };
-
-                for c in s.chars() {
-                    self.add_to_char_list(c)?;
-                }
-            }
-            ExpressionDataType::Expression => {
-                let e = self.get_expression(from)?;
-                let s = format!("Expression({})", e);
-
-                for c in s.chars() {
-                    self.add_to_char_list(c)?;
-                }
-            }
-            ExpressionDataType::External => {
-                let e = self.get_external(from)?;
-                let s = format!("External({})", e);
-
-                for c in s.chars() {
-                    self.add_to_char_list(c)?;
-                }
-            }
-            ExpressionDataType::Range => {
-                let (start, end) = self
-                    .get_range(from)
-                    .and_then(|(start, end)| Ok((self.get_integer(start)?, self.get_integer(end)?)))?;
-
-                let s = format!("{}..{}", start, end);
-
-                for c in s.chars() {
-                    self.add_to_char_list(c)?;
-                }
-            }
-            _ => unimplemented!(),
-        }
+        self.add_to_current_char_list(from)?;
         self.end_char_list()
     }
 
