@@ -157,6 +157,64 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 Ok(this.add_byte(c)?)
             })?;
         }
+        (ExpressionDataType::Slice, ExpressionDataType::Link) => {
+            let (_, _, to_is_append) = this.get_link(right)?;
+            let (value, range) = this.get_slice(left)?;
+            let (start, end, _) = get_range(this, range)?;
+
+            match this.get_data_type(value)? {
+                // ExpressionDataType::List => {
+                //     let len = this.get_list_len(value)?;
+                //
+                //     this.start_list(len)?;
+                //
+                //     let mut i = start;
+                //
+                //     while i <= end {
+                //         let addr = this.get_list_item(value, i)?;
+                //         let is_associative = match this.get_data_type(addr)? {
+                //             ExpressionDataType::Pair => {
+                //                 let (left, _) = this.get_pair(addr)?;
+                //                 match this.get_data_type(left)? {
+                //                     ExpressionDataType::Symbol => true,
+                //                     _ => false,
+                //                 }
+                //             }
+                //             _ => false,
+                //         };
+                //
+                //         this.add_to_list(addr, is_associative)?;
+                //         i += Data::Integer::one();
+                //     }
+                //
+                //     this.end_list().and_then(|r| this.push_register(r))?
+                // }
+                ExpressionDataType::Link => {
+                    let mut last = this.add_unit()?;
+
+                    if to_is_append {
+                        iterate_link_start_end_internal(this, value, start, end + Data::Integer::one(), |this, addr, _index| {
+                            last = this.add_link(addr, last, to_is_append)?;
+                            Ok(false)
+                        })?;
+                    } else {
+                        iterate_link_start_end_internal_rev(this, value, start, end + Data::Integer::one(), |this, addr, _index| {
+                            last = this.add_link(addr, last, to_is_append)?;
+                            Ok(false)
+                        })?;
+                    }
+
+                    this.push_register(last)?;
+                }
+                // ExpressionDataType::CharList => {
+                //     list_from_char_list(this, value, start, end + Data::Integer::one())?;
+                // }
+                // ExpressionDataType::ByteList => {
+                //     list_from_byte_list(this, value, start, end + Data::Integer::one())?;
+                // }
+                _ => push_unit(this)?,
+            }
+        }
         // Unit and Boolean
         (ExpressionDataType::Unit, ExpressionDataType::True) | (ExpressionDataType::False, ExpressionDataType::True) => {
             this.add_false().and_then(|r| this.push_register(r))?;
@@ -242,8 +300,8 @@ pub(crate) fn iterate_link_start_end_internal_rev<Data: GarnishLangRuntimeData, 
     end: Data::Integer,
     mut func: Callback,
 ) -> Result<(), RuntimeError<Data::Error>>
-    where
-        Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> Result<bool, RuntimeError<Data::Error>>,
+where
+    Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> Result<bool, RuntimeError<Data::Error>>,
 {
     let mut skip = start;
 
@@ -877,7 +935,7 @@ mod lists {
 
 #[cfg(test)]
 mod links {
-    use crate::runtime::internals::link_len_size;
+    use crate::runtime::internals::{link_len, link_len_size};
     use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
     use crate::{iterate_link, runtime::GarnishRuntime, symbol_value, GarnishLangRuntimeData, SimpleRuntimeData};
 
@@ -1126,6 +1184,66 @@ mod links {
 
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
             assert_eq!(runtime.get_integer(right).unwrap(), 20 + current_index);
+            Ok(false)
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn slice_of_append_link_to_prepend_link() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links_with_start(&mut runtime, 10, true, 20);
+        let d2 = add_range(&mut runtime, 2, 7);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let list = add_links_with_start(&mut runtime, 1, false, 0);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = link_len(&mut runtime, addr).unwrap();
+        assert_eq!(len, 6);
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            let value = 22 + current_index;
+            let (left, right) = runtime.get_pair(addr).unwrap();
+            let s = symbol_value(format!("val{}", value).as_ref());
+
+            assert_eq!(runtime.get_symbol(left).unwrap(), s);
+            assert_eq!(runtime.get_integer(right).unwrap(), value);
+            Ok(false)
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn slice_of_prepend_link_to_append_link() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links_with_start(&mut runtime, 10, false, 20);
+        let d2 = add_range(&mut runtime, 2, 7);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let list = add_links_with_start(&mut runtime, 1, true, 0);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = link_len(&mut runtime, addr).unwrap();
+        assert_eq!(len, 6);
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            let value = 22 + current_index;
+            let (left, right) = runtime.get_pair(addr).unwrap();
+            let s = symbol_value(format!("val{}", value).as_ref());
+
+            assert_eq!(runtime.get_symbol(left).unwrap(), s);
+            assert_eq!(runtime.get_integer(right).unwrap(), value);
             Ok(false)
         })
         .unwrap();
