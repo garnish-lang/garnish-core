@@ -185,12 +185,18 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
 
                     this.push_register(last)?;
                 }
-                // ExpressionDataType::CharList => {
-                //     list_from_char_list(this, value, start, end + Data::Integer::one())?;
-                // }
-                // ExpressionDataType::ByteList => {
-                //     list_from_byte_list(this, value, start, end + Data::Integer::one())?;
-                // }
+                ExpressionDataType::CharList => {
+                    create_link(this, right, start, end + Data::Integer::one(), |this, index| {
+                        let c = this.get_char_list_item(value, index)?;
+                        Ok(this.add_char(c)?)
+                    })?;
+                }
+                ExpressionDataType::ByteList => {
+                    create_link(this, right, start, end + Data::Integer::one(), |this, index| {
+                        let c = this.get_byte_list_item(value, index)?;
+                        Ok(this.add_byte(c)?)
+                    })?;
+                }
                 _ => push_unit(this)?,
             }
         }
@@ -1286,5 +1292,105 @@ mod links {
             Ok(false)
         })
         .unwrap();
+    }
+
+    #[test]
+    fn slice_of_char_list_to_link_append() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let input = "characters";
+        let d1 = add_char_list(&mut runtime, input);
+        let d2 = add_range(&mut runtime, 2, 7); // "aracte"
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let list = add_links_with_start(&mut runtime, 1, true, 0);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            let i = 2 + current_index as usize;
+            assert_eq!(runtime.get_char(addr).unwrap(), input.chars().nth(i).unwrap());
+            Ok(false)
+        })
+            .unwrap();
+    }
+
+    #[test]
+    fn slice_of_char_list_to_link_prepend() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let input = "characters";
+        let d1 = add_char_list(&mut runtime, input);
+        let d2 = add_range(&mut runtime, 2, 7); // "aracte"
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let list = add_links_with_start(&mut runtime, 1, false, 0);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            let i = 2 + current_index as usize;
+            assert_eq!(runtime.get_char(addr).unwrap(), input.chars().nth(i).unwrap());
+            Ok(false)
+        })
+            .unwrap();
+    }
+
+    #[test]
+    fn slice_of_byte_list_to_link_append() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let input = "characters";
+        let d1 = add_byte_list(&mut runtime, input);
+        let d2 = add_range(&mut runtime, 2, 7);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let list = add_links_with_start(&mut runtime, 1, true, 0);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            let i = 2 + current_index as usize;
+            assert_eq!(runtime.get_byte(addr).unwrap(), input.chars().nth(i).unwrap() as u8);
+            Ok(false)
+        })
+            .unwrap();
+    }
+
+    #[test]
+    fn slice_of_byte_list_to_link_prepend() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let input = "characters";
+        let d1 = add_byte_list(&mut runtime, input);
+        let d2 = add_range(&mut runtime, 2, 7);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let list = add_links_with_start(&mut runtime, 1, false, 0);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            let i = 2 + current_index as usize;
+            assert_eq!(runtime.get_byte(addr).unwrap(), input.chars().nth(i).unwrap() as u8);
+            Ok(false)
+        })
+            .unwrap();
     }
 }
