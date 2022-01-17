@@ -35,6 +35,9 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         }
         // NoOp re-push left to register
         (l, r) if l == r => this.push_register(left)?,
+        (_, ExpressionDataType::CharList) => {
+            this.add_char_list_from(left).and_then(|r| this.push_register(r))?;
+        }
         // Numbers
         (ExpressionDataType::Integer, ExpressionDataType::Float) => {
             primitive_cast(this, left, Data::get_integer, Data::integer_to_float, Data::add_float)?;
@@ -1392,5 +1395,38 @@ mod links {
             Ok(false)
         })
             .unwrap();
+    }
+}
+
+#[cfg(test)]
+mod char_list {
+    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData};
+
+    #[test]
+    fn unit() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_unit().unwrap();
+
+        runtime.start_char_list().unwrap();
+        let s = runtime.end_char_list().unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(s).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = runtime.get_char_list_len(addr).unwrap();
+
+        let expected = "()";
+        let mut chars = String::new();
+
+        for i in 0..len {
+            let c = runtime.get_char_list_item(addr, i as i32).unwrap();
+            chars.push(c);
+        }
+
+        assert_eq!(chars, expected);
     }
 }

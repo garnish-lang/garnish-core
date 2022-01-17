@@ -640,6 +640,31 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     //
+    // To CharList
+    //
+
+    fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
+        match self.get_data_type(from)? {
+            ExpressionDataType::Unit => {
+                self.start_char_list()?;
+                self.add_to_char_list('(')?;
+                self.add_to_char_list(')')?;
+                self.end_char_list()
+            }
+            ExpressionDataType::Integer => {
+                let int = self.get_integer(from)?;
+                let s = int.to_string();
+                self.start_char_list()?;
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+                self.end_char_list()
+            }
+            _ => unimplemented!()
+        }
+    }
+
+    //
     // Parsing
     //
 
@@ -927,5 +952,50 @@ mod leases {
         runtime.release_tmp_stack(lease).unwrap();
 
         assert!(runtime.lease_stack.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod to_char_list {
+    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn unit() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_unit().unwrap();
+
+        let addr = runtime.add_char_list_from(d1).unwrap();
+        let len = runtime.get_char_list_len(addr).unwrap();
+
+        let expected = "()";
+        let mut chars = String::new();
+
+        for i in 0..len {
+            let c = runtime.get_char_list_item(addr, i as i32).unwrap();
+            chars.push(c);
+        }
+
+        assert_eq!(chars, expected);
+    }
+
+    #[test]
+    fn integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_integer(123).unwrap();
+
+        let addr = runtime.add_char_list_from(d1).unwrap();
+        let len = runtime.get_char_list_len(addr).unwrap();
+
+        let expected = "123";
+        let mut chars = String::new();
+
+        for i in 0..len {
+            let c = runtime.get_char_list_item(addr, i as i32).unwrap();
+            chars.push(c);
+        }
+
+        assert_eq!(chars, expected);
     }
 }
