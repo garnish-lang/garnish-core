@@ -244,26 +244,17 @@ impl SimpleRuntimeData {
                 }
             }
             ExpressionDataType::Pair => {
-                if depth > 1 {
-                    self.add_to_char_list('[')?;
-                    self.add_to_char_list('P')?;
-                    self.add_to_char_list('a')?;
-                    self.add_to_char_list('i')?;
-                    self.add_to_char_list('r')?;
-                    self.add_to_char_list(']')?;
-                } else {
-                    let (left, right) = self.get_pair(from)?;
-                    if depth > 0 {
-                        self.add_to_char_list('(')?;
-                    }
-                    self.add_to_current_char_list(left, depth + 1)?;
-                    self.add_to_char_list(' ')?;
-                    self.add_to_char_list('=')?;
-                    self.add_to_char_list(' ')?;
-                    self.add_to_current_char_list(right, depth + 1)?;
-                    if depth > 0 {
-                        self.add_to_char_list(')')?;
-                    }
+                let (left, right) = self.get_pair(from)?;
+                if depth > 0 {
+                    self.add_to_char_list('(')?;
+                }
+                self.add_to_current_char_list(left, depth + 1)?;
+                self.add_to_char_list(' ')?;
+                self.add_to_char_list('=')?;
+                self.add_to_char_list(' ')?;
+                self.add_to_current_char_list(right, depth + 1)?;
+                if depth > 0 {
+                    self.add_to_char_list(')')?;
                 }
             }
             _ => unimplemented!(),
@@ -1185,7 +1176,7 @@ mod to_char_list {
 
     #[test]
     fn pair_nested_two() {
-        assert_to_char_list("10 = (20 = [Pair])", |runtime| {
+        assert_to_char_list("10 = (20 = (30 = 40))", |runtime| {
             let d1 = runtime.add_integer(10).unwrap();
             let d2 = runtime.add_integer(20).unwrap();
             let d3 = runtime.add_integer(30).unwrap();
