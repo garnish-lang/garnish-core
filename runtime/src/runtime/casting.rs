@@ -37,6 +37,29 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
             let len = link_len_size(this, left)?;
             list_from_link(this, left, Data::Integer::zero(), Data::size_to_integer(len))?;
         }
+        (ExpressionDataType::Range, ExpressionDataType::List) => {
+            let (start, end) = this.get_range(left)?;
+            let len = end - start + Data::Size::one();
+            let (start, end, _) = get_range(this, left)?;
+            let mut count = start;
+
+            this.start_list(len)?;
+            while count <= end {
+                let addr = this.add_integer(count)?;
+                this.add_to_list(addr, false)?;
+                count += Data::Integer::one();
+            }
+
+            this.end_list().and_then(|r| this.push_register(r))?
+        }
+        (ExpressionDataType::CharList, ExpressionDataType::List) => {
+            let len = this.get_char_list_len(left)?;
+            list_from_char_list(this, left, Data::Integer::zero(), Data::size_to_integer(len))?;
+        }
+        (ExpressionDataType::ByteList, ExpressionDataType::List) => {
+            let len = this.get_byte_list_len(left)?;
+            list_from_byte_list(this, left, Data::Integer::zero(), Data::size_to_integer(len))?;
+        }
         (ExpressionDataType::Slice, ExpressionDataType::List) => {
             let (value, range) = this.get_slice(left)?;
             let (start, end, _) = get_range(this, range)?;
@@ -78,29 +101,6 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 }
                 _ => push_unit(this)?,
             }
-        }
-        (ExpressionDataType::Range, ExpressionDataType::List) => {
-            let (start, end) = this.get_range(left)?;
-            let len = end - start + Data::Size::one();
-            let (start, end, _) = get_range(this, left)?;
-            let mut count = start;
-
-            this.start_list(len)?;
-            while count <= end {
-                let addr = this.add_integer(count)?;
-                this.add_to_list(addr, false)?;
-                count += Data::Integer::one();
-            }
-
-            this.end_list().and_then(|r| this.push_register(r))?
-        }
-        (ExpressionDataType::CharList, ExpressionDataType::List) => {
-            let len = this.get_char_list_len(left)?;
-            list_from_char_list(this, left, Data::Integer::zero(), Data::size_to_integer(len))?;
-        }
-        (ExpressionDataType::ByteList, ExpressionDataType::List) => {
-            let len = this.get_byte_list_len(left)?;
-            list_from_byte_list(this, left, Data::Integer::zero(), Data::size_to_integer(len))?;
         }
         // Unit and Boolean
         (ExpressionDataType::Unit, ExpressionDataType::True) | (ExpressionDataType::False, ExpressionDataType::True) => {
