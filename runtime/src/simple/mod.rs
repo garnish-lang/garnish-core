@@ -644,24 +644,55 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     //
 
     fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
+        self.start_char_list()?;
         match self.get_data_type(from)? {
             ExpressionDataType::Unit => {
-                self.start_char_list()?;
                 self.add_to_char_list('(')?;
                 self.add_to_char_list(')')?;
-                self.end_char_list()
             }
             ExpressionDataType::Integer => {
-                let int = self.get_integer(from)?;
-                let s = int.to_string();
+                let x = self.get_integer(from)?;
+                let s = x.to_string();
                 self.start_char_list()?;
                 for c in s.chars() {
                     self.add_to_char_list(c)?;
                 }
-                self.end_char_list()
+            }
+            ExpressionDataType::Float => {
+                let x = self.get_float(from)?;
+                let s = x.to_string();
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::Char => {
+                let c = self.get_char(from)?;
+                self.add_to_char_list(c)?;
+            }
+            ExpressionDataType::Byte => {
+                let b = self.get_byte(from)?;
+                let s = b.to_string();
+                self.start_char_list()?;
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::ByteList => {
+                let len = self.get_byte_list_len(from)?;
+                let mut strs = vec![];
+                for i in 0..len {
+                    let b = self.get_byte_list_item(from, i as i32)?;
+                    strs.push(format!("'{}'", b));
+                }
+                let s = strs.join(" ");
+                self.start_char_list()?;
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
             }
             _ => unimplemented!()
         }
+        self.end_char_list()
     }
 
     //
@@ -988,6 +1019,38 @@ mod to_char_list {
     fn integer() {
         assert_to_char_list("10", |runtime| {
             runtime.add_integer(10).unwrap()
+        })
+    }
+
+    #[test]
+    fn float() {
+        assert_to_char_list("10.123", |runtime| {
+            runtime.add_float(10.123).unwrap()
+        })
+    }
+
+    #[test]
+    fn char() {
+        assert_to_char_list("c", |runtime| {
+            runtime.add_char('c').unwrap()
+        })
+    }
+
+    #[test]
+    fn byte() {
+        assert_to_char_list("100", |runtime| {
+            runtime.add_byte(100).unwrap()
+        })
+    }
+
+    #[test]
+    fn byte_list() {
+        assert_to_char_list("'10' '20' '30'", |runtime| {
+            runtime.start_byte_list().unwrap();
+            runtime.add_to_byte_list(10).unwrap();
+            runtime.add_to_byte_list(20).unwrap();
+            runtime.add_to_byte_list(30).unwrap();
+            runtime.end_byte_list().unwrap()
         })
     }
 }
