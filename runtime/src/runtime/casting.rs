@@ -104,14 +104,30 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         }
         (ExpressionDataType::List, ExpressionDataType::Link) => {
             let len = Data::size_to_integer(this.get_list_len(left)?);
-            create_link(this, right, Data::Integer::zero(), len, |this, index| {
-                Ok(this.get_list_item(left, index)?)
-            })?;
+            create_link(
+                this,
+                right,
+                Data::Integer::zero(),
+                len,
+                |this, index| Ok(this.get_list_item(left, index)?),
+            )?;
         }
         (ExpressionDataType::Range, ExpressionDataType::Link) => {
             let (start, end, _) = get_range(this, left)?;
-            create_link(this, right, start, end + Data::Integer::one(), |this, index| {
-                Ok(this.add_integer(index)?)
+            create_link(this, right, start, end + Data::Integer::one(), |this, index| Ok(this.add_integer(index)?))?;
+        }
+        (ExpressionDataType::CharList, ExpressionDataType::Link) => {
+            let len = this.get_char_list_len(left)?;
+            create_link(this, right, Data::Integer::zero(), Data::size_to_integer(len), |this, index| {
+                let c = this.get_char_list_item(left, index)?;
+                Ok(this.add_char(c)?)
+            })?;
+        }
+        (ExpressionDataType::ByteList, ExpressionDataType::Link) => {
+            let len = this.get_byte_list_len(left)?;
+            create_link(this, right, Data::Integer::zero(), Data::size_to_integer(len), |this, index| {
+                let c = this.get_byte_list_item(left, index)?;
+                Ok(this.add_byte(c)?)
             })?;
         }
         // Unit and Boolean
@@ -884,5 +900,101 @@ mod links {
             Ok(false)
         })
         .unwrap();
+    }
+
+    #[test]
+    fn char_list_to_link_append() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let input = "characters";
+        let d1 = add_char_list(&mut runtime, input);
+        let list = add_links_with_start(&mut runtime, 1, true, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = link_len_size(&mut runtime, addr).unwrap();
+        assert_eq!(len, input.len());
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            assert_eq!(runtime.get_char(addr).unwrap(), input.chars().nth(current_index as usize).unwrap());
+            Ok(false)
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn char_list_to_link_prepend() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let input = "characters";
+        let d1 = add_char_list(&mut runtime, input);
+        let list = add_links_with_start(&mut runtime, 1, false, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = link_len_size(&mut runtime, addr).unwrap();
+        assert_eq!(len, input.len());
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            assert_eq!(runtime.get_char(addr).unwrap(), input.chars().nth(current_index as usize).unwrap());
+            Ok(false)
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn byte_list_to_link_append() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let input = "characters";
+        let d1 = add_byte_list(&mut runtime, input);
+        let list = add_links_with_start(&mut runtime, 1, true, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = link_len_size(&mut runtime, addr).unwrap();
+        assert_eq!(len, input.len());
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            assert_eq!(runtime.get_byte(addr).unwrap(), input.chars().nth(current_index as usize).unwrap() as u8);
+            Ok(false)
+        })
+            .unwrap();
+    }
+
+    #[test]
+    fn byte_list_to_link_prepend() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let input = "characters";
+        let d1 = add_byte_list(&mut runtime, input);
+        let list = add_links_with_start(&mut runtime, 1, false, 0);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = link_len_size(&mut runtime, addr).unwrap();
+        assert_eq!(len, input.len());
+
+        iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
+            assert_eq!(runtime.get_byte(addr).unwrap(), input.chars().nth(current_index as usize).unwrap() as u8);
+            Ok(false)
+        })
+            .unwrap();
     }
 }
