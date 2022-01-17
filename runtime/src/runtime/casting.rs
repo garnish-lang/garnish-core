@@ -103,6 +103,71 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
 
             this.end_list().and_then(|r| this.push_register(r))?
         }
+        (ExpressionDataType::Slice, ExpressionDataType::List) => {
+            let (value, range) = this.get_slice(left)?;
+            let (start, end, _) = get_range(this, range)?;
+            match this.get_data_type(value)? {
+                ExpressionDataType::List => {
+                    let len = this.get_list_len(value)?;
+
+                    this.start_list(len)?;
+
+                    let mut i = start;
+
+                    while i <= end {
+                        let addr = this.get_list_item(value, i)?;
+                        let is_associative = match this.get_data_type(addr)? {
+                            ExpressionDataType::Pair => {
+                                let (left, _) = this.get_pair(addr)?;
+                                match this.get_data_type(left)? {
+                                    ExpressionDataType::Symbol => true,
+                                    _ => false
+                                }
+                            }
+                            _ => false
+                        };
+
+                        this.add_to_list(addr, is_associative)?;
+                        i += Data::Integer::one();
+                    }
+
+                    this.end_list().and_then(|r| this.push_register(r))?
+                }
+                ExpressionDataType::Link => {
+                    let len = link_len_size(this, value)?;
+                    this.start_list(len)?;
+                    let mut skip = start;
+
+                    iterate_link_internal(this, value, |this, addr, current_index| {
+                        if skip > Data::Integer::zero() {
+                            skip -= Data::Integer::one();
+                            return Ok(false);
+                        }
+
+                        if current_index > end {
+                            return Ok(true);
+                        }
+
+                        let is_associative = match this.get_data_type(addr)? {
+                            ExpressionDataType::Pair => {
+                                let (left, _) = this.get_pair(addr)?;
+                                match this.get_data_type(left)? {
+                                    ExpressionDataType::Symbol => true,
+                                    _ => false
+                                }
+                            }
+                            _ => false
+                        };
+
+                        this.add_to_list(addr, is_associative)?;
+                        Ok(false)
+                    })?;
+
+                    this.end_list().and_then(|r| this.push_register(r))?
+                }
+                _ => push_unit(this)?
+            }
+        }
         (ExpressionDataType::Range, ExpressionDataType::List) => {
             let (start, end) = this.get_range(left)?;
             let len = end - start + Data::Size::one();
@@ -547,5 +612,67 @@ mod lists {
         }
 
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn slice_of_link_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_links_with_start(&mut runtime, 10, true, 20);
+        let d2 = add_range(&mut runtime, 2, 7);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let list = add_list_with_start(&mut runtime, 1, 0);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = runtime.get_list_len(addr).unwrap();
+        assert_eq!(len, 6);
+
+        for i in 0..6 {
+            let value = 22 + i;
+            let item_addr = runtime.get_list_item(addr, i).unwrap();
+            let (left, right) = runtime.get_pair(item_addr).unwrap();
+            let s = symbol_value(format!("val{}", value).as_ref());
+            assert_eq!(runtime.get_symbol(left).unwrap(), s);
+            assert_eq!(runtime.get_integer(right).unwrap(), value);
+
+            let association = runtime.get_list_item_with_symbol(addr, s).unwrap().unwrap();
+            assert_eq!(runtime.get_integer(association).unwrap(), value)
+        }
+    }
+
+    #[test]
+    fn slice_of_list_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 20);
+        let d2 = add_range(&mut runtime, 2, 7);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let list = add_list_with_start(&mut runtime, 1, 0);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(list).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = runtime.get_list_len(addr).unwrap();
+        assert_eq!(len, 6);
+
+        for i in 0..6 {
+            let value = 22 + i;
+            let item_addr = runtime.get_list_item(addr, i).unwrap();
+            let (left, right) = runtime.get_pair(item_addr).unwrap();
+            let s = symbol_value(format!("val{}", value).as_ref());
+            assert_eq!(runtime.get_symbol(left).unwrap(), s);
+            assert_eq!(runtime.get_integer(right).unwrap(), value);
+
+            let association = runtime.get_list_item_with_symbol(addr, s).unwrap().unwrap();
+            assert_eq!(runtime.get_integer(association).unwrap(), value)
+        }
     }
 }
