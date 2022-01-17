@@ -10,76 +10,28 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         (l, r) if l == r => this.push_register(left)?,
         // Numbers
         (ExpressionDataType::Integer, ExpressionDataType::Float) => {
-            let i = this.get_integer(left)?;
-            match Data::integer_to_float(i) {
-                Some(i) => {
-                    this.add_float(i).and_then(|r| this.push_register(r))?;
-                }
-                None => push_unit(this)?,
-            }
+            primitive_cast(this, left, Data::get_integer, Data::integer_to_float, Data::add_float)?;
         }
         (ExpressionDataType::Integer, ExpressionDataType::Char) => {
-            let i = this.get_integer(left)?;
-            match Data::integer_to_char(i) {
-                Some(i) => {
-                    this.add_char(i).and_then(|r| this.push_register(r))?;
-                }
-                None => push_unit(this)?,
-            }
+            primitive_cast(this, left, Data::get_integer, Data::integer_to_char, Data::add_char)?;
         }
         (ExpressionDataType::Integer, ExpressionDataType::Byte) => {
-            let i = this.get_integer(left)?;
-            match Data::integer_to_byte(i) {
-                Some(i) => {
-                    this.add_byte(i).and_then(|r| this.push_register(r))?;
-                }
-                None => push_unit(this)?,
-            }
+            primitive_cast(this, left, Data::get_integer, Data::integer_to_byte, Data::add_byte)?;
         }
         (ExpressionDataType::Float, ExpressionDataType::Integer) => {
-            let f = this.get_float(left)?;
-            match Data::float_to_integer(f) {
-                Some(f) => {
-                    this.add_integer(f).and_then(|r| this.push_register(r))?;
-                }
-                None => push_unit(this)?,
-            }
+            primitive_cast(this, left, Data::get_float, Data::float_to_integer, Data::add_integer)?;
         }
         (ExpressionDataType::Char, ExpressionDataType::Integer) => {
-            let c = this.get_char(left)?;
-            match Data::char_to_integer(c) {
-                Some(i) => {
-                    this.add_integer(i).and_then(|r| this.push_register(r))?;
-                }
-                None => push_unit(this)?,
-            }
+            primitive_cast(this, left, Data::get_char, Data::char_to_integer, Data::add_integer)?;
         }
         (ExpressionDataType::Char, ExpressionDataType::Byte) => {
-            let c = this.get_char(left)?;
-            match Data::char_to_byte(c) {
-                Some(i) => {
-                    this.add_byte(i).and_then(|r| this.push_register(r))?;
-                }
-                None => push_unit(this)?,
-            }
+            primitive_cast(this, left, Data::get_char, Data::char_to_byte, Data::add_byte)?;
         }
         (ExpressionDataType::Byte, ExpressionDataType::Integer) => {
-            let c = this.get_byte(left)?;
-            match Data::byte_to_integer(c) {
-                Some(i) => {
-                    this.add_integer(i).and_then(|r| this.push_register(r))?;
-                }
-                None => push_unit(this)?,
-            }
+            primitive_cast(this, left, Data::get_byte, Data::byte_to_integer, Data::add_integer)?;
         }
         (ExpressionDataType::Byte, ExpressionDataType::Char) => {
-            let i = this.get_byte(left)?;
-            match Data::byte_to_char(i) {
-                Some(i) => {
-                    this.add_char(i).and_then(|r| this.push_register(r))?;
-                }
-                None => push_unit(this)?,
-            }
+            primitive_cast(this, left, Data::get_byte, Data::byte_to_char, Data::add_char)?;
         }
         (ExpressionDataType::Link, ExpressionDataType::List) => {
             let len = link_len_size(this, left)?;
@@ -248,6 +200,30 @@ pub(crate) fn list_from_byte_list<Data: GarnishLangRuntimeData>(
     }
 
     this.end_list().and_then(|r| this.push_register(r))?;
+
+    Ok(())
+}
+
+pub(crate) fn primitive_cast<Data: GarnishLangRuntimeData, From, To, GetFunc, CastFunc, AddFunc>(
+    this: &mut Data,
+    addr: Data::Size,
+    get: GetFunc,
+    cast: CastFunc,
+    add: AddFunc,
+) -> Result<(), RuntimeError<Data::Error>>
+where
+    GetFunc: Fn(&Data, Data::Size) -> Result<From, Data::Error>,
+    CastFunc: Fn(From) -> Option<To>,
+    AddFunc: FnOnce(&mut Data, To) -> Result<Data::Size, Data::Error>,
+{
+    let i = get(this, addr)?;
+    match cast(i) {
+        Some(i) => {
+            let r = add(this, i)?;
+            this.push_register(r)?;
+        }
+        None => push_unit(this)?,
+    }
 
     Ok(())
 }
