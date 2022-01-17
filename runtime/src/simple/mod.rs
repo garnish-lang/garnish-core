@@ -1,10 +1,14 @@
 use std::collections::hash_map::DefaultHasher;
+use std::convert::TryInto;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
-use std::convert::TryInto;
 
-use crate::{symbol_value, AnyData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, ListData, PairData, RuntimeError, SimpleData, SimpleDataList, SymbolData, FloatData, CharData, CharListData, ByteData, ByteListData, RangeData, SliceData, LinkData};
+use crate::{
+    symbol_value, AnyData, ByteData, ByteListData, CharData, CharListData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType,
+    ExternalData, FloatData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction,
+    InstructionData, IntegerData, LinkData, ListData, PairData, RangeData, RuntimeError, SimpleData, SimpleDataList, SliceData, SymbolData,
+};
 
 pub mod data;
 
@@ -21,7 +25,7 @@ pub struct SimpleRuntimeData {
     current_list: Option<(Vec<usize>, Vec<usize>)>,
     current_char_list: Option<String>,
     current_byte_list: Option<Vec<u8>>,
-    symbols: HashMap<String, u64>,
+    symbols: HashMap<u64, String>,
     cache: HashMap<u64, usize>,
     lease_stack: Vec<usize>,
 }
@@ -53,7 +57,7 @@ impl SimpleRuntimeData {
         }
     }
 
-    pub fn get_symbols(&self) -> &HashMap<String, u64> {
+    pub fn get_symbols(&self) -> &HashMap<u64, String> {
         &self.symbols
     }
 
@@ -256,7 +260,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Integer) -> Result<Self::Char, Self::Error> {
         match self.get(addr)?.as_char_list()?.value().chars().nth(item_index as usize) {
             None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
-            Some(c) => Ok(c)
+            Some(c) => Ok(c),
         }
     }
 
@@ -267,7 +271,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Integer) -> Result<Self::Byte, Self::Error> {
         match self.get(addr)?.as_byte_list()?.value().get(item_index as usize) {
             None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
-            Some(c) => Ok(*c)
+            Some(c) => Ok(*c),
         }
     }
 
@@ -301,7 +305,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn add_symbol(&mut self, value: &str) -> Result<usize, Self::Error> {
         let sym_val = symbol_value(value);
-        self.symbols.insert(value.to_string(), sym_val);
+        self.symbols.insert(sym_val, value.to_string());
         self.cache_add(SymbolData::from(sym_val))
     }
 
@@ -392,7 +396,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn add_to_char_list(&mut self, c: Self::Char) -> Result<(), Self::Error> {
         match &mut self.current_char_list {
             None => Err(format!("Attempting to add to unstarted char list."))?,
-            Some(s) => s.push(c)
+            Some(s) => s.push(c),
         }
 
         Ok(())
@@ -401,7 +405,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn end_char_list(&mut self) -> Result<Self::Size, Self::Error> {
         let data = match &self.current_char_list {
             None => Err(format!("Attempting to end unstarted char list."))?,
-            Some(s) => CharListData::from(s.clone())
+            Some(s) => CharListData::from(s.clone()),
         };
 
         let addr = self.cache_add(data)?;
@@ -419,7 +423,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn add_to_byte_list(&mut self, c: Self::Byte) -> Result<(), Self::Error> {
         match &mut self.current_byte_list {
             None => Err(format!("Attempting to add to unstarted byte list."))?,
-            Some(l) => l.push(c)
+            Some(l) => l.push(c),
         }
 
         Ok(())
@@ -428,7 +432,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error> {
         let data = match &self.current_byte_list {
             None => Err(format!("Attempting to end unstarted byte list."))?,
-            Some(l) => ByteListData::from(l.clone())
+            Some(l) => ByteListData::from(l.clone()),
         };
 
         let addr = self.cache_add(data)?;
@@ -496,7 +500,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(())
     }
 
-    fn get_register(&self, addr: Self::Size) -> Option<Self::Size>{
+    fn get_register(&self, addr: Self::Size) -> Option<Self::Size> {
         self.register.get(addr).cloned()
     }
 
@@ -608,14 +612,14 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn integer_to_char(from: Self::Integer) -> Option<Self::Char> {
         match (from as u8).try_into() {
             Ok(c) => Some(c),
-            Err(_) => None
+            Err(_) => None,
         }
     }
 
     fn integer_to_byte(from: Self::Integer) -> Option<Self::Byte> {
         match from.try_into() {
             Ok(b) => Some(b),
-            Err(_) => None
+            Err(_) => None,
         }
     }
 
@@ -649,6 +653,19 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
             ExpressionDataType::Unit => {
                 self.add_to_char_list('(')?;
                 self.add_to_char_list(')')?;
+            }
+            ExpressionDataType::True => {
+                self.add_to_char_list('t')?;
+                self.add_to_char_list('r')?;
+                self.add_to_char_list('u')?;
+                self.add_to_char_list('e')?;
+            }
+            ExpressionDataType::False => {
+                self.add_to_char_list('f')?;
+                self.add_to_char_list('a')?;
+                self.add_to_char_list('l')?;
+                self.add_to_char_list('s')?;
+                self.add_to_char_list('e')?;
             }
             ExpressionDataType::Integer => {
                 let x = self.get_integer(from)?;
@@ -690,7 +707,45 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
                     self.add_to_char_list(c)?;
                 }
             }
-            _ => unimplemented!()
+            ExpressionDataType::Symbol => {
+                let sym = self.get_symbol(from)?;
+                let s = match self.symbols.get(&sym) {
+                    None => sym.to_string(),
+                    Some(s) => s.clone(),
+                };
+
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::Expression => {
+                let e = self.get_expression(from)?;
+                let s = format!("Expression({})", e);
+
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::External => {
+                let e = self.get_external(from)?;
+                let s = format!("External({})", e);
+
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            ExpressionDataType::Range => {
+                let (start, end) = self
+                    .get_range(from)
+                    .and_then(|(start, end)| Ok((self.get_integer(start)?, self.get_integer(end)?)))?;
+
+                let s = format!("{}..{}", start, end);
+
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
+            _ => unimplemented!(),
         }
         self.end_char_list()
     }
@@ -728,7 +783,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData, Instruction};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
 
     #[test]
     fn type_of() {
@@ -756,7 +811,6 @@ mod tests {
 
         assert_eq!(runtime.get_instructions().len(), 1);
     }
-
 
     #[test]
     fn get_instruction() {
@@ -990,7 +1044,10 @@ mod leases {
 mod to_char_list {
     use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
 
-    fn assert_to_char_list<Func>(expected: &str, setup: Func) where Func: FnOnce(&mut SimpleRuntimeData) -> usize {
+    fn assert_to_char_list<Func>(expected: &str, setup: Func)
+    where
+        Func: FnOnce(&mut SimpleRuntimeData) -> usize,
+    {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = setup(&mut runtime);
@@ -1010,37 +1067,37 @@ mod to_char_list {
 
     #[test]
     fn unit() {
-        assert_to_char_list("()", |runtime| {
-            runtime.add_unit().unwrap()
-        })
+        assert_to_char_list("()", |runtime| runtime.add_unit().unwrap())
+    }
+
+    #[test]
+    fn true_boolean() {
+        assert_to_char_list("true", |runtime| runtime.add_true().unwrap())
+    }
+
+    #[test]
+    fn false_boolean() {
+        assert_to_char_list("false", |runtime| runtime.add_false().unwrap())
     }
 
     #[test]
     fn integer() {
-        assert_to_char_list("10", |runtime| {
-            runtime.add_integer(10).unwrap()
-        })
+        assert_to_char_list("10", |runtime| runtime.add_integer(10).unwrap())
     }
 
     #[test]
     fn float() {
-        assert_to_char_list("10.123", |runtime| {
-            runtime.add_float(10.123).unwrap()
-        })
+        assert_to_char_list("10.123", |runtime| runtime.add_float(10.123).unwrap())
     }
 
     #[test]
     fn char() {
-        assert_to_char_list("c", |runtime| {
-            runtime.add_char('c').unwrap()
-        })
+        assert_to_char_list("c", |runtime| runtime.add_char('c').unwrap())
     }
 
     #[test]
     fn byte() {
-        assert_to_char_list("100", |runtime| {
-            runtime.add_byte(100).unwrap()
-        })
+        assert_to_char_list("100", |runtime| runtime.add_byte(100).unwrap())
     }
 
     #[test]
@@ -1051,6 +1108,39 @@ mod to_char_list {
             runtime.add_to_byte_list(20).unwrap();
             runtime.add_to_byte_list(30).unwrap();
             runtime.end_byte_list().unwrap()
+        })
+    }
+
+    #[test]
+    fn symbol() {
+        assert_to_char_list("my_symbol", |runtime| runtime.add_symbol("my_symbol").unwrap())
+    }
+
+    #[test]
+    fn expression() {
+        assert_to_char_list("Expression(10)", |runtime| runtime.add_expression(10).unwrap())
+    }
+
+    #[test]
+    fn external() {
+        assert_to_char_list("External(10)", |runtime| runtime.add_external(10).unwrap())
+    }
+
+    #[test]
+    fn pair() {
+        assert_to_char_list("10 = 10", |runtime| {
+            let d1 = runtime.add_integer(10).unwrap();
+            let d2 = runtime.add_integer(10).unwrap();
+            runtime.add_pair((d1, d2)).unwrap()
+        })
+    }
+
+    #[test]
+    fn range() {
+        assert_to_char_list("5..10", |runtime| {
+            let d1 = runtime.add_integer(5).unwrap();
+            let d2 = runtime.add_integer(10).unwrap();
+            runtime.add_range(d1, d2).unwrap()
         })
     }
 }
