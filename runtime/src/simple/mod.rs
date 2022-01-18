@@ -28,6 +28,7 @@ pub struct SimpleRuntimeData {
     symbols: HashMap<u64, String>,
     cache: HashMap<u64, usize>,
     lease_stack: Vec<usize>,
+    max_char_list_depth: usize
 }
 
 impl SimpleRuntimeData {
@@ -47,6 +48,7 @@ impl SimpleRuntimeData {
             symbols: HashMap::new(),
             cache: HashMap::new(),
             lease_stack: vec![],
+            max_char_list_depth: 1000
         }
     }
 
@@ -148,6 +150,10 @@ impl SimpleRuntimeData {
     }
 
     fn add_to_current_char_list(&mut self, from: usize, depth: usize) -> Result<(), DataError> {
+        if depth >= self.max_char_list_depth {
+            return Ok(());
+        }
+
         match self.get_data_type(from)? {
             ExpressionDataType::Unit => {
                 self.add_to_char_list('(')?;
@@ -183,6 +189,13 @@ impl SimpleRuntimeData {
             ExpressionDataType::Char => {
                 let c = self.get_char(from)?;
                 self.add_to_char_list(c)?;
+            }
+            ExpressionDataType::CharList => {
+                let len = self.get_char_list_len(from)?;
+                for i in 0..len {
+                    let c = self.get_char_list_item(from, i as i32)?;
+                    self.add_to_char_list(c)?;
+                }
             }
             ExpressionDataType::Byte => {
                 let b = self.get_byte(from)?;
@@ -278,7 +291,41 @@ impl SimpleRuntimeData {
                     self.add_to_char_list(')')?;
                 }
             }
-            _ => unimplemented!(),
+            ExpressionDataType::Link => {
+                let (value, linked, is_append) = self.get_link(from)?;
+
+                match self.get_data_type(linked)? {
+                    ExpressionDataType::Unit => {
+                        self.add_to_current_char_list(value, depth + 1)?;
+                    },
+                    ExpressionDataType::Link => {
+                        if is_append {
+                            self.add_to_current_char_list(linked, depth + 1)?;
+                            self.add_to_char_list(' ')?;
+                            self.add_to_char_list('-')?;
+                            self.add_to_char_list('>')?;
+                            self.add_to_char_list(' ')?;
+                            self.add_to_current_char_list(value, depth + 1)?;
+                        } else {
+                            self.add_to_current_char_list(value, depth + 1)?;
+                            self.add_to_char_list(' ')?;
+                            self.add_to_char_list('<')?;
+                            self.add_to_char_list('-')?;
+                            self.add_to_char_list(' ')?;
+                            self.add_to_current_char_list(linked, depth + 1)?;
+                        }
+                    }
+                    t => Err(DataError::from(format!("Invalid linked type {:?}", t)))?
+                }
+            }
+            ExpressionDataType::Slice => {
+                let (value, range) = self.get_slice(from)?;
+                self.add_to_current_char_list(value, depth + 1)?;
+                self.add_to_char_list(' ')?;
+                self.add_to_char_list('~')?;
+                self.add_to_char_list(' ')?;
+                self.add_to_current_char_list(range, depth + 1)?;
+            }
         }
 
         Ok(())
@@ -1136,6 +1183,24 @@ mod to_char_list {
     }
 
     #[test]
+    fn char_list() {
+        assert_to_char_list("characters", |runtime| {
+            runtime.start_char_list().unwrap();
+            runtime.add_to_char_list('c').unwrap();
+            runtime.add_to_char_list('h').unwrap();
+            runtime.add_to_char_list('a').unwrap();
+            runtime.add_to_char_list('r').unwrap();
+            runtime.add_to_char_list('a').unwrap();
+            runtime.add_to_char_list('c').unwrap();
+            runtime.add_to_char_list('t').unwrap();
+            runtime.add_to_char_list('e').unwrap();
+            runtime.add_to_char_list('r').unwrap();
+            runtime.add_to_char_list('s').unwrap();
+            runtime.end_char_list().unwrap()
+        })
+    }
+
+    #[test]
     fn byte() {
         assert_to_char_list("100", |runtime| runtime.add_byte(100).unwrap())
     }
@@ -1242,4 +1307,75 @@ mod to_char_list {
             runtime.end_list().unwrap()
         })
     }
+
+    #[test]
+    fn link_append() {
+        assert_to_char_list("10 -> 20", |runtime| {
+            let unit = runtime.add_unit().unwrap();
+            let d1 = runtime.add_integer(10).unwrap();
+            let d2 = runtime.add_integer(20).unwrap();
+            let link1 = runtime.add_link(d1, unit, true).unwrap();
+            runtime.add_link(d2, link1, true).unwrap()
+        })
+    }
+
+    #[test]
+    fn link_prepend() {
+        assert_to_char_list("10 <- 20", |runtime| {
+            let unit = runtime.add_unit().unwrap();
+            let d1 = runtime.add_integer(10).unwrap();
+            let d2 = runtime.add_integer(20).unwrap();
+            let link1 = runtime.add_link(d2, unit, false).unwrap();
+            runtime.add_link(d1, link1, false).unwrap()
+        })
+    }
+
+    #[test]
+    fn link_append_multiple() {
+        assert_to_char_list("10 -> 20 -> 30", |runtime| {
+            let unit = runtime.add_unit().unwrap();
+            let d1 = runtime.add_integer(10).unwrap();
+            let d2 = runtime.add_integer(20).unwrap();
+            let d3 = runtime.add_integer(30).unwrap();
+
+            let link1 = runtime.add_link(d1, unit, true).unwrap();
+            let link2 = runtime.add_link(d2, link1, true).unwrap();
+            runtime.add_link(d3, link2, true).unwrap()
+        })
+    }
+
+    #[test]
+    fn link_prepend_multiple() {
+        assert_to_char_list("10 <- 20 <- 30", |runtime| {
+            let unit = runtime.add_unit().unwrap();
+            let d1 = runtime.add_integer(10).unwrap();
+            let d2 = runtime.add_integer(20).unwrap();
+            let d3 = runtime.add_integer(30).unwrap();
+
+            let link1 = runtime.add_link(d3, unit, false).unwrap();
+            let link2 = runtime.add_link(d2, link1, false).unwrap();
+            runtime.add_link(d1, link2, false).unwrap()
+        })
+    }
+
+    #[test]
+    fn slice() {
+        assert_to_char_list("(10, 20, 30) ~ 5..10", |runtime| {
+            let d1 = runtime.add_integer(5).unwrap();
+            let d2 = runtime.add_integer(10).unwrap();
+            let d3 = runtime.add_integer(20).unwrap();
+            let d4 = runtime.add_integer(30).unwrap();
+
+            runtime.start_list(3).unwrap();
+            runtime.add_to_list(d2, false).unwrap();
+            runtime.add_to_list(d3, false).unwrap();
+            runtime.add_to_list(d4, false).unwrap();
+            let list = runtime.end_list().unwrap();
+
+            let range = runtime.add_range(d1, d2).unwrap();
+
+            runtime.add_slice(list, range).unwrap()
+        })
+    }
+
 }
