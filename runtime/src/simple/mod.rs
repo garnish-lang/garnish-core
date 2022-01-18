@@ -160,17 +160,12 @@ impl SimpleRuntimeData {
                 self.add_to_char_list(')')?;
             }
             ExpressionDataType::True => {
-                self.add_to_char_list('t')?;
-                self.add_to_char_list('r')?;
-                self.add_to_char_list('u')?;
-                self.add_to_char_list('e')?;
+                self.add_to_char_list('$')?;
+                self.add_to_char_list('?')?;
             }
             ExpressionDataType::False => {
-                self.add_to_char_list('f')?;
-                self.add_to_char_list('a')?;
-                self.add_to_char_list('l')?;
-                self.add_to_char_list('s')?;
-                self.add_to_char_list('e')?;
+                self.add_to_char_list('$')?;
+                self.add_to_char_list('!')?;
             }
             ExpressionDataType::Integer => {
                 let x = self.get_integer(from)?;
@@ -1223,12 +1218,12 @@ mod to_char_list {
 
     #[test]
     fn true_boolean() {
-        assert_to_char_list("true", |runtime| runtime.add_true().unwrap())
+        assert_to_char_list("$?", |runtime| runtime.add_true().unwrap())
     }
 
     #[test]
     fn false_boolean() {
-        assert_to_char_list("false", |runtime| runtime.add_false().unwrap())
+        assert_to_char_list("$!", |runtime| runtime.add_false().unwrap())
     }
 
     #[test]
