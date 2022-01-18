@@ -257,6 +257,27 @@ impl SimpleRuntimeData {
                     self.add_to_char_list(')')?;
                 }
             }
+            ExpressionDataType::List => {
+                let len = self.get_list_len(from)?;
+
+                if depth > 0 {
+                    self.add_to_char_list('(')?;
+                }
+
+                for i in 0..len {
+                    let item = self.get_list_item(from, i as i32)?;
+                    self.add_to_current_char_list(item, depth + 1)?;
+
+                    if i < len - 1 {
+                        self.add_to_char_list(',')?;
+                        self.add_to_char_list(' ')?;
+                    }
+                }
+
+                if depth > 0 {
+                    self.add_to_char_list(')')?;
+                }
+            }
             _ => unimplemented!(),
         }
 
@@ -1184,6 +1205,41 @@ mod to_char_list {
             let d5 = runtime.add_pair((d3, d4)).unwrap();
             let d6 = runtime.add_pair((d2, d5)).unwrap();
             runtime.add_pair((d1, d6)).unwrap()
+        })
+    }
+
+    #[test]
+    fn list() {
+        assert_to_char_list("10, 20, 30", |runtime| {
+            let d1 = runtime.add_integer(10).unwrap();
+            let d2 = runtime.add_integer(20).unwrap();
+            let d3 = runtime.add_integer(30).unwrap();
+            runtime.start_list(3).unwrap();
+            runtime.add_to_list(d1, false).unwrap();
+            runtime.add_to_list(d2, false).unwrap();
+            runtime.add_to_list(d3, false).unwrap();
+            runtime.end_list().unwrap()
+        })
+    }
+
+    #[test]
+    fn list_nested() {
+        assert_to_char_list("10, (20, 30), 40", |runtime| {
+            let d1 = runtime.add_integer(10).unwrap();
+            let d2 = runtime.add_integer(20).unwrap();
+            let d3 = runtime.add_integer(30).unwrap();
+            let d4 = runtime.add_integer(40).unwrap();
+
+            runtime.start_list(2).unwrap();
+            runtime.add_to_list(d2, false).unwrap();
+            runtime.add_to_list(d3, false).unwrap();
+            let list = runtime.end_list().unwrap();
+
+            runtime.start_list(3).unwrap();
+            runtime.add_to_list(d1, false).unwrap();
+            runtime.add_to_list(list, false).unwrap();
+            runtime.add_to_list(d4, false).unwrap();
+            runtime.end_list().unwrap()
         })
     }
 }
