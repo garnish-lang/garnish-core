@@ -27,7 +27,7 @@ pub use error::*;
 use log::trace;
 pub(crate) use utilities::*;
 
-use crate::runtime::arithmetic::{absolute_value, divide, integer_divide, multiply, opposite, perform_addition, power, remainder, subtract};
+use crate::runtime::arithmetic::{absolute_value, divide, integer_divide, multiply, opposite, add, power, remainder, subtract};
 use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
 use crate::runtime::pair::make_pair;
 use crate::runtime::put::{push_input, push_result, put, put_input};
@@ -230,7 +230,7 @@ where
     //
 
     fn add(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        perform_addition(self)
+        add(self)
     }
 
     fn subtract(&mut self) -> Result<(), RuntimeError<Data::Error>> {

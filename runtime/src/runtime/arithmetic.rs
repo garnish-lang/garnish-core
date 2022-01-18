@@ -3,7 +3,7 @@ use log::trace;
 use crate::runtime::data::Overflowable;
 use crate::{next_two_raw_ref, push_integer, push_pair, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
 
-pub fn perform_addition<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub fn add<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
     let types = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
@@ -68,7 +68,25 @@ pub fn perform_addition<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
 }
 
 pub fn subtract<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    todo!()
+    let (right_addr, left_addr) = next_two_raw_ref(this)?;
+
+    let types = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
+    trace!("Attempting addition between {:?} at {:?} and {:?} at {:?}", types.0, left_addr, types.1, right_addr);
+
+    match types {
+        (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+            let left = this.get_integer(left_addr)?;
+            let right = this.get_integer(right_addr)?;
+
+            let result= left - right;
+
+            push_integer(this, result)
+        }
+        _ => {
+            trace!("Unsupported types pushing unit");
+            push_unit(this)
+        },
+    }
 }
 
 pub fn multiply<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
@@ -238,5 +256,22 @@ mod tests {
         runtime.add().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+    }
+
+    #[test]
+    fn subtract_integer_integer() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_integer(10).unwrap();
+        let int2 = runtime.add_integer(20).unwrap();
+        let new_data_start = runtime.get_data_len();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        runtime.subtract().unwrap();
+
+        assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
+        assert_eq!(runtime.get_integer(new_data_start).unwrap(), -10);
     }
 }
