@@ -38,6 +38,12 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         (_, ExpressionDataType::CharList) => {
             this.add_char_list_from(left).and_then(|r| this.push_register(r))?;
         }
+        (_, ExpressionDataType::ByteList) => {
+            this.add_byte_list_from(left).and_then(|r| this.push_register(r))?;
+        }
+        (_, ExpressionDataType::Symbol) => {
+            this.add_symbol_from(left).and_then(|r| this.push_register(r))?;
+        }
         // Numbers
         (ExpressionDataType::Integer, ExpressionDataType::Float) => {
             primitive_cast(this, left, Data::get_integer, Data::integer_to_float, Data::add_float)?;
@@ -1399,11 +1405,11 @@ mod links {
 }
 
 #[cfg(test)]
-mod char_list {
-    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData};
+mod deferred {
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData};
 
     #[test]
-    fn unit() {
+    fn char_list() {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = runtime.add_unit().unwrap();
@@ -1428,5 +1434,40 @@ mod char_list {
         }
 
         assert_eq!(chars, expected);
+    }
+
+    #[test]
+    fn byte_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_unit().unwrap();
+
+        runtime.start_byte_list().unwrap();
+        let s = runtime.end_byte_list().unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(s).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        assert_eq!(runtime.get_data_type(addr).unwrap(), ExpressionDataType::ByteList);
+    }
+
+    #[test]
+    fn symbols() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_unit().unwrap();
+
+        let s = runtime.add_symbol("sym").unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(s).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        assert_eq!(runtime.get_data_type(addr).unwrap(), ExpressionDataType::Symbol);
     }
 }

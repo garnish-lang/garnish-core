@@ -28,7 +28,7 @@ pub struct SimpleRuntimeData {
     symbols: HashMap<u64, String>,
     cache: HashMap<u64, usize>,
     lease_stack: Vec<usize>,
-    max_char_list_depth: usize
+    max_char_list_depth: usize,
 }
 
 impl SimpleRuntimeData {
@@ -48,7 +48,7 @@ impl SimpleRuntimeData {
             symbols: HashMap::new(),
             cache: HashMap::new(),
             lease_stack: vec![],
-            max_char_list_depth: 1000
+            max_char_list_depth: 1000,
         }
     }
 
@@ -297,7 +297,7 @@ impl SimpleRuntimeData {
                 match self.get_data_type(linked)? {
                     ExpressionDataType::Unit => {
                         self.add_to_current_char_list(value, depth + 1)?;
-                    },
+                    }
                     ExpressionDataType::Link => {
                         if is_append {
                             self.add_to_current_char_list(linked, depth + 1)?;
@@ -315,7 +315,7 @@ impl SimpleRuntimeData {
                             self.add_to_current_char_list(linked, depth + 1)?;
                         }
                     }
-                    t => Err(DataError::from(format!("Invalid linked type {:?}", t)))?
+                    t => Err(DataError::from(format!("Invalid linked type {:?}", t)))?,
                 }
             }
             ExpressionDataType::Slice => {
@@ -828,13 +828,37 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     //
-    // To CharList
+    // Add Conversions
     //
 
     fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         self.start_char_list()?;
         self.add_to_current_char_list(from, 0)?;
         self.end_char_list()
+    }
+
+    fn add_byte_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
+        match self.get_data_type(from)? {
+            ExpressionDataType::Unit => {
+                self.start_byte_list()?;
+                self.end_byte_list()
+            }
+            t => Err(DataError::from(format!("No cast to ByteList available for {:?}", t))),
+        }
+    }
+
+    fn add_symbol_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
+        let addr = self.add_char_list_from(from)?;
+        let len = self.get_char_list_len(addr)?;
+        let mut h = DefaultHasher::new();
+
+        for i in 0..len {
+            let c = self.get_char_list_item(addr, i as i32)?;
+            c.hash(&mut h);
+        }
+        let hv = h.finish();
+
+        self.cache_add(SymbolData::from(hv))
     }
 
     //
@@ -1128,6 +1152,46 @@ mod leases {
 }
 
 #[cfg(test)]
+mod to_symbol {
+    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::Hash;
+    use std::hash::Hasher;
+
+    #[test]
+    fn unit() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_unit().unwrap();
+        let addr = runtime.add_symbol_from(d1).unwrap();
+
+        let mut h = DefaultHasher::new();
+        for c in "()".chars() {
+            c.hash(&mut h);
+        }
+
+        let val = h.finish();
+        assert_eq!(runtime.get_symbol(addr).unwrap(), val);
+    }
+}
+
+#[cfg(test)]
+mod to_byte_list {
+    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn unit() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_unit().unwrap();
+        let addr = runtime.add_byte_list_from(d1).unwrap();
+        let len = runtime.get_byte_list_len(addr).unwrap();
+
+        assert_eq!(len, 0);
+    }
+}
+
+#[cfg(test)]
 mod to_char_list {
     use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
 
@@ -1377,5 +1441,4 @@ mod to_char_list {
             runtime.add_slice(list, range).unwrap()
         })
     }
-
 }

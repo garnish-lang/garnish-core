@@ -133,6 +133,8 @@ pub trait GarnishLangRuntimeData {
 
     // mut conversions
     fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error>;
+    fn add_byte_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error>;
+    fn add_symbol_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error>;
 
     // parsing, to be moved to separate object
     // will require moving simple data to its own crate
