@@ -220,7 +220,7 @@ mod tests {
         // 1
         let i1 = runtime.push_instruction(Instruction::Put, Some(int1)).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
         // 5
@@ -257,10 +257,10 @@ mod tests {
         let d4 = runtime.end_list().unwrap();
         let d5 = runtime.add_integer(2).unwrap();
 
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         let i1 = runtime.push_instruction(Instruction::Apply, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.set_instruction_cursor(i1).unwrap();
 
@@ -285,10 +285,10 @@ mod tests {
         let d2 = runtime.add_integer(2).unwrap();
         let start = runtime.get_data_len();
 
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         let i1 = runtime.push_instruction(Instruction::Apply, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.set_instruction_cursor(i1).unwrap();
 
@@ -314,10 +314,10 @@ mod tests {
         let d2 = runtime.add_integer(2).unwrap();
         let start = runtime.get_data_len();
 
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         let i1 = runtime.push_instruction(Instruction::Apply, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.set_instruction_cursor(i1).unwrap();
 
@@ -489,7 +489,7 @@ mod tests {
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
         // 5
@@ -516,7 +516,7 @@ mod tests {
         // 1
         let i1 = runtime.push_instruction(Instruction::Put, Some(int1)).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
         // 5
@@ -547,7 +547,7 @@ mod tests {
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
         // 5
@@ -581,7 +581,7 @@ mod tests {
         // 4
         let i1 = runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
         let i2 = runtime.push_instruction(Instruction::Reapply, Some(0)).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
@@ -620,7 +620,7 @@ mod tests {
         // 4
         runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
         runtime.push_instruction(Instruction::Reapply, Some(0)).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
@@ -650,10 +650,10 @@ mod tests {
         let ext1 = runtime.add_external(3).unwrap();
         let int1 = runtime.add_integer(100).unwrap();
 
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         let i1 = runtime.push_instruction(Instruction::Apply, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_register(ext1).unwrap();
         runtime.push_register(int1).unwrap();

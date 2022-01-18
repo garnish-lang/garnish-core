@@ -944,11 +944,11 @@ mod tests {
 
         runtime.push_instruction(Instruction::Put, None).unwrap();
         runtime.push_instruction(Instruction::Put, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.set_instruction_cursor(2).unwrap();
 
-        assert_eq!(runtime.get_current_instruction().unwrap().0, Instruction::PerformAddition);
+        assert_eq!(runtime.get_current_instruction().unwrap().0, Instruction::Add);
     }
 }
 

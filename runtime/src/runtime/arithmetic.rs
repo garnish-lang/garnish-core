@@ -67,6 +67,38 @@ pub fn perform_addition<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
     }
 }
 
+pub fn subtract<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    todo!()
+}
+
+pub fn multiply<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    todo!()
+}
+
+pub fn power<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    todo!()
+}
+
+pub fn divide<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    todo!()
+}
+
+pub fn integer_divide<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    todo!()
+}
+
+pub fn remainder<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    todo!()
+}
+
+pub fn absolute_value<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    todo!()
+}
+
+pub fn opposite<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    todo!()
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
@@ -82,7 +114,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.perform_addition().unwrap();
+        runtime.add().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_integer(new_data_start).unwrap(), 30);
@@ -99,7 +131,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.perform_addition().unwrap();
+        runtime.add().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_float(new_data_start).unwrap(), 30.5);
@@ -116,7 +148,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.perform_addition().unwrap();
+        runtime.add().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_float(new_data_start).unwrap(), 30.5);
@@ -133,7 +165,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.perform_addition().unwrap();
+        runtime.add().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_float(new_data_start).unwrap(), 31.0);
@@ -150,7 +182,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.perform_addition().unwrap();
+        runtime.add().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start + 1);
         let (left, right) = runtime.get_pair(new_data_start + 1).unwrap();
@@ -171,7 +203,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.perform_addition().unwrap();
+        runtime.add().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start + 1);
         let (left, right) = runtime.get_pair(new_data_start + 1).unwrap();
@@ -188,7 +220,7 @@ mod tests {
         runtime.add_integer(10).unwrap();
         runtime.add_integer(20).unwrap();
 
-        let result = runtime.perform_addition();
+        let result = runtime.add();
 
         assert!(result.is_err());
     }
@@ -203,7 +235,7 @@ mod tests {
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
 
-        runtime.perform_addition().unwrap();
+        runtime.add().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }

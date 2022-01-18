@@ -27,7 +27,7 @@ pub use error::*;
 use log::trace;
 pub(crate) use utilities::*;
 
-use crate::runtime::arithmetic::perform_addition;
+use crate::runtime::arithmetic::{absolute_value, divide, integer_divide, multiply, opposite, perform_addition, power, remainder, subtract};
 use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
 use crate::runtime::pair::make_pair;
 use crate::runtime::put::{push_input, push_result, put, put_input};
@@ -53,7 +53,15 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn reapply(&mut self, index: Data::Size) -> Result<(), RuntimeError<Data::Error>>;
     fn empty_apply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
 
-    fn perform_addition(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn add(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn subtract(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn multiply(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn power(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn divide(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn integer_divide(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn remainder(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn absolute_value(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn opposite(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
     fn equality_comparison(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
@@ -114,7 +122,14 @@ where
         let mut next_instruction = self.get_instruction_cursor() + Data::Size::one();
 
         match instruction {
-            Instruction::PerformAddition => self.perform_addition()?,
+            Instruction::Add => self.add()?,
+            Instruction::Subtract => todo!(),
+            Instruction::Multiply => todo!(),
+            Instruction::Divide => todo!(),
+            Instruction::IntegerDivide => todo!(),
+            Instruction::Opposite => todo!(),
+            Instruction::AbsoluteValue => todo!(),
+            Instruction::Remainder => todo!(),
             Instruction::PutValue => self.put_value()?,
             Instruction::PushValue => self.push_value()?,
             Instruction::UpdateValue => self.update_value()?,
@@ -214,8 +229,40 @@ where
     // Arithmetic
     //
 
-    fn perform_addition(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+    fn add(&mut self) -> Result<(), RuntimeError<Data::Error>> {
         perform_addition(self)
+    }
+
+    fn subtract(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        subtract(self)
+    }
+
+    fn multiply(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        multiply(self)
+    }
+
+    fn power(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        power(self)
+    }
+
+    fn divide(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        divide(self)
+    }
+
+    fn integer_divide(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        integer_divide(self)
+    }
+
+    fn remainder(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        remainder(self)
+    }
+
+    fn absolute_value(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        absolute_value(self)
+    }
+
+    fn opposite(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        opposite(self)
     }
 
     //
@@ -412,7 +459,7 @@ mod tests {
         let d2 = runtime.add_integer(20).unwrap();
         let start = runtime.get_data_len();
 
-        let i1 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        let i1 = runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
@@ -433,7 +480,7 @@ mod tests {
         let i2 = runtime.add_integer(20).unwrap();
         let _start = runtime.get_data_len();
 
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_register(i1).unwrap();
         runtime.push_register(i2).unwrap();
@@ -456,7 +503,7 @@ mod tests {
         // 1
         let i1 = runtime.push_instruction(Instruction::Put, Some(int1)).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
         // 5
@@ -489,7 +536,7 @@ mod tests {
         // 1
         let i1 = runtime.push_instruction(Instruction::Put, Some(int1)).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
         // 5
@@ -528,10 +575,10 @@ mod tests {
         // 4
         let i1 = runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         runtime.push_instruction(Instruction::PutValue, None).unwrap();
         let i2 = runtime.push_instruction(Instruction::Reapply, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
         runtime.push_instruction(Instruction::EndExpression, None).unwrap();
 
         runtime.push_jump_point(i1).unwrap();
@@ -556,11 +603,11 @@ mod tests {
 
         let ta = runtime.add_true().unwrap();
         let i1 = runtime.push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_jump_point(i2).unwrap();
 
@@ -581,11 +628,11 @@ mod tests {
 
         let ua = runtime.add_unit().unwrap();
         let i1 = runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_jump_point(i2).unwrap();
 
@@ -606,11 +653,11 @@ mod tests {
 
         let fa = runtime.add_false().unwrap();
         let i1 = runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_jump_point(i2).unwrap();
 

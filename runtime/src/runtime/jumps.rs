@@ -125,8 +125,8 @@ mod tests {
         runtime.add_symbol("false").unwrap();
         runtime.push_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
         runtime.push_instruction(Instruction::JumpTo, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        let i1 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        let i1 = runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_jump_point(i1).unwrap();
 
@@ -142,9 +142,9 @@ mod tests {
 
         runtime.add_true().unwrap();
         runtime.push_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_jump_point(3).unwrap();
 
@@ -159,9 +159,9 @@ mod tests {
 
         runtime.add_true().unwrap();
         runtime.push_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_jump_point(3).unwrap();
 
@@ -176,9 +176,9 @@ mod tests {
 
         let ta = runtime.add_true().unwrap();
         let i1 = runtime.push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_jump_point(i2).unwrap();
 
@@ -199,9 +199,9 @@ mod tests {
 
         let ua = runtime.add_unit().unwrap();
         runtime.push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_jump_point(3).unwrap();
         runtime.set_instruction_cursor(1).unwrap();
@@ -220,9 +220,9 @@ mod tests {
 
         let fa = runtime.add_false().unwrap();
         runtime.push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_jump_point(3).unwrap();
         runtime.set_instruction_cursor(1).unwrap();
@@ -241,9 +241,9 @@ mod tests {
 
         let ta = runtime.add_true().unwrap();
         runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_jump_point(3).unwrap();
         runtime.set_instruction_cursor(1).unwrap();
@@ -262,9 +262,9 @@ mod tests {
 
         let ua = runtime.add_unit().unwrap();
         let i1 = runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_jump_point(i2).unwrap();
         runtime.set_instruction_cursor(i1).unwrap();
@@ -283,9 +283,9 @@ mod tests {
 
         let fa = runtime.add_false().unwrap();
         let i1 = runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
-        runtime.push_instruction(Instruction::PerformAddition, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
+        runtime.push_instruction(Instruction::Add, None).unwrap();
 
         runtime.push_jump_point(i2).unwrap();
         runtime.set_instruction_cursor(i1).unwrap();

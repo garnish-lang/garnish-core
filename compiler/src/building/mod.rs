@@ -172,7 +172,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
             data.push_instruction(Instruction::EmptyApply, None)?;
         }
         Definition::Addition => {
-            data.push_instruction(Instruction::PerformAddition, None)?;
+            data.push_instruction(Instruction::Add, None)?;
         }
         Definition::Equality => {
             data.push_instruction(Instruction::EqualityComparison, None)?;
@@ -887,7 +887,7 @@ mod operations {
             vec![
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(4)),
-                (Instruction::PerformAddition, None),
+                (Instruction::Add, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
@@ -906,7 +906,7 @@ mod operations {
             vec![
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(3)),
-                (Instruction::PerformAddition, None),
+                (Instruction::Add, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(IntegerData::from(5)),
@@ -993,11 +993,11 @@ mod operations {
             vec![
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(4)),
-                (Instruction::PerformAddition, None),
+                (Instruction::Add, None),
                 (Instruction::Put, Some(5)),
-                (Instruction::PerformAddition, None),
+                (Instruction::Add, None),
                 (Instruction::Put, Some(6)),
-                (Instruction::PerformAddition, None),
+                (Instruction::Add, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default()
@@ -1527,7 +1527,7 @@ mod groups {
             vec![
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(4)),
-                (Instruction::PerformAddition, None),
+                (Instruction::Add, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
@@ -1555,7 +1555,7 @@ mod side_effects {
                 (Instruction::StartSideEffect, None),
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(4)),
-                (Instruction::PerformAddition, None),
+                (Instruction::Add, None),
                 (Instruction::EndSideEffect, None),
                 (Instruction::EndExpression, None),
             ],
@@ -1579,7 +1579,7 @@ mod side_effects {
                 (Instruction::StartSideEffect, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::Put, Some(5)),
-                (Instruction::PerformAddition, None),
+                (Instruction::Add, None),
                 (Instruction::EndSideEffect, None),
                 (Instruction::EndExpression, None),
             ],
@@ -1605,7 +1605,7 @@ mod side_effects {
                 (Instruction::StartSideEffect, None),
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(4)),
-                (Instruction::PerformAddition, None),
+                (Instruction::Add, None),
                 (Instruction::EndSideEffect, None),
                 (Instruction::Put, Some(5)),
                 (Instruction::EndExpression, None),
@@ -1636,7 +1636,7 @@ mod side_effects {
                 (Instruction::StartSideEffect, None),
                 (Instruction::Put, Some(5)),
                 (Instruction::Put, Some(6)),
-                (Instruction::PerformAddition, None),
+                (Instruction::Add, None),
                 (Instruction::EndSideEffect, None),
                 (Instruction::MakeList, Some(2)),
                 (Instruction::EndExpression, None),
@@ -1666,7 +1666,7 @@ mod side_effects {
                 (Instruction::StartSideEffect, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::Put, Some(5)),
-                (Instruction::PerformAddition, None),
+                (Instruction::Add, None),
                 (Instruction::EndSideEffect, None),
                 (Instruction::MakeList, Some(1)),
                 (Instruction::EndExpression, None),
@@ -1700,7 +1700,7 @@ mod nested_expressions {
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::Put, Some(5)),
-                (Instruction::PerformAddition, None),
+                (Instruction::Add, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default()
