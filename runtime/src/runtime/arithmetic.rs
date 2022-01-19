@@ -3,61 +3,11 @@ use log::trace;
 use crate::{next_two_raw_ref, push_integer, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError};
 
 pub fn add<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    let (right_addr, left_addr) = next_two_raw_ref(this)?;
-
-    let types = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
-    trace!(
-        "Attempting addition between {:?} at {:?} and {:?} at {:?}",
-        types.0,
-        left_addr,
-        types.1,
-        right_addr
-    );
-
-    match types {
-        (ExpressionDataType::Number, ExpressionDataType::Number) => {
-            let left = this.get_integer(left_addr)?;
-            let right = this.get_integer(right_addr)?;
-
-            match left.add(right) {
-                Some(result) => push_integer(this, result),
-                None => push_unit(this),
-            }
-        }
-        _ => {
-            trace!("Unsupported types pushing unit");
-            push_unit(this)
-        }
-    }
+    perform_op(this, "subtraction", Data::Number::add)
 }
 
 pub fn subtract<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    let (right_addr, left_addr) = next_two_raw_ref(this)?;
-
-    let types = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
-    trace!(
-        "Attempting subtraction between {:?} at {:?} and {:?} at {:?}",
-        types.0,
-        left_addr,
-        types.1,
-        right_addr
-    );
-
-    match types {
-        (ExpressionDataType::Number, ExpressionDataType::Number) => {
-            let left = this.get_integer(left_addr)?;
-            let right = this.get_integer(right_addr)?;
-
-            match left.subtract(right) {
-                Some(result) => push_integer(this, result),
-                None => push_unit(this),
-            }
-        }
-        _ => {
-            trace!("Unsupported types pushing unit");
-            push_unit(this)
-        }
-    }
+    perform_op(this, "subtraction", Data::Number::subtract)
 }
 
 pub fn multiply<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
@@ -86,6 +36,39 @@ pub fn absolute_value<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(
 
 pub fn opposite<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     todo!()
+}
+
+fn perform_op<Data: GarnishLangRuntimeData, Op>(this: &mut Data, op_name: &str, op: Op) -> Result<(), RuntimeError<Data::Error>>
+where
+    Op: FnOnce(Data::Number, Data::Number) -> Option<Data::Number>,
+{
+    let (right_addr, left_addr) = next_two_raw_ref(this)?;
+
+    let types = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
+    trace!(
+        "Attempting {:?} between {:?} at {:?} and {:?} at {:?}",
+        op_name,
+        types.0,
+        left_addr,
+        types.1,
+        right_addr
+    );
+
+    match types {
+        (ExpressionDataType::Number, ExpressionDataType::Number) => {
+            let left = this.get_integer(left_addr)?;
+            let right = this.get_integer(right_addr)?;
+
+            match op(left, right) {
+                Some(result) => push_integer(this, result),
+                None => push_unit(this),
+            }
+        }
+        _ => {
+            trace!("Unsupported types pushing unit");
+            push_unit(this)
+        }
+    }
 }
 
 #[cfg(test)]
