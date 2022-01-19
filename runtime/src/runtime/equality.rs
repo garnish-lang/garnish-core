@@ -16,7 +16,9 @@ pub fn not_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), Ru
 }
 
 pub fn type_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    todo!()
+    let (left, right) = next_two_raw_ref(this)?;
+    let equal = this.get_data_type(left)? == this.get_data_type(right)?;
+    push_boolean(this, equal)
 }
 
 fn perform_equality_check<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
@@ -608,6 +610,36 @@ mod general {
         runtime.push_register(d2).unwrap();
 
         runtime.not_equal().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn type_equal_true() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_number(20).unwrap();
+        let d2 = runtime.add_number(10).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_equal().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn type_equal_false() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_number(10).unwrap();
+        let d2 = runtime.add_true().unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
