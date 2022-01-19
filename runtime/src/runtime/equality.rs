@@ -6,6 +6,20 @@ use crate::{get_range, next_two_raw_ref, push_boolean, state_error, ExpressionDa
 use crate::runtime::internals::link_len;
 
 pub(crate) fn equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    let equal = perform_equality_check(this)?;
+    push_boolean(this, equal)
+}
+
+pub fn not_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    let equal = perform_equality_check(this)?;
+    push_boolean(this, !equal)
+}
+
+pub fn type_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    todo!()
+}
+
+fn perform_equality_check<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
     // hope that can get reduced to a constant
     let two = Data::Size::one() + Data::Size::one();
     if this.get_register_len() < two {
@@ -22,23 +36,11 @@ pub(crate) fn equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(),
                 this.pop_register();
             }
 
-            push_boolean(this, false)?;
-
-            return Ok(());
+            return Ok(false);
         }
     }
 
-    push_boolean(this, true)
-}
-
-
-pub fn not_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    todo!()
-}
-
-
-pub fn type_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    todo!()
+    Ok(true)
 }
 
 fn data_equal<Data: GarnishLangRuntimeData>(
@@ -548,7 +550,7 @@ where
 }
 
 #[cfg(test)]
-mod tests {
+mod general {
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
 
     #[test]
@@ -557,9 +559,6 @@ mod tests {
 
         runtime.add_number(10).unwrap();
         runtime.add_number(10).unwrap();
-
-        runtime.push_instruction(Instruction::Equal, None).unwrap();
-
         let result = runtime.equal();
 
         assert!(result.is_err());
@@ -572,8 +571,6 @@ mod tests {
         let int1 = runtime.add_number(10).unwrap();
         let exp1 = runtime.add_expression(10).unwrap();
 
-        runtime.push_instruction(Instruction::Equal, None).unwrap();
-
         runtime.push_register(int1).unwrap();
         runtime.push_register(exp1).unwrap();
 
@@ -583,6 +580,36 @@ mod tests {
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
             ExpressionDataType::False
         );
+    }
+
+    #[test]
+    fn not_equal_true() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_number(10).unwrap();
+        let d2 = runtime.add_number(20).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.not_equal().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn not_equal_false() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_number(10).unwrap();
+        let d2 = runtime.add_number(10).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.not_equal().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
 }
 
