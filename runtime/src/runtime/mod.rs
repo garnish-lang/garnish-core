@@ -11,6 +11,7 @@ mod internals;
 mod jumps;
 mod link;
 mod list;
+mod logical;
 mod pair;
 mod put;
 mod range;
@@ -29,10 +30,12 @@ use log::trace;
 pub(crate) use utilities::*;
 
 use crate::runtime::arithmetic::{absolute_value, add, divide, integer_divide, multiply, opposite, power, remainder, subtract};
+use crate::runtime::bitwise::{bitwise_and, bitwise_not, bitwise_or, bitwise_shift_left, bitwise_shift_right, bitwise_xor};
 use crate::runtime::casting::type_cast;
 use crate::runtime::internals::{access_left_internal, access_length_internal, access_right_internal};
 use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
 use crate::runtime::link::{append_link, prepend_link};
+use crate::runtime::logical::{and, not, or, xor};
 use crate::runtime::pair::make_pair;
 use crate::runtime::put::{push_input, push_result, put, put_input};
 use crate::runtime::range::{make_end_exclusive_range, make_exclusive_range, make_range, make_start_exclusive_range};
@@ -43,7 +46,6 @@ use instruction::*;
 use list::*;
 use result::*;
 use sideeffect::*;
-use crate::runtime::bitwise::{bitwise_and, bitwise_not, bitwise_or, bitwise_shift_left, bitwise_shift_right, bitwise_xor};
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
@@ -71,6 +73,11 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn bitwise_xor(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn bitwise_shift_left(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn bitwise_shift_right(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+
+    fn and(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn or(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn xor(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn not(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
     fn equality_comparison(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
@@ -139,12 +146,16 @@ where
             Instruction::Opposite => self.opposite()?,
             Instruction::AbsoluteValue => self.absolute_value()?,
             Instruction::Remainder => self.remainder()?,
-            Instruction::BitwiseNot=> self.bitwise_not()?,
-            Instruction::BitwiseAnd=> self.bitwise_not()?,
-            Instruction::BitwiseOr=> self.bitwise_not()?,
-            Instruction::BitwiseXor=> self.bitwise_not()?,
-            Instruction::BitwiseShiftLeft=> self.bitwise_not()?,
-            Instruction::BitwiseShiftRight=> self.bitwise_not()?,
+            Instruction::BitwiseNot => self.bitwise_not()?,
+            Instruction::BitwiseAnd => self.bitwise_not()?,
+            Instruction::BitwiseOr => self.bitwise_not()?,
+            Instruction::BitwiseXor => self.bitwise_not()?,
+            Instruction::BitwiseShiftLeft => self.bitwise_not()?,
+            Instruction::BitwiseShiftRight => self.bitwise_not()?,
+            Instruction::And => self.and()?,
+            Instruction::Or => self.or()?,
+            Instruction::Xor => self.xor()?,
+            Instruction::Not => self.not()?,
             Instruction::PutValue => self.put_value()?,
             Instruction::PushValue => self.push_value()?,
             Instruction::UpdateValue => self.update_value()?,
@@ -306,6 +317,26 @@ where
 
     fn bitwise_shift_right(&mut self) -> Result<(), RuntimeError<Data::Error>> {
         bitwise_shift_right(self)
+    }
+
+    //
+    // Logical
+    //
+
+    fn and(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        and(self)
+    }
+
+    fn or(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        or(self)
+    }
+
+    fn xor(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        xor(self)
+    }
+
+    fn not(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        not(self)
     }
 
     //
