@@ -1,10 +1,13 @@
 mod apply;
 mod arithmetic;
+mod bitwise;
+mod casting;
 mod comparisons;
 mod context;
 mod data;
 mod error;
 pub mod instruction;
+mod internals;
 mod jumps;
 mod link;
 mod list;
@@ -12,8 +15,6 @@ mod pair;
 mod put;
 mod range;
 mod resolve;
-mod internals;
-mod casting;
 pub mod result;
 mod sideeffect;
 pub mod types;
@@ -22,13 +23,16 @@ mod utilities;
 pub use utilities::{iterate_link, link_count};
 
 pub use context::{EmptyContext, GarnishLangRuntimeContext};
-pub use data::{GarnishLangRuntimeData, TypeConstants, GarnishNumber};
+pub use data::{GarnishLangRuntimeData, GarnishNumber, TypeConstants};
 pub use error::*;
 use log::trace;
 pub(crate) use utilities::*;
 
-use crate::runtime::arithmetic::{absolute_value, divide, integer_divide, multiply, opposite, add, power, remainder, subtract};
+use crate::runtime::arithmetic::{absolute_value, add, divide, integer_divide, multiply, opposite, power, remainder, subtract};
+use crate::runtime::casting::type_cast;
+use crate::runtime::internals::{access_left_internal, access_length_internal, access_right_internal};
 use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
+use crate::runtime::link::{append_link, prepend_link};
 use crate::runtime::pair::make_pair;
 use crate::runtime::put::{push_input, push_result, put, put_input};
 use crate::runtime::range::{make_end_exclusive_range, make_exclusive_range, make_range, make_start_exclusive_range};
@@ -39,9 +43,7 @@ use instruction::*;
 use list::*;
 use result::*;
 use sideeffect::*;
-use crate::runtime::casting::type_cast;
-use crate::runtime::internals::{access_left_internal, access_length_internal, access_right_internal};
-use crate::runtime::link::{append_link, prepend_link};
+use crate::runtime::bitwise::{bitwise_and, bitwise_not, bitwise_or, bitwise_shift_left, bitwise_shift_right, bitwise_xor};
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
@@ -62,6 +64,13 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn remainder(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn absolute_value(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn opposite(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+
+    fn bitwise_not(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn bitwise_and(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn bitwise_or(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn bitwise_xor(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn bitwise_shift_left(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn bitwise_shift_right(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
     fn equality_comparison(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
@@ -123,13 +132,19 @@ where
 
         match instruction {
             Instruction::Add => self.add()?,
-            Instruction::Subtract => todo!(),
-            Instruction::Multiply => todo!(),
-            Instruction::Divide => todo!(),
-            Instruction::IntegerDivide => todo!(),
-            Instruction::Opposite => todo!(),
-            Instruction::AbsoluteValue => todo!(),
-            Instruction::Remainder => todo!(),
+            Instruction::Subtract => self.subtract()?,
+            Instruction::Multiply => self.multiply()?,
+            Instruction::Divide => self.divide()?,
+            Instruction::IntegerDivide => self.integer_divide()?,
+            Instruction::Opposite => self.opposite()?,
+            Instruction::AbsoluteValue => self.absolute_value()?,
+            Instruction::Remainder => self.remainder()?,
+            Instruction::BitwiseNot=> self.bitwise_not()?,
+            Instruction::BitwiseAnd=> self.bitwise_not()?,
+            Instruction::BitwiseOr=> self.bitwise_not()?,
+            Instruction::BitwiseXor=> self.bitwise_not()?,
+            Instruction::BitwiseShiftLeft=> self.bitwise_not()?,
+            Instruction::BitwiseShiftRight=> self.bitwise_not()?,
             Instruction::PutValue => self.put_value()?,
             Instruction::PushValue => self.push_value()?,
             Instruction::UpdateValue => self.update_value()?,
@@ -263,6 +278,34 @@ where
 
     fn opposite(&mut self) -> Result<(), RuntimeError<Data::Error>> {
         opposite(self)
+    }
+
+    //
+    // Bitwise
+    //
+
+    fn bitwise_not(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        bitwise_not(self)
+    }
+
+    fn bitwise_and(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        bitwise_and(self)
+    }
+
+    fn bitwise_or(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        bitwise_or(self)
+    }
+
+    fn bitwise_xor(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        bitwise_xor(self)
+    }
+
+    fn bitwise_shift_left(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        bitwise_shift_left(self)
+    }
+
+    fn bitwise_shift_right(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        bitwise_shift_right(self)
     }
 
     //
@@ -771,7 +814,7 @@ pub mod testing_utilites {
             // Append:  10 -> 20 -> 30 | 30 is the current value
             // Prepend: 10 <- 20 <- 30 | 10 is the current value
             // if not append we make reversed the creation to match ex above
-            let i = if is_append { i } else { count - 1 - i  };
+            let i = if is_append { i } else { count - 1 - i };
 
             // use crate::symbol_value;
             // let sym = format!("val{}", i);
@@ -789,7 +832,7 @@ pub mod testing_utilites {
             // Append:  10 -> 20 -> 30 | 30 is the current value
             // Prepend: 10 <- 20 <- 30 | 10 is the current value
             // if not append we make reversed the creation to match ex above
-            let i = if is_append { i } else { count - 1 - i  };
+            let i = if is_append { i } else { count - 1 - i };
             let v = start + i as i32;
 
             // use crate::symbol_value;
