@@ -10,7 +10,6 @@ use crate::lexing::lexer::*;
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
 pub enum Definition {
     Integer,
-    Float,
     CharList,
     ByteList,
     Identifier,
@@ -53,7 +52,6 @@ pub enum Definition {
 impl Definition {
     pub fn is_value_like(self) -> bool {
         self == Definition::Integer
-            || self == Definition::Float
             || self == Definition::CharList
             || self == Definition::ByteList
             || self == Definition::Identifier
@@ -103,8 +101,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
         TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
         TokenType::Symbol => (Definition::Symbol, SecondaryDefinition::Value),
-        TokenType::Integer => (Definition::Integer, SecondaryDefinition::Value),
-        TokenType::Float => (Definition::Float, SecondaryDefinition::Value),
+        TokenType::Number => (Definition::Integer, SecondaryDefinition::Value),
         TokenType::Value => (Definition::Value, SecondaryDefinition::Value),
         TokenType::True => (Definition::True, SecondaryDefinition::Value),
         TokenType::False => (Definition::False, SecondaryDefinition::Value),
@@ -237,7 +234,6 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::SideEffect, 5);
 
     map.insert(Definition::Integer, 10);
-    map.insert(Definition::Float, 10);
     map.insert(Definition::CharList, 10);
     map.insert(Definition::ByteList, 10);
     map.insert(Definition::Identifier, 10);
@@ -1055,8 +1051,8 @@ mod composition_errors {
     #[test]
     fn double_value_token() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -1079,7 +1075,7 @@ mod composition_errors {
     #[test]
     fn value_identifier_token() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
         ];
 
@@ -1091,7 +1087,7 @@ mod composition_errors {
     #[test]
     fn value_start_group() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
@@ -1119,7 +1115,7 @@ mod composition_errors {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -1144,7 +1140,7 @@ mod composition_errors {
     fn identifier_value_token() {
         let tokens = vec![
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -1169,7 +1165,7 @@ mod composition_errors {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
@@ -1182,7 +1178,7 @@ mod composition_errors {
     fn binary_end_group() {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
@@ -1663,7 +1659,7 @@ mod composition_errors {
         let tokens = vec![
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
@@ -1689,7 +1685,7 @@ mod composition_errors {
     fn binary_end_side_effect() {
         let tokens = vec![
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
@@ -1715,11 +1711,11 @@ mod composition_errors {
     #[test]
     fn side_effect_surrounded_by_value() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -1730,13 +1726,13 @@ mod composition_errors {
     #[test]
     fn side_effect_surrounded_by_binary() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens);
@@ -1800,7 +1796,6 @@ mod tests {
     fn value_like_definitions() {
         let value_like = [
             Definition::Integer,
-            Definition::Float,
             Definition::CharList,
             Definition::ByteList,
             Definition::Identifier,
@@ -1851,7 +1846,7 @@ mod tests {
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
@@ -1883,20 +1878,11 @@ mod tests {
 
     #[test]
     fn single_number() {
-        let tokens = vec![LexerToken::new("5".to_string(), TokenType::Integer, 0, 0)];
+        let tokens = vec![LexerToken::new("5".to_string(), TokenType::Number, 0, 0)];
 
         let result = parse(tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::Integer, None, None, None)]);
-    }
-
-    #[test]
-    fn single_float() {
-        let tokens = vec![LexerToken::new("3.14".to_string(), TokenType::Float, 0, 0)];
-
-        let result = parse(tokens).unwrap();
-
-        assert_result(&result, 0, &[(0, Definition::Float, None, None, None)]);
     }
 
     #[test]
@@ -1974,9 +1960,9 @@ mod tests {
     #[test]
     fn addition() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -1995,9 +1981,9 @@ mod tests {
     #[test]
     fn equality() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2016,9 +2002,9 @@ mod tests {
     #[test]
     fn range() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("..".to_string(), TokenType::Range, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2037,9 +2023,9 @@ mod tests {
     #[test]
     fn start_exclusive_range() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(">..".to_string(), TokenType::StartExclusiveRange, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2058,9 +2044,9 @@ mod tests {
     #[test]
     fn end_exclusive_range() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("..<".to_string(), TokenType::EndExclusiveRange, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2079,9 +2065,9 @@ mod tests {
     #[test]
     fn exclusive_range() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(">..<".to_string(), TokenType::ExclusiveRange, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2100,9 +2086,9 @@ mod tests {
     #[test]
     fn apply() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("~".to_string(), TokenType::Apply, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2121,9 +2107,9 @@ mod tests {
     #[test]
     fn apply_to() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("~>".to_string(), TokenType::ApplyTo, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2142,9 +2128,9 @@ mod tests {
     #[test]
     fn reapply() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("^~".to_string(), TokenType::Reapply, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2163,9 +2149,9 @@ mod tests {
     #[test]
     fn pair() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("=".to_string(), TokenType::Pair, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2307,7 +2293,7 @@ mod tests {
     fn absolute_value() {
         let tokens = vec![
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2345,9 +2331,9 @@ mod tests {
     fn absolute_value_then_addition() {
         let tokens = vec![
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2367,10 +2353,10 @@ mod tests {
     #[test]
     fn addition_then_absolute_value() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2393,7 +2379,7 @@ mod tests {
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2416,7 +2402,7 @@ mod tests {
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
-            LexerToken::new("value".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("value".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
@@ -2442,13 +2428,13 @@ mod tests {
     #[test]
     fn three_addition_operations() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2471,11 +2457,11 @@ mod tests {
     #[test]
     fn binary_operations_different_priority() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0), // 4
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 4
         ];
 
         // 5 == 5 + 5
@@ -2502,21 +2488,21 @@ mod tests {
     #[test]
     fn multiple_binary_operations() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0), // 4
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 4
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0), // 8
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 8
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0), // 12
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 12
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         // 5 == 5 + 5 == 5 + 5 == 5 + 5 == 5
@@ -2557,35 +2543,35 @@ mod tests {
     fn multiple_binary_operations_with_spaces() {
         let tokens = vec![
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0), // 4
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 4
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0), // 8
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 8
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0), // 12
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0), // 12
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("==".to_string(), TokenType::Equality, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
         ];
 
@@ -2695,7 +2681,7 @@ mod tests {
     #[test]
     fn suffix_unary_with_binary_operation_and_access() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
             LexerToken::new(".".to_string(), TokenType::Period, 0, 0),
@@ -2729,9 +2715,9 @@ mod links {
     #[test]
     fn append_link() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("->".to_string(), TokenType::AppendLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2750,9 +2736,9 @@ mod links {
     #[test]
     fn prepend_link() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2771,17 +2757,17 @@ mod links {
     #[test]
     fn prepend_and_append_links() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("->".to_string(), TokenType::AppendLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("->".to_string(), TokenType::AppendLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2815,9 +2801,9 @@ mod lists {
     #[test]
     fn two_item_comma_list() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2865,7 +2851,7 @@ mod lists {
     #[test]
     fn single_item_left() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
         ];
 
@@ -2884,10 +2870,10 @@ mod lists {
     #[test]
     fn single_item_left_subexpression() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2908,7 +2894,7 @@ mod lists {
     fn single_item_left_in_group() {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
@@ -2930,7 +2916,7 @@ mod lists {
     fn single_item_right() {
         let tokens = vec![
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2948,10 +2934,10 @@ mod lists {
     #[test]
     fn subexpression_single_item_right() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -2973,7 +2959,7 @@ mod lists {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
@@ -2993,17 +2979,17 @@ mod lists {
     #[test]
     fn comma_list_nested_in_space_list() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3032,9 +3018,9 @@ mod lists {
     #[test]
     fn two_item_space_list() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3053,7 +3039,7 @@ mod lists {
     #[test]
     fn space_list_all_value_like() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
@@ -3090,17 +3076,17 @@ mod lists {
     #[test]
     fn space_list_with_operations() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("20".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("20".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3131,7 +3117,7 @@ mod side_effects {
     fn alone() {
         let tokens = vec![
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
@@ -3150,9 +3136,9 @@ mod side_effects {
     #[test]
     fn after_value() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
@@ -3173,9 +3159,9 @@ mod side_effects {
     fn before_value() {
         let tokens = vec![
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3194,12 +3180,12 @@ mod side_effects {
     #[test]
     fn between_binary() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3220,12 +3206,12 @@ mod side_effects {
     #[test]
     fn between_space_list() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3246,10 +3232,10 @@ mod side_effects {
     #[test]
     fn after_value_space_is_not_list() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
@@ -3269,11 +3255,11 @@ mod side_effects {
     #[test]
     fn after_binary() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
@@ -3296,11 +3282,11 @@ mod side_effects {
     fn before_binary() {
         let tokens = vec![
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3323,9 +3309,9 @@ mod side_effects {
         let tokens = vec![
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3381,7 +3367,7 @@ mod groups {
     fn single_value() {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
@@ -3397,7 +3383,7 @@ mod groups {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
@@ -3412,10 +3398,10 @@ mod groups {
     #[test]
     fn in_list() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
@@ -3434,11 +3420,11 @@ mod groups {
     #[test]
     fn in_list_with_spaces() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
@@ -3458,12 +3444,12 @@ mod groups {
     #[test]
     fn in_list_with_list() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("15".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("15".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
@@ -3485,15 +3471,15 @@ mod groups {
     fn list_of_groups() {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("15".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("15".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("15".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("15".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
@@ -3518,9 +3504,9 @@ mod groups {
     fn single_operation() {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
@@ -3539,15 +3525,15 @@ mod groups {
     #[test]
     fn single_operation_with_operations_outside() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         assert_group_nested_results(
@@ -3570,9 +3556,9 @@ mod groups {
     fn single_operation_with_unary_suffix_operations_outside() {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
         ];
@@ -3595,9 +3581,9 @@ mod groups {
         let tokens = vec![
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
@@ -3618,21 +3604,21 @@ mod groups {
     fn multiple_nested_groups() {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
@@ -3667,9 +3653,9 @@ mod groups {
     fn subexpression_in_group_makes_list() {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
@@ -3690,14 +3676,14 @@ mod groups {
     #[test]
     fn multiple_subexpression_in_group_makes_list() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
@@ -3721,9 +3707,9 @@ mod groups {
     fn subexpression_in_nested_expression_is_subexpression() {
         let tokens = vec![
             LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
         ];
 
@@ -3744,14 +3730,14 @@ mod groups {
     #[test]
     fn multiple_subexpression_in_nested_expression_is_subexpression() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
         ];
 
@@ -3781,9 +3767,9 @@ mod conditionals {
     #[test]
     fn conditional_if() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3802,9 +3788,9 @@ mod conditionals {
     #[test]
     fn conditional_else() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("!>".to_string(), TokenType::JumpIfFalse, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3823,13 +3809,13 @@ mod conditionals {
     #[test]
     fn conditional_chain_of_two() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3852,17 +3838,17 @@ mod conditionals {
     #[test]
     fn conditional_chain_of_three() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3891,17 +3877,17 @@ mod conditionals {
     #[test]
     fn conditional_chain_with_both_conditional_definitions() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("!>".to_string(), TokenType::JumpIfFalse, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("!>".to_string(), TokenType::JumpIfFalse, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3930,11 +3916,11 @@ mod conditionals {
     #[test]
     fn conditional_chain_last_conditional_having_no_condition() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3955,11 +3941,11 @@ mod conditionals {
     #[test]
     fn reapply_with_else() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("^~".to_string(), TokenType::Reapply, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("|>".to_string(), TokenType::ElseJump, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -3980,15 +3966,15 @@ mod conditionals {
     #[test]
     fn conditional_ends_with_group() {
         let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
             LexerToken::new("?>".to_string(), TokenType::JumpIfTrue, 0, 0),
-            LexerToken::new("10".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -4021,7 +4007,7 @@ mod annotations {
         let tokens = vec![
             LexerToken::new("@value".to_string(), TokenType::Annotation, 0, 0),
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();
@@ -4034,7 +4020,7 @@ mod annotations {
         let tokens = vec![
             LexerToken::new("@@ Some line annotation".to_string(), TokenType::Annotation, 0, 0),
             LexerToken::new("\n".to_string(), TokenType::Whitespace, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Integer, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
         let result = parse(tokens).unwrap();

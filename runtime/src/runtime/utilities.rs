@@ -1,6 +1,6 @@
 // use log::trace;
 
-use crate::{GarnishLangRuntimeData, RuntimeError, state_error, ExpressionDataType, TypeConstants};
+use crate::{GarnishLangRuntimeData, RuntimeError, state_error, ExpressionDataType, TypeConstants, GarnishNumber, OrNumberError};
 use crate::runtime::list::iterate_link_internal;
 use crate::runtime::range::range_len;
 
@@ -18,14 +18,14 @@ pub(crate) fn next_two_raw_ref<Data: GarnishLangRuntimeData>(this: &mut Data) ->
     Ok((first_ref, second_ref))
 }
 
-pub(crate) fn get_range<Data: GarnishLangRuntimeData>(this: &mut Data, addr: Data::Size) -> Result<(Data::Integer, Data::Integer, Data::Integer), RuntimeError<Data::Error>> {
+pub(crate) fn get_range<Data: GarnishLangRuntimeData>(this: &mut Data, addr: Data::Size) -> Result<(Data::Number, Data::Number, Data::Number), RuntimeError<Data::Error>> {
     let (start, end) = this.get_range(addr)?;
     let (start, end) = match (this.get_data_type(start)?, this.get_data_type(end)?) {
-        (ExpressionDataType::Integer, ExpressionDataType::Integer) => (this.get_integer(start)?, this.get_integer(end)?),
+        (ExpressionDataType::Number, ExpressionDataType::Number) => (this.get_integer(start)?, this.get_integer(end)?),
         (s, e) => state_error(format!("Invalid range values {:?} {:?}", s, e))?,
     };
 
-    Ok((start, end, range_len::<Data>(start, end)))
+    Ok((start, end, range_len::<Data>(start, end)?))
 }
 
 // push utilities
@@ -35,7 +35,7 @@ pub(crate) fn push_unit<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
     Ok(())
 }
 
-pub(crate) fn push_integer<Data: GarnishLangRuntimeData>(this: &mut Data, value: Data::Integer) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn push_integer<Data: GarnishLangRuntimeData>(this: &mut Data, value: Data::Number) -> Result<(), RuntimeError<Data::Error>> {
     this.add_integer(value).and_then(|v| this.push_register(v))?;
     Ok(())
 }
@@ -64,18 +64,18 @@ pub fn iterate_link<Data: GarnishLangRuntimeData, Callback>(
     func: Callback,
 ) -> Result<(), RuntimeError<Data::Error>>
     where
-        Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> Result<bool, RuntimeError<Data::Error>>,
+        Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
 {
     iterate_link_internal(this, link, func)
 }
 
 pub fn link_count<Data: GarnishLangRuntimeData>(
     this: &mut Data,
-    link: Data::Size) -> Result<Data::Integer, RuntimeError<Data::Error>> {
-    let mut count = Data::Integer::zero();
+    link: Data::Size) -> Result<Data::Number, RuntimeError<Data::Error>> {
+    let mut count = Data::Number::zero();
 
     iterate_link_internal(this, link, |_, _, _| {
-        count += Data::Integer::one();
+        count = count.increment().or_num_err()?;
         Ok(false)
     })?;
 

@@ -52,11 +52,11 @@ impl DataCoersion for AnyData {
     }
 
     fn as_integer(&self) -> DataCoersionResult<IntegerData> {
-        downcast_result(self, ExpressionDataType::Integer)
+        downcast_result(self, ExpressionDataType::Number)
     }
 
     fn as_float(&self) -> DataCoersionResult<FloatData> {
-        downcast_result(self, ExpressionDataType::Float)
+        downcast_result(self, ExpressionDataType::Number)
     }
 
     fn as_char(&self) -> DataCoersionResult<CharData> {

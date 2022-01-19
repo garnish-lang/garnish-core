@@ -22,7 +22,7 @@ mod utilities;
 pub use utilities::{iterate_link, link_count};
 
 pub use context::{EmptyContext, GarnishLangRuntimeContext};
-pub use data::{GarnishLangRuntimeData, TypeConstants};
+pub use data::{GarnishLangRuntimeData, TypeConstants, GarnishNumber};
 pub use error::*;
 use log::trace;
 pub(crate) use utilities::*;

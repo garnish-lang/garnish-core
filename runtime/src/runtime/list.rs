@@ -1,5 +1,5 @@
 use crate::runtime::range::range_len;
-use crate::{get_range, next_ref, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
+use crate::{get_range, next_ref, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, GarnishNumber, OrNumberError};
 
 pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
     if len > this.get_register_len() {
@@ -63,7 +63,7 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
     left: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_data_type(right)? {
-        ExpressionDataType::Integer => {
+        ExpressionDataType::Number => {
             let i = this.get_integer(right)?;
             access_with_integer(this, i, left)
         }
@@ -77,7 +77,7 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
 
 pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
     this: &mut Data,
-    index: Data::Integer,
+    index: Data::Number,
     value: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_data_type(value)? {
@@ -87,15 +87,15 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
         ExpressionDataType::Range => {
             let (start, end) = this.get_range(value)?;
             match (this.get_data_type(start)?, this.get_data_type(end)?) {
-                (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+                (ExpressionDataType::Number, ExpressionDataType::Number) => {
                     let start_int = this.get_integer(start)?;
                     let end_int = this.get_integer(end)?;
-                    let len = range_len::<Data>(start_int, end_int);
+                    let len = range_len::<Data>(start_int, end_int)?;
 
                     if index >= len {
                         return Ok(None);
                     } else {
-                        let result = start_int + index;
+                        let result = start_int.add(index).or_num_err()?;
                         let addr = this.add_integer(result)?;
                         Ok(Some(addr))
                     }
@@ -106,7 +106,7 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
         ExpressionDataType::Slice => {
                 let (value, range) = this.get_slice(value)?;
                 let (start, _, _) = get_range(this, range)?;
-                let adjusted_index = start + index;
+                let adjusted_index = start.add(index).or_num_err()?;
 
                 match this.get_data_type(value)? {
                     ExpressionDataType::Link => index_link(this, value, adjusted_index),
@@ -124,9 +124,9 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
 fn index_list<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     list: Data::Size,
-    index: Data::Integer,
+    index: Data::Number,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    if index < Data::Integer::zero() {
+    if index < Data::Number::zero() {
         Ok(None)
     } else {
         if index >= Data::size_to_integer(this.get_list_len(list)?) {
@@ -140,9 +140,9 @@ fn index_list<Data: GarnishLangRuntimeData>(
 fn index_char_list<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     list: Data::Size,
-    index: Data::Integer,
+    index: Data::Number,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    if index < Data::Integer::zero() {
+    if index < Data::Number::zero() {
         Ok(None)
     } else {
         if index >= Data::size_to_integer(this.get_char_list_len(list)?) {
@@ -158,9 +158,9 @@ fn index_char_list<Data: GarnishLangRuntimeData>(
 fn index_byte_list<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     list: Data::Size,
-    index: Data::Integer,
+    index: Data::Number,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    if index < Data::Integer::zero() {
+    if index < Data::Number::zero() {
         Ok(None)
     } else {
         if index >= Data::size_to_integer(this.get_byte_list_len(list)?) {
@@ -179,9 +179,9 @@ pub(crate) fn iterate_link_internal<Data: GarnishLangRuntimeData, Callback>(
     mut func: Callback,
 ) -> Result<(), RuntimeError<Data::Error>>
 where
-    Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> Result<bool, RuntimeError<Data::Error>>,
+    Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
 {
-    let mut current_index = Data::Integer::zero();
+    let mut current_index = Data::Number::zero();
     // keep track of starting point to any pushed values later
     let start_register = this.get_register_len();
 
@@ -219,7 +219,7 @@ where
                     if func(this, r, current_index)? {
                         break;
                     } else {
-                        current_index += Data::Integer::one();
+                        current_index = current_index.increment().or_num_err()?;
                     }
                 }
             },
@@ -239,9 +239,9 @@ pub(crate) fn iterate_link_internal_rev<Data: GarnishLangRuntimeData, Callback>(
     mut func: Callback,
 ) -> Result<(), RuntimeError<Data::Error>>
     where
-        Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> Result<bool, RuntimeError<Data::Error>>,
+        Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
 {
-    let mut current_index = Data::Integer::zero();
+    let mut current_index = Data::Number::zero();
     // keep track of starting point to any pushed values later
     let start_register = this.get_register_len();
 
@@ -279,7 +279,7 @@ pub(crate) fn iterate_link_internal_rev<Data: GarnishLangRuntimeData, Callback>(
                     if func(this, r, current_index)? {
                         break;
                     } else {
-                        current_index += Data::Integer::one();
+                        current_index = current_index.increment().or_num_err()?;
                     }
                 }
             },
@@ -296,7 +296,7 @@ pub(crate) fn iterate_link_internal_rev<Data: GarnishLangRuntimeData, Callback>(
 pub(crate) fn index_link<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     link: Data::Size,
-    index: Data::Integer,
+    index: Data::Number,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let mut item: Option<Data::Size> = None;
     iterate_link_internal(this, link, |_runtime, item_addr, current_index| {
@@ -348,7 +348,7 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                             _ => (),
                         }
 
-                        i += Data::Integer::one();
+                        i = i.increment().or_num_err()?;
                     }
 
                     Ok(item)
@@ -356,21 +356,21 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
-        ExpressionDataType::Link => sym_access_links_slices(this, Data::Integer::zero(), value, sym, Data::Integer::max()),
+        ExpressionDataType::Link => sym_access_links_slices(this, Data::Number::zero(), value, sym, Data::Number::max()),
         _ => Ok(None),
     }
 }
 
 fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
     this: &mut Data,
-    start_count: Data::Integer,
+    start_count: Data::Number,
     start_value: Data::Size,
     sym: Data::Symbol,
-    limit: Data::Integer,
+    limit: Data::Number,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let mut item: Option<Data::Size> = None;
     let mut skip = start_count;
-    let mut count = Data::Integer::zero();
+    let mut count = Data::Number::zero();
     // keep track of starting point to any pushed values later
     let start_register = this.get_register_len();
 
@@ -408,8 +408,8 @@ fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
                 }
                 ExpressionDataType::Pair => {
                     // skip values
-                    if skip > Data::Integer::zero() {
-                        skip -= Data::Integer::one();
+                    if skip > Data::Number::zero() {
+                        skip = skip.decrement().or_num_err()?;
                         continue;
                     }
 
@@ -422,24 +422,24 @@ fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
                                 item = Some(right);
                                 break;
                             } else {
-                                count += Data::Integer::one();
+                                count = count.increment().or_num_err()?;
                             }
                         }
                         // not an associations, continue on
                         _ => {
-                            count += Data::Integer::one();
+                            count = count.increment().or_num_err()?;
                         }
                     }
                 }
                 // nothing to do for any other values
                 _ => {
                     // skip values
-                    if skip > Data::Integer::zero() {
-                        skip -= Data::Integer::one();
+                    if skip > Data::Number::zero() {
+                        skip = skip.decrement().or_num_err()?;
                         continue;
                     }
 
-                    count += Data::Integer::one();
+                    count = count.increment().or_num_err()?;
                 }
             },
         }

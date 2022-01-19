@@ -6,7 +6,7 @@ use std::{collections::HashMap, hash::Hasher};
 
 use crate::{
     symbol_value, AnyData, ByteData, ByteListData, CharData, CharListData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType,
-    ExternalData, FloatData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction,
+    ExternalData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction,
     InstructionData, IntegerData, LinkData, ListData, PairData, RangeData, RuntimeError, SimpleData, SimpleDataList, SliceData, SymbolData,
 };
 
@@ -167,15 +167,8 @@ impl SimpleRuntimeData {
                 self.add_to_char_list('$')?;
                 self.add_to_char_list('!')?;
             }
-            ExpressionDataType::Integer => {
+            ExpressionDataType::Number => {
                 let x = self.get_integer(from)?;
-                let s = x.to_string();
-                for c in s.chars() {
-                    self.add_to_char_list(c)?;
-                }
-            }
-            ExpressionDataType::Float => {
-                let x = self.get_float(from)?;
                 let s = x.to_string();
                 for c in s.chars() {
                     self.add_to_char_list(c)?;
@@ -352,8 +345,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     type Symbol = u64;
     type Char = char;
     type Byte = u8;
-    type Integer = i32;
-    type Float = f64;
+    type Number = i32;
     type Size = usize;
 
     fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error> {
@@ -364,10 +356,6 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn get_integer(&self, index: usize) -> Result<i32, Self::Error> {
         Ok(self.get(index)?.as_integer()?.value())
-    }
-
-    fn get_float(&self, index: usize) -> Result<f64, Self::Error> {
-        Ok(self.get(index)?.as_float()?.value())
     }
 
     fn get_char(&self, index: Self::Size) -> Result<Self::Char, Self::Error> {
@@ -436,7 +424,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.get(addr)?.as_char_list()?.value().len())
     }
 
-    fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Integer) -> Result<Self::Char, Self::Error> {
+    fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error> {
         match self.get(addr)?.as_char_list()?.value().chars().nth(item_index as usize) {
             None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
             Some(c) => Ok(c),
@@ -447,7 +435,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.get(addr)?.as_byte_list()?.value().len())
     }
 
-    fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Integer) -> Result<Self::Byte, Self::Error> {
+    fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error> {
         match self.get(addr)?.as_byte_list()?.value().get(item_index as usize) {
             None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
             Some(c) => Ok(*c),
@@ -468,10 +456,6 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn add_integer(&mut self, value: i32) -> Result<usize, Self::Error> {
         self.cache_add(IntegerData::from(value))
-    }
-
-    fn add_float(&mut self, value: f64) -> Result<usize, Self::Error> {
-        self.cache_add(FloatData::from(value))
     }
 
     fn add_char(&mut self, value: Self::Char) -> Result<Self::Size, Self::Error> {
@@ -780,33 +764,25 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     // Casting
     //
 
-    fn size_to_integer(from: Self::Size) -> Self::Integer {
-        from as Self::Integer
+    fn size_to_integer(from: Self::Size) -> Self::Number {
+        from as Self::Number
     }
 
-    fn integer_to_float(from: Self::Integer) -> Option<Self::Float> {
-        Some(from as Self::Float)
-    }
-
-    fn integer_to_char(from: Self::Integer) -> Option<Self::Char> {
+    fn integer_to_char(from: Self::Number) -> Option<Self::Char> {
         match (from as u8).try_into() {
             Ok(c) => Some(c),
             Err(_) => None,
         }
     }
 
-    fn integer_to_byte(from: Self::Integer) -> Option<Self::Byte> {
+    fn integer_to_byte(from: Self::Number) -> Option<Self::Byte> {
         match from.try_into() {
             Ok(b) => Some(b),
             Err(_) => None,
         }
     }
 
-    fn float_to_integer(from: Self::Float) -> Option<Self::Integer> {
-        Some(from as Self::Integer)
-    }
-
-    fn char_to_integer(from: Self::Char) -> Option<Self::Integer> {
+    fn char_to_integer(from: Self::Char) -> Option<Self::Number> {
         Some(from as i32)
     }
 
@@ -814,7 +790,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Some(from as u8)
     }
 
-    fn byte_to_integer(from: Self::Byte) -> Option<Self::Integer> {
+    fn byte_to_integer(from: Self::Byte) -> Option<Self::Number> {
         Some(from as i32)
     }
 
@@ -896,7 +872,7 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
         runtime.add_integer(10).unwrap();
 
-        assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Integer);
+        assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Number);
     }
 
     // #[test]
@@ -1008,24 +984,6 @@ mod data_storage {
         assert_eq!(runtime.get_data_len(), 5);
         assert_eq!(runtime.simple_data.get(3).unwrap().as_integer().unwrap().value(), 10);
         assert_eq!(runtime.simple_data.get(4).unwrap().as_integer().unwrap().value(), 20);
-    }
-
-    #[test]
-    fn floats() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let start = runtime.get_data_len();
-        let i1 = runtime.add_float(10.0).unwrap();
-        let i2 = runtime.add_float(20.0).unwrap();
-        let i3 = runtime.add_float(10.0).unwrap();
-
-        assert_eq!(i1, start);
-        assert_eq!(i2, start + 1);
-        assert_eq!(i3, i1);
-
-        assert_eq!(runtime.get_data_len(), 5);
-        assert_eq!(runtime.simple_data.get(3).unwrap().as_float().unwrap().value(), 10.0);
-        assert_eq!(runtime.simple_data.get(4).unwrap().as_float().unwrap().value(), 20.0);
     }
 
     #[test]
@@ -1229,11 +1187,6 @@ mod to_char_list {
     #[test]
     fn integer() {
         assert_to_char_list("10", |runtime| runtime.add_integer(10).unwrap())
-    }
-
-    #[test]
-    fn float() {
-        assert_to_char_list("10.123", |runtime| runtime.add_float(10.123).unwrap())
     }
 
     #[test]

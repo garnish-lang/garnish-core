@@ -11,7 +11,7 @@ pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData>(this: &mut Data
         ExpressionDataType::Range => {
             let (start, _) = this.get_range(r)?;
             match this.get_data_type(start)? {
-                ExpressionDataType::Integer => {
+                ExpressionDataType::Number => {
                     this.push_register(start)?;
                 }
                 _ => push_unit(this)?,
@@ -41,7 +41,7 @@ pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData>(this: &mut Dat
         ExpressionDataType::Range => {
             let (_, end) = this.get_range(r)?;
             match this.get_data_type(end)? {
-                ExpressionDataType::Integer => {
+                ExpressionDataType::Number => {
                     this.push_register(end)?;
                 }
                 _ => push_unit(this)?,
@@ -79,10 +79,10 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
         ExpressionDataType::Range => {
             let (start, end) = this.get_range(r)?;
             match (this.get_data_type(end)?, this.get_data_type(start)?) {
-                (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+                (ExpressionDataType::Number, ExpressionDataType::Number) => {
                     let start_int = this.get_integer(start)?;
                     let end_int = this.get_integer(end)?;
-                    let result = range_len::<Data>(start_int, end_int);
+                    let result = range_len::<Data>(start_int, end_int)?;
 
                     let addr = this.add_integer(result)?;
                     this.push_register(addr)?;
@@ -94,10 +94,10 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
             let (_, range_addr) = this.get_slice(r)?;
             let (start, end) = this.get_range(range_addr)?;
             match (this.get_data_type(start)?, this.get_data_type(end)?) {
-                (ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+                (ExpressionDataType::Number, ExpressionDataType::Number) => {
                     let start = this.get_integer(start)?;
                     let end = this.get_integer(end)?;
-                    let addr = this.add_integer(range_len::<Data>(start, end))?;
+                    let addr = this.add_integer(range_len::<Data>(start, end)?)?;
                     this.push_register(addr)?;
                 }
                 (s, e) => state_error(format!("Non integer values used for range {:?} {:?}", s, e))?,
@@ -114,7 +114,7 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData>(this: &mut Da
     Ok(())
 }
 
-pub(crate) fn link_len<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Integer, RuntimeError<Data::Error>> {
+pub(crate) fn link_len<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Number, RuntimeError<Data::Error>> {
     Ok(Data::size_to_integer(link_len_size(this, addr)?))
 }
 

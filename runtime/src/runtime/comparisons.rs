@@ -2,7 +2,7 @@ use log::trace;
 use std::fmt::Debug;
 
 use crate::runtime::list::index_link;
-use crate::{get_range, next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
+use crate::{get_range, next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, GarnishNumber, OrNumberError};
 use crate::runtime::internals::link_len;
 
 pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
@@ -45,34 +45,11 @@ fn data_equal<Data: GarnishLangRuntimeData>(
         (ExpressionDataType::Symbol, ExpressionDataType::Symbol) => compare(this, left_addr, right_addr, Data::get_symbol)?,
         (ExpressionDataType::Char, ExpressionDataType::Char) => compare(this, left_addr, right_addr, Data::get_char)?,
         (ExpressionDataType::Byte, ExpressionDataType::Byte) => compare(this, left_addr, right_addr, Data::get_byte)?,
-        (ExpressionDataType::Float, ExpressionDataType::Float) => compare(this, left_addr, right_addr, Data::get_float)?,
-        (ExpressionDataType::Integer, ExpressionDataType::Integer) => compare(this, left_addr, right_addr, Data::get_integer)?,
-        (ExpressionDataType::Integer, ExpressionDataType::Float) => {
-            let left = this.get_integer(left_addr)?;
-            let right = this.get_float(right_addr)?;
-
-            match Data::integer_to_float(left) {
-                Some(left) => {
-                    left == right
-                }
-                None => false
-            }
-        }
-        (ExpressionDataType::Float, ExpressionDataType::Integer) => {
-            let left = this.get_float(left_addr)?;
-            let right = this.get_integer(right_addr)?;
-
-            match Data::integer_to_float(right) {
-                Some(right) => {
-                    left == right
-                }
-                None => false
-            }
-        }
+        (ExpressionDataType::Number, ExpressionDataType::Number) => compare(this, left_addr, right_addr, Data::get_integer)?,
         (ExpressionDataType::Char, ExpressionDataType::CharList) => {
             if this.get_char_list_len(right_addr)? == Data::Size::one() {
                 let c1 = this.get_char(left_addr)?;
-                let c2 = this.get_char_list_item(right_addr, Data::Integer::zero())?;
+                let c2 = this.get_char_list_item(right_addr, Data::Number::zero())?;
 
                 c1 == c2
             } else {
@@ -81,7 +58,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
         }
         (ExpressionDataType::CharList, ExpressionDataType::Char) => {
             if this.get_char_list_len(left_addr)? == Data::Size::one() {
-                let c1 = this.get_char_list_item(left_addr, Data::Integer::zero())?;
+                let c1 = this.get_char_list_item(left_addr, Data::Number::zero())?;
                 let c2 = this.get_char(right_addr)?;
 
                 c1 == c2
@@ -92,7 +69,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
         (ExpressionDataType::Byte, ExpressionDataType::ByteList) => {
             if this.get_byte_list_len(right_addr)? == Data::Size::one() {
                 let c1 = this.get_byte(left_addr)?;
-                let c2 = this.get_byte_list_item(right_addr, Data::Integer::zero())?;
+                let c2 = this.get_byte_list_item(right_addr, Data::Number::zero())?;
 
                 c1 == c2
             } else {
@@ -101,7 +78,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
         }
         (ExpressionDataType::ByteList, ExpressionDataType::Byte) => {
             if this.get_byte_list_len(left_addr)? == Data::Size::one() {
-                let c1 = this.get_byte_list_item(left_addr, Data::Integer::zero())?;
+                let c1 = this.get_byte_list_item(left_addr, Data::Number::zero())?;
                 let c2 = this.get_byte(right_addr)?;
 
                 c1 == c2
@@ -163,13 +140,13 @@ fn data_equal<Data: GarnishLangRuntimeData>(
 
             let start_equal = match (this.get_data_type(start1)?, this.get_data_type(start2)?) {
                 (ExpressionDataType::Unit, ExpressionDataType::Unit) => true,
-                (ExpressionDataType::Integer, ExpressionDataType::Integer) => this.get_integer(start1)? == this.get_integer(start2)?,
+                (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_integer(start1)? == this.get_integer(start2)?,
                 _ => false,
             };
 
             let end_equal = match (this.get_data_type(end1)?, this.get_data_type(end2)?) {
                 (ExpressionDataType::Unit, ExpressionDataType::Unit) => true,
-                (ExpressionDataType::Integer, ExpressionDataType::Integer) => this.get_integer(end1)? == this.get_integer(end2)?,
+                (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_integer(end1)? == this.get_integer(end2)?,
                 _ => false,
             };
 
@@ -204,7 +181,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                     (ExpressionDataType::CharList, ExpressionDataType::CharList) => {
                         let mut index1 = start1;
                         let mut index2 = start2;
-                        let mut count = Data::Integer::zero();
+                        let mut count = Data::Number::zero();
 
                         let list_len1 = Data::size_to_integer(this.get_char_list_len(value1)?);
                         let list_len2 = Data::size_to_integer(this.get_char_list_len(value2)?);
@@ -226,9 +203,10 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                                 return Ok(false);
                             }
 
-                            index1 += Data::Integer::one();
-                            index2 += Data::Integer::one();
-                            count += Data::Integer::one();
+                            index1 = index1.increment().or_num_err()?;
+                            index1 = index1.increment().or_num_err()?;
+                            index2 = index2.increment().or_num_err()?;
+                            count = count.increment().or_num_err()?;
                         }
 
                         true
@@ -236,7 +214,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                     (ExpressionDataType::ByteList, ExpressionDataType::ByteList) => {
                         let mut index1 = start1;
                         let mut index2 = start2;
-                        let mut count = Data::Integer::zero();
+                        let mut count = Data::Number::zero();
 
                         let list_len1 = Data::size_to_integer(this.get_byte_list_len(value1)?);
                         let list_len2 = Data::size_to_integer(this.get_byte_list_len(value2)?);
@@ -258,9 +236,9 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                                 return Ok(false);
                             }
 
-                            index1 += Data::Integer::one();
-                            index2 += Data::Integer::one();
-                            count += Data::Integer::one();
+                            index1 = index1.increment().or_num_err()?;
+                            index2 = index2.increment().or_num_err()?;
+                            count = count.increment().or_num_err()?;
                         }
 
                         true
@@ -268,7 +246,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                     (ExpressionDataType::List, ExpressionDataType::List) => {
                         let mut index1 = start1;
                         let mut index2 = start2;
-                        let mut count = Data::Integer::zero();
+                        let mut count = Data::Number::zero();
 
                         let list_len1 = Data::size_to_integer(this.get_list_len(value1)?);
                         let list_len2 = Data::size_to_integer(this.get_list_len(value2)?);
@@ -289,9 +267,9 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                             this.push_register(item1)?;
                             this.push_register(item2)?;
 
-                            index1 += Data::Integer::one();
-                            index2 += Data::Integer::one();
-                            count += Data::Integer::one();
+                            index1 = index1.increment().or_num_err()?;
+                            index2 = index2.increment().or_num_err()?;
+                            count = count.increment().or_num_err()?;
                         }
 
                         true
@@ -299,7 +277,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                     (ExpressionDataType::List, ExpressionDataType::Link) => {
                         let mut index1 = start1;
                         let mut index2 = start2;
-                        let mut count = Data::Integer::zero();
+                        let mut count = Data::Number::zero();
 
                         let list_len1 = Data::size_to_integer(this.get_list_len(value1)?);
 
@@ -320,9 +298,9 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                             this.push_register(item1)?;
                             this.push_register(item2)?;
 
-                            index1 += Data::Integer::one();
-                            index2 += Data::Integer::one();
-                            count += Data::Integer::one();
+                            index1 = index1.increment().or_num_err()?;
+                            index2 = index2.increment().or_num_err()?;
+                            count = count.increment().or_num_err()?;
                         }
 
                         true
@@ -330,7 +308,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                     (ExpressionDataType::Link, ExpressionDataType::List) => {
                         let mut index1 = start1;
                         let mut index2 = start2;
-                        let mut count = Data::Integer::zero();
+                        let mut count = Data::Number::zero();
 
                         let list_len2 = Data::size_to_integer(this.get_list_len(value2)?);
 
@@ -351,9 +329,9 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                             this.push_register(item1)?;
                             this.push_register(item2)?;
 
-                            index1 += Data::Integer::one();
-                            index2 += Data::Integer::one();
-                            count += Data::Integer::one();
+                            index1 = index1.increment().or_num_err()?;
+                            index2 = index2.increment().or_num_err()?;
+                            count = count.increment().or_num_err()?;
                         }
 
                         true
@@ -363,7 +341,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
 
                         let mut index1 = start1;
                         let mut index2 = start2;
-                        let mut count = Data::Integer::zero();
+                        let mut count = Data::Number::zero();
 
                         while count < len1 {
                             match (index_link(this, value1, index1)?, index_link(this, value2, index2)?) {
@@ -389,9 +367,9 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                                 }
                             }
 
-                            index1 += Data::Integer::one();
-                            index2 += Data::Integer::one();
-                            count += Data::Integer::one();
+                            index1 = index1.increment().or_num_err()?;
+                            index2 = index2.increment().or_num_err()?;
+                            count = count.increment().or_num_err()?;
                         }
 
                         true
@@ -407,7 +385,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
             if len1 != len2 {
                 false
             } else {
-                let mut count = Data::Integer::zero();
+                let mut count = Data::Number::zero();
 
                 while count < len1 {
                     match (index_link(this, left_addr, count)?, index_link(this, right_addr, count)?) {
@@ -418,7 +396,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                         _ => state_error(format!("Items not found during link comparison"))?
                     }
 
-                    count += Data::Integer::one();
+                    count = count.increment().or_num_err()?;
                 }
 
                 true
@@ -431,7 +409,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
             if len1 != len2 {
                 false
             } else {
-                let mut count = Data::Integer::zero();
+                let mut count = Data::Number::zero();
 
                 while count < len1 {
                     let item1 = match index_link(this, left_addr,count)? {
@@ -444,7 +422,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                     this.push_register(item1)?;
                     this.push_register(item2)?;
 
-                    count += Data::Integer::one();
+                    count = count.increment().or_num_err()?;
                 }
 
                 true
@@ -457,7 +435,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
             if len1 != len2 {
                 false
             } else {
-                let mut count = Data::Integer::zero();
+                let mut count = Data::Number::zero();
 
                 while count < len1 {
                     let item1 = match index_link(this, right_addr,count)? {
@@ -470,7 +448,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                     this.push_register(item1)?;
                     this.push_register(item2)?;
 
-                    count += Data::Integer::one();
+                    count = count.increment().or_num_err()?;
                 }
 
                 true
@@ -673,105 +651,6 @@ mod numbers {
         let mut runtime = SimpleRuntimeData::new();
 
         let int1 = runtime.add_integer(10).unwrap();
-        let int2 = runtime.add_integer(20).unwrap();
-
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
-
-        runtime.equality_comparison().unwrap();
-
-        assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
-            ExpressionDataType::False
-        );
-    }
-
-    #[test]
-    fn equality_floats_equal() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let int1 = runtime.add_float(10.0).unwrap();
-        let int2 = runtime.add_float(10.0).unwrap();
-
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
-
-        runtime.equality_comparison().unwrap();
-
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
-    }
-
-    #[test]
-    fn equality_floats_not_equal() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let int1 = runtime.add_float(10.0).unwrap();
-        let int2 = runtime.add_float(20.0).unwrap();
-
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
-
-        runtime.equality_comparison().unwrap();
-
-        assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
-            ExpressionDataType::False
-        );
-    }
-
-    #[test]
-    fn equality_integer_float_equal() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let int1 = runtime.add_integer(10).unwrap();
-        let int2 = runtime.add_float(10.0).unwrap();
-
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
-
-        runtime.equality_comparison().unwrap();
-
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
-    }
-
-    #[test]
-    fn equality_float_integer_equal() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let int1 = runtime.add_float(10.0).unwrap();
-        let int2 = runtime.add_integer(10).unwrap();
-
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
-
-        runtime.equality_comparison().unwrap();
-
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
-    }
-
-    #[test]
-    fn equality_integer_float_note_equal() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let int1 = runtime.add_integer(10).unwrap();
-        let int2 = runtime.add_float(20.0).unwrap();
-
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
-
-        runtime.equality_comparison().unwrap();
-
-        assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
-            ExpressionDataType::False
-        );
-    }
-
-    #[test]
-    fn equality_float_integer_note_equal() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let int1 = runtime.add_float(10.0).unwrap();
         let int2 = runtime.add_integer(20).unwrap();
 
         runtime.push_register(int1).unwrap();

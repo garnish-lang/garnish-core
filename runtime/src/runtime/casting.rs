@@ -1,6 +1,6 @@
 use crate::runtime::internals::{link_len, link_len_size};
 use crate::runtime::list::{iterate_link_internal, iterate_link_internal_rev};
-use crate::{get_range, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
+use crate::{get_range, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, GarnishNumber, OrNumberError};
 
 pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
@@ -19,12 +19,12 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                 let mut last = this.add_unit()?;
 
                 if to_is_append {
-                    iterate_link_start_end_internal(this, left, Data::Integer::zero(), len, |this, addr, _index| {
+                    iterate_link_start_end_internal(this, left, Data::Number::zero(), len, |this, addr, _index| {
                         last = this.add_link(addr, last, to_is_append)?;
                         Ok(false)
                     })?;
                 } else {
-                    iterate_link_start_end_internal_rev(this, left, Data::Integer::zero(), len, |this, addr, _index| {
+                    iterate_link_start_end_internal_rev(this, left, Data::Number::zero(), len, |this, addr, _index| {
                         last = this.add_link(addr, last, to_is_append)?;
                         Ok(false)
                     })?;
@@ -45,25 +45,19 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
             this.add_symbol_from(left).and_then(|r| this.push_register(r))?;
         }
         // Numbers
-        (ExpressionDataType::Integer, ExpressionDataType::Float) => {
-            primitive_cast(this, left, Data::get_integer, Data::integer_to_float, Data::add_float)?;
-        }
-        (ExpressionDataType::Integer, ExpressionDataType::Char) => {
+        (ExpressionDataType::Number, ExpressionDataType::Char) => {
             primitive_cast(this, left, Data::get_integer, Data::integer_to_char, Data::add_char)?;
         }
-        (ExpressionDataType::Integer, ExpressionDataType::Byte) => {
+        (ExpressionDataType::Number, ExpressionDataType::Byte) => {
             primitive_cast(this, left, Data::get_integer, Data::integer_to_byte, Data::add_byte)?;
         }
-        (ExpressionDataType::Float, ExpressionDataType::Integer) => {
-            primitive_cast(this, left, Data::get_float, Data::float_to_integer, Data::add_integer)?;
-        }
-        (ExpressionDataType::Char, ExpressionDataType::Integer) => {
+        (ExpressionDataType::Char, ExpressionDataType::Number) => {
             primitive_cast(this, left, Data::get_char, Data::char_to_integer, Data::add_integer)?;
         }
         (ExpressionDataType::Char, ExpressionDataType::Byte) => {
             primitive_cast(this, left, Data::get_char, Data::char_to_byte, Data::add_byte)?;
         }
-        (ExpressionDataType::Byte, ExpressionDataType::Integer) => {
+        (ExpressionDataType::Byte, ExpressionDataType::Number) => {
             primitive_cast(this, left, Data::get_byte, Data::byte_to_integer, Data::add_integer)?;
         }
         (ExpressionDataType::Byte, ExpressionDataType::Char) => {
@@ -71,7 +65,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         }
         (ExpressionDataType::Link, ExpressionDataType::List) => {
             let len = link_len_size(this, left)?;
-            list_from_link(this, left, Data::Integer::zero(), Data::size_to_integer(len))?;
+            list_from_link(this, left, Data::Number::zero(), Data::size_to_integer(len))?;
         }
         (ExpressionDataType::Range, ExpressionDataType::List) => {
             let (start, end) = this.get_range(left)?;
@@ -83,18 +77,18 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
             while count <= end {
                 let addr = this.add_integer(count)?;
                 this.add_to_list(addr, false)?;
-                count += Data::Integer::one();
+                count = count.increment().or_num_err()?;
             }
 
             this.end_list().and_then(|r| this.push_register(r))?
         }
         (ExpressionDataType::CharList, ExpressionDataType::List) => {
             let len = this.get_char_list_len(left)?;
-            list_from_char_list(this, left, Data::Integer::zero(), Data::size_to_integer(len))?;
+            list_from_char_list(this, left, Data::Number::zero(), Data::size_to_integer(len))?;
         }
         (ExpressionDataType::ByteList, ExpressionDataType::List) => {
             let len = this.get_byte_list_len(left)?;
-            list_from_byte_list(this, left, Data::Integer::zero(), Data::size_to_integer(len))?;
+            list_from_byte_list(this, left, Data::Number::zero(), Data::size_to_integer(len))?;
         }
         (ExpressionDataType::Slice, ExpressionDataType::List) => {
             let (value, range) = this.get_slice(left)?;
@@ -121,19 +115,19 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                         };
 
                         this.add_to_list(addr, is_associative)?;
-                        i += Data::Integer::one();
+                        i = i.increment().or_num_err()?;
                     }
 
                     this.end_list().and_then(|r| this.push_register(r))?
                 }
                 ExpressionDataType::Link => {
-                    list_from_link(this, value, start, end + Data::Integer::one())?;
+                    list_from_link(this, value, start, end.increment().or_num_err()?)?;
                 }
                 ExpressionDataType::CharList => {
-                    list_from_char_list(this, value, start, end + Data::Integer::one())?;
+                    list_from_char_list(this, value, start, end.increment().or_num_err()?)?;
                 }
                 ExpressionDataType::ByteList => {
-                    list_from_byte_list(this, value, start, end + Data::Integer::one())?;
+                    list_from_byte_list(this, value, start, end.increment().or_num_err()?)?;
                 }
                 _ => push_unit(this)?,
             }
@@ -143,25 +137,25 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
             create_link(
                 this,
                 right,
-                Data::Integer::zero(),
+                Data::Number::zero(),
                 len,
                 |this, index| Ok(this.get_list_item(left, index)?),
             )?;
         }
         (ExpressionDataType::Range, ExpressionDataType::Link) => {
             let (start, end, _) = get_range(this, left)?;
-            create_link(this, right, start, end + Data::Integer::one(), |this, index| Ok(this.add_integer(index)?))?;
+            create_link(this, right, start, end.increment().or_num_err()?, |this, index| Ok(this.add_integer(index)?))?;
         }
         (ExpressionDataType::CharList, ExpressionDataType::Link) => {
             let len = this.get_char_list_len(left)?;
-            create_link(this, right, Data::Integer::zero(), Data::size_to_integer(len), |this, index| {
+            create_link(this, right, Data::Number::zero(), Data::size_to_integer(len), |this, index| {
                 let c = this.get_char_list_item(left, index)?;
                 Ok(this.add_char(c)?)
             })?;
         }
         (ExpressionDataType::ByteList, ExpressionDataType::Link) => {
             let len = this.get_byte_list_len(left)?;
-            create_link(this, right, Data::Integer::zero(), Data::size_to_integer(len), |this, index| {
+            create_link(this, right, Data::Number::zero(), Data::size_to_integer(len), |this, index| {
                 let c = this.get_byte_list_item(left, index)?;
                 Ok(this.add_byte(c)?)
             })?;
@@ -173,7 +167,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
 
             match this.get_data_type(value)? {
                 ExpressionDataType::List => {
-                    create_link(this, right, start, end + Data::Integer::one(), |this, index| {
+                    create_link(this, right, start, end.increment().or_num_err()?, |this, index| {
                         Ok(this.get_list_item(value, index)?)
                     })?;
                 }
@@ -181,12 +175,12 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                     let mut last = this.add_unit()?;
 
                     if to_is_append {
-                        iterate_link_start_end_internal(this, value, start, end + Data::Integer::one(), |this, addr, _index| {
+                        iterate_link_start_end_internal(this, value, start, end.increment().or_num_err()?, |this, addr, _index| {
                             last = this.add_link(addr, last, to_is_append)?;
                             Ok(false)
                         })?;
                     } else {
-                        iterate_link_start_end_internal_rev(this, value, start, end + Data::Integer::one(), |this, addr, _index| {
+                        iterate_link_start_end_internal_rev(this, value, start, end.increment().or_num_err()?, |this, addr, _index| {
                             last = this.add_link(addr, last, to_is_append)?;
                             Ok(false)
                         })?;
@@ -195,13 +189,13 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
                     this.push_register(last)?;
                 }
                 ExpressionDataType::CharList => {
-                    create_link(this, right, start, end + Data::Integer::one(), |this, index| {
+                    create_link(this, right, start, end.increment().or_num_err()?, |this, index| {
                         let c = this.get_char_list_item(value, index)?;
                         Ok(this.add_char(c)?)
                     })?;
                 }
                 ExpressionDataType::ByteList => {
-                    create_link(this, right, start, end + Data::Integer::one(), |this, index| {
+                    create_link(this, right, start, end.increment().or_num_err()?, |this, index| {
                         let c = this.get_byte_list_item(value, index)?;
                         Ok(this.add_byte(c)?)
                     })?;
@@ -228,12 +222,12 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
 pub(crate) fn create_link<Data: GarnishLangRuntimeData, GetFunc>(
     this: &mut Data,
     link_addr: Data::Size,
-    start: Data::Integer,
-    end: Data::Integer,
+    start: Data::Number,
+    end: Data::Number,
     mut get_item: GetFunc,
 ) -> Result<(), RuntimeError<Data::Error>>
 where
-    GetFunc: FnMut(&mut Data, Data::Integer) -> Result<Data::Size, RuntimeError<Data::Error>>,
+    GetFunc: FnMut(&mut Data, Data::Number) -> Result<Data::Size, RuntimeError<Data::Error>>,
 {
     let (_, _, is_append) = this.get_link(link_addr)?;
     let mut last = this.add_unit()?;
@@ -244,15 +238,15 @@ where
         while i < end {
             let addr = get_item(this, i)?;
             last = this.add_link(addr, last, is_append)?;
-            i += Data::Integer::one();
+            i = i.increment().or_num_err()?;
         }
     } else {
-        let mut i = end - Data::Integer::one();
+        let mut i = end.decrement().or_num_err()?;
 
         while i >= start {
             let addr = get_item(this, i)?;
             last = this.add_link(addr, last, is_append)?;
-            i -= Data::Integer::one();
+            i = i.decrement().or_num_err()?;
         }
     }
 
@@ -264,18 +258,18 @@ where
 pub(crate) fn iterate_link_start_end_internal<Data: GarnishLangRuntimeData, Callback>(
     this: &mut Data,
     link_addr: Data::Size,
-    start: Data::Integer,
-    end: Data::Integer,
+    start: Data::Number,
+    end: Data::Number,
     mut func: Callback,
 ) -> Result<(), RuntimeError<Data::Error>>
 where
-    Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> Result<bool, RuntimeError<Data::Error>>,
+    Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
 {
     let mut skip = start;
 
     iterate_link_internal(this, link_addr, |this, addr, current_index| {
-        if skip > Data::Integer::zero() {
-            skip -= Data::Integer::one();
+        if skip > Data::Number::zero() {
+            skip = skip.decrement().or_num_err()?;
             return Ok(false);
         }
 
@@ -290,18 +284,18 @@ where
 pub(crate) fn iterate_link_start_end_internal_rev<Data: GarnishLangRuntimeData, Callback>(
     this: &mut Data,
     link_addr: Data::Size,
-    start: Data::Integer,
-    end: Data::Integer,
+    start: Data::Number,
+    end: Data::Number,
     mut func: Callback,
 ) -> Result<(), RuntimeError<Data::Error>>
 where
-    Callback: FnMut(&mut Data, Data::Size, Data::Integer) -> Result<bool, RuntimeError<Data::Error>>,
+    Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
 {
     let mut skip = start;
 
     iterate_link_internal_rev(this, link_addr, |this, addr, current_index| {
-        if skip > Data::Integer::zero() {
-            skip -= Data::Integer::one();
+        if skip > Data::Number::zero() {
+            skip = skip.decrement().or_num_err()?;
             return Ok(false);
         }
 
@@ -316,16 +310,16 @@ where
 pub(crate) fn list_from_link<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     link_addr: Data::Size,
-    start: Data::Integer,
-    end: Data::Integer,
+    start: Data::Number,
+    end: Data::Number,
 ) -> Result<(), RuntimeError<Data::Error>> {
     let len = link_len_size(this, link_addr)?;
     this.start_list(len)?;
     let mut skip = start;
 
     iterate_link_internal(this, link_addr, |this, addr, current_index| {
-        if skip > Data::Integer::zero() {
-            skip -= Data::Integer::one();
+        if skip > Data::Number::zero() {
+            skip = skip.decrement().or_num_err()?;
             return Ok(false);
         }
 
@@ -356,8 +350,8 @@ pub(crate) fn list_from_link<Data: GarnishLangRuntimeData>(
 pub(crate) fn list_from_char_list<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     byte_list_addr: Data::Size,
-    start: Data::Integer,
-    end: Data::Integer,
+    start: Data::Number,
+    end: Data::Number,
 ) -> Result<(), RuntimeError<Data::Error>> {
     let len = this.get_char_list_len(byte_list_addr)?;
     let mut count = start;
@@ -368,7 +362,7 @@ pub(crate) fn list_from_char_list<Data: GarnishLangRuntimeData>(
         let addr = this.add_char(c)?;
         this.add_to_list(addr, false)?;
 
-        count += Data::Integer::one();
+        count = count.increment().or_num_err()?;
     }
 
     this.end_list().and_then(|r| this.push_register(r))?;
@@ -379,8 +373,8 @@ pub(crate) fn list_from_char_list<Data: GarnishLangRuntimeData>(
 pub(crate) fn list_from_byte_list<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     byte_list_addr: Data::Size,
-    start: Data::Integer,
-    end: Data::Integer,
+    start: Data::Number,
+    end: Data::Number,
 ) -> Result<(), RuntimeError<Data::Error>> {
     let len = this.get_byte_list_len(byte_list_addr)?;
     let mut count = start;
@@ -391,7 +385,7 @@ pub(crate) fn list_from_byte_list<Data: GarnishLangRuntimeData>(
         let addr = this.add_byte(c)?;
         this.add_to_list(addr, false)?;
 
-        count += Data::Integer::one();
+        count = count.increment().or_num_err()?;
     }
 
     this.end_list().and_then(|r| this.push_register(r))?;
@@ -564,22 +558,6 @@ mod simple {
 mod primitive {
     use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
 
-    #[test]
-    fn integer_to_float() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let d1 = runtime.add_integer(10).unwrap();
-        let d2 = runtime.add_float(0.0).unwrap();
-
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
-
-        runtime.type_cast().unwrap();
-
-        let expected = SimpleRuntimeData::integer_to_float(10).unwrap();
-
-        assert_eq!(runtime.get_float(runtime.get_register(0).unwrap()).unwrap(), expected);
-    }
 
     #[test]
     fn integer_to_char() {
@@ -681,23 +659,6 @@ mod primitive {
         let expected = SimpleRuntimeData::byte_to_char('a' as u8).unwrap();
 
         assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), expected);
-    }
-
-    #[test]
-    fn float_to_integer() {
-        let mut runtime = SimpleRuntimeData::new();
-
-        let d1 = runtime.add_float(3.14).unwrap();
-        let d2 = runtime.add_integer(0).unwrap();
-
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
-
-        runtime.type_cast().unwrap();
-
-        let expected = SimpleRuntimeData::float_to_integer(3.14).unwrap();
-
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
 }
 

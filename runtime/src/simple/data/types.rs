@@ -68,7 +68,7 @@ impl From<i32> for IntegerData {
 
 impl SimpleData for IntegerData {
     fn get_type(&self) -> ExpressionDataType {
-        ExpressionDataType::Integer
+        ExpressionDataType::Number
     }
 }
 
@@ -97,7 +97,7 @@ impl Hash for FloatData {
 
 impl SimpleData for FloatData {
     fn get_type(&self) -> ExpressionDataType {
-        ExpressionDataType::Float
+        ExpressionDataType::Number
     }
 }
 
@@ -511,7 +511,7 @@ mod simple_tests {
 
     #[test]
     fn integer() {
-        assert_eq!(IntegerData::from(10).get_type(), ExpressionDataType::Integer);
+        assert_eq!(IntegerData::from(10).get_type(), ExpressionDataType::Number);
     }
 
     #[test]
@@ -536,7 +536,7 @@ mod simple_tests {
 
     #[test]
     fn float() {
-        assert_eq!(FloatData::from(3.14).get_type(), ExpressionDataType::Float);
+        assert_eq!(FloatData::from(3.14).get_type(), ExpressionDataType::Number);
     }
 
     #[test]

@@ -1,6 +1,6 @@
 use crate::{ExpressionDataType, Instruction};
 use std::fmt::{Debug, Display};
-use std::ops::{Add, AddAssign, Rem, Sub, SubAssign};
+use std::ops::{Add, AddAssign, Sub, SubAssign};
 use std::str::FromStr;
 
 pub trait TypeConstants {
@@ -9,10 +9,18 @@ pub trait TypeConstants {
     fn max() -> Self;
 }
 
-pub trait Overflowable {
-    fn overflowable_addition(self, rhs: Self) -> (Self, bool)
-    where
-        Self: Sized;
+pub trait GarnishNumber: Sized {
+    fn add(self, rhs: Self) -> Option<Self>;
+    fn subtract(self, rhs: Self) -> Option<Self>;
+    fn multiply(self, rhs: Self) -> Option<Self>;
+    fn divide(self, rhs: Self) -> Option<Self>;
+    fn integer_divide(self, rhs: Self) -> Option<Self>;
+    fn power(self, rhs: Self) -> Option<Self>;
+    fn remainder(self, rhs: Self) -> Option<Self>;
+    fn absolute_value(self) -> Option<Self>;
+    fn opposite(self) -> Option<Self>;
+    fn increment(self) -> Option<Self>;
+    fn decrement(self) -> Option<Self>;
 }
 
 pub trait GarnishLangRuntimeData {
@@ -21,19 +29,7 @@ pub trait GarnishLangRuntimeData {
     type Symbol: Display + Debug + PartialOrd + TypeConstants + Copy;
     type Byte: Display + Debug + PartialOrd + Copy;
     type Char: Display + Debug + PartialOrd + Copy;
-    type Integer: Display
-        + Debug
-        + Overflowable
-        + Add<Self::Integer, Output = Self::Integer>
-        + AddAssign<Self::Integer>
-        + Sub<Self::Integer, Output = Self::Integer>
-        + SubAssign<Self::Integer>
-        + Rem<Self::Integer, Output = Self::Integer>
-        + PartialOrd
-        + TypeConstants
-        + Copy
-        + FromStr;
-    type Float: Display + Debug + Add<Self::Float, Output = Self::Float> + PartialOrd + TypeConstants + Copy + FromStr;
+    type Number: Display + Debug + PartialOrd + TypeConstants + Copy + GarnishNumber + FromStr;
     type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + SubAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
 
     fn get_data_len(&self) -> Self::Size;
@@ -48,8 +44,7 @@ pub trait GarnishLangRuntimeData {
 
     fn get_data_type(&self, addr: Self::Size) -> Result<ExpressionDataType, Self::Error>;
 
-    fn get_integer(&self, addr: Self::Size) -> Result<Self::Integer, Self::Error>;
-    fn get_float(&self, addr: Self::Size) -> Result<Self::Float, Self::Error>;
+    fn get_integer(&self, addr: Self::Size) -> Result<Self::Number, Self::Error>;
     fn get_char(&self, addr: Self::Size) -> Result<Self::Char, Self::Error>;
     fn get_byte(&self, addr: Self::Size) -> Result<Self::Byte, Self::Error>;
     fn get_symbol(&self, addr: Self::Size) -> Result<Self::Symbol, Self::Error>;
@@ -61,23 +56,22 @@ pub trait GarnishLangRuntimeData {
     fn get_link(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size, bool), Self::Error>;
 
     fn get_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Integer) -> Result<Self::Size, Self::Error>;
+    fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error>;
     fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Integer) -> Result<Self::Size, Self::Error>;
+    fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error>;
     fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error>;
 
     fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Integer) -> Result<Self::Char, Self::Error>;
+    fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error>;
 
     fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Integer) -> Result<Self::Byte, Self::Error>;
+    fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error>;
 
     fn add_unit(&mut self) -> Result<Self::Size, Self::Error>;
     fn add_true(&mut self) -> Result<Self::Size, Self::Error>;
     fn add_false(&mut self) -> Result<Self::Size, Self::Error>;
 
-    fn add_integer(&mut self, value: Self::Integer) -> Result<Self::Size, Self::Error>;
-    fn add_float(&mut self, value: Self::Float) -> Result<Self::Size, Self::Error>;
+    fn add_integer(&mut self, value: Self::Number) -> Result<Self::Size, Self::Error>;
     fn add_char(&mut self, value: Self::Char) -> Result<Self::Size, Self::Error>;
     fn add_byte(&mut self, value: Self::Byte) -> Result<Self::Size, Self::Error>;
     fn add_symbol(&mut self, value: &str) -> Result<Self::Size, Self::Error>;
@@ -121,14 +115,12 @@ pub trait GarnishLangRuntimeData {
     fn pop_jump_path(&mut self) -> Option<Self::Size>;
 
     // deferred conversions
-    fn size_to_integer(from: Self::Size) -> Self::Integer;
-    fn integer_to_float(from: Self::Integer) -> Option<Self::Float>;
-    fn integer_to_char(from: Self::Integer) -> Option<Self::Char>;
-    fn integer_to_byte(from: Self::Integer) -> Option<Self::Byte>;
-    fn float_to_integer(from: Self::Float) -> Option<Self::Integer>;
-    fn char_to_integer(from: Self::Char) -> Option<Self::Integer>;
+    fn size_to_integer(from: Self::Size) -> Self::Number;
+    fn integer_to_char(from: Self::Number) -> Option<Self::Char>;
+    fn integer_to_byte(from: Self::Number) -> Option<Self::Byte>;
+    fn char_to_integer(from: Self::Char) -> Option<Self::Number>;
     fn char_to_byte(from: Self::Char) -> Option<Self::Byte>;
-    fn byte_to_integer(from: Self::Byte) -> Option<Self::Integer>;
+    fn byte_to_integer(from: Self::Byte) -> Option<Self::Number>;
     fn byte_to_char(from: Self::Byte) -> Option<Self::Char>;
 
     // mut conversions
@@ -148,12 +140,49 @@ pub trait GarnishLangRuntimeData {
     fn release_tmp_stack(&mut self, lease: Self::DataLease) -> Result<(), Self::Error>;
 }
 
-impl Overflowable for i32 {
-    fn overflowable_addition(self, rhs: Self) -> (Self, bool)
-    where
-        Self: Sized,
-    {
-        self.overflowing_add(rhs)
+impl GarnishNumber for i32 {
+    fn add(self, rhs: Self) -> Option<Self> {
+        Some(self + rhs)
+    }
+
+    fn subtract(self, rhs: Self) -> Option<Self> {
+        Some(self - rhs)
+    }
+
+    fn multiply(self, rhs: Self) -> Option<Self> {
+        Some(self * rhs)
+    }
+
+    fn divide(self, rhs: Self) -> Option<Self> {
+        Some(self / rhs)
+    }
+
+    fn integer_divide(self, rhs: Self) -> Option<Self> {
+        Some(self / rhs)
+    }
+
+    fn power(self, rhs: Self) -> Option<Self> {
+        Some(self.pow(rhs as u32))
+    }
+
+    fn remainder(self, rhs: Self) -> Option<Self> {
+        Some(self % rhs)
+    }
+
+    fn absolute_value(self) -> Option<Self> {
+        Some(self.abs())
+    }
+
+    fn opposite(self) -> Option<Self> {
+        Some(-self)
+    }
+
+    fn increment(self) -> Option<Self> {
+        Some(self + 1)
+    }
+
+    fn decrement(self) -> Option<Self> {
+        Some(self - 1)
     }
 }
 
@@ -166,7 +195,9 @@ impl TypeConstants for i8 {
         1
     }
 
-    fn max() -> Self { i8::MAX }
+    fn max() -> Self {
+        i8::MAX
+    }
 }
 
 impl TypeConstants for i16 {
@@ -178,7 +209,9 @@ impl TypeConstants for i16 {
         1
     }
 
-    fn max() -> Self { i16::MAX }
+    fn max() -> Self {
+        i16::MAX
+    }
 }
 
 impl TypeConstants for i32 {
@@ -190,7 +223,9 @@ impl TypeConstants for i32 {
         1
     }
 
-    fn max() -> Self { i32::MAX }
+    fn max() -> Self {
+        i32::MAX
+    }
 }
 
 impl TypeConstants for i64 {
@@ -202,7 +237,9 @@ impl TypeConstants for i64 {
         1
     }
 
-    fn max() -> Self { i64::MAX }
+    fn max() -> Self {
+        i64::MAX
+    }
 }
 
 impl TypeConstants for i128 {
@@ -214,7 +251,9 @@ impl TypeConstants for i128 {
         1
     }
 
-    fn max() -> Self { i128::MAX }
+    fn max() -> Self {
+        i128::MAX
+    }
 }
 
 impl TypeConstants for u8 {
@@ -226,7 +265,9 @@ impl TypeConstants for u8 {
         1
     }
 
-    fn max() -> Self { u8::MAX }
+    fn max() -> Self {
+        u8::MAX
+    }
 }
 
 impl TypeConstants for u16 {
@@ -238,7 +279,9 @@ impl TypeConstants for u16 {
         1
     }
 
-    fn max() -> Self { u16::MAX }
+    fn max() -> Self {
+        u16::MAX
+    }
 }
 
 impl TypeConstants for u32 {
@@ -250,7 +293,9 @@ impl TypeConstants for u32 {
         1
     }
 
-    fn max() -> Self { u32::MAX }
+    fn max() -> Self {
+        u32::MAX
+    }
 }
 
 impl TypeConstants for u64 {
@@ -262,7 +307,9 @@ impl TypeConstants for u64 {
         1
     }
 
-    fn max() -> Self { u64::MAX }
+    fn max() -> Self {
+        u64::MAX
+    }
 }
 
 impl TypeConstants for u128 {
@@ -274,7 +321,9 @@ impl TypeConstants for u128 {
         1
     }
 
-    fn max() -> Self { u128::MAX }
+    fn max() -> Self {
+        u128::MAX
+    }
 }
 
 impl TypeConstants for isize {
@@ -286,7 +335,9 @@ impl TypeConstants for isize {
         1
     }
 
-    fn max() -> Self { isize::MAX }
+    fn max() -> Self {
+        isize::MAX
+    }
 }
 
 impl TypeConstants for usize {
@@ -298,7 +349,9 @@ impl TypeConstants for usize {
         1
     }
 
-    fn max() -> Self { usize::MAX }
+    fn max() -> Self {
+        usize::MAX
+    }
 }
 
 impl TypeConstants for f32 {
@@ -310,7 +363,9 @@ impl TypeConstants for f32 {
         1.0
     }
 
-    fn max() -> Self { f32::MAX }
+    fn max() -> Self {
+        f32::MAX
+    }
 }
 
 impl TypeConstants for f64 {
@@ -322,7 +377,9 @@ impl TypeConstants for f64 {
         1.0
     }
 
-    fn max() -> Self { f64::MAX }
+    fn max() -> Self {
+        f64::MAX
+    }
 }
 
 impl TypeConstants for char {
@@ -334,5 +391,7 @@ impl TypeConstants for char {
         1 as char
     }
 
-    fn max() -> Self { char::MAX }
+    fn max() -> Self {
+        char::MAX
+    }
 }

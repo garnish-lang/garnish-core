@@ -1,6 +1,10 @@
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
-use crate::Instruction;
+use crate::{GarnishNumber, Instruction};
+
+pub trait OrNumberError<T, Source: 'static + std::error::Error> {
+    fn or_num_err(self) -> Result<T, RuntimeError<Source>>;
+}
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RuntimeError<Source: 'static + std::error::Error> {
@@ -53,6 +57,12 @@ impl<Source: 'static + std::error::Error> From<Source> for RuntimeError<Source> 
         let mut e = RuntimeError::default();
         e.source = Some(source);
         e
+    }
+}
+
+impl<Num: GarnishNumber, Source: 'static + std::error::Error> OrNumberError<Num, Source> for Option<Num> {
+    fn or_num_err(self) -> Result<Num, RuntimeError<Source>> {
+        self.ok_or(RuntimeError::new("Number error"))
     }
 }
 

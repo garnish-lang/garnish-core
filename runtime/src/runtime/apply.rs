@@ -1,7 +1,7 @@
 use super::context::GarnishLangRuntimeContext;
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
-use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants};
+use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, GarnishNumber};
 
 pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
@@ -176,20 +176,26 @@ pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
     let (old_start, _) = this.get_range(to_narrow)?;
 
     match (this.get_data_type(start)?, this.get_data_type(end)?, this.get_data_type(old_start)?) {
-        (ExpressionDataType::Integer, ExpressionDataType::Integer, ExpressionDataType::Integer) => {
+        (ExpressionDataType::Number, ExpressionDataType::Number, ExpressionDataType::Number) => {
             let (start_int, end_int, old_start_int) = (this.get_integer(start)?, this.get_integer(end)?, this.get_integer(old_start)?);
 
-            let new_start = old_start_int + start_int;
+            match (old_start_int.add(start_int), end_int.subtract(start_int)) {
+                (Some(new_start), Some(adjusted_end)) => {
+                    // end is always len away from start
+                    // offset end by same amount as start
+                    match new_start.add(adjusted_end) {
+                        Some(new_end) => {
+                            let start_addr = this.add_integer(new_start)?;
+                            let end_addr = this.add_integer(new_end)?;
+                            let range_addr = this.add_range(start_addr, end_addr)?;
 
-            // end is always len away from start
-            // offset end by same amount as start
-            let new_end = new_start + (end_int - start_int);
-
-            let start_addr = this.add_integer(new_start)?;
-            let end_addr = this.add_integer(new_end)?;
-            let range_addr = this.add_range(start_addr, end_addr)?;
-
-            Ok(range_addr)
+                            Ok(range_addr)
+                        }
+                        _ => state_error(format!("Could not narrow range."))?
+                    }
+                }
+                _ => state_error(format!("Could not narrow range."))?
+            }
         }
         (s1, e1, s2) => state_error(format!(
             "Attempting to create slice from slice with an invalid range. Slice range starting with {:?}. Range {:?} {:?}",
@@ -437,14 +443,14 @@ mod tests {
         let (pair_left, pair_right) = runtime.get_pair(pair_addr).unwrap();
         assert_eq!(runtime.get_data_type(pair_left).unwrap(), ExpressionDataType::Symbol);
         assert_eq!(runtime.get_symbol(pair_left).unwrap(), symbol_value("val3"));
-        assert_eq!(runtime.get_data_type(pair_right).unwrap(), ExpressionDataType::Integer);
+        assert_eq!(runtime.get_data_type(pair_right).unwrap(), ExpressionDataType::Number);
         assert_eq!(runtime.get_integer(pair_right).unwrap(), 30);
 
         let association_value1 = runtime.get_list_item_with_symbol(addr, symbol_value("val3")).unwrap().unwrap();
         assert_eq!(runtime.get_integer(association_value1).unwrap(), 30);
 
         let int_addr = runtime.get_list_item(addr, 1).unwrap();
-        assert_eq!(runtime.get_data_type(int_addr).unwrap(), ExpressionDataType::Integer);
+        assert_eq!(runtime.get_data_type(int_addr).unwrap(), ExpressionDataType::Number);
         assert_eq!(runtime.get_integer(int_addr).unwrap(), 20);
 
         let unit1 = runtime.get_list_item(addr, 2).unwrap();
@@ -459,7 +465,7 @@ mod tests {
         let (map_pair_left, map_pair_right) = runtime.get_pair(map_pair_addr).unwrap();
         assert_eq!(runtime.get_data_type(map_pair_left).unwrap(), ExpressionDataType::Symbol);
         assert_eq!(runtime.get_symbol(map_pair_left).unwrap(), symbol_value("new_key"));
-        assert_eq!(runtime.get_data_type(map_pair_right).unwrap(), ExpressionDataType::Integer);
+        assert_eq!(runtime.get_data_type(map_pair_right).unwrap(), ExpressionDataType::Number);
         assert_eq!(runtime.get_integer(map_pair_right).unwrap(), 10);
     }
 
@@ -673,7 +679,7 @@ mod tests {
                 assert_eq!(external_value, 3);
 
                 let value = match runtime.get_data_type(input_addr)? {
-                    ExpressionDataType::Integer => runtime.get_integer(input_addr)?,
+                    ExpressionDataType::Number => runtime.get_integer(input_addr)?,
                     _ => return Ok(false),
                 };
 
