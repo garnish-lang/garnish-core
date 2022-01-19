@@ -45,7 +45,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
         (ExpressionDataType::Symbol, ExpressionDataType::Symbol) => compare(this, left_addr, right_addr, Data::get_symbol)?,
         (ExpressionDataType::Char, ExpressionDataType::Char) => compare(this, left_addr, right_addr, Data::get_char)?,
         (ExpressionDataType::Byte, ExpressionDataType::Byte) => compare(this, left_addr, right_addr, Data::get_byte)?,
-        (ExpressionDataType::Number, ExpressionDataType::Number) => compare(this, left_addr, right_addr, Data::get_integer)?,
+        (ExpressionDataType::Number, ExpressionDataType::Number) => compare(this, left_addr, right_addr, Data::get_number)?,
         (ExpressionDataType::Char, ExpressionDataType::CharList) => {
             if this.get_char_list_len(right_addr)? == Data::Size::one() {
                 let c1 = this.get_char(left_addr)?;
@@ -140,13 +140,13 @@ fn data_equal<Data: GarnishLangRuntimeData>(
 
             let start_equal = match (this.get_data_type(start1)?, this.get_data_type(start2)?) {
                 (ExpressionDataType::Unit, ExpressionDataType::Unit) => true,
-                (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_integer(start1)? == this.get_integer(start2)?,
+                (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_number(start1)? == this.get_number(start2)?,
                 _ => false,
             };
 
             let end_equal = match (this.get_data_type(end1)?, this.get_data_type(end2)?) {
                 (ExpressionDataType::Unit, ExpressionDataType::Unit) => true,
-                (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_integer(end1)? == this.get_integer(end2)?,
+                (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_number(end1)? == this.get_number(end2)?,
                 _ => false,
             };
 
@@ -545,8 +545,8 @@ mod tests {
     fn equality_no_references_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_integer(10).unwrap();
+        runtime.add_number(10).unwrap();
+        runtime.add_number(10).unwrap();
 
         runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
 
@@ -559,7 +559,7 @@ mod tests {
     fn equality_of_unsupported_comparison_is_false() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(10).unwrap();
+        let int1 = runtime.add_number(10).unwrap();
         let exp1 = runtime.add_expression(10).unwrap();
 
         runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
@@ -634,8 +634,8 @@ mod numbers {
     fn equality_integers_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(10).unwrap();
-        let int2 = runtime.add_integer(10).unwrap();
+        let int1 = runtime.add_number(10).unwrap();
+        let int2 = runtime.add_number(10).unwrap();
 
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
@@ -649,8 +649,8 @@ mod numbers {
     fn equality_integers_not_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(10).unwrap();
-        let int2 = runtime.add_integer(20).unwrap();
+        let int1 = runtime.add_number(10).unwrap();
+        let int2 = runtime.add_number(20).unwrap();
 
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
@@ -1130,12 +1130,12 @@ mod pairs {
     fn equality_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
-        let i4 = runtime.add_integer(10).unwrap();
-        let i5 = runtime.add_integer(10).unwrap();
+        let i4 = runtime.add_number(10).unwrap();
+        let i5 = runtime.add_number(10).unwrap();
         let i6 = runtime.add_pair((i4, i5)).unwrap();
 
         runtime.push_register(i3).unwrap();
@@ -1150,12 +1150,12 @@ mod pairs {
     fn equality_not_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
+        let i2 = runtime.add_number(20).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
-        let i4 = runtime.add_integer(10).unwrap();
-        let i5 = runtime.add_integer(10).unwrap();
+        let i4 = runtime.add_number(10).unwrap();
+        let i5 = runtime.add_number(10).unwrap();
         let i6 = runtime.add_pair((i4, i5)).unwrap();
 
         runtime.push_register(i3).unwrap();
@@ -1180,12 +1180,12 @@ mod ranges {
     fn equality_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_range(i1, i2).unwrap();
 
-        let i4 = runtime.add_integer(10).unwrap();
-        let i5 = runtime.add_integer(10).unwrap();
+        let i4 = runtime.add_number(10).unwrap();
+        let i5 = runtime.add_number(10).unwrap();
         let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
@@ -1201,11 +1201,11 @@ mod ranges {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_unit().unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_range(i1, i2).unwrap();
 
         let i4 = runtime.add_unit().unwrap();
-        let i5 = runtime.add_integer(10).unwrap();
+        let i5 = runtime.add_number(10).unwrap();
         let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
@@ -1221,11 +1221,11 @@ mod ranges {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_unit().unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_range(i1, i2).unwrap();
 
-        let i4 = runtime.add_integer(5).unwrap();
-        let i5 = runtime.add_integer(10).unwrap();
+        let i4 = runtime.add_number(5).unwrap();
+        let i5 = runtime.add_number(10).unwrap();
         let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
@@ -1243,12 +1243,12 @@ mod ranges {
     fn equality_integer_open_start_not_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(5).unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_number(5).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_range(i1, i2).unwrap();
 
         let i4 = runtime.add_unit().unwrap();
-        let i5 = runtime.add_integer(10).unwrap();
+        let i5 = runtime.add_number(10).unwrap();
         let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
@@ -1266,11 +1266,11 @@ mod ranges {
     fn equality_open_end_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
         let i2 = runtime.add_unit().unwrap();
         let i3 = runtime.add_range(i1, i2).unwrap();
 
-        let i4 = runtime.add_integer(10).unwrap();
+        let i4 = runtime.add_number(10).unwrap();
         let i5 = runtime.add_unit().unwrap();
         let i6 = runtime.add_range(i4, i5).unwrap();
 
@@ -1286,12 +1286,12 @@ mod ranges {
     fn equality_open_end_integer_not_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
         let i2 = runtime.add_unit().unwrap();
         let i3 = runtime.add_range(i1, i2).unwrap();
 
-        let i4 = runtime.add_integer(10).unwrap();
-        let i5 = runtime.add_integer(20).unwrap();
+        let i4 = runtime.add_number(10).unwrap();
+        let i5 = runtime.add_number(20).unwrap();
         let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
@@ -1309,11 +1309,11 @@ mod ranges {
     fn equality_integer_open_end_not_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
+        let i2 = runtime.add_number(20).unwrap();
         let i3 = runtime.add_range(i1, i2).unwrap();
 
-        let i4 = runtime.add_integer(10).unwrap();
+        let i4 = runtime.add_number(10).unwrap();
         let i5 = runtime.add_unit().unwrap();
         let i6 = runtime.add_range(i4, i5).unwrap();
 
@@ -1332,12 +1332,12 @@ mod ranges {
     fn equality_start_not_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_range(i1, i2).unwrap();
 
-        let i4 = runtime.add_integer(5).unwrap();
-        let i5 = runtime.add_integer(10).unwrap();
+        let i4 = runtime.add_number(5).unwrap();
+        let i5 = runtime.add_number(10).unwrap();
         let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
@@ -1355,12 +1355,12 @@ mod ranges {
     fn equality_end_not_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_range(i1, i2).unwrap();
 
-        let i4 = runtime.add_integer(10).unwrap();
-        let i5 = runtime.add_integer(20).unwrap();
+        let i4 = runtime.add_number(10).unwrap();
+        let i5 = runtime.add_number(20).unwrap();
         let i6 = runtime.add_range(i4, i5).unwrap();
 
         runtime.push_register(i3).unwrap();
@@ -1383,18 +1383,18 @@ mod lists {
     fn equality_only_items_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
-        let i3 = runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
+        let i3 = runtime.add_number(10).unwrap();
         runtime.start_list(3).unwrap();
         runtime.add_to_list(i1, false).unwrap();
         runtime.add_to_list(i2, false).unwrap();
         runtime.add_to_list(i3, false).unwrap();
         let i4 = runtime.end_list().unwrap();
 
-        let i5 = runtime.add_integer(10).unwrap();
-        let i6 = runtime.add_integer(10).unwrap();
-        let i7 = runtime.add_integer(10).unwrap();
+        let i5 = runtime.add_number(10).unwrap();
+        let i6 = runtime.add_number(10).unwrap();
+        let i7 = runtime.add_number(10).unwrap();
         runtime.start_list(3).unwrap();
         runtime.add_to_list(i5, false).unwrap();
         runtime.add_to_list(i6, false).unwrap();
@@ -1413,18 +1413,18 @@ mod lists {
     fn equality_only_items_not_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
-        let i3 = runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
+        let i3 = runtime.add_number(10).unwrap();
         runtime.start_list(3).unwrap();
         runtime.add_to_list(i1, false).unwrap();
         runtime.add_to_list(i2, false).unwrap();
         runtime.add_to_list(i3, false).unwrap();
         let i4 = runtime.end_list().unwrap();
 
-        let i5 = runtime.add_integer(10).unwrap();
-        let i6 = runtime.add_integer(20).unwrap();
-        let i7 = runtime.add_integer(30).unwrap();
+        let i5 = runtime.add_number(10).unwrap();
+        let i6 = runtime.add_number(20).unwrap();
+        let i7 = runtime.add_number(30).unwrap();
         runtime.start_list(3).unwrap();
         runtime.add_to_list(i5, false).unwrap();
         runtime.add_to_list(i6, false).unwrap();
@@ -1449,15 +1449,15 @@ mod lists {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol("val1").unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
         let i4 = runtime.add_symbol("val2").unwrap();
-        let i5 = runtime.add_integer(20).unwrap();
+        let i5 = runtime.add_number(20).unwrap();
         let i6 = runtime.add_pair((i4, i5)).unwrap();
 
         let i7 = runtime.add_symbol("val3").unwrap();
-        let i8 = runtime.add_integer(30).unwrap();
+        let i8 = runtime.add_number(30).unwrap();
         let i9 = runtime.add_pair((i7, i8)).unwrap();
 
         runtime.start_list(3).unwrap();
@@ -1467,15 +1467,15 @@ mod lists {
         let i10 = runtime.end_list().unwrap();
 
         let i11 = runtime.add_symbol("val3").unwrap();
-        let i12 = runtime.add_integer(30).unwrap();
+        let i12 = runtime.add_number(30).unwrap();
         let i13 = runtime.add_pair((i11, i12)).unwrap();
 
         let i14 = runtime.add_symbol("val1").unwrap();
-        let i15 = runtime.add_integer(10).unwrap();
+        let i15 = runtime.add_number(10).unwrap();
         let i16 = runtime.add_pair((i14, i15)).unwrap();
 
         let i17 = runtime.add_symbol("val2").unwrap();
-        let i18 = runtime.add_integer(20).unwrap();
+        let i18 = runtime.add_number(20).unwrap();
         let i19 = runtime.add_pair((i17, i18)).unwrap();
 
         runtime.start_list(3).unwrap();
@@ -1497,15 +1497,15 @@ mod lists {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol("val1").unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
         let i4 = runtime.add_symbol("val2").unwrap();
-        let i5 = runtime.add_integer(20).unwrap();
+        let i5 = runtime.add_number(20).unwrap();
         let i6 = runtime.add_pair((i4, i5)).unwrap();
 
         let i7 = runtime.add_symbol("val3").unwrap();
-        let i8 = runtime.add_integer(30).unwrap();
+        let i8 = runtime.add_number(30).unwrap();
         let i9 = runtime.add_pair((i7, i8)).unwrap();
 
         runtime.start_list(3).unwrap();
@@ -1515,15 +1515,15 @@ mod lists {
         let i10 = runtime.end_list().unwrap();
 
         let i11 = runtime.add_symbol("val3").unwrap();
-        let i12 = runtime.add_integer(30).unwrap();
+        let i12 = runtime.add_number(30).unwrap();
         let i13 = runtime.add_pair((i11, i12)).unwrap();
 
         let i14 = runtime.add_symbol("val1").unwrap();
-        let i15 = runtime.add_integer(10).unwrap();
+        let i15 = runtime.add_number(10).unwrap();
         let i16 = runtime.add_pair((i14, i15)).unwrap();
 
         let i17 = runtime.add_symbol("val2").unwrap();
-        let i18 = runtime.add_integer(100).unwrap();
+        let i18 = runtime.add_number(100).unwrap();
         let i19 = runtime.add_pair((i17, i18)).unwrap();
 
         runtime.start_list(3).unwrap();
@@ -1548,13 +1548,13 @@ mod lists {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol("val1").unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
-        let i4 = runtime.add_integer(40).unwrap();
+        let i4 = runtime.add_number(40).unwrap();
 
         let i5 = runtime.add_symbol("val3").unwrap();
-        let i6 = runtime.add_integer(30).unwrap();
+        let i6 = runtime.add_number(30).unwrap();
         let i7 = runtime.add_pair((i5, i6)).unwrap();
 
         runtime.start_list(3).unwrap();
@@ -1564,13 +1564,13 @@ mod lists {
         let i8 = runtime.end_list().unwrap();
 
         let i9 = runtime.add_symbol("val1").unwrap();
-        let i10 = runtime.add_integer(10).unwrap();
+        let i10 = runtime.add_number(10).unwrap();
         let i11 = runtime.add_pair((i9, i10)).unwrap();
 
-        let i12 = runtime.add_integer(40).unwrap();
+        let i12 = runtime.add_number(40).unwrap();
 
         let i13 = runtime.add_symbol("val3").unwrap();
-        let i14 = runtime.add_integer(30).unwrap();
+        let i14 = runtime.add_number(30).unwrap();
         let i15 = runtime.add_pair((i13, i14)).unwrap();
 
         runtime.start_list(3).unwrap();
@@ -1592,13 +1592,13 @@ mod lists {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol("val1").unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
-        let i4 = runtime.add_integer(40).unwrap();
+        let i4 = runtime.add_number(40).unwrap();
 
         let i5 = runtime.add_symbol("val3").unwrap();
-        let i6 = runtime.add_integer(30).unwrap();
+        let i6 = runtime.add_number(30).unwrap();
         let i7 = runtime.add_pair((i5, i6)).unwrap();
 
         runtime.start_list(3).unwrap();
@@ -1608,13 +1608,13 @@ mod lists {
         let i8 = runtime.end_list().unwrap();
 
         let i9 = runtime.add_symbol("val1").unwrap();
-        let i10 = runtime.add_integer(10).unwrap();
+        let i10 = runtime.add_number(10).unwrap();
         let i11 = runtime.add_pair((i9, i10)).unwrap();
 
-        let i12 = runtime.add_integer(20).unwrap();
+        let i12 = runtime.add_number(20).unwrap();
 
         let i13 = runtime.add_symbol("val3").unwrap();
-        let i14 = runtime.add_integer(30).unwrap();
+        let i14 = runtime.add_number(30).unwrap();
         let i15 = runtime.add_pair((i13, i14)).unwrap();
 
         runtime.start_list(3).unwrap();
@@ -1705,7 +1705,7 @@ mod slices {
         let mut runtime = SimpleRuntimeData::new();
 
         let unit = runtime.add_unit().unwrap();
-        let d1 = runtime.add_integer(10).unwrap();
+        let d1 = runtime.add_number(10).unwrap();
 
         runtime.start_list(3).unwrap();
         runtime.add_to_list(d1, false).unwrap();
@@ -1734,8 +1734,8 @@ mod slices {
         let mut runtime = SimpleRuntimeData::new();
 
         let unit = runtime.add_unit().unwrap();
-        let d1 = runtime.add_integer(10).unwrap();
-        let d2 = runtime.add_integer(20).unwrap();
+        let d1 = runtime.add_number(10).unwrap();
+        let d2 = runtime.add_number(20).unwrap();
 
         runtime.start_list(3).unwrap();
         runtime.add_to_list(d1, false).unwrap();
@@ -1868,7 +1868,7 @@ mod slices {
 
         let unit = runtime.add_unit().unwrap();
 
-        let d1 = runtime.add_integer(10).unwrap();
+        let d1 = runtime.add_number(10).unwrap();
 
         let link1 = runtime.add_link(d1, unit, true).unwrap();
         let link2 = runtime.add_link(unit, link1, true).unwrap();
@@ -1894,8 +1894,8 @@ mod slices {
 
         let unit = runtime.add_unit().unwrap();
 
-        let d1 = runtime.add_integer(10).unwrap();
-        let d2 = runtime.add_integer(20).unwrap();
+        let d1 = runtime.add_number(10).unwrap();
+        let d2 = runtime.add_number(20).unwrap();
 
         let link1 = runtime.add_link(d1, unit, true).unwrap();
         let link2 = runtime.add_link(d2, link1, true).unwrap();
@@ -1924,7 +1924,7 @@ mod slices {
 
         let unit = runtime.add_unit().unwrap();
 
-        let d1 = runtime.add_integer(10).unwrap();
+        let d1 = runtime.add_number(10).unwrap();
 
         let link1 = runtime.add_link(d1, unit, true).unwrap();
         let link2 = runtime.add_link(unit, link1, true).unwrap();
@@ -1950,8 +1950,8 @@ mod slices {
 
         let unit = runtime.add_unit().unwrap();
 
-        let d1 = runtime.add_integer(10).unwrap();
-        let d2 = runtime.add_integer(20).unwrap();
+        let d1 = runtime.add_number(10).unwrap();
+        let d2 = runtime.add_number(20).unwrap();
 
         let link1 = runtime.add_link(d1, unit, true).unwrap();
         let link2 = runtime.add_link(d2, link1, true).unwrap();

@@ -47,7 +47,7 @@ mod tests {
     #[test]
     fn put() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_integer(10).unwrap();
+        runtime.add_number(10).unwrap();
         runtime.set_end_of_constant(runtime.get_data_len()).unwrap();
 
         runtime.put(1).unwrap();
@@ -58,7 +58,7 @@ mod tests {
     #[test]
     fn put_outside_of_constant_data() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_integer(10).unwrap();
+        runtime.add_number(10).unwrap();
 
         let result = runtime.put(10);
 
@@ -69,8 +69,8 @@ mod tests {
     fn put_input() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_integer(20).unwrap();
+        runtime.add_number(10).unwrap();
+        runtime.add_number(20).unwrap();
 
         runtime.push_value_stack(2).unwrap();
 
@@ -83,8 +83,8 @@ mod tests {
     fn put_input_is_unit_if_no_input() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_integer(20).unwrap();
+        runtime.add_number(10).unwrap();
+        runtime.add_number(20).unwrap();
 
         runtime.put_value().unwrap();
 
@@ -95,8 +95,8 @@ mod tests {
     fn push_input() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_integer(20).unwrap();
+        runtime.add_number(10).unwrap();
+        runtime.add_number(20).unwrap();
 
         runtime.push_register(2).unwrap();
 
@@ -111,8 +111,8 @@ mod tests {
     fn push_input_no_register_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_integer(20).unwrap();
+        runtime.add_number(10).unwrap();
+        runtime.add_number(20).unwrap();
 
         assert!(runtime.push_value().is_err());
     }
@@ -121,7 +121,7 @@ mod tests {
     fn push_result() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
         runtime.push_instruction(Instruction::UpdateValue, None).unwrap();
 
         runtime.push_register(i1).unwrap();
@@ -132,14 +132,14 @@ mod tests {
 
         assert_eq!(runtime.get_value_stack_len(), 1);
         assert_eq!(runtime.get_current_value().unwrap(), i1);
-        assert_eq!(runtime.get_integer(runtime.get_current_value().unwrap()).unwrap(), 10i32);
+        assert_eq!(runtime.get_number(runtime.get_current_value().unwrap()).unwrap(), 10i32);
     }
 
     #[test]
     fn push_result_no_register_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
+        runtime.add_number(10).unwrap();
         runtime.push_instruction(Instruction::UpdateValue, None).unwrap();
 
         assert!(runtime.update_value().is_err());

@@ -37,7 +37,7 @@ mod tests {
     use crate::{
         runtime::{
             context::{EmptyContext, GarnishLangRuntimeContext},
-            utilities::push_integer,
+            utilities::push_number,
             GarnishRuntime,
         },
         symbol_value, GarnishLangRuntimeData, RuntimeError, Instruction, SimpleRuntimeData, ExpressionDataType
@@ -49,7 +49,7 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol("one").unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
         runtime.add_to_list(i3, true).unwrap();
@@ -70,7 +70,7 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol("one").unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
         runtime.add_to_list(i3, true).unwrap();
@@ -99,7 +99,7 @@ mod tests {
             fn resolve(&mut self, sym_val: u64, runtime: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
                 assert_eq!(symbol_value("one"), sym_val);
 
-                push_integer(runtime, 100)?;
+                push_number(runtime, 100)?;
                 Ok(true)
             }
 

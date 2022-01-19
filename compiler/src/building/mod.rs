@@ -100,7 +100,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
 ) -> Result<bool, CompilerError<Data::Error>> {
     match node.get_definition() {
         Definition::Integer => {
-            let addr = data.add_integer(match node.get_lex_token().get_text().parse::<Data::Number>() {
+            let addr = data.add_number(match node.get_lex_token().get_text().parse::<Data::Number>() {
                 Err(_) => data_parse_error(node.get_lex_token(), ExpressionDataType::Number)?,
                 Ok(i) => i,
             })?;

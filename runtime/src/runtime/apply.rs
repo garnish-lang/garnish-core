@@ -177,7 +177,7 @@ pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
 
     match (this.get_data_type(start)?, this.get_data_type(end)?, this.get_data_type(old_start)?) {
         (ExpressionDataType::Number, ExpressionDataType::Number, ExpressionDataType::Number) => {
-            let (start_int, end_int, old_start_int) = (this.get_integer(start)?, this.get_integer(end)?, this.get_integer(old_start)?);
+            let (start_int, end_int, old_start_int) = (this.get_number(start)?, this.get_number(end)?, this.get_number(old_start)?);
 
             match (old_start_int.add(start_int), end_int.subtract(start_int)) {
                 (Some(new_start), Some(adjusted_end)) => {
@@ -185,8 +185,8 @@ pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
                     // offset end by same amount as start
                     match new_start.add(adjusted_end) {
                         Some(new_end) => {
-                            let start_addr = this.add_integer(new_start)?;
-                            let end_addr = this.add_integer(new_end)?;
+                            let start_addr = this.add_number(new_start)?;
+                            let end_addr = this.add_number(new_end)?;
                             let range_addr = this.add_range(start_addr, end_addr)?;
 
                             Ok(range_addr)
@@ -219,9 +219,9 @@ mod tests {
     fn apply() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(10).unwrap();
+        let int1 = runtime.add_number(10).unwrap();
         let exp1 = runtime.add_expression(0).unwrap();
-        let int2 = runtime.add_integer(20).unwrap();
+        let int2 = runtime.add_number(20).unwrap();
 
         // 1
         let i1 = runtime.push_instruction(Instruction::Put, Some(int1)).unwrap();
@@ -253,15 +253,15 @@ mod tests {
     fn apply_integer_to_list() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_integer(10).unwrap();
-        let d2 = runtime.add_integer(20).unwrap();
-        let d3 = runtime.add_integer(30).unwrap();
+        let d1 = runtime.add_number(10).unwrap();
+        let d2 = runtime.add_number(20).unwrap();
+        let d3 = runtime.add_number(30).unwrap();
         runtime.start_list(3).unwrap();
         runtime.add_to_list(d1, false).unwrap();
         runtime.add_to_list(d2, false).unwrap();
         runtime.add_to_list(d3, false).unwrap();
         let d4 = runtime.end_list().unwrap();
-        let d5 = runtime.add_integer(2).unwrap();
+        let d5 = runtime.add_number(2).unwrap();
 
         runtime.push_instruction(Instruction::Add, None).unwrap();
         let i1 = runtime.push_instruction(Instruction::Apply, None).unwrap();
@@ -275,7 +275,7 @@ mod tests {
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 30);
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 30);
         assert_eq!(runtime.get_instruction_cursor(), i2);
     }
 
@@ -288,7 +288,7 @@ mod tests {
         runtime.add_to_char_list('b').unwrap();
         runtime.add_to_char_list('c').unwrap();
         let d1 = runtime.end_char_list().unwrap();
-        let d2 = runtime.add_integer(2).unwrap();
+        let d2 = runtime.add_number(2).unwrap();
         let start = runtime.get_data_len();
 
         runtime.push_instruction(Instruction::Add, None).unwrap();
@@ -317,7 +317,7 @@ mod tests {
         runtime.add_to_byte_list(20).unwrap();
         runtime.add_to_byte_list(30).unwrap();
         let d1 = runtime.end_byte_list().unwrap();
-        let d2 = runtime.add_integer(2).unwrap();
+        let d2 = runtime.add_number(2).unwrap();
         let start = runtime.get_data_len();
 
         runtime.push_instruction(Instruction::Add, None).unwrap();
@@ -341,10 +341,10 @@ mod tests {
     fn range_with_integer() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
+        let i2 = runtime.add_number(20).unwrap();
         let i3 = runtime.add_range(i1, i2).unwrap();
-        let i4 = runtime.add_integer(5).unwrap();
+        let i4 = runtime.add_number(5).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -353,7 +353,7 @@ mod tests {
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 15);
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 15);
     }
 
     #[test]
@@ -361,15 +361,15 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol("val1").unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
         let i4 = runtime.add_symbol("val2").unwrap();
-        let i5 = runtime.add_integer(20).unwrap();
+        let i5 = runtime.add_number(20).unwrap();
         let i6 = runtime.add_pair((i4, i5)).unwrap();
 
         let i7 = runtime.add_symbol("val3").unwrap();
-        let i8 = runtime.add_integer(30).unwrap();
+        let i8 = runtime.add_number(30).unwrap();
         let i9 = runtime.add_pair((i7, i8)).unwrap();
 
         runtime.start_list(3).unwrap();
@@ -385,7 +385,7 @@ mod tests {
 
         runtime.apply::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), 20);
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 20);
     }
 
     #[test]
@@ -393,15 +393,15 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol("val1").unwrap();
-        let i2 = runtime.add_integer(10).unwrap();
+        let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
         let i4 = runtime.add_symbol("val2").unwrap();
-        let i5 = runtime.add_integer(20).unwrap();
+        let i5 = runtime.add_number(20).unwrap();
         let i6 = runtime.add_pair((i4, i5)).unwrap();
 
         let i7 = runtime.add_symbol("val3").unwrap();
-        let i8 = runtime.add_integer(30).unwrap();
+        let i8 = runtime.add_number(30).unwrap();
         let i9 = runtime.add_pair((i7, i8)).unwrap();
 
         runtime.start_list(3).unwrap();
@@ -410,9 +410,9 @@ mod tests {
         runtime.add_to_list(i9, true).unwrap();
         let i10 = runtime.end_list().unwrap();
 
-        let i11 = runtime.add_integer(2).unwrap(); // integer access
+        let i11 = runtime.add_number(2).unwrap(); // integer access
         let i12 = runtime.add_symbol("val2").unwrap(); // symbol access
-        let i13 = runtime.add_integer(5).unwrap(); // access out of bounds
+        let i13 = runtime.add_number(5).unwrap(); // access out of bounds
         let i14 = runtime.add_expression(10).unwrap(); // invalid access type
 
         let i15 = runtime.add_symbol("new_key").unwrap();
@@ -444,14 +444,14 @@ mod tests {
         assert_eq!(runtime.get_data_type(pair_left).unwrap(), ExpressionDataType::Symbol);
         assert_eq!(runtime.get_symbol(pair_left).unwrap(), symbol_value("val3"));
         assert_eq!(runtime.get_data_type(pair_right).unwrap(), ExpressionDataType::Number);
-        assert_eq!(runtime.get_integer(pair_right).unwrap(), 30);
+        assert_eq!(runtime.get_number(pair_right).unwrap(), 30);
 
         let association_value1 = runtime.get_list_item_with_symbol(addr, symbol_value("val3")).unwrap().unwrap();
-        assert_eq!(runtime.get_integer(association_value1).unwrap(), 30);
+        assert_eq!(runtime.get_number(association_value1).unwrap(), 30);
 
         let int_addr = runtime.get_list_item(addr, 1).unwrap();
         assert_eq!(runtime.get_data_type(int_addr).unwrap(), ExpressionDataType::Number);
-        assert_eq!(runtime.get_integer(int_addr).unwrap(), 20);
+        assert_eq!(runtime.get_number(int_addr).unwrap(), 20);
 
         let unit1 = runtime.get_list_item(addr, 2).unwrap();
         let unit2 = runtime.get_list_item(addr, 3).unwrap();
@@ -466,15 +466,15 @@ mod tests {
         assert_eq!(runtime.get_data_type(map_pair_left).unwrap(), ExpressionDataType::Symbol);
         assert_eq!(runtime.get_symbol(map_pair_left).unwrap(), symbol_value("new_key"));
         assert_eq!(runtime.get_data_type(map_pair_right).unwrap(), ExpressionDataType::Number);
-        assert_eq!(runtime.get_integer(map_pair_right).unwrap(), 10);
+        assert_eq!(runtime.get_number(map_pair_right).unwrap(), 10);
     }
 
     #[test]
     fn apply_with_unsupported_left_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(10).unwrap();
-        let int2 = runtime.add_integer(20).unwrap();
+        let int1 = runtime.add_number(10).unwrap();
+        let int2 = runtime.add_number(20).unwrap();
 
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
@@ -488,9 +488,9 @@ mod tests {
     fn apply_no_references_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
+        runtime.add_number(10).unwrap();
         runtime.add_expression(0).unwrap();
-        runtime.add_integer(20).unwrap();
+        runtime.add_number(20).unwrap();
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
@@ -516,7 +516,7 @@ mod tests {
     fn empty_apply() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(10).unwrap();
+        let int1 = runtime.add_number(10).unwrap();
         let exp1 = runtime.add_expression(0).unwrap();
 
         // 1
@@ -547,7 +547,7 @@ mod tests {
     fn empty_apply_no_references_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
+        runtime.add_number(10).unwrap();
         runtime.add_expression(0).unwrap();
 
         // 1
@@ -575,9 +575,9 @@ mod tests {
 
         let true1 = runtime.add_true().unwrap();
         let _exp1 = runtime.add_expression(0).unwrap();
-        let int1 = runtime.add_integer(20).unwrap();
-        let _int2 = runtime.add_integer(30).unwrap();
-        let int3 = runtime.add_integer(40).unwrap();
+        let int1 = runtime.add_number(20).unwrap();
+        let _int2 = runtime.add_number(30).unwrap();
+        let int3 = runtime.add_number(40).unwrap();
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
@@ -614,9 +614,9 @@ mod tests {
 
         runtime.add_false().unwrap();
         runtime.add_expression(0).unwrap();
-        runtime.add_integer(20).unwrap();
-        runtime.add_integer(30).unwrap();
-        runtime.add_integer(40).unwrap();
+        runtime.add_number(20).unwrap();
+        runtime.add_number(30).unwrap();
+        runtime.add_number(40).unwrap();
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
@@ -654,7 +654,7 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         let ext1 = runtime.add_external(3).unwrap();
-        let int1 = runtime.add_integer(100).unwrap();
+        let int1 = runtime.add_number(100).unwrap();
 
         runtime.push_instruction(Instruction::Add, None).unwrap();
         let i1 = runtime.push_instruction(Instruction::Apply, None).unwrap();
@@ -679,11 +679,11 @@ mod tests {
                 assert_eq!(external_value, 3);
 
                 let value = match runtime.get_data_type(input_addr)? {
-                    ExpressionDataType::Number => runtime.get_integer(input_addr)?,
+                    ExpressionDataType::Number => runtime.get_number(input_addr)?,
                     _ => return Ok(false),
                 };
 
-                self.new_addr = runtime.add_integer(value * 2)?;
+                self.new_addr = runtime.add_number(value * 2)?;
                 runtime.push_register(self.new_addr)?;
 
                 Ok(true)
@@ -694,7 +694,7 @@ mod tests {
 
         runtime.apply(Some(&mut context)).unwrap();
 
-        assert_eq!(runtime.get_integer(context.new_addr).unwrap(), 200);
+        assert_eq!(runtime.get_number(context.new_addr).unwrap(), 200);
         assert_eq!(runtime.get_register(0).unwrap(), context.new_addr);
         assert_eq!(runtime.get_instruction_cursor(), i2);
     }
@@ -743,8 +743,8 @@ mod slices {
         assert_eq!(list, d1);
 
         let (start, end) = runtime.get_range(range).unwrap();
-        assert_eq!(runtime.get_integer(start).unwrap(), 3);
-        assert_eq!(runtime.get_integer(end).unwrap(), 5);
+        assert_eq!(runtime.get_number(start).unwrap(), 3);
+        assert_eq!(runtime.get_number(end).unwrap(), 5);
     }
 
     #[test]
@@ -802,8 +802,8 @@ mod slices {
         runtime.apply::<EmptyContext>(None).unwrap();
 
         let (start, end) = runtime.get_range(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_integer(start).unwrap(), 6);
-        assert_eq!(runtime.get_integer(end).unwrap(), 14);
+        assert_eq!(runtime.get_number(start).unwrap(), 6);
+        assert_eq!(runtime.get_number(end).unwrap(), 14);
     }
 
     #[test]
@@ -811,7 +811,7 @@ mod slices {
         let mut runtime = SimpleRuntimeData::new();
 
         let unit = runtime.add_unit().unwrap();
-        let d1 = runtime.add_integer(10).unwrap();
+        let d1 = runtime.add_number(10).unwrap();
         let d2 = runtime.add_link(d1, unit, true).unwrap();
 
         let d3 = add_range(&mut runtime, 1, 5);

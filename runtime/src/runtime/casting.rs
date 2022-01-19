@@ -46,19 +46,19 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         }
         // Numbers
         (ExpressionDataType::Number, ExpressionDataType::Char) => {
-            primitive_cast(this, left, Data::get_integer, Data::integer_to_char, Data::add_char)?;
+            primitive_cast(this, left, Data::get_number, Data::integer_to_char, Data::add_char)?;
         }
         (ExpressionDataType::Number, ExpressionDataType::Byte) => {
-            primitive_cast(this, left, Data::get_integer, Data::integer_to_byte, Data::add_byte)?;
+            primitive_cast(this, left, Data::get_number, Data::integer_to_byte, Data::add_byte)?;
         }
         (ExpressionDataType::Char, ExpressionDataType::Number) => {
-            primitive_cast(this, left, Data::get_char, Data::char_to_integer, Data::add_integer)?;
+            primitive_cast(this, left, Data::get_char, Data::char_to_integer, Data::add_number)?;
         }
         (ExpressionDataType::Char, ExpressionDataType::Byte) => {
             primitive_cast(this, left, Data::get_char, Data::char_to_byte, Data::add_byte)?;
         }
         (ExpressionDataType::Byte, ExpressionDataType::Number) => {
-            primitive_cast(this, left, Data::get_byte, Data::byte_to_integer, Data::add_integer)?;
+            primitive_cast(this, left, Data::get_byte, Data::byte_to_integer, Data::add_number)?;
         }
         (ExpressionDataType::Byte, ExpressionDataType::Char) => {
             primitive_cast(this, left, Data::get_byte, Data::byte_to_char, Data::add_char)?;
@@ -75,7 +75,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
 
             this.start_list(len)?;
             while count <= end {
-                let addr = this.add_integer(count)?;
+                let addr = this.add_number(count)?;
                 this.add_to_list(addr, false)?;
                 count = count.increment().or_num_err()?;
             }
@@ -144,7 +144,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         }
         (ExpressionDataType::Range, ExpressionDataType::Link) => {
             let (start, end, _) = get_range(this, left)?;
-            create_link(this, right, start, end.increment().or_num_err()?, |this, index| Ok(this.add_integer(index)?))?;
+            create_link(this, right, start, end.increment().or_num_err()?, |this, index| Ok(this.add_number(index)?))?;
         }
         (ExpressionDataType::CharList, ExpressionDataType::Link) => {
             let len = this.get_char_list_len(left)?;
@@ -440,7 +440,7 @@ mod simple {
     fn cast_to_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int = runtime.add_integer(10).unwrap();
+        let int = runtime.add_number(10).unwrap();
         let unit = runtime.add_unit().unwrap();
 
         runtime.push_register(int).unwrap();
@@ -455,7 +455,7 @@ mod simple {
     fn cast_to_true() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_integer(10).unwrap();
+        let d1 = runtime.add_number(10).unwrap();
         let d2 = runtime.add_true().unwrap();
 
         runtime.push_register(d1).unwrap();
@@ -506,7 +506,7 @@ mod simple {
     fn cast_to_false() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_integer(10).unwrap();
+        let d1 = runtime.add_number(10).unwrap();
         let d2 = runtime.add_false().unwrap();
 
         runtime.push_register(d1).unwrap();
@@ -563,7 +563,7 @@ mod primitive {
     fn integer_to_char() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_integer('a' as i32).unwrap();
+        let d1 = runtime.add_number('a' as i32).unwrap();
         let d2 = runtime.add_char('\0').unwrap();
 
         runtime.push_register(d1).unwrap();
@@ -580,7 +580,7 @@ mod primitive {
     fn integer_to_byte() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_integer(10).unwrap();
+        let d1 = runtime.add_number(10).unwrap();
         let d2 = runtime.add_byte(0).unwrap();
 
         runtime.push_register(d1).unwrap();
@@ -598,7 +598,7 @@ mod primitive {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = runtime.add_char('a').unwrap();
-        let d2 = runtime.add_integer(0).unwrap();
+        let d2 = runtime.add_number(0).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
@@ -607,7 +607,7 @@ mod primitive {
 
         let expected = SimpleRuntimeData::char_to_integer('a').unwrap();
 
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), expected);
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
 
     #[test]
@@ -632,7 +632,7 @@ mod primitive {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = runtime.add_byte('a' as u8).unwrap();
-        let d2 = runtime.add_integer(0).unwrap();
+        let d2 = runtime.add_number(0).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
@@ -641,7 +641,7 @@ mod primitive {
 
         let expected = SimpleRuntimeData::byte_to_integer('a' as u8).unwrap();
 
-        assert_eq!(runtime.get_integer(runtime.get_register(0).unwrap()).unwrap(), expected);
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
 
     #[test]
@@ -688,10 +688,10 @@ mod lists {
             let (left, right) = runtime.get_pair(item_addr).unwrap();
             let s = symbol_value(format!("val{}", 20 + i).as_ref());
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
-            assert_eq!(runtime.get_integer(right).unwrap(), 20 + i);
+            assert_eq!(runtime.get_number(right).unwrap(), 20 + i);
 
             let association = runtime.get_list_item_with_symbol(addr, s).unwrap().unwrap();
-            assert_eq!(runtime.get_integer(association).unwrap(), 20 + i)
+            assert_eq!(runtime.get_number(association).unwrap(), 20 + i)
         }
     }
 
@@ -713,7 +713,7 @@ mod lists {
 
         for i in 0..10 {
             let item_addr = runtime.get_list_item(addr, i).unwrap();
-            assert_eq!(runtime.get_integer(item_addr).unwrap(), 10 + i);
+            assert_eq!(runtime.get_number(item_addr).unwrap(), 10 + i);
         }
     }
 
@@ -793,10 +793,10 @@ mod lists {
             let (left, right) = runtime.get_pair(item_addr).unwrap();
             let s = symbol_value(format!("val{}", value).as_ref());
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
-            assert_eq!(runtime.get_integer(right).unwrap(), value);
+            assert_eq!(runtime.get_number(right).unwrap(), value);
 
             let association = runtime.get_list_item_with_symbol(addr, s).unwrap().unwrap();
-            assert_eq!(runtime.get_integer(association).unwrap(), value)
+            assert_eq!(runtime.get_number(association).unwrap(), value)
         }
     }
 
@@ -824,10 +824,10 @@ mod lists {
             let (left, right) = runtime.get_pair(item_addr).unwrap();
             let s = symbol_value(format!("val{}", value).as_ref());
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
-            assert_eq!(runtime.get_integer(right).unwrap(), value);
+            assert_eq!(runtime.get_number(right).unwrap(), value);
 
             let association = runtime.get_list_item_with_symbol(addr, s).unwrap().unwrap();
-            assert_eq!(runtime.get_integer(association).unwrap(), value)
+            assert_eq!(runtime.get_number(association).unwrap(), value)
         }
     }
 
@@ -915,7 +915,7 @@ mod links {
             let s = symbol_value(format!("val{}", 20 + current_index).as_ref());
 
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
-            assert_eq!(runtime.get_integer(right).unwrap(), 20 + current_index);
+            assert_eq!(runtime.get_number(right).unwrap(), 20 + current_index);
             Ok(false)
         })
         .unwrap();
@@ -942,7 +942,7 @@ mod links {
             let s = symbol_value(format!("val{}", 20 + current_index).as_ref());
 
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
-            assert_eq!(runtime.get_integer(right).unwrap(), 20 + current_index);
+            assert_eq!(runtime.get_number(right).unwrap(), 20 + current_index);
             Ok(false)
         })
         .unwrap();
@@ -965,7 +965,7 @@ mod links {
         assert_eq!(len, 11);
 
         iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
-            assert_eq!(runtime.get_integer(addr).unwrap(), current_index);
+            assert_eq!(runtime.get_number(addr).unwrap(), current_index);
             Ok(false)
         })
         .unwrap();
@@ -988,7 +988,7 @@ mod links {
         assert_eq!(len, 11);
 
         iterate_link(&mut runtime, addr, |runtime, addr, current_index| {
-            assert_eq!(runtime.get_integer(addr).unwrap(), current_index);
+            assert_eq!(runtime.get_number(addr).unwrap(), current_index);
             Ok(false)
         })
         .unwrap();
@@ -1111,7 +1111,7 @@ mod links {
             let s = symbol_value(format!("val{}", 20 + current_index).as_ref());
 
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
-            assert_eq!(runtime.get_integer(right).unwrap(), 20 + current_index);
+            assert_eq!(runtime.get_number(right).unwrap(), 20 + current_index);
             Ok(false)
         })
         .unwrap();
@@ -1138,7 +1138,7 @@ mod links {
             let s = symbol_value(format!("val{}", 20 + current_index).as_ref());
 
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
-            assert_eq!(runtime.get_integer(right).unwrap(), 20 + current_index);
+            assert_eq!(runtime.get_number(right).unwrap(), 20 + current_index);
             Ok(false)
         })
         .unwrap();
@@ -1168,7 +1168,7 @@ mod links {
             let s = symbol_value(format!("val{}", value).as_ref());
 
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
-            assert_eq!(runtime.get_integer(right).unwrap(), value);
+            assert_eq!(runtime.get_number(right).unwrap(), value);
             Ok(false)
         })
         .unwrap();
@@ -1198,7 +1198,7 @@ mod links {
             let s = symbol_value(format!("val{}", value).as_ref());
 
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
-            assert_eq!(runtime.get_integer(right).unwrap(), value);
+            assert_eq!(runtime.get_number(right).unwrap(), value);
             Ok(false)
         })
         .unwrap();
@@ -1228,7 +1228,7 @@ mod links {
             let s = symbol_value(format!("val{}", value).as_ref());
 
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
-            assert_eq!(runtime.get_integer(right).unwrap(), value);
+            assert_eq!(runtime.get_number(right).unwrap(), value);
             Ok(false)
         })
         .unwrap();
@@ -1258,7 +1258,7 @@ mod links {
             let s = symbol_value(format!("val{}", value).as_ref());
 
             assert_eq!(runtime.get_symbol(left).unwrap(), s);
-            assert_eq!(runtime.get_integer(right).unwrap(), value);
+            assert_eq!(runtime.get_number(right).unwrap(), value);
             Ok(false)
         })
         .unwrap();

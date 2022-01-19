@@ -20,6 +20,6 @@ mod tests {
 
         data.execute_all_instructions().unwrap();
 
-        assert_eq!(data.get_integer(data.get_current_value().unwrap()).unwrap(), 10)
+        assert_eq!(data.get_number(data.get_current_value().unwrap()).unwrap(), 10)
     }
 }

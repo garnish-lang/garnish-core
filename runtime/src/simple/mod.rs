@@ -168,7 +168,7 @@ impl SimpleRuntimeData {
                 self.add_to_char_list('!')?;
             }
             ExpressionDataType::Number => {
-                let x = self.get_integer(from)?;
+                let x = self.get_number(from)?;
                 let s = x.to_string();
                 for c in s.chars() {
                     self.add_to_char_list(c)?;
@@ -236,7 +236,7 @@ impl SimpleRuntimeData {
             ExpressionDataType::Range => {
                 let (start, end) = self
                     .get_range(from)
-                    .and_then(|(start, end)| Ok((self.get_integer(start)?, self.get_integer(end)?)))?;
+                    .and_then(|(start, end)| Ok((self.get_number(start)?, self.get_number(end)?)))?;
 
                 let s = format!("{}..{}", start, end);
 
@@ -354,7 +354,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(d.get_data_type())
     }
 
-    fn get_integer(&self, index: usize) -> Result<i32, Self::Error> {
+    fn get_number(&self, index: usize) -> Result<i32, Self::Error> {
         Ok(self.get(index)?.as_integer()?.value())
     }
 
@@ -454,7 +454,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(2)
     }
 
-    fn add_integer(&mut self, value: i32) -> Result<usize, Self::Error> {
+    fn add_number(&mut self, value: i32) -> Result<usize, Self::Error> {
         self.cache_add(IntegerData::from(value))
     }
 
@@ -870,7 +870,7 @@ mod tests {
     #[test]
     fn type_of() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_integer(10).unwrap();
+        runtime.add_number(10).unwrap();
 
         assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Number);
     }
@@ -973,9 +973,9 @@ mod data_storage {
         let mut runtime = SimpleRuntimeData::new();
 
         let start = runtime.get_data_len();
-        let i1 = runtime.add_integer(10).unwrap();
-        let i2 = runtime.add_integer(20).unwrap();
-        let i3 = runtime.add_integer(10).unwrap();
+        let i1 = runtime.add_number(10).unwrap();
+        let i2 = runtime.add_number(20).unwrap();
+        let i3 = runtime.add_number(10).unwrap();
 
         assert_eq!(i1, start);
         assert_eq!(i2, start + 1);
@@ -1186,7 +1186,7 @@ mod to_char_list {
 
     #[test]
     fn integer() {
-        assert_to_char_list("10", |runtime| runtime.add_integer(10).unwrap())
+        assert_to_char_list("10", |runtime| runtime.add_number(10).unwrap())
     }
 
     #[test]
@@ -1246,8 +1246,8 @@ mod to_char_list {
     #[test]
     fn range() {
         assert_to_char_list("5..10", |runtime| {
-            let d1 = runtime.add_integer(5).unwrap();
-            let d2 = runtime.add_integer(10).unwrap();
+            let d1 = runtime.add_number(5).unwrap();
+            let d2 = runtime.add_number(10).unwrap();
             runtime.add_range(d1, d2).unwrap()
         })
     }
@@ -1255,8 +1255,8 @@ mod to_char_list {
     #[test]
     fn pair() {
         assert_to_char_list("10 = 10", |runtime| {
-            let d1 = runtime.add_integer(10).unwrap();
-            let d2 = runtime.add_integer(10).unwrap();
+            let d1 = runtime.add_number(10).unwrap();
+            let d2 = runtime.add_number(10).unwrap();
             runtime.add_pair((d1, d2)).unwrap()
         })
     }
@@ -1264,9 +1264,9 @@ mod to_char_list {
     #[test]
     fn pair_nested() {
         assert_to_char_list("10 = (20 = 30)", |runtime| {
-            let d1 = runtime.add_integer(10).unwrap();
-            let d2 = runtime.add_integer(20).unwrap();
-            let d3 = runtime.add_integer(30).unwrap();
+            let d1 = runtime.add_number(10).unwrap();
+            let d2 = runtime.add_number(20).unwrap();
+            let d3 = runtime.add_number(30).unwrap();
             let d4 = runtime.add_pair((d2, d3)).unwrap();
             runtime.add_pair((d1, d4)).unwrap()
         })
@@ -1275,10 +1275,10 @@ mod to_char_list {
     #[test]
     fn pair_nested_two() {
         assert_to_char_list("10 = (20 = (30 = 40))", |runtime| {
-            let d1 = runtime.add_integer(10).unwrap();
-            let d2 = runtime.add_integer(20).unwrap();
-            let d3 = runtime.add_integer(30).unwrap();
-            let d4 = runtime.add_integer(40).unwrap();
+            let d1 = runtime.add_number(10).unwrap();
+            let d2 = runtime.add_number(20).unwrap();
+            let d3 = runtime.add_number(30).unwrap();
+            let d4 = runtime.add_number(40).unwrap();
             let d5 = runtime.add_pair((d3, d4)).unwrap();
             let d6 = runtime.add_pair((d2, d5)).unwrap();
             runtime.add_pair((d1, d6)).unwrap()
@@ -1288,9 +1288,9 @@ mod to_char_list {
     #[test]
     fn list() {
         assert_to_char_list("10, 20, 30", |runtime| {
-            let d1 = runtime.add_integer(10).unwrap();
-            let d2 = runtime.add_integer(20).unwrap();
-            let d3 = runtime.add_integer(30).unwrap();
+            let d1 = runtime.add_number(10).unwrap();
+            let d2 = runtime.add_number(20).unwrap();
+            let d3 = runtime.add_number(30).unwrap();
             runtime.start_list(3).unwrap();
             runtime.add_to_list(d1, false).unwrap();
             runtime.add_to_list(d2, false).unwrap();
@@ -1302,10 +1302,10 @@ mod to_char_list {
     #[test]
     fn list_nested() {
         assert_to_char_list("10, (20, 30), 40", |runtime| {
-            let d1 = runtime.add_integer(10).unwrap();
-            let d2 = runtime.add_integer(20).unwrap();
-            let d3 = runtime.add_integer(30).unwrap();
-            let d4 = runtime.add_integer(40).unwrap();
+            let d1 = runtime.add_number(10).unwrap();
+            let d2 = runtime.add_number(20).unwrap();
+            let d3 = runtime.add_number(30).unwrap();
+            let d4 = runtime.add_number(40).unwrap();
 
             runtime.start_list(2).unwrap();
             runtime.add_to_list(d2, false).unwrap();
@@ -1324,8 +1324,8 @@ mod to_char_list {
     fn link_append() {
         assert_to_char_list("10 -> 20", |runtime| {
             let unit = runtime.add_unit().unwrap();
-            let d1 = runtime.add_integer(10).unwrap();
-            let d2 = runtime.add_integer(20).unwrap();
+            let d1 = runtime.add_number(10).unwrap();
+            let d2 = runtime.add_number(20).unwrap();
             let link1 = runtime.add_link(d1, unit, true).unwrap();
             runtime.add_link(d2, link1, true).unwrap()
         })
@@ -1335,8 +1335,8 @@ mod to_char_list {
     fn link_prepend() {
         assert_to_char_list("10 <- 20", |runtime| {
             let unit = runtime.add_unit().unwrap();
-            let d1 = runtime.add_integer(10).unwrap();
-            let d2 = runtime.add_integer(20).unwrap();
+            let d1 = runtime.add_number(10).unwrap();
+            let d2 = runtime.add_number(20).unwrap();
             let link1 = runtime.add_link(d2, unit, false).unwrap();
             runtime.add_link(d1, link1, false).unwrap()
         })
@@ -1346,9 +1346,9 @@ mod to_char_list {
     fn link_append_multiple() {
         assert_to_char_list("10 -> 20 -> 30", |runtime| {
             let unit = runtime.add_unit().unwrap();
-            let d1 = runtime.add_integer(10).unwrap();
-            let d2 = runtime.add_integer(20).unwrap();
-            let d3 = runtime.add_integer(30).unwrap();
+            let d1 = runtime.add_number(10).unwrap();
+            let d2 = runtime.add_number(20).unwrap();
+            let d3 = runtime.add_number(30).unwrap();
 
             let link1 = runtime.add_link(d1, unit, true).unwrap();
             let link2 = runtime.add_link(d2, link1, true).unwrap();
@@ -1360,9 +1360,9 @@ mod to_char_list {
     fn link_prepend_multiple() {
         assert_to_char_list("10 <- 20 <- 30", |runtime| {
             let unit = runtime.add_unit().unwrap();
-            let d1 = runtime.add_integer(10).unwrap();
-            let d2 = runtime.add_integer(20).unwrap();
-            let d3 = runtime.add_integer(30).unwrap();
+            let d1 = runtime.add_number(10).unwrap();
+            let d2 = runtime.add_number(20).unwrap();
+            let d3 = runtime.add_number(30).unwrap();
 
             let link1 = runtime.add_link(d3, unit, false).unwrap();
             let link2 = runtime.add_link(d2, link1, false).unwrap();
@@ -1373,10 +1373,10 @@ mod to_char_list {
     #[test]
     fn slice() {
         assert_to_char_list("(10, 20, 30) ~ 5..10", |runtime| {
-            let d1 = runtime.add_integer(5).unwrap();
-            let d2 = runtime.add_integer(10).unwrap();
-            let d3 = runtime.add_integer(20).unwrap();
-            let d4 = runtime.add_integer(30).unwrap();
+            let d1 = runtime.add_number(5).unwrap();
+            let d2 = runtime.add_number(10).unwrap();
+            let d3 = runtime.add_number(20).unwrap();
+            let d4 = runtime.add_number(30).unwrap();
 
             runtime.start_list(3).unwrap();
             runtime.add_to_list(d2, false).unwrap();

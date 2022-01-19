@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{next_two_raw_ref, push_integer, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, next_ref};
+use crate::{next_two_raw_ref, push_number, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, next_ref};
 
 pub fn add<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     perform_op(this, "addition", Data::Number::add)
@@ -54,10 +54,10 @@ fn perform_unary_op<Data: GarnishLangRuntimeData, Op>(this: &mut Data, op_name: 
 
     match t {
         ExpressionDataType::Number => {
-            let value = this.get_integer(addr)?;
+            let value = this.get_number(addr)?;
 
             match op(value) {
-                Some(result) => push_integer(this, result),
+                Some(result) => push_number(this, result),
                 None => push_unit(this),
             }
         }
@@ -86,11 +86,11 @@ where
 
     match types {
         (ExpressionDataType::Number, ExpressionDataType::Number) => {
-            let left = this.get_integer(left_addr)?;
-            let right = this.get_integer(right_addr)?;
+            let left = this.get_number(left_addr)?;
+            let right = this.get_number(right_addr)?;
 
             match op(left, right) {
-                Some(result) => push_integer(this, result),
+                Some(result) => push_number(this, result),
                 None => push_unit(this),
             }
         }
@@ -109,8 +109,8 @@ mod tests {
     fn perform_addition() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(10).unwrap();
-        let int2 = runtime.add_integer(20).unwrap();
+        let int1 = runtime.add_number(10).unwrap();
+        let int2 = runtime.add_number(20).unwrap();
         let new_data_start = runtime.get_data_len();
 
         runtime.push_register(int1).unwrap();
@@ -119,15 +119,15 @@ mod tests {
         runtime.add().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_integer(new_data_start).unwrap(), 30);
+        assert_eq!(runtime.get_number(new_data_start).unwrap(), 30);
     }
 
     #[test]
     fn perform_addition_no_refs_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_integer(10).unwrap();
-        runtime.add_integer(20).unwrap();
+        runtime.add_number(10).unwrap();
+        runtime.add_number(20).unwrap();
 
         let result = runtime.add();
 
@@ -153,8 +153,8 @@ mod tests {
     fn subtract() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(10).unwrap();
-        let int2 = runtime.add_integer(20).unwrap();
+        let int1 = runtime.add_number(10).unwrap();
+        let int2 = runtime.add_number(20).unwrap();
         let new_data_start = runtime.get_data_len();
 
         runtime.push_register(int1).unwrap();
@@ -163,15 +163,15 @@ mod tests {
         runtime.subtract().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_integer(new_data_start).unwrap(), -10);
+        assert_eq!(runtime.get_number(new_data_start).unwrap(), -10);
     }
 
     #[test]
     fn multiply() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(10).unwrap();
-        let int2 = runtime.add_integer(20).unwrap();
+        let int1 = runtime.add_number(10).unwrap();
+        let int2 = runtime.add_number(20).unwrap();
         let new_data_start = runtime.get_data_len();
 
         runtime.push_register(int1).unwrap();
@@ -180,15 +180,15 @@ mod tests {
         runtime.multiply().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_integer(new_data_start).unwrap(), 200);
+        assert_eq!(runtime.get_number(new_data_start).unwrap(), 200);
     }
 
     #[test]
     fn divide() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(20).unwrap();
-        let int2 = runtime.add_integer(10).unwrap();
+        let int1 = runtime.add_number(20).unwrap();
+        let int2 = runtime.add_number(10).unwrap();
         let new_data_start = runtime.get_data_len();
 
         runtime.push_register(int1).unwrap();
@@ -197,15 +197,15 @@ mod tests {
         runtime.divide().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_integer(new_data_start).unwrap(), 2);
+        assert_eq!(runtime.get_number(new_data_start).unwrap(), 2);
     }
 
     #[test]
     fn integer_divide() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(20).unwrap();
-        let int2 = runtime.add_integer(10).unwrap();
+        let int1 = runtime.add_number(20).unwrap();
+        let int2 = runtime.add_number(10).unwrap();
         let new_data_start = runtime.get_data_len();
 
         runtime.push_register(int1).unwrap();
@@ -214,15 +214,15 @@ mod tests {
         runtime.integer_divide().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_integer(new_data_start).unwrap(), 2);
+        assert_eq!(runtime.get_number(new_data_start).unwrap(), 2);
     }
 
     #[test]
     fn power() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(10).unwrap();
-        let int2 = runtime.add_integer(3).unwrap();
+        let int1 = runtime.add_number(10).unwrap();
+        let int2 = runtime.add_number(3).unwrap();
         let new_data_start = runtime.get_data_len();
 
         runtime.push_register(int1).unwrap();
@@ -231,15 +231,15 @@ mod tests {
         runtime.power().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_integer(new_data_start).unwrap(), 1000);
+        assert_eq!(runtime.get_number(new_data_start).unwrap(), 1000);
     }
 
     #[test]
     fn remainder() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(23).unwrap();
-        let int2 = runtime.add_integer(20).unwrap();
+        let int1 = runtime.add_number(23).unwrap();
+        let int2 = runtime.add_number(20).unwrap();
         let new_data_start = runtime.get_data_len();
 
         runtime.push_register(int1).unwrap();
@@ -248,14 +248,14 @@ mod tests {
         runtime.remainder().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_integer(new_data_start).unwrap(), 3);
+        assert_eq!(runtime.get_number(new_data_start).unwrap(), 3);
     }
 
     #[test]
     fn absolute_value() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(-10).unwrap();
+        let int1 = runtime.add_number(-10).unwrap();
         let new_data_start = runtime.get_data_len();
 
         runtime.push_register(int1).unwrap();
@@ -263,14 +263,14 @@ mod tests {
         runtime.absolute_value().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_integer(new_data_start).unwrap(), 10);
+        assert_eq!(runtime.get_number(new_data_start).unwrap(), 10);
     }
 
     #[test]
     fn opposite() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_integer(10).unwrap();
+        let int1 = runtime.add_number(10).unwrap();
         let new_data_start = runtime.get_data_len();
 
         runtime.push_register(int1).unwrap();
@@ -278,6 +278,6 @@ mod tests {
         runtime.opposite().unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_integer(new_data_start).unwrap(), -10);
+        assert_eq!(runtime.get_number(new_data_start).unwrap(), -10);
     }
 }
