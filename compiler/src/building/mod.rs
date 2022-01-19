@@ -166,7 +166,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
             data.push_instruction(Instruction::Add, None)?;
         }
         Definition::Equality => {
-            data.push_instruction(Instruction::EqualityComparison, None)?;
+            data.push_instruction(Instruction::Equal, None)?;
         }
         Definition::Pair => {
             data.push_instruction(Instruction::MakePair, None)?;
@@ -1001,7 +1001,7 @@ mod operations {
             vec![
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(4)),
-                (Instruction::EqualityComparison, None),
+                (Instruction::Equal, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),

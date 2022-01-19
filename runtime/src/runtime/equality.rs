@@ -5,7 +5,7 @@ use crate::runtime::list::index_link;
 use crate::{get_range, next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, GarnishNumber, OrNumberError};
 use crate::runtime::internals::link_len;
 
-pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     // hope that can get reduced to a constant
     let two = Data::Size::one() + Data::Size::one();
     if this.get_register_len() < two {
@@ -29,6 +29,16 @@ pub(crate) fn equality_comparison<Data: GarnishLangRuntimeData>(this: &mut Data)
     }
 
     push_boolean(this, true)
+}
+
+
+pub fn not_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    todo!()
+}
+
+
+pub fn type_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    todo!()
 }
 
 fn data_equal<Data: GarnishLangRuntimeData>(
@@ -548,9 +558,9 @@ mod tests {
         runtime.add_number(10).unwrap();
         runtime.add_number(10).unwrap();
 
-        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+        runtime.push_instruction(Instruction::Equal, None).unwrap();
 
-        let result = runtime.equality_comparison();
+        let result = runtime.equal();
 
         assert!(result.is_err());
     }
@@ -562,12 +572,12 @@ mod tests {
         let int1 = runtime.add_number(10).unwrap();
         let exp1 = runtime.add_expression(10).unwrap();
 
-        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+        runtime.push_instruction(Instruction::Equal, None).unwrap();
 
         runtime.push_register(int1).unwrap();
         runtime.push_register(exp1).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -590,7 +600,7 @@ mod simple_types {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -605,7 +615,7 @@ mod simple_types {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -620,7 +630,7 @@ mod simple_types {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -640,7 +650,7 @@ mod numbers {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -655,7 +665,7 @@ mod numbers {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -678,7 +688,7 @@ mod chars {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -693,7 +703,7 @@ mod chars {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -720,7 +730,7 @@ mod chars {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -744,7 +754,7 @@ mod chars {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -765,7 +775,7 @@ mod chars {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -784,7 +794,7 @@ mod chars {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -805,7 +815,7 @@ mod chars {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -824,7 +834,7 @@ mod chars {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -847,7 +857,7 @@ mod bytes {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -862,7 +872,7 @@ mod bytes {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -889,7 +899,7 @@ mod bytes {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -913,7 +923,7 @@ mod bytes {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -934,7 +944,7 @@ mod bytes {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -953,7 +963,7 @@ mod bytes {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -974,7 +984,7 @@ mod bytes {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -993,7 +1003,7 @@ mod bytes {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1016,7 +1026,7 @@ mod symbols {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1031,9 +1041,9 @@ mod symbols {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+        runtime.push_instruction(Instruction::Equal, None).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1056,7 +1066,7 @@ mod expression {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1071,9 +1081,9 @@ mod expression {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+        runtime.push_instruction(Instruction::Equal, None).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1096,7 +1106,7 @@ mod external {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1111,9 +1121,9 @@ mod external {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+        runtime.push_instruction(Instruction::Equal, None).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1141,7 +1151,7 @@ mod pairs {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1161,9 +1171,9 @@ mod pairs {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
 
-        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+        runtime.push_instruction(Instruction::Equal, None).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1191,7 +1201,7 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1211,7 +1221,7 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1231,7 +1241,7 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1254,7 +1264,7 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1277,7 +1287,7 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1297,7 +1307,7 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1320,7 +1330,7 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1343,7 +1353,7 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1366,7 +1376,7 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1404,7 +1414,7 @@ mod lists {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i8).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1434,9 +1444,9 @@ mod lists {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i8).unwrap();
 
-        runtime.push_instruction(Instruction::EqualityComparison, None).unwrap();
+        runtime.push_instruction(Instruction::Equal, None).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1487,7 +1497,7 @@ mod lists {
         runtime.push_register(i10).unwrap();
         runtime.push_register(i20).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1535,7 +1545,7 @@ mod lists {
         runtime.push_register(i10).unwrap();
         runtime.push_register(i20).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1582,7 +1592,7 @@ mod lists {
         runtime.push_register(i8).unwrap();
         runtime.push_register(i16).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1626,7 +1636,7 @@ mod lists {
         runtime.push_register(i8).unwrap();
         runtime.push_register(i16).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1655,7 +1665,7 @@ mod slices {
         runtime.push_register(d3).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1675,7 +1685,7 @@ mod slices {
         runtime.push_register(slice1).unwrap();
         runtime.push_register(slice2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1695,7 +1705,7 @@ mod slices {
         runtime.push_register(slice1).unwrap();
         runtime.push_register(slice2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1724,7 +1734,7 @@ mod slices {
         runtime.push_register(slice1).unwrap();
         runtime.push_register(slice2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1754,7 +1764,7 @@ mod slices {
         runtime.push_register(slice1).unwrap();
         runtime.push_register(slice2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1777,7 +1787,7 @@ mod slices {
         runtime.push_register(d3).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1797,7 +1807,7 @@ mod slices {
         runtime.push_register(d3).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1817,7 +1827,7 @@ mod slices {
         runtime.push_register(d3).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
@@ -1837,7 +1847,7 @@ mod slices {
         runtime.push_register(d3).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1857,7 +1867,7 @@ mod slices {
         runtime.push_register(d3).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
@@ -1883,7 +1893,7 @@ mod slices {
         runtime.push_register(slice1).unwrap();
         runtime.push_register(slice2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1910,7 +1920,7 @@ mod slices {
         runtime.push_register(slice1).unwrap();
         runtime.push_register(slice2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1939,7 +1949,7 @@ mod slices {
         runtime.push_register(slice2).unwrap();
         runtime.push_register(slice1).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -1966,7 +1976,7 @@ mod slices {
         runtime.push_register(slice2).unwrap();
         runtime.push_register(slice1).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -1990,7 +2000,7 @@ mod links {
         runtime.push_register(list1).unwrap();
         runtime.push_register(list2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -2005,7 +2015,7 @@ mod links {
         runtime.push_register(list1).unwrap();
         runtime.push_register(list2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
@@ -2020,7 +2030,7 @@ mod links {
         runtime.push_register(list1).unwrap();
         runtime.push_register(list2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -2035,7 +2045,7 @@ mod links {
         runtime.push_register(list1).unwrap();
         runtime.push_register(list2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
@@ -2050,7 +2060,7 @@ mod links {
         runtime.push_register(list1).unwrap();
         runtime.push_register(list2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -2065,7 +2075,7 @@ mod links {
         runtime.push_register(list1).unwrap();
         runtime.push_register(list2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
@@ -2080,7 +2090,7 @@ mod links {
         runtime.push_register(list1).unwrap();
         runtime.push_register(list2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -2095,7 +2105,7 @@ mod links {
         runtime.push_register(list1).unwrap();
         runtime.push_register(list2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
@@ -2110,7 +2120,7 @@ mod links {
         runtime.push_register(list1).unwrap();
         runtime.push_register(list2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -2125,7 +2135,7 @@ mod links {
         runtime.push_register(list1).unwrap();
         runtime.push_register(list2).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
@@ -2140,7 +2150,7 @@ mod links {
         runtime.push_register(list2).unwrap();
         runtime.push_register(list1).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -2155,7 +2165,7 @@ mod links {
         runtime.push_register(list2).unwrap();
         runtime.push_register(list1).unwrap();
 
-        runtime.equality_comparison().unwrap();
+        runtime.equal().unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }

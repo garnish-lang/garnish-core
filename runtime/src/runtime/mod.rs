@@ -2,7 +2,8 @@ mod apply;
 mod arithmetic;
 mod bitwise;
 mod casting;
-mod comparisons;
+mod comparison;
+mod equality;
 mod context;
 mod data;
 mod error;
@@ -41,11 +42,13 @@ use crate::runtime::put::{push_input, push_result, put, put_input};
 use crate::runtime::range::{make_end_exclusive_range, make_exclusive_range, make_range, make_start_exclusive_range};
 use crate::GarnishLangRuntimeInfo;
 use apply::*;
-use comparisons::equality_comparison;
+use equality::equal;
 use instruction::*;
 use list::*;
 use result::*;
 use sideeffect::*;
+use crate::runtime::comparison::{greater_than, greater_than_or_equal, less_than, less_than_or_equal};
+use crate::runtime::equality::{not_equal, type_equal};
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
@@ -79,7 +82,13 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn xor(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn not(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
-    fn equality_comparison(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn equal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn not_equal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn type_equal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn less_than(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn less_than_or_equal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn greater_than(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn greater_than_or_equal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
     fn jump(&mut self, index: Data::Size) -> Result<(), RuntimeError<Data::Error>>;
     fn jump_if_true(&mut self, index: Data::Size) -> Result<(), RuntimeError<Data::Error>>;
@@ -161,7 +170,12 @@ where
             Instruction::UpdateValue => self.update_value()?,
             Instruction::StartSideEffect => self.start_side_effect()?,
             Instruction::EndSideEffect => self.end_side_effect()?,
-            Instruction::EqualityComparison => self.equality_comparison()?,
+            Instruction::Equal => self.equal()?,
+            Instruction::NotEqual => self.not_equal()?,
+            Instruction::LessThan => self.less_than()?,
+            Instruction::LessThanOrEqual => self.less_than_or_equal()?,
+            Instruction::GreaterThan => self.greater_than()?,
+            Instruction::GreaterThanOrEqual => self.greater_than_or_equal()?,
             Instruction::MakePair => self.make_pair()?,
             Instruction::Access => self.access()?,
             Instruction::AccessLeftInternal => self.access_left_internal()?,
@@ -343,10 +357,34 @@ where
     // Comparison
     //
 
-    fn equality_comparison(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        equality_comparison(self)
+    fn equal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        equal(self)
     }
 
+    fn not_equal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        not_equal(self)
+    }
+
+    fn type_equal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        type_equal(self)
+    }
+
+    fn less_than(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        less_than(self)
+    }
+
+    fn less_than_or_equal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        less_than_or_equal(self)
+    }
+
+    fn greater_than(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        greater_than(self)
+    }
+
+    fn greater_than_or_equal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        greater_than_or_equal(self)
+    }
+    
     //
     // Jumps
     //
