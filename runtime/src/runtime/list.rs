@@ -356,7 +356,7 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
-        ExpressionDataType::Link => sym_access_links_slices(this, Data::Number::zero(), value, sym, Data::Number::max()),
+        ExpressionDataType::Link => sym_access_links_slices(this, Data::Number::zero(), value, sym, Data::Number::max_value()),
         _ => Ok(None),
     }
 }

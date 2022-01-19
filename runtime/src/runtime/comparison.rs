@@ -5,42 +5,40 @@ use crate::{
 use std::cmp::Ordering;
 
 pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Data::Number::lt, Data::Char::lt, Data::Byte::lt)
+    perform_comparison(this, Ordering::is_lt)
 }
 
 pub fn less_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Data::Number::le, Data::Char::le, Data::Byte::le)
+    perform_comparison(this, Ordering::is_le)
 }
 
 pub fn greater_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Data::Number::gt, Data::Char::gt, Data::Byte::gt)
+    perform_comparison(this, Ordering::is_gt)
 }
 
 pub fn greater_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Data::Number::ge, Data::Char::ge, Data::Byte::ge)
+    perform_comparison(this, Ordering::is_ge)
 }
 
-fn perform_comparison<Data: GarnishLangRuntimeData, NumberOp, CharOp, ByteOp>(
+fn perform_comparison<Data: GarnishLangRuntimeData, NumberOp>(
     this: &mut Data,
-    num_op: NumberOp,
-    char_op: CharOp,
-    byte_op: ByteOp,
+    to_bool: NumberOp
 ) -> Result<(), RuntimeError<Data::Error>>
-where
-    NumberOp: Fn(&Data::Number, &Data::Number) -> bool,
-    CharOp: Fn(&Data::Char, &Data::Char) -> bool,
-    ByteOp: Fn(&Data::Byte, &Data::Byte) -> bool,
+where NumberOp: Fn(Ordering) -> bool
 {
     let (right, left) = next_two_raw_ref(this)?;
 
     let result = match (this.get_data_type(left)?, this.get_data_type(right)?) {
-        (ExpressionDataType::Number, ExpressionDataType::Number) => num_op(&this.get_number(left)?, &this.get_number(right)?),
-        (ExpressionDataType::Char, ExpressionDataType::Char) => char_op(&this.get_char(left)?, &this.get_char(right)?),
-        (ExpressionDataType::Byte, ExpressionDataType::Byte) => byte_op(&this.get_byte(left)?, &this.get_byte(right)?),
-        _ => false,
+        (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_number(left)?.cmp(&this.get_number(right)?),
+        (ExpressionDataType::Char, ExpressionDataType::Char) =>  this.get_char(left)?.cmp(&this.get_char(right)?),
+        (ExpressionDataType::Byte, ExpressionDataType::Byte) => this.get_byte(left)?.cmp(&this.get_byte(right)?),
+        _ => {
+            push_boolean(this, false)?;
+            return Ok(())
+        },
     };
 
-    push_boolean(this, result)
+    push_boolean(this, to_bool(result))
 }
 
 #[cfg(test)]
