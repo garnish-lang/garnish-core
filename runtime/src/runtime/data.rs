@@ -208,11 +208,11 @@ impl GarnishNumber for i32 {
     }
 
     fn bitwise_shift_left(self, rhs: Self) -> Option<Self> {
-        Some(self >> rhs)
+        Some(self << rhs)
     }
 
     fn bitwise_shift_right(self, rhs: Self) -> Option<Self> {
-        Some(self << rhs)
+        Some(self >> rhs)
     }
 }
 

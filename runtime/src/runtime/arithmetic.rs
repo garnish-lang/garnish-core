@@ -38,7 +38,7 @@ pub fn opposite<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), Run
     perform_unary_op(this, "opposite", Data::Number::opposite)
 }
 
-fn perform_unary_op<Data: GarnishLangRuntimeData, Op>(this: &mut Data, op_name: &str, op: Op) -> Result<(), RuntimeError<Data::Error>>
+pub(crate) fn perform_unary_op<Data: GarnishLangRuntimeData, Op>(this: &mut Data, op_name: &str, op: Op) -> Result<(), RuntimeError<Data::Error>>
     where
         Op: FnOnce(Data::Number) -> Option<Data::Number>,
 {
@@ -68,7 +68,7 @@ fn perform_unary_op<Data: GarnishLangRuntimeData, Op>(this: &mut Data, op_name: 
     }
 }
 
-fn perform_op<Data: GarnishLangRuntimeData, Op>(this: &mut Data, op_name: &str, op: Op) -> Result<(), RuntimeError<Data::Error>>
+pub(crate) fn perform_op<Data: GarnishLangRuntimeData, Op>(this: &mut Data, op_name: &str, op: Op) -> Result<(), RuntimeError<Data::Error>>
 where
     Op: FnOnce(Data::Number, Data::Number) -> Option<Data::Number>,
 {
@@ -106,7 +106,7 @@ mod tests {
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
-    fn perform_addition() {
+    fn add() {
         let mut runtime = SimpleRuntimeData::new();
 
         let int1 = runtime.add_number(10).unwrap();
@@ -123,7 +123,7 @@ mod tests {
     }
 
     #[test]
-    fn perform_addition_no_refs_is_err() {
+    fn add_no_refs_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_number(10).unwrap();
@@ -135,7 +135,7 @@ mod tests {
     }
 
     #[test]
-    fn perform_addition_with_non_integers() {
+    fn add_with_non_numbers() {
         let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_symbol("sym1").unwrap();
