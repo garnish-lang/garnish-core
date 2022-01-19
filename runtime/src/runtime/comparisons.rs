@@ -204,7 +204,6 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                             }
 
                             index1 = index1.increment().or_num_err()?;
-                            index1 = index1.increment().or_num_err()?;
                             index2 = index2.increment().or_num_err()?;
                             count = count.increment().or_num_err()?;
                         }
