@@ -21,6 +21,12 @@ pub trait GarnishNumber: Sized {
     fn opposite(self) -> Option<Self>;
     fn increment(self) -> Option<Self>;
     fn decrement(self) -> Option<Self>;
+    fn bitwise_not(self) -> Option<Self>;
+    fn bitwise_and(self, rhs: Self) -> Option<Self>;
+    fn bitwise_or(self, rhs: Self) -> Option<Self>;
+    fn bitwise_xor(self, rhs: Self) -> Option<Self>;
+    fn bitwise_shift_left(self, rhs: Self) -> Option<Self>;
+    fn bitwise_shift_right(self, rhs: Self) -> Option<Self>;
 }
 
 pub trait GarnishLangRuntimeData {
@@ -183,6 +189,30 @@ impl GarnishNumber for i32 {
 
     fn decrement(self) -> Option<Self> {
         Some(self - 1)
+    }
+
+    fn bitwise_not(self) -> Option<Self> {
+        Some(!self)
+    }
+
+    fn bitwise_and(self, rhs: Self) -> Option<Self> {
+        Some(self & rhs)
+    }
+
+    fn bitwise_or(self, rhs: Self) -> Option<Self> {
+        Some(self | rhs)
+    }
+
+    fn bitwise_xor(self, rhs: Self) -> Option<Self> {
+        Some(self ^ rhs)
+    }
+
+    fn bitwise_shift_left(self, rhs: Self) -> Option<Self> {
+        Some(self >> rhs)
+    }
+
+    fn bitwise_shift_right(self, rhs: Self) -> Option<Self> {
+        Some(self << rhs)
     }
 }
 
