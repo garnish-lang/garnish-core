@@ -36,7 +36,7 @@ pub fn subtract<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), Run
 
     let types = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
     trace!(
-        "Attempting addition between {:?} at {:?} and {:?} at {:?}",
+        "Attempting subtraction between {:?} at {:?} and {:?} at {:?}",
         types.0,
         left_addr,
         types.1,
