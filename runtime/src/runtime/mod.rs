@@ -925,6 +925,12 @@ pub mod testing_utilites {
         runtime.end_char_list().unwrap()
     }
 
+    pub fn slice_of_char_list(runtime: &mut SimpleRuntimeData, s: &str, start: i32, end: i32) -> usize {
+        let list = add_char_list(runtime, s);
+        let range = add_range(runtime, start, end);
+        runtime.add_slice(list, range).unwrap()
+    }
+
     pub fn add_byte_list(runtime: &mut SimpleRuntimeData, s: &str) -> usize {
         let bytes = SimpleRuntimeData::parse_byte_list(s);
 

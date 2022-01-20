@@ -1,4 +1,6 @@
-use crate::{next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants, get_range};
+use crate::{
+    get_range, next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants,
+};
 use std::cmp::Ordering;
 
 pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
@@ -61,7 +63,21 @@ fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data, false_ord: 
                         Data::get_byte_list_len,
                     )?
                 }
-                _ => return Ok(false_ord)
+                (ExpressionDataType::CharList, ExpressionDataType::CharList) => {
+                    let (start1, ..) = get_range(this, left_range)?;
+                    let (start2, ..) = get_range(this, right_range)?;
+
+                    cmp_list(
+                        this,
+                        left_value,
+                        right_value,
+                        start1,
+                        start2,
+                        Data::get_char_list_item,
+                        Data::get_char_list_len,
+                    )?
+                }
+                _ => return Ok(false_ord),
             }
         }
         _ => return Ok(false_ord),
@@ -140,7 +156,7 @@ mod general {
 
 #[cfg(test)]
 mod less_than {
-    use crate::testing_utilites::{add_byte_list, add_char_list, slice_of_byte_list};
+    use crate::testing_utilites::{add_byte_list, add_char_list, slice_of_byte_list, slice_of_char_list};
     use crate::{runtime::GarnishRuntime, DataError, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, SimpleRuntimeData};
 
     fn perform_compare<Setup, Op>(expected: bool, op_name: &str, op: Op, setup: Setup)
@@ -332,6 +348,47 @@ mod less_than {
     fn byte_list_greater_than_dif_len() {
         perform_all_compare(false, false, true, true, |runtime| {
             (add_byte_list(runtime, "aaaaa"), add_byte_list(runtime, "aaa"))
+        });
+    }
+
+    #[test]
+    fn slice_of_char_list_less_than() {
+        perform_all_compare(true, true, false, false, |runtime| {
+            (slice_of_char_list(runtime, "aaaaaa", 0, 3), slice_of_char_list(runtime, "bbbbbb", 1, 4))
+        });
+    }
+
+    #[test]
+    fn slice_of_char_list_less_than_dif_len() {
+        perform_all_compare(true, true, false, false, |runtime| {
+            (
+                slice_of_char_list(runtime, "aaaaaa", 1, 4),
+                slice_of_char_list(runtime, "aaaaaaaaa", 1, 6),
+            )
+        });
+    }
+
+    #[test]
+    fn slice_of_char_list_equal() {
+        perform_all_compare(false, true, false, true, |runtime| {
+            (slice_of_char_list(runtime, "aaaaaa", 0, 3), slice_of_char_list(runtime, "aaaaaa", 1, 4))
+        });
+    }
+
+    #[test]
+    fn slice_of_char_list_greater_than() {
+        perform_all_compare(false, false, true, true, |runtime| {
+            (slice_of_char_list(runtime, "bbbbbb", 0, 3), slice_of_char_list(runtime, "aaaaaa", 1, 4))
+        });
+    }
+
+    #[test]
+    fn slice_of_char_list_greater_than_dif_len() {
+        perform_all_compare(false, false, true, true, |runtime| {
+            (
+                slice_of_char_list(runtime, "aaaaaaaaa", 2, 7),
+                slice_of_char_list(runtime, "aaaaaa", 1, 4),
+            )
         });
     }
 
