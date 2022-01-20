@@ -886,22 +886,6 @@ mod metadata {
                 InstructionMetadata::new(None),
             ]
         );
-
-        // assert_instruction_data(
-        //     1,
-        //     vec![
-        //         (Definition::Number, Some(1), None, None, "5", TokenType::Number),
-        //         (Definition::Subexpression, None, Some(0), Some(2), "\n\n", TokenType::Subexpression),
-        //         (Definition::Number, Some(1), None, None, "10", TokenType::Number),
-        //     ],
-        //     vec![
-        //         (Instruction::Put, Some(3)),
-        //         (Instruction::UpdateValue, None),
-        //         (Instruction::Put, Some(4)),
-        //         (Instruction::EndExpression, None),
-        //     ],
-        //     SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
-        // );
     }
 }
 
@@ -912,23 +896,6 @@ mod operations {
     use super::test_utils::*;
     use crate::*;
     use garnish_lang_runtime::*;
-
-    #[test]
-    fn empty_apply() {
-        assert_instruction_data(
-            1,
-            vec![
-                (Definition::Identifier, Some(1), None, None, "value", TokenType::Identifier),
-                (Definition::EmptyApply, None, Some(0), None, "~~", TokenType::EmptyApply),
-            ],
-            vec![
-                (Instruction::Resolve, Some(3)),
-                (Instruction::EmptyApply, None),
-                (Instruction::EndExpression, None),
-            ],
-            SimpleDataList::default().append(SymbolData::from(symbol_value("value"))),
-        );
-    }
 
     #[test]
     fn empty_apply_no_left_is_error() {
@@ -948,25 +915,6 @@ mod operations {
         );
 
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn addition() {
-        assert_instruction_data(
-            1,
-            vec![
-                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
-                (Definition::Addition, None, Some(0), Some(2), "+", TokenType::PlusSign),
-                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
-            ],
-            vec![
-                (Instruction::Put, Some(3)),
-                (Instruction::Put, Some(4)),
-                (Instruction::Add, None),
-                (Instruction::EndExpression, None),
-            ],
-            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
-        );
     }
 
     #[test]
@@ -1084,6 +1032,340 @@ mod operations {
     }
 
     #[test]
+    fn empty_apply() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Identifier, Some(1), None, None, "value", TokenType::Identifier),
+                (Definition::EmptyApply, None, Some(0), None, "~~", TokenType::EmptyApply),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::EmptyApply, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(SymbolData::from(symbol_value("value"))),
+        );
+    }
+
+    #[test]
+    fn addition() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Addition, None, Some(0), Some(2), "+", TokenType::PlusSign),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Add, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn subtraction() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Subtraction, None, Some(0), Some(2), "-", TokenType::Subtraction),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Subtract, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn multiplication() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::MultiplicationSign, None, Some(0), Some(2), "*", TokenType::MultiplicationSign),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Multiply, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn division() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Division, None, Some(0), Some(2), "/", TokenType::Division),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Divide, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn integer_division() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::IntegerDivision, None, Some(0), Some(2), "//", TokenType::IntegerDivision),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::IntegerDivide, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn exponential() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::ExponentialSign, None, Some(0), Some(2), "**", TokenType::ExponentialSign),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Power, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn remainder() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Remainder, None, Some(0), Some(2), "%", TokenType::Remainder),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Remainder, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn absolute_value() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::AbsoluteValue, None, None, Some(1), "--", TokenType::AbsoluteValue),
+                (Definition::Identifier, Some(0), None, None, "value", TokenType::Identifier),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::AbsoluteValue, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(SymbolData::from(symbol_value("value"))),
+        );
+    }
+
+    #[test]
+    fn opposite() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::Opposite, None, None, Some(1), "--", TokenType::Opposite),
+                (Definition::Identifier, Some(0), None, None, "value", TokenType::Identifier),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::Opposite, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(SymbolData::from(symbol_value("value"))),
+        );
+    }
+
+    #[test]
+    fn bitwise_not() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::BitwiseNot, None, None, Some(1), "!", TokenType::BitwiseNot),
+                (Definition::Identifier, Some(0), None, None, "value", TokenType::Identifier),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::BitwiseNot, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(SymbolData::from(symbol_value("value"))),
+        );
+    }
+
+    #[test]
+    fn bitwise_and() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::BitwiseAnd, None, Some(0), Some(2), "&", TokenType::BitwiseAnd),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::BitwiseAnd, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn bitwise_or() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::BitwiseOr, None, Some(0), Some(2), "|", TokenType::BitwiseOr),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::BitwiseOr, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn bitwise_xor() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::BitwiseXor, None, Some(0), Some(2), "^", TokenType::BitwiseXor),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::BitwiseXor, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn bitwise_left_shift() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::BitwiseLeftShift, None, Some(0), Some(2), "<<", TokenType::BitwiseLeftShift),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::BitwiseShiftLeft, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn bitwise_right_shift() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::BitwiseRightShift, None, Some(0), Some(2), ">>", TokenType::BitwiseRightShift),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::BitwiseShiftRight, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn apply_type() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::TypeCast, None, Some(0), Some(2), "~#", TokenType::TypeCast),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::ApplyType, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn type_equal() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::TypeEqual, None, Some(0), Some(2), "#=", TokenType::TypeEqual),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::TypeEqual, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
     fn equality() {
         assert_instruction_data(
             1,
@@ -1096,6 +1378,175 @@ mod operations {
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(4)),
                 (Instruction::Equal, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn inequality() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Inequality, None, Some(0), Some(2), "!=", TokenType::Inequality),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::NotEqual, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn less_than() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::LessThan, None, Some(0), Some(2), "<", TokenType::LessThan),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::LessThan, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn less_than_or_equal() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::LessThanOrEqual, None, Some(0), Some(2), "<=", TokenType::LessThanOrEqual),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::LessThanOrEqual, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn greater_than() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::GreaterThan, None, Some(0), Some(2), ">", TokenType::GreaterThan),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::GreaterThan, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn greater_than_or_equal() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::GreaterThanOrEqual, None, Some(0), Some(2), ">=", TokenType::GreaterThanOrEqual),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::GreaterThanOrEqual, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn not() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::Not, None, None, Some(1), "!!", TokenType::Not),
+                (Definition::Identifier, Some(0), None, None, "value", TokenType::Identifier),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::Not, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(SymbolData::from(symbol_value("value"))),
+        );
+    }
+
+    #[test]
+    fn and() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::And, None, Some(0), Some(2), "&&", TokenType::And),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::And, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn or() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Or, None, Some(0), Some(2), ">=", TokenType::Or),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Or, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
+        );
+    }
+
+    #[test]
+    fn xor() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Xor, None, Some(0), Some(2), ">=", TokenType::Xor),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Xor, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(IntegerData::from(5)).append(IntegerData::from(10)),
