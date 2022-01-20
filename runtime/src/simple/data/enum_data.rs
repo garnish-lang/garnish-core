@@ -77,35 +77,84 @@ impl SimpleData {
     pub fn as_char(self) -> DataCastResult<char> {
         match self {
             SimpleData::Char(v) => Ok(v),
-            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Char", self)))
         }
     }
 
     pub fn as_byte(self) -> DataCastResult<u8> {
         match self {
             SimpleData::Byte(v) => Ok(v),
-            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Byte", self)))
         }
     }
 
     pub fn as_symbol(self) -> DataCastResult<u64> {
         match self {
             SimpleData::Symbol(v) => Ok(v),
-            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Symbol", self)))
         }
     }
 
     pub fn as_expression(self) -> DataCastResult<usize> {
         match self {
             SimpleData::Expression(v) => Ok(v),
-            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+            _ => Err(DataError::from(format!("{:?} is not an Expression", self)))
         }
     }
 
     pub fn as_external(self) -> DataCastResult<usize> {
         match self {
             SimpleData::External(v) => Ok(v),
-            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+            _ => Err(DataError::from(format!("{:?} is not an External", self)))
+        }
+    }
+
+    pub fn as_char_list(self) -> DataCastResult<String> {
+        match self {
+            SimpleData::CharList(v) => Ok(v),
+            _ => Err(DataError::from(format!("{:?} is not a CharList", self)))
+        }
+    }
+
+    pub fn as_byte_list(self) -> DataCastResult<Vec<u8>> {
+        match self {
+            SimpleData::ByteList(v) => Ok(v),
+            _ => Err(DataError::from(format!("{:?} is not a ByteList", self)))
+        }
+    }
+
+    pub fn as_pair(self) -> DataCastResult<(usize, usize)> {
+        match self {
+            SimpleData::Pair(l, r) => Ok((l, r)),
+            _ => Err(DataError::from(format!("{:?} is not a Pair", self)))
+        }
+    }
+
+    pub fn as_range(self) -> DataCastResult<(usize, usize)> {
+        match self {
+            SimpleData::Range(s, e) => Ok((s, e)),
+            _ => Err(DataError::from(format!("{:?} is not a Range", self)))
+        }
+    }
+
+    pub fn as_link(self) -> DataCastResult<(usize, usize, bool)> {
+        match self {
+            SimpleData::Link(v, l, a) => Ok((v, l, a)),
+            _ => Err(DataError::from(format!("{:?} is not a Link", self)))
+        }
+    }
+
+    pub fn as_slice(self) -> DataCastResult<(usize, usize)> {
+        match self {
+            SimpleData::Slice(v, r) => Ok((v, r)),
+            _ => Err(DataError::from(format!("{:?} is not a Slice", self)))
+        }
+    }
+
+    pub fn as_list(self) -> DataCastResult<Vec<usize>> {
+        match self {
+            SimpleData::List(v) => Ok(v),
+            _ => Err(DataError::from(format!("{:?} is not a List", self)))
         }
     }
 }
@@ -223,5 +272,75 @@ mod tests {
     #[test]
     fn as_external_not_external() {
         assert!(SimpleData::Unit.as_external().is_err());
+    }
+
+    #[test]
+    fn as_char_list() {
+        assert_eq!(SimpleData::CharList(String::new()).as_char_list().unwrap(), "");
+    }
+
+    #[test]
+    fn as_char_list_not_char_list() {
+        assert!(SimpleData::Unit.as_char_list().is_err());
+    }
+
+    #[test]
+    fn as_byte_list() {
+        assert_eq!(SimpleData::ByteList(vec![10]).as_byte_list().unwrap(), vec![10]);
+    }
+
+    #[test]
+    fn as_byte_list_not_byte_list() {
+        assert!(SimpleData::Unit.as_byte_list().is_err());
+    }
+
+    #[test]
+    fn as_pair() {
+        assert_eq!(SimpleData::Pair(10, 20).as_pair().unwrap(), (10, 20));
+    }
+
+    #[test]
+    fn as_pair_not_pair() {
+        assert!(SimpleData::Unit.as_pair().is_err());
+    }
+
+    #[test]
+    fn as_range() {
+        assert_eq!(SimpleData::Range(10, 20).as_range().unwrap(), (10, 20));
+    }
+
+    #[test]
+    fn as_range_not_range() {
+        assert!(SimpleData::Unit.as_range().is_err());
+    }
+
+    #[test]
+    fn as_link() {
+        assert_eq!(SimpleData::Link(10, 20, true).as_link().unwrap(), (10, 20, true));
+    }
+
+    #[test]
+    fn as_link_not_link() {
+        assert!(SimpleData::Unit.as_link().is_err());
+    }
+
+    #[test]
+    fn as_slice() {
+        assert_eq!(SimpleData::Slice(10, 20).as_slice().unwrap(), (10, 20));
+    }
+
+    #[test]
+    fn as_slice_not_slice() {
+        assert!(SimpleData::Unit.as_slice().is_err());
+    }
+
+    #[test]
+    fn as_list() {
+        assert_eq!(SimpleData::List(vec![10, 20]).as_list().unwrap(), vec![10, 20]);
+    }
+
+    #[test]
+    fn as_list_not_list() {
+        assert!(SimpleData::Unit.as_list().is_err());
     }
 }
