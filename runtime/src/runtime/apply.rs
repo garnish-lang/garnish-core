@@ -1,13 +1,13 @@
 use super::context::GarnishLangRuntimeContext;
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
-use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
+use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants, Instruction};
 
 pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
     context: Option<&mut T>,
 ) -> Result<(), RuntimeError<Data::Error>> {
-    apply_internal(this, context)
+    apply_internal(this, Instruction::Apply, context)
 }
 
 pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
@@ -37,11 +37,12 @@ pub(crate) fn empty_apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeCon
     context: Option<&mut T>,
 ) -> Result<(), RuntimeError<Data::Error>> {
     push_unit(this)?;
-    apply_internal(this, context)
+    apply_internal(this, Instruction::EmptyApply, context)
 }
 
 pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
+    instruction: Instruction,
     context: Option<&mut T>,
 ) -> Result<(), RuntimeError<Data::Error>> {
     let right_addr = next_ref(this)?;
@@ -157,8 +158,11 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                 Some(i) => this.push_register(i)?,
             }
         }
-        _ => {
-            push_unit(this)?;
+        (l, r) => match context {
+            None => push_unit(this)?,
+            Some(c) => if !c.defer_op(this,instruction, (l, left_addr), (r, right_addr))? {
+                push_unit(this)?
+            }
         }
     }
 
@@ -214,6 +218,23 @@ mod tests {
         },
         ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData,
     };
+    use crate::testing_utilites::{DeferOpTestContext, DEFERRED_VALUE};
+
+    #[test]
+    fn deferred() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_number(10).unwrap();
+        let int2 = runtime.add_number(20).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        let mut context = DeferOpTestContext::new();
+        runtime.apply(Some(&mut context)).unwrap();
+
+        assert_eq!(runtime.get_external(runtime.get_register(0).unwrap()).unwrap(), DEFERRED_VALUE);
+    }
 
     #[test]
     fn apply() {

@@ -3,9 +3,9 @@ mod arithmetic;
 mod bitwise;
 mod casting;
 mod comparison;
-mod equality;
 mod context;
 mod data;
+mod equality;
 mod error;
 pub mod instruction;
 mod internals;
@@ -33,6 +33,8 @@ pub(crate) use utilities::*;
 use crate::runtime::arithmetic::{absolute_value, add, divide, integer_divide, multiply, opposite, power, remainder, subtract};
 use crate::runtime::bitwise::{bitwise_and, bitwise_not, bitwise_or, bitwise_shift_left, bitwise_shift_right, bitwise_xor};
 use crate::runtime::casting::type_cast;
+use crate::runtime::comparison::{greater_than, greater_than_or_equal, less_than, less_than_or_equal};
+use crate::runtime::equality::{not_equal, type_equal};
 use crate::runtime::internals::{access_left_internal, access_length_internal, access_right_internal};
 use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
 use crate::runtime::link::{append_link, prepend_link};
@@ -47,8 +49,6 @@ use instruction::*;
 use list::*;
 use result::*;
 use sideeffect::*;
-use crate::runtime::comparison::{greater_than, greater_than_or_equal, less_than, less_than_or_equal};
-use crate::runtime::equality::{not_equal, type_equal};
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
@@ -387,7 +387,7 @@ where
     fn greater_than_or_equal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
         greater_than_or_equal(self)
     }
-    
+
     //
     // Jumps
     //
@@ -830,7 +830,31 @@ mod tests {
 
 #[cfg(test)]
 pub mod testing_utilites {
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{DataError, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData};
+
+    pub const DEFERRED_VALUE: usize = 1000;
+
+    pub struct DeferOpTestContext {}
+
+    impl DeferOpTestContext {
+        pub fn new() -> Self {
+            DeferOpTestContext {}
+        }
+    }
+
+    impl GarnishLangRuntimeContext<SimpleRuntimeData> for DeferOpTestContext {
+        fn defer_op(
+            &mut self,
+            data: &mut SimpleRuntimeData,
+            _operation: Instruction,
+            _left: (ExpressionDataType, usize),
+            _right: (ExpressionDataType, usize),
+        ) -> Result<bool, RuntimeError<DataError>> {
+            // add simple value that is produced by any op
+            data.add_external(DEFERRED_VALUE).and_then(|r| data.push_register(r))?;
+            Ok(true)
+        }
+    }
 
     pub fn add_pair(runtime: &mut SimpleRuntimeData, key: &str, value: i32) -> usize {
         let i1 = runtime.add_symbol(key).unwrap();
