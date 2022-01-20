@@ -1,3 +1,4 @@
+use crate::{DataError, ExpressionDataType};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct SimpleDataList {
@@ -32,10 +33,6 @@ impl SimpleDataList {
         self.list.len()
     }
 }
-
-
-use crate::{DataError, ExpressionDataType};
-
 
 pub type DataCastResult<T> = Result<T, DataError>;
 
