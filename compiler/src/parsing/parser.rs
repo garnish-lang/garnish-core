@@ -154,6 +154,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::Or => todo!(),
         TokenType::Xor => todo!(),
         TokenType::Not => todo!(),
+        TokenType::TypeCast => todo!(),
         TokenType::TypeEqual => todo!(),
         TokenType::Inequality => todo!(),
         TokenType::LessThan => todo!(),

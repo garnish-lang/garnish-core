@@ -49,6 +49,7 @@ pub enum TokenType {
     ApplyTo,
     Reapply,
     EmptyApply,
+    TypeCast,
     TypeEqual,
     Equality,
     Inequality,
@@ -341,6 +342,7 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
         ("~>", TokenType::ApplyTo),
         ("^~", TokenType::Reapply),
         ("~~", TokenType::EmptyApply),
+        ("~#", TokenType::TypeCast),
         ("#=", TokenType::TypeEqual),
         ("==", TokenType::Equality),
         ("!=", TokenType::Inequality),
@@ -1270,6 +1272,21 @@ mod tests {
             vec![LexerToken {
                 text: ">=".to_string(),
                 token_type: TokenType::GreaterThanOrEqual,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn type_cast() {
+        let result = lex(&"~#".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "~#".to_string(),
+                token_type: TokenType::TypeCast,
                 column: 0,
                 row: 0
             }]
