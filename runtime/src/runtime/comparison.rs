@@ -1,7 +1,4 @@
-use crate::{
-    next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError,
-    RuntimeError, TypeConstants,
-};
+use crate::{next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants, get_range};
 use std::cmp::Ordering;
 
 pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
@@ -27,11 +24,45 @@ fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data, false_ord: 
         (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_number(left)?.cmp(&this.get_number(right)?),
         (ExpressionDataType::Char, ExpressionDataType::Char) => this.get_char(left)?.cmp(&this.get_char(right)?),
         (ExpressionDataType::Byte, ExpressionDataType::Byte) => this.get_byte(left)?.cmp(&this.get_byte(right)?),
-        (ExpressionDataType::CharList, ExpressionDataType::CharList) => {
-            cmp_list(this, left, right, Data::get_char_list_item, Data::get_char_list_len)?
-        }
-        (ExpressionDataType::ByteList, ExpressionDataType::ByteList) => {
-            cmp_list(this, left, right, Data::get_byte_list_item, Data::get_byte_list_len)?
+        (ExpressionDataType::CharList, ExpressionDataType::CharList) => cmp_list(
+            this,
+            left,
+            right,
+            Data::Number::zero(),
+            Data::Number::zero(),
+            Data::get_char_list_item,
+            Data::get_char_list_len,
+        )?,
+        (ExpressionDataType::ByteList, ExpressionDataType::ByteList) => cmp_list(
+            this,
+            left,
+            right,
+            Data::Number::zero(),
+            Data::Number::zero(),
+            Data::get_byte_list_item,
+            Data::get_byte_list_len,
+        )?,
+        (ExpressionDataType::Slice, ExpressionDataType::Slice) => {
+            let (left_value, left_range) = this.get_slice(left)?;
+            let (right_value, right_range) = this.get_slice(right)?;
+
+            match (this.get_data_type(left_value)?, this.get_data_type(right_value)?) {
+                (ExpressionDataType::ByteList, ExpressionDataType::ByteList) => {
+                    let (start1, ..) = get_range(this, left_range)?;
+                    let (start2, ..) = get_range(this, right_range)?;
+
+                    cmp_list(
+                        this,
+                        left_value,
+                        right_value,
+                        start1,
+                        start2,
+                        Data::get_byte_list_item,
+                        Data::get_byte_list_len,
+                    )?
+                }
+                _ => return Ok(false_ord)
+            }
         }
         _ => return Ok(false_ord),
     };
@@ -43,6 +74,8 @@ fn cmp_list<Data: GarnishLangRuntimeData, T: Ord, GetFunc, LenFunc>(
     this: &mut Data,
     left: Data::Size,
     right: Data::Size,
+    left_start: Data::Number,
+    right_start: Data::Number,
     get_func: GetFunc,
     len_func: LenFunc,
 ) -> Result<Ordering, RuntimeError<Data::Error>>
@@ -55,15 +88,17 @@ where
         Data::size_to_integer(len_func(this, right)?),
     );
 
-    let min = if len1 < len2 { len1 } else { len2 };
-    let mut count = Data::Number::zero();
+    let mut left_index = left_start;
+    let mut right_index = right_start;
 
-    while count < min {
-        match get_func(this, left, count)?.cmp(&get_func(this, right, count)?) {
+    while left_index < len1 && right_index < len2 {
+        match get_func(this, left, left_index)?.cmp(&get_func(this, right, right_index)?) {
             Ordering::Equal => (),
             non_eq => return Ok(non_eq),
         }
-        count = count.increment().or_num_err()?;
+
+        left_index = left_index.increment().or_num_err()?;
+        right_index = right_index.increment().or_num_err()?;
     }
 
     Ok(len1.cmp(&len2))
@@ -105,7 +140,7 @@ mod general {
 
 #[cfg(test)]
 mod less_than {
-    use crate::testing_utilites::{add_byte_list, add_char_list};
+    use crate::testing_utilites::{add_byte_list, add_char_list, slice_of_byte_list};
     use crate::{runtime::GarnishRuntime, DataError, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, SimpleRuntimeData};
 
     fn perform_compare<Setup, Op>(expected: bool, op_name: &str, op: Op, setup: Setup)
@@ -297,6 +332,47 @@ mod less_than {
     fn byte_list_greater_than_dif_len() {
         perform_all_compare(false, false, true, true, |runtime| {
             (add_byte_list(runtime, "aaaaa"), add_byte_list(runtime, "aaa"))
+        });
+    }
+
+    #[test]
+    fn slice_of_byte_list_less_than() {
+        perform_all_compare(true, true, false, false, |runtime| {
+            (slice_of_byte_list(runtime, "aaaaaa", 0, 3), slice_of_byte_list(runtime, "bbbbbb", 1, 4))
+        });
+    }
+
+    #[test]
+    fn slice_of_byte_list_less_than_dif_len() {
+        perform_all_compare(true, true, false, false, |runtime| {
+            (
+                slice_of_byte_list(runtime, "aaaaaa", 1, 4),
+                slice_of_byte_list(runtime, "aaaaaaaaa", 1, 6),
+            )
+        });
+    }
+
+    #[test]
+    fn slice_of_byte_list_equal() {
+        perform_all_compare(false, true, false, true, |runtime| {
+            (slice_of_byte_list(runtime, "aaaaaa", 0, 3), slice_of_byte_list(runtime, "aaaaaa", 1, 4))
+        });
+    }
+
+    #[test]
+    fn slice_of_byte_list_greater_than() {
+        perform_all_compare(false, false, true, true, |runtime| {
+            (slice_of_byte_list(runtime, "bbbbbb", 0, 3), slice_of_byte_list(runtime, "aaaaaa", 1, 4))
+        });
+    }
+
+    #[test]
+    fn slice_of_byte_list_greater_than_dif_len() {
+        perform_all_compare(false, false, true, true, |runtime| {
+            (
+                slice_of_byte_list(runtime, "aaaaaaaaa", 2, 7),
+                slice_of_byte_list(runtime, "aaaaaa", 1, 4),
+            )
         });
     }
 }

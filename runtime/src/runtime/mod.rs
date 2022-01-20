@@ -935,4 +935,10 @@ pub mod testing_utilites {
 
         runtime.end_byte_list().unwrap()
     }
+
+    pub fn slice_of_byte_list(runtime: &mut SimpleRuntimeData, s: &str, start: i32, end: i32) -> usize {
+        let list = add_byte_list(runtime, s);
+        let range = add_range(runtime, start, end);
+        runtime.add_slice(list, range).unwrap()
+    }
 }
