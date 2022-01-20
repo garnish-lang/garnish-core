@@ -1,8 +1,10 @@
 mod types;
 mod utilities;
+mod enum_data;
 
 pub use types::*;
 pub use utilities::*;
+pub use enum_data::*;
 
 use crate::runtime::types::ExpressionDataType;
 use std::any::Any;
