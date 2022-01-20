@@ -1,27 +1,27 @@
 use crate::runtime::logical::or;
-use crate::{next_ref, next_two_raw_ref, push_boolean, push_number, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants, OrNumberError};
+use crate::{
+    next_ref, next_two_raw_ref, push_boolean, push_number, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError,
+    RuntimeError, TypeConstants,
+};
 use std::cmp::Ordering;
 
 pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Ordering::is_lt)
+    push_boolean(this, perform_comparison(this)?.is_lt())
 }
 
 pub fn less_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Ordering::is_le)
+    push_boolean(this, perform_comparison(this)?.is_le())
 }
 
 pub fn greater_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Ordering::is_gt)
+    push_boolean(this, perform_comparison(this)?.is_gt())
 }
 
 pub fn greater_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Ordering::is_ge)
+    push_boolean(this, perform_comparison(this)?.is_ge())
 }
 
-fn perform_comparison<Data: GarnishLangRuntimeData, ToBool>(this: &mut Data, to_bool: ToBool) -> Result<(), RuntimeError<Data::Error>>
-where
-    ToBool: Fn(Ordering) -> bool,
-{
+fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Ordering, RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
 
     let result = match (this.get_data_type(left)?, this.get_data_type(right)?) {
@@ -35,7 +35,7 @@ where
         }
     };
 
-    push_boolean(this, to_bool(result))
+    result
 }
 
 fn cmp_char_list<Data: GarnishLangRuntimeData>(this: &mut Data, left: Data::Size, right: Data::Size) -> Result<Ordering, RuntimeError<Data::Error>> {
