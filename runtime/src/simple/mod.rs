@@ -4,17 +4,14 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
-use crate::{
-    symbol_value, AnyData, ByteData, ByteListData, CharData, CharListData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType,
-    ExternalData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction,
-    InstructionData, IntegerData, LinkData, ListData, PairData, RangeData, RuntimeError, SimpleData, SimpleDataList, SliceData, SymbolData,
-};
+use crate::{symbol_value, AnyData, ByteData, ByteListData, CharData, CharListData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, LinkData, ListData, PairData, RangeData, RuntimeError, SimpleData, SimpleDataList, SliceData, SymbolData, SimpleDataEnum};
 
 pub mod data;
 
 #[derive(Debug)]
 pub struct SimpleRuntimeData {
     register: Vec<usize>,
+    data: Vec<SimpleDataEnum>,
     simple_data: SimpleDataList,
     end_of_constant_data: usize,
     values: Vec<usize>,
@@ -35,6 +32,7 @@ impl SimpleRuntimeData {
     pub fn new() -> Self {
         SimpleRuntimeData {
             register: vec![],
+            data: vec![SimpleDataEnum::Unit, SimpleDataEnum::False, SimpleDataEnum::True],
             simple_data: SimpleDataList::default(),
             end_of_constant_data: 0,
             values: vec![],
@@ -52,8 +50,8 @@ impl SimpleRuntimeData {
         }
     }
 
-    pub(crate) fn get(&self, index: usize) -> Result<&AnyData, DataError> {
-        match self.simple_data.get(index) {
+    pub(crate) fn get(&self, index: usize) -> Result<&SimpleDataEnum, DataError> {
+        match self.data.get(index) {
             None => Err(format!("No data at addr {:?}", index))?,
             Some(d) => Ok(d),
         }
@@ -132,17 +130,17 @@ impl SimpleRuntimeData {
         Ok(())
     }
 
-    fn cache_add<T: SimpleData>(&mut self, value: T) -> Result<usize, DataError> {
+    fn cache_add(&mut self, value: SimpleDataEnum) -> Result<usize, DataError> {
         let mut h = DefaultHasher::new();
         value.hash(&mut h);
-        value.get_type().hash(&mut h);
+        value.get_data_type().hash(&mut h);
         let hv = h.finish();
 
         match self.cache.get(&hv) {
             Some(addr) => Ok(*addr),
             None => {
-                let addr = self.simple_data.len();
-                self.simple_data.push(value);
+                let addr = self.data.len();
+                self.data.push(value);
                 self.cache.insert(hv, addr);
                 Ok(addr)
             }
@@ -355,88 +353,84 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn get_number(&self, index: usize) -> Result<i32, Self::Error> {
-        Ok(self.get(index)?.as_integer()?.value())
+        self.get(index)?.as_number()
     }
 
     fn get_char(&self, index: Self::Size) -> Result<Self::Char, Self::Error> {
-        Ok(self.get(index)?.as_char()?.value())
+        self.get(index)?.as_char()
     }
 
     fn get_byte(&self, addr: Self::Size) -> Result<Self::Byte, Self::Error> {
-        Ok(self.get(addr)?.as_byte()?.value())
+        self.get(addr)?.as_byte()
     }
 
     fn get_symbol(&self, index: usize) -> Result<u64, Self::Error> {
-        Ok(self.get(index)?.as_symbol()?.value())
+        self.get(index)?.as_symbol()
     }
 
     fn get_expression(&self, index: usize) -> Result<usize, Self::Error> {
-        Ok(self.get(index)?.as_expression()?.value())
+        self.get(index)?.as_expression()
     }
 
     fn get_external(&self, index: usize) -> Result<usize, Self::Error> {
-        Ok(self.get(index)?.as_external()?.value())
+        self.get(index)?.as_external()
     }
 
     fn get_pair(&self, index: usize) -> Result<(usize, usize), Self::Error> {
-        let pair = self.get(index)?.as_pair()?;
-        Ok((pair.left(), pair.right()))
+        self.get(index)?.as_pair()
     }
 
     fn get_range(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
-        let range = self.get(addr)?.as_range()?;
-        Ok((range.start(), range.end()))
+        self.get(addr)?.as_range()
     }
 
     fn get_slice(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
-        let slice = self.get(addr)?.as_slice()?;
-        Ok((slice.list(), slice.range()))
+        self.get(addr)?.as_slice()
     }
 
     fn get_link(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size, bool), Self::Error> {
-        let link = self.get(addr)?.as_link()?;
-        Ok((link.value(), link.linked(), link.is_append()))
+        self.get(addr)?.as_link()
     }
 
     fn get_list_len(&self, index: usize) -> Result<usize, Self::Error> {
-        Ok(self.get(index)?.as_list()?.items().len())
+        Ok(self.get(index)?.as_list()?.0.len())
     }
 
     fn get_list_item(&self, list_index: usize, item_index: i32) -> Result<usize, Self::Error> {
-        match self.get(list_index)?.as_list()?.items().get(item_index as usize) {
+        match self.get(list_index)?.as_list()?.0.get(item_index as usize) {
             None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
             Some(v) => Ok(*v),
         }
     }
 
     fn get_list_associations_len(&self, index: usize) -> Result<usize, Self::Error> {
-        Ok(self.get(index)?.as_list()?.associations().len())
+        Ok(self.get(index)?.as_list()?.1.len())
     }
 
     fn get_list_association(&self, list_index: usize, item_index: i32) -> Result<usize, Self::Error> {
-        match self.get(list_index)?.as_list()?.associations().get(item_index as usize) {
+        match self.get(list_index)?.as_list()?.1.get(item_index as usize) {
             None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
             Some(v) => Ok(*v),
         }
     }
 
     fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        Ok(self.get(addr)?.as_char_list()?.value().len())
+        Ok(self.get(addr)?.as_char_list()?.len())
     }
 
     fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error> {
-        match self.get(addr)?.as_char_list()?.value().chars().nth(item_index as usize) {
+        match self.get(addr)?.as_char_list()?.chars().nth(item_index as usize) {
             None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
             Some(c) => Ok(c),
         }
     }
 
     fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        Ok(self.get(addr)?.as_byte_list()?.value().len())
+        Ok(self.get(addr)?.as_byte_list()?.len())
     }
 
     fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error> {
-        match self.get(addr)?.as_byte_list()?.value().get(item_index as usize) {
+        match self.get(addr)?.as_byte_list()?.get(item_index as usize) {
             None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
             Some(c) => Ok(*c),
         }
@@ -455,49 +449,49 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn add_number(&mut self, value: i32) -> Result<usize, Self::Error> {
-        self.cache_add(IntegerData::from(value))
+        self.cache_add(SimpleDataEnum::Number(value))
     }
 
     fn add_char(&mut self, value: Self::Char) -> Result<Self::Size, Self::Error> {
-        self.cache_add(CharData::from(value))
+        self.cache_add(SimpleDataEnum::Char(value))
     }
 
     fn add_byte(&mut self, value: Self::Byte) -> Result<Self::Size, Self::Error> {
-        self.cache_add(ByteData::from(value))
+        self.cache_add(SimpleDataEnum::Byte(value))
     }
 
     fn add_symbol(&mut self, value: &str) -> Result<usize, Self::Error> {
         let sym_val = symbol_value(value);
         self.symbols.insert(sym_val, value.to_string());
-        self.cache_add(SymbolData::from(sym_val))
+        self.cache_add(SimpleDataEnum::Symbol(sym_val))
     }
 
     fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error> {
-        self.cache_add(ExpressionData::from(value))
+        self.cache_add(SimpleDataEnum::Expression(value))
     }
 
     fn add_external(&mut self, value: usize) -> Result<usize, Self::Error> {
-        self.cache_add(ExternalData::from(value))
+        self.cache_add(SimpleDataEnum::External(value))
     }
 
     fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error> {
-        self.simple_data.push(PairData::from(value));
-        Ok(self.simple_data.len() - 1)
+        self.data.push(SimpleDataEnum::Pair(value.0, value.1));
+        Ok(self.data.len() - 1)
     }
 
     fn add_range(&mut self, start: Self::Size, end: Self::Size) -> Result<Self::Size, Self::Error> {
-        self.simple_data.push(RangeData::from((start, end)));
-        Ok(self.simple_data.len() - 1)
+        self.data.push(SimpleDataEnum::Range(start, end));
+        Ok(self.data.len() - 1)
     }
 
     fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
-        self.simple_data.push(SliceData::from((list, range)));
-        Ok(self.simple_data.len() - 1)
+        self.data.push(SimpleDataEnum::Slice(list, range));
+        Ok(self.data.len() - 1)
     }
 
     fn add_link(&mut self, value: Self::Size, linked: Self::Size, is_append: bool) -> Result<Self::Size, Self::Error> {
-        self.simple_data.push(LinkData::from((value, linked, is_append)));
-        Ok(self.simple_data.len() - 1)
+        self.data.push(SimpleDataEnum::Link(value, linked, is_append));
+        Ok(self.data.len() - 1)
     }
 
     fn start_list(&mut self, _: usize) -> Result<(), Self::Error> {
@@ -545,8 +539,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
                     ordered[i] = item;
                 }
 
-                self.simple_data.push(ListData::from_items(items.to_vec(), ordered));
-                Ok(self.simple_data.len() - 1)
+                self.data.push(SimpleDataEnum::List(items.to_vec(), ordered));
+                Ok(self.data.len() - 1)
             }
         }
     }
@@ -568,7 +562,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn end_char_list(&mut self) -> Result<Self::Size, Self::Error> {
         let data = match &self.current_char_list {
             None => Err(format!("Attempting to end unstarted char list."))?,
-            Some(s) => CharListData::from(s.clone()),
+            Some(s) => SimpleDataEnum::CharList(s.clone()),
         };
 
         let addr = self.cache_add(data)?;
@@ -595,7 +589,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error> {
         let data = match &self.current_byte_list {
             None => Err(format!("Attempting to end unstarted byte list."))?,
-            Some(l) => ByteListData::from(l.clone()),
+            Some(l) => SimpleDataEnum::ByteList(l.clone()),
         };
 
         let addr = self.cache_add(data)?;
@@ -672,7 +666,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn get_data_len(&self) -> usize {
-        self.simple_data.len()
+        self.data.len()
     }
 
     fn push_value_stack(&mut self, addr: usize) -> Result<(), Self::Error> {
@@ -829,7 +823,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         }
         let hv = h.finish();
 
-        self.cache_add(SymbolData::from(hv))
+        self.cache_add(SimpleDataEnum::Symbol(hv))
     }
 
     fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -979,7 +973,7 @@ mod data_storage {
         assert_eq!(runtime.add_unit().unwrap(), 0);
 
         assert_eq!(runtime.get_data_len(), 3);
-        assert_eq!(runtime.simple_data.get(0).unwrap().as_unit().unwrap(), UnitData::new());
+        assert!(runtime.data.get(0).unwrap().is_unit());
     }
 
     #[test]
@@ -991,7 +985,7 @@ mod data_storage {
         assert_eq!(runtime.add_false().unwrap(), 1);
 
         assert_eq!(runtime.get_data_len(), 3);
-        assert_eq!(runtime.simple_data.get(1).unwrap().as_false().unwrap(), FalseData::new());
+        assert!(runtime.data.get(1).unwrap().is_false());
     }
 
     #[test]
@@ -1003,7 +997,7 @@ mod data_storage {
         assert_eq!(runtime.add_true().unwrap(), 2);
 
         assert_eq!(runtime.get_data_len(), 3);
-        assert_eq!(runtime.simple_data.get(2).unwrap().as_true().unwrap(), TrueData::new());
+        assert!(runtime.data.get(2).unwrap().is_true());
     }
 
     #[test]
@@ -1020,8 +1014,8 @@ mod data_storage {
         assert_eq!(i3, i1);
 
         assert_eq!(runtime.get_data_len(), 5);
-        assert_eq!(runtime.simple_data.get(3).unwrap().as_integer().unwrap().value(), 10);
-        assert_eq!(runtime.simple_data.get(4).unwrap().as_integer().unwrap().value(), 20);
+        assert_eq!(runtime.data.get(3).unwrap().as_number().unwrap(), 10);
+        assert_eq!(runtime.data.get(4).unwrap().as_number().unwrap(), 20);
     }
 
     #[test]
@@ -1038,8 +1032,8 @@ mod data_storage {
         assert_eq!(i3, i1);
 
         assert_eq!(runtime.get_data_len(), 5);
-        assert_eq!(runtime.simple_data.get(3).unwrap().as_symbol().unwrap().value(), symbol_value("sym"));
-        assert_eq!(runtime.simple_data.get(4).unwrap().as_symbol().unwrap().value(), symbol_value("value"));
+        assert_eq!(runtime.data.get(3).unwrap().as_symbol().unwrap(), symbol_value("sym"));
+        assert_eq!(runtime.data.get(4).unwrap().as_symbol().unwrap(), symbol_value("value"));
     }
 
     #[test]
@@ -1056,8 +1050,8 @@ mod data_storage {
         assert_eq!(i3, i1);
 
         assert_eq!(runtime.get_data_len(), 5);
-        assert_eq!(runtime.simple_data.get(3).unwrap().as_expression().unwrap().value(), 10);
-        assert_eq!(runtime.simple_data.get(4).unwrap().as_expression().unwrap().value(), 20);
+        assert_eq!(runtime.data.get(3).unwrap().as_expression().unwrap(), 10);
+        assert_eq!(runtime.data.get(4).unwrap().as_expression().unwrap(), 20);
     }
 
     #[test]
@@ -1074,8 +1068,8 @@ mod data_storage {
         assert_eq!(i3, i1);
 
         assert_eq!(runtime.get_data_len(), 5);
-        assert_eq!(runtime.simple_data.get(3).unwrap().as_external().unwrap().value(), 10);
-        assert_eq!(runtime.simple_data.get(4).unwrap().as_external().unwrap().value(), 20);
+        assert_eq!(runtime.data.get(3).unwrap().as_external().unwrap(), 10);
+        assert_eq!(runtime.data.get(4).unwrap().as_external().unwrap(), 20);
     }
 
     #[test]
@@ -1091,8 +1085,8 @@ mod data_storage {
         assert_ne!(i1, i2);
 
         assert_eq!(runtime.get_data_len(), 5);
-        assert_eq!(runtime.simple_data.get(3).unwrap().as_external().unwrap().value(), 10);
-        assert_eq!(runtime.simple_data.get(4).unwrap().as_expression().unwrap().value(), 10);
+        assert_eq!(runtime.data.get(3).unwrap().as_external().unwrap(), 10);
+        assert_eq!(runtime.data.get(4).unwrap().as_expression().unwrap(), 10);
     }
 }
 
