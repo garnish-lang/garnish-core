@@ -1,6 +1,8 @@
 use crate::runtime::internals::{link_len, link_len_size};
 use crate::runtime::list::{iterate_link_internal, iterate_link_internal_rev};
-use crate::{get_range, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, GarnishNumber, OrNumberError};
+use crate::{
+    get_range, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants,
+};
 
 pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
@@ -35,6 +37,14 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         }
         // NoOp re-push left to register
         (l, r) if l == r => this.push_register(left)?,
+
+        // Casts that defer to data object and only expect an addr to push
+        (ExpressionDataType::CharList, ExpressionDataType::Byte) => {
+            this.add_byte_from(left).and_then(|r| this.push_register(r))?;
+        }
+        (ExpressionDataType::CharList, ExpressionDataType::Number) => {
+            this.add_number_from(left).and_then(|r| this.push_register(r))?;
+        }
         (_, ExpressionDataType::CharList) => {
             this.add_char_list_from(left).and_then(|r| this.push_register(r))?;
         }
@@ -44,7 +54,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         (_, ExpressionDataType::Symbol) => {
             this.add_symbol_from(left).and_then(|r| this.push_register(r))?;
         }
-        // Numbers
+        // Primitives
         (ExpressionDataType::Number, ExpressionDataType::Char) => {
             primitive_cast(this, left, Data::get_number, Data::integer_to_char, Data::add_char)?;
         }
@@ -62,6 +72,16 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         }
         (ExpressionDataType::Byte, ExpressionDataType::Char) => {
             primitive_cast(this, left, Data::get_byte, Data::byte_to_char, Data::add_char)?;
+        }
+        (ExpressionDataType::CharList, ExpressionDataType::Char) => {
+            let len = this.get_char_list_len(left)?;
+            if len == Data::Size::one() {
+                this.get_char_list_item(left, Data::Number::zero())
+                    .and_then(|c| this.add_char(c))
+                    .and_then(|r| this.push_register(r))?;
+            } else {
+                push_unit(this)?;
+            }
         }
         (ExpressionDataType::Link, ExpressionDataType::List) => {
             let len = link_len_size(this, left)?;
@@ -134,17 +154,13 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         }
         (ExpressionDataType::List, ExpressionDataType::Link) => {
             let len = Data::size_to_integer(this.get_list_len(left)?);
-            create_link(
-                this,
-                right,
-                Data::Number::zero(),
-                len,
-                |this, index| Ok(this.get_list_item(left, index)?),
-            )?;
+            create_link(this, right, Data::Number::zero(), len, |this, index| Ok(this.get_list_item(left, index)?))?;
         }
         (ExpressionDataType::Range, ExpressionDataType::Link) => {
             let (start, end, _) = get_range(this, left)?;
-            create_link(this, right, start, end.increment().or_num_err()?, |this, index| Ok(this.add_number(index)?))?;
+            create_link(this, right, start, end.increment().or_num_err()?, |this, index| {
+                Ok(this.add_number(index)?)
+            })?;
         }
         (ExpressionDataType::CharList, ExpressionDataType::Link) => {
             let len = this.get_char_list_len(left)?;
@@ -556,8 +572,8 @@ mod simple {
 
 #[cfg(test)]
 mod primitive {
+    use crate::testing_utilites::add_char_list;
     use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
-
 
     #[test]
     fn integer_to_char() {
@@ -659,6 +675,51 @@ mod primitive {
         let expected = SimpleRuntimeData::byte_to_char('a' as u8).unwrap();
 
         assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), expected);
+    }
+
+    #[test]
+    fn char_list_to_byte() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_char_list(&mut runtime, "100");
+        let d2 = runtime.add_byte(0).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        assert_eq!(runtime.get_byte(runtime.get_register(0).unwrap()).unwrap(), 100);
+    }
+
+    #[test]
+    fn char_list_to_char() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_char_list(&mut runtime, "c");
+        let d2 = runtime.add_char('a').unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), 'c');
+    }
+
+    #[test]
+    fn char_list_to_number() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_char_list(&mut runtime, "100");
+        let d2 = runtime.add_number(0).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast().unwrap();
+
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 100);
     }
 }
 
@@ -1286,7 +1347,7 @@ mod links {
             assert_eq!(runtime.get_char(addr).unwrap(), input.chars().nth(i).unwrap());
             Ok(false)
         })
-            .unwrap();
+        .unwrap();
     }
 
     #[test]
@@ -1311,7 +1372,7 @@ mod links {
             assert_eq!(runtime.get_char(addr).unwrap(), input.chars().nth(i).unwrap());
             Ok(false)
         })
-            .unwrap();
+        .unwrap();
     }
 
     #[test]
@@ -1336,7 +1397,7 @@ mod links {
             assert_eq!(runtime.get_byte(addr).unwrap(), input.chars().nth(i).unwrap() as u8);
             Ok(false)
         })
-            .unwrap();
+        .unwrap();
     }
 
     #[test]
@@ -1361,7 +1422,7 @@ mod links {
             assert_eq!(runtime.get_byte(addr).unwrap(), input.chars().nth(i).unwrap() as u8);
             Ok(false)
         })
-            .unwrap();
+        .unwrap();
     }
 }
 

@@ -832,6 +832,44 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.cache_add(SymbolData::from(hv))
     }
 
+    fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
+        match self.get_data_type(from)? {
+            ExpressionDataType::CharList => {
+                let len = self.get_char_list_len(from)?;
+                let mut s = String::new();
+                for i in 0..len {
+                    let c = self.get_char_list_item(from, i as i32)?;
+                    s.push(c);
+                }
+
+                match s.parse::<u8>() {
+                    Ok(v) => self.add_byte(v),
+                    Err(_) => self.add_unit()
+                }
+            }
+            _ => self.add_unit()
+        }
+    }
+
+    fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
+        match self.get_data_type(from)? {
+            ExpressionDataType::CharList => {
+                let len = self.get_char_list_len(from)?;
+                let mut s = String::new();
+                for i in 0..len {
+                    let c = self.get_char_list_item(from, i as i32)?;
+                    s.push(c);
+                }
+
+                match s.parse::<i32>() {
+                    Ok(v) => self.add_number(v),
+                    Err(_) => self.add_unit()
+                }
+            }
+            _ => self.add_unit()
+        }
+    }
+
     //
     // Parsing
     //
