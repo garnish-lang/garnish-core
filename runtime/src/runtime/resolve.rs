@@ -40,9 +40,10 @@ mod tests {
             utilities::push_number,
             GarnishRuntime,
         },
-        symbol_value, GarnishLangRuntimeData, RuntimeError, Instruction, SimpleRuntimeData, ExpressionDataType
+        GarnishLangRuntimeData, RuntimeError, Instruction, SimpleRuntimeData, ExpressionDataType
     };
     use crate::simple::DataError;
+    use crate::simple::symbol_value;
 
     #[test]
     fn resolve_from_input() {

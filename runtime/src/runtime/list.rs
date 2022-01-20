@@ -792,7 +792,8 @@ mod ranges {
 #[cfg(test)]
 mod slice {
     use crate::testing_utilites::{add_integer_list, add_links, add_list, add_pair, add_range};
-    use crate::{runtime::GarnishRuntime, symbol_value, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::simple::symbol_value;
 
     #[test]
     fn index_slice_of_list() {
@@ -1011,7 +1012,8 @@ mod slice {
 #[cfg(test)]
 mod link {
     use crate::testing_utilites::add_links;
-    use crate::{symbol_value, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData};
+    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData};
+    use crate::simple::symbol_value;
 
     #[test]
     fn index_prepend_link_with_integer() {

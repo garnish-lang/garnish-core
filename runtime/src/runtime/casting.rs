@@ -726,7 +726,8 @@ mod primitive {
 #[cfg(test)]
 mod lists {
     use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
-    use crate::{runtime::GarnishRuntime, symbol_value, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::simple::symbol_value;
 
     #[test]
     fn link_to_list() {
@@ -953,7 +954,8 @@ mod lists {
 mod links {
     use crate::runtime::internals::{link_len, link_len_size};
     use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
-    use crate::{iterate_link, runtime::GarnishRuntime, symbol_value, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{iterate_link, runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::simple::symbol_value;
 
     #[test]
     fn list_to_link_append() {

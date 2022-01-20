@@ -1,7 +1,7 @@
 use super::context::GarnishLangRuntimeContext;
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
-use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, GarnishNumber};
+use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
 
 pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
@@ -191,10 +191,10 @@ pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
 
                             Ok(range_addr)
                         }
-                        _ => state_error(format!("Could not narrow range."))?
+                        _ => state_error(format!("Could not narrow range."))?,
                     }
                 }
-                _ => state_error(format!("Could not narrow range."))?
+                _ => state_error(format!("Could not narrow range."))?,
             }
         }
         (s1, e1, s2) => state_error(format!(
@@ -206,13 +206,13 @@ pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
 
 #[cfg(test)]
 mod tests {
-    use crate::simple::DataError;
+    use crate::simple::{symbol_value, DataError};
     use crate::{
         runtime::{
             context::{EmptyContext, GarnishLangRuntimeContext},
             GarnishRuntime,
         },
-        symbol_value, ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData,
+        ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData,
     };
 
     #[test]
@@ -702,11 +702,11 @@ mod tests {
 
 #[cfg(test)]
 mod slices {
+    use crate::testing_utilites::{add_list, add_range};
     use crate::{
         runtime::{context::EmptyContext, GarnishRuntime},
         GarnishLangRuntimeData, SimpleRuntimeData,
     };
-    use crate::testing_utilites::{add_list, add_range};
 
     #[test]
     fn create_with_list() {

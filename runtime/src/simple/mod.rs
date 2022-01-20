@@ -1,18 +1,25 @@
+use std::{collections::HashMap, hash::Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::convert::TryInto;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
-use std::{collections::HashMap, hash::Hasher};
 
-use crate::{symbol_value, AnyData, ByteData, ByteListData, CharData, CharListData, DataCoersion, EmptyContext, ExpressionData, ExpressionDataType, ExternalData, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, IntegerData, LinkData, ListData, PairData, RangeData, RuntimeError, SimpleData, SimpleDataList, SliceData, SymbolData, SimpleDataEnum};
+use crate::{EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, RuntimeError, SimpleDataEnum, SimpleDataList};
 
 pub mod data;
+
+pub fn symbol_value(value: &str) -> u64 {
+    let mut h = DefaultHasher::new();
+    value.hash(&mut h);
+    let hv = h.finish();
+
+    hv
+}
 
 #[derive(Debug)]
 pub struct SimpleRuntimeData {
     register: Vec<usize>,
     data: SimpleDataList,
-    simple_data: SimpleDataList,
     end_of_constant_data: usize,
     values: Vec<usize>,
     instructions: Vec<InstructionData>,
@@ -33,7 +40,6 @@ impl SimpleRuntimeData {
         SimpleRuntimeData {
             register: vec![],
             data: SimpleDataList::default(),
-            simple_data: SimpleDataList::default(),
             end_of_constant_data: 0,
             values: vec![],
             instruction_cursor: 0,
@@ -962,7 +968,8 @@ mod tests {
 
 #[cfg(test)]
 mod data_storage {
-    use crate::{symbol_value, DataCoersion, FalseData, GarnishLangRuntimeData, SimpleRuntimeData, TrueData, UnitData};
+    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::simple::symbol_value;
 
     #[test]
     fn unit() {
@@ -1138,10 +1145,11 @@ mod leases {
 
 #[cfg(test)]
 mod to_symbol {
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
     use std::collections::hash_map::DefaultHasher;
     use std::hash::Hash;
     use std::hash::Hasher;
+
+    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn unit() {
