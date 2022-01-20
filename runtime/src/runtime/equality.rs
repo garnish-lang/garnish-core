@@ -553,7 +553,7 @@ where
 
 #[cfg(test)]
 mod general {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn equality_no_references_is_err() {
