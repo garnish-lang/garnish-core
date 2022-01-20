@@ -41,14 +41,14 @@ impl<T: SimpleData> AsAnyData for T {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct SimpleDataList {
-    list: Vec<AnyData>,
+    list: Vec<SimpleDataEnum>,
 }
 
 impl Default for SimpleDataList {
     fn default() -> Self {
-        SimpleDataList::new().append(UnitData::new()).append(FalseData::new()).append(TrueData::new())
+        SimpleDataList::new().append(SimpleDataEnum::Unit).append(SimpleDataEnum::False).append(SimpleDataEnum::True)
     }
 }
 
@@ -57,16 +57,16 @@ impl SimpleDataList {
         SimpleDataList { list: vec![] }
     }
 
-    pub fn append<T: SimpleData>(mut self, item: T) -> Self {
-        self.list.push(item.as_any_data());
+    pub fn append(mut self, item: SimpleDataEnum) -> Self {
+        self.list.push(item);
         self
     }
 
-    pub fn push<T: SimpleData>(&mut self, item: T) {
-        self.list.push(item.as_any_data());
+    pub fn push(&mut self, item: SimpleDataEnum) {
+        self.list.push(item);
     }
 
-    pub(crate) fn get(&self, index: usize) -> Option<&AnyData> {
+    pub(crate) fn get(&self, index: usize) -> Option<&SimpleDataEnum> {
         self.list.get(index)
     }
 
@@ -74,30 +74,3 @@ impl SimpleDataList {
         self.list.len()
     }
 }
-
-impl PartialEq<SimpleDataList> for SimpleDataList {
-    fn eq(&self, other: &SimpleDataList) -> bool {
-        if self.list.len() != other.list.len() {
-            return false;
-        }
-
-        let mut equal = true;
-        for i in 0..self.list.len() {
-            match (self.list.get(i), other.list.get(i)) {
-                (Some(left), Some(right)) => {
-                    if !data_equal(&left.data, &right.data) {
-                        equal = false;
-                        break;
-                    }
-                }
-                _ => {
-                    equal = false;
-                    break;
-                }
-            }
-        }
-
-        equal
-    }
-}
-

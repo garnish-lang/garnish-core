@@ -11,7 +11,7 @@ pub mod data;
 #[derive(Debug)]
 pub struct SimpleRuntimeData {
     register: Vec<usize>,
-    data: Vec<SimpleDataEnum>,
+    data: SimpleDataList,
     simple_data: SimpleDataList,
     end_of_constant_data: usize,
     values: Vec<usize>,
@@ -32,7 +32,7 @@ impl SimpleRuntimeData {
     pub fn new() -> Self {
         SimpleRuntimeData {
             register: vec![],
-            data: vec![SimpleDataEnum::Unit, SimpleDataEnum::False, SimpleDataEnum::True],
+            data: SimpleDataList::default(),
             simple_data: SimpleDataList::default(),
             end_of_constant_data: 0,
             values: vec![],
@@ -78,7 +78,7 @@ impl SimpleRuntimeData {
     }
 
     pub fn get_data(&self) -> &SimpleDataList {
-        &self.simple_data
+        &self.data
     }
 
     pub fn execute_all_instructions(&mut self) -> Result<(), RuntimeError<DataError>> {
