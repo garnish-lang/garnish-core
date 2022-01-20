@@ -1,7 +1,5 @@
 use crate::runtime::logical::or;
-use crate::{
-    next_ref, next_two_raw_ref, push_boolean, push_number, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError,
-};
+use crate::{next_ref, next_two_raw_ref, push_boolean, push_number, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants, OrNumberError};
 use std::cmp::Ordering;
 
 pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
@@ -20,25 +18,45 @@ pub fn greater_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> R
     perform_comparison(this, Ordering::is_ge)
 }
 
-fn perform_comparison<Data: GarnishLangRuntimeData, NumberOp>(
-    this: &mut Data,
-    to_bool: NumberOp
-) -> Result<(), RuntimeError<Data::Error>>
-where NumberOp: Fn(Ordering) -> bool
+fn perform_comparison<Data: GarnishLangRuntimeData, ToBool>(this: &mut Data, to_bool: ToBool) -> Result<(), RuntimeError<Data::Error>>
+where
+    ToBool: Fn(Ordering) -> bool,
 {
     let (right, left) = next_two_raw_ref(this)?;
 
     let result = match (this.get_data_type(left)?, this.get_data_type(right)?) {
         (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_number(left)?.cmp(&this.get_number(right)?),
-        (ExpressionDataType::Char, ExpressionDataType::Char) =>  this.get_char(left)?.cmp(&this.get_char(right)?),
+        (ExpressionDataType::Char, ExpressionDataType::Char) => this.get_char(left)?.cmp(&this.get_char(right)?),
         (ExpressionDataType::Byte, ExpressionDataType::Byte) => this.get_byte(left)?.cmp(&this.get_byte(right)?),
+        (ExpressionDataType::CharList, ExpressionDataType::CharList) => cmp_char_list(this, left, right)?,
         _ => {
             push_boolean(this, false)?;
-            return Ok(())
-        },
+            return Ok(());
+        }
     };
 
     push_boolean(this, to_bool(result))
+}
+
+fn cmp_char_list<Data: GarnishLangRuntimeData>(this: &mut Data, left: Data::Size, right: Data::Size) -> Result<Ordering, RuntimeError<Data::Error>> {
+    let (len1, len2) = (
+        Data::size_to_integer(this.get_char_list_len(left)?),
+        Data::size_to_integer(this.get_char_list_len(right)?),
+    );
+
+    let min = if len1 < len2 { len1 } else { len2 };
+    let mut count = Data::Number::zero();
+    let mut order = Ordering::Equal;
+
+    while count < min {
+        match this.get_char_list_item(left, count)?.cmp(&this.get_char_list_item(right, count)?) {
+            Ordering::Equal => (),
+            non_eq => return Ok(non_eq),
+        }
+        count = count.increment().or_num_err()?;
+    }
+
+    Ok(len1.cmp(&len2))
 }
 
 #[cfg(test)]
@@ -77,6 +95,7 @@ mod general {
 
 #[cfg(test)]
 mod less_than {
+    use crate::testing_utilites::add_char_list;
     use crate::{runtime::GarnishRuntime, DataError, ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData};
 
     fn perform_compare<Setup, Op>(expected: bool, op_name: &str, op: Op, mut setup: Setup)
@@ -109,139 +128,130 @@ mod less_than {
         perform_compare(less_than, "less than", SimpleRuntimeData::less_than, setup);
         perform_compare(less_than_equal, "less than or equal", SimpleRuntimeData::less_than_or_equal, setup);
         perform_compare(greater_than, "greater than", SimpleRuntimeData::greater_than, setup);
-        perform_compare(greater_than_equal, "greater than or equal", SimpleRuntimeData::greater_than_or_equal, setup);
+        perform_compare(
+            greater_than_equal,
+            "greater than or equal",
+            SimpleRuntimeData::greater_than_or_equal,
+            setup,
+        );
     }
 
     #[test]
     fn units_are_false() {
-        perform_all_compare(
-            false,
-            false,
-            false,
-            false,
-            | runtime | (runtime.add_unit().unwrap(), runtime.add_unit().unwrap()),
-        );
+        perform_all_compare(false, false, false, false, |runtime| {
+            (runtime.add_unit().unwrap(), runtime.add_unit().unwrap())
+        });
     }
 
     #[test]
     fn trues_are_false() {
-        perform_all_compare(
-            false,
-            false,
-            false,
-            false,
-            | runtime | (runtime.add_true().unwrap(), runtime.add_true().unwrap()),
-        );
+        perform_all_compare(false, false, false, false, |runtime| {
+            (runtime.add_true().unwrap(), runtime.add_true().unwrap())
+        });
     }
 
     #[test]
     fn falses_are_false() {
-        perform_all_compare(
-            false,
-            false,
-            false,
-            false,
-            | runtime | (runtime.add_false().unwrap(), runtime.add_false().unwrap()),
-        );
+        perform_all_compare(false, false, false, false, |runtime| {
+            (runtime.add_false().unwrap(), runtime.add_false().unwrap())
+        });
     }
 
     #[test]
     fn numbers_less_than() {
-        perform_all_compare(
-            true,
-            true,
-            false,
-            false,
-            | runtime | (runtime.add_number(10).unwrap(), runtime.add_number(20).unwrap()),
-        );
+        perform_all_compare(true, true, false, false, |runtime| {
+            (runtime.add_number(10).unwrap(), runtime.add_number(20).unwrap())
+        });
     }
 
     #[test]
     fn numbers_equal() {
-        perform_all_compare(
-            false,
-            true,
-            false,
-            true,
-            | runtime | (runtime.add_number(20).unwrap(), runtime.add_number(20).unwrap()),
-        );
+        perform_all_compare(false, true, false, true, |runtime| {
+            (runtime.add_number(20).unwrap(), runtime.add_number(20).unwrap())
+        });
     }
 
     #[test]
     fn numbers_greater_than() {
-        perform_all_compare(
-            false,
-            false,
-            true,
-            true,
-            | runtime | (runtime.add_number(20).unwrap(), runtime.add_number(10).unwrap()),
-        );
+        perform_all_compare(false, false, true, true, |runtime| {
+            (runtime.add_number(20).unwrap(), runtime.add_number(10).unwrap())
+        });
     }
 
     #[test]
     fn chars_less_than() {
-        perform_all_compare(
-            true,
-            true,
-            false,
-            false,
-            | runtime | (runtime.add_char('d').unwrap(), runtime.add_char('f').unwrap()),
-        );
+        perform_all_compare(true, true, false, false, |runtime| {
+            (runtime.add_char('d').unwrap(), runtime.add_char('f').unwrap())
+        });
     }
 
     #[test]
     fn chars_equal() {
-        perform_all_compare(
-            false,
-            true,
-            false,
-            true,
-            | runtime | (runtime.add_char('d').unwrap(), runtime.add_char('d').unwrap()),
-        );
+        perform_all_compare(false, true, false, true, |runtime| {
+            (runtime.add_char('d').unwrap(), runtime.add_char('d').unwrap())
+        });
     }
 
     #[test]
     fn chars_greater_than() {
-        perform_all_compare(
-            false,
-            false,
-            true,
-            true,
-            | runtime | (runtime.add_char('d').unwrap(), runtime.add_char('b').unwrap()),
-        );
+        perform_all_compare(false, false, true, true, |runtime| {
+            (runtime.add_char('d').unwrap(), runtime.add_char('b').unwrap())
+        });
     }
 
     #[test]
     fn bytes_less_than() {
-        perform_all_compare(
-            true,
-            true,
-            false,
-            false,
-            | runtime | (runtime.add_byte(10).unwrap(), runtime.add_byte(20).unwrap()),
-        );
+        perform_all_compare(true, true, false, false, |runtime| {
+            (runtime.add_byte(10).unwrap(), runtime.add_byte(20).unwrap())
+        });
     }
 
     #[test]
     fn bytes_equal() {
-        perform_all_compare(
-            false,
-            true,
-            false,
-            true,
-            | runtime | (runtime.add_byte(20).unwrap(), runtime.add_byte(20).unwrap()),
-        );
+        perform_all_compare(false, true, false, true, |runtime| {
+            (runtime.add_byte(20).unwrap(), runtime.add_byte(20).unwrap())
+        });
     }
 
     #[test]
     fn bytes_greater_than() {
-        perform_all_compare(
-            false,
-            false,
-            true,
-            true,
-            | runtime | (runtime.add_byte(20).unwrap(), runtime.add_byte(10).unwrap()),
-        );
+        perform_all_compare(false, false, true, true, |runtime| {
+            (runtime.add_byte(20).unwrap(), runtime.add_byte(10).unwrap())
+        });
     }
 
+    #[test]
+    fn char_list_less_than() {
+        perform_all_compare(true, true, false, false, |runtime| {
+            (add_char_list(runtime, "aaa"), add_char_list(runtime, "bbb"))
+        });
+    }
+
+    #[test]
+    fn char_list_less_than_dif_len() {
+        perform_all_compare(true, true, false, false, |runtime| {
+            (add_char_list(runtime, "aaa"), add_char_list(runtime, "aaaaa"))
+        });
+    }
+
+    #[test]
+    fn char_list_equal() {
+        perform_all_compare(false, true, false, true, |runtime| {
+            (add_char_list(runtime, "aaa"), add_char_list(runtime, "aaa"))
+        });
+    }
+
+    #[test]
+    fn char_list_greater_than() {
+        perform_all_compare(false, false, true, true, |runtime| {
+            (add_char_list(runtime, "bbb"), add_char_list(runtime, "aaa"))
+        });
+    }
+
+    #[test]
+    fn char_list_greater_than_dif_len() {
+        perform_all_compare(false, false, true, true, |runtime| {
+            (add_char_list(runtime, "aaaaa"), add_char_list(runtime, "aaa"))
+        });
+    }
 }
