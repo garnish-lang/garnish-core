@@ -1,3 +1,4 @@
+use std::f32::consts::E;
 use crate::{DataError, ExpressionDataType};
 use crate::ExpressionDataType::CharList;
 
@@ -65,6 +66,48 @@ impl SimpleData {
             _ => false
         }
     }
+
+    pub fn as_number(self) -> DataCastResult<i32> {
+        match self {
+            SimpleData::Number(v) => Ok(v),
+            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+        }
+    }
+
+    pub fn as_char(self) -> DataCastResult<char> {
+        match self {
+            SimpleData::Char(v) => Ok(v),
+            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+        }
+    }
+
+    pub fn as_byte(self) -> DataCastResult<u8> {
+        match self {
+            SimpleData::Byte(v) => Ok(v),
+            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+        }
+    }
+
+    pub fn as_symbol(self) -> DataCastResult<u64> {
+        match self {
+            SimpleData::Symbol(v) => Ok(v),
+            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+        }
+    }
+
+    pub fn as_expression(self) -> DataCastResult<usize> {
+        match self {
+            SimpleData::Expression(v) => Ok(v),
+            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+        }
+    }
+
+    pub fn as_external(self) -> DataCastResult<usize> {
+        match self {
+            SimpleData::External(v) => Ok(v),
+            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+        }
+    }
 }
 
 #[cfg(test)]
@@ -120,5 +163,65 @@ mod tests {
     #[test]
     fn is_false_not_false() {
         assert!(!SimpleData::Unit.is_false());
+    }
+
+    #[test]
+    fn as_number() {
+        assert_eq!(SimpleData::Number(10).as_number().unwrap(), 10);
+    }
+
+    #[test]
+    fn as_number_not_number() {
+        assert!(SimpleData::Unit.as_number().is_err());
+    }
+
+    #[test]
+    fn as_char() {
+        assert_eq!(SimpleData::Char('a').as_char().unwrap(), 'a');
+    }
+
+    #[test]
+    fn as_char_not_char() {
+        assert!(SimpleData::Unit.as_char().is_err());
+    }
+
+    #[test]
+    fn as_byte() {
+        assert_eq!(SimpleData::Byte(10).as_byte().unwrap(), 10);
+    }
+
+    #[test]
+    fn as_byte_not_byte() {
+        assert!(SimpleData::Unit.as_byte().is_err());
+    }
+
+    #[test]
+    fn as_symbol() {
+        assert_eq!(SimpleData::Symbol(10).as_symbol().unwrap(), 10);
+    }
+
+    #[test]
+    fn as_symbol_not_symbol() {
+        assert!(SimpleData::Unit.as_symbol().is_err());
+    }
+
+    #[test]
+    fn as_expression() {
+        assert_eq!(SimpleData::Expression(10).as_expression().unwrap(), 10);
+    }
+
+    #[test]
+    fn as_expression_not_expression() {
+        assert!(SimpleData::Unit.as_expression().is_err());
+    }
+
+    #[test]
+    fn as_external() {
+        assert_eq!(SimpleData::External(10).as_external().unwrap(), 10);
+    }
+
+    #[test]
+    fn as_external_not_external() {
+        assert!(SimpleData::Unit.as_external().is_err());
     }
 }
