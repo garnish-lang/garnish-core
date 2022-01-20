@@ -14,10 +14,34 @@ pub enum Definition {
     ByteList,
     Identifier,
     Property,
-    AbsoluteValue,
-    EmptyApply,
     Addition,
+    AbsoluteValue,
+    Subtraction,
+    Division,
+    MultiplicationSign,
+    ExponentialSign,
+    IntegerDivision,
+    Remainder,
+    Opposite,
+    BitwiseNot,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+    BitwiseLeftShift,
+    BitwiseRightShift,
+    And,
+    Or,
+    Xor,
+    Not,
+    EmptyApply,
+    TypeCast,
+    TypeEqual,
     Equality,
+    Inequality,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
     Pair,
     Range,
     StartExclusiveRange,
@@ -137,30 +161,30 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::ExclusiveRange => (Definition::ExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
         TokenType::AppendLink => (Definition::AppendLink, SecondaryDefinition::BinaryLeftToRight),
         TokenType::PrependLink => (Definition::PrependLink, SecondaryDefinition::BinaryRightToLeft),
-        TokenType::MultiplicationSign => todo!(),
-        TokenType::ExponentialSign => todo!(),
-        TokenType::Subtraction => todo!(),
-        TokenType::Division => todo!(),
-        TokenType::IntegerDivision => todo!(),
-        TokenType::Remainder => todo!(),
-        TokenType::Opposite => todo!(),
-        TokenType::BitwiseNot => todo!(),
-        TokenType::BitwiseAnd => todo!(),
-        TokenType::BitwiseOr => todo!(),
-        TokenType::BitwiseXor => todo!(),
-        TokenType::BitwiseLeftShift => todo!(),
-        TokenType::BitwiseRightShift => todo!(),
-        TokenType::And => todo!(),
-        TokenType::Or => todo!(),
-        TokenType::Xor => todo!(),
-        TokenType::Not => todo!(),
-        TokenType::TypeCast => todo!(),
-        TokenType::TypeEqual => todo!(),
-        TokenType::Inequality => todo!(),
-        TokenType::LessThan => todo!(),
-        TokenType::LessThanOrEqual => todo!(),
-        TokenType::GreaterThan => todo!(),
-        TokenType::GreaterThanOrEqual => todo!(),
+        TokenType::MultiplicationSign => (Definition::MultiplicationSign, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::ExponentialSign => (Definition::ExponentialSign, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Subtraction => (Definition::Subtraction, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Division => (Definition::Division, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::IntegerDivision => (Definition::IntegerDivision, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Remainder => (Definition::Remainder, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Opposite => (Definition::Opposite, SecondaryDefinition::UnaryPrefix),
+        TokenType::BitwiseNot => (Definition::BitwiseNot, SecondaryDefinition::UnaryPrefix),
+        TokenType::BitwiseAnd => (Definition::BitwiseAnd, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::BitwiseOr => (Definition::BitwiseOr, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::BitwiseXor => (Definition::BitwiseXor, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::BitwiseLeftShift => (Definition::BitwiseLeftShift, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::BitwiseRightShift => (Definition::BitwiseRightShift, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::And => (Definition::And, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Or => (Definition::Or, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Xor => (Definition::Xor, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Not => (Definition::Not, SecondaryDefinition::UnaryPrefix),
+        TokenType::TypeCast => (Definition::TypeCast, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::TypeEqual => (Definition::TypeEqual, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Inequality => (Definition::Inequality, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::LessThan => (Definition::LessThan, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::LessThanOrEqual => (Definition::LessThanOrEqual, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::GreaterThan => (Definition::GreaterThan, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::GreaterThanOrEqual => (Definition::GreaterThanOrEqual, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Apply => (Definition::Apply, SecondaryDefinition::BinaryLeftToRight),
         TokenType::ApplyTo => (Definition::ApplyTo, SecondaryDefinition::BinaryLeftToRight),
         TokenType::LeftInternal => (Definition::AccessLeftInternal, SecondaryDefinition::UnaryPrefix),
@@ -280,9 +304,41 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::AccessRightInternal, 60);
     map.insert(Definition::AccessLengthInternal, 60);
 
-    map.insert(Definition::Addition, 100);
+    map.insert(Definition::TypeCast, 70);
 
+    map.insert(Definition::AbsoluteValue, 75);
+    map.insert(Definition::Opposite, 75);
+    map.insert(Definition::BitwiseNot, 75);
+
+    map.insert(Definition::ExponentialSign, 80);
+
+    map.insert(Definition::MultiplicationSign, 90);
+    map.insert(Definition::Division, 90);
+    map.insert(Definition::IntegerDivision, 90);
+    map.insert(Definition::Remainder, 90);
+
+    map.insert(Definition::Addition, 100);
+    map.insert(Definition::Subtraction, 100);
+
+    map.insert(Definition::BitwiseLeftShift, 110);
+    map.insert(Definition::BitwiseRightShift, 110);
+    map.insert(Definition::BitwiseAnd, 111);
+    map.insert(Definition::BitwiseXor, 112);
+    map.insert(Definition::BitwiseOr, 113);
+
+    map.insert(Definition::LessThan, 130);
+    map.insert(Definition::LessThanOrEqual, 130);
+    map.insert(Definition::GreaterThan, 130);
+    map.insert(Definition::GreaterThanOrEqual, 130);
+
+    map.insert(Definition::TypeEqual, 140);
+    map.insert(Definition::Inequality, 140);
     map.insert(Definition::Equality, 140);
+
+    map.insert(Definition::Not, 140);
+    map.insert(Definition::And, 141);
+    map.insert(Definition::Xor, 142);
+    map.insert(Definition::Or, 143);
 
     map.insert(Definition::Range, 200);
     map.insert(Definition::StartExclusiveRange, 200);
@@ -2002,6 +2058,418 @@ mod tests {
     }
 
     #[test]
+    fn subtraction() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("-".to_string(), TokenType::Subtraction, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::Subtraction, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn multiplication() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("*".to_string(), TokenType::MultiplicationSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::MultiplicationSign, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn division() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("/".to_string(), TokenType::Division, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::Division, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn integer_division() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("//".to_string(), TokenType::IntegerDivision, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::IntegerDivision, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn exponential() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("**".to_string(), TokenType::ExponentialSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::ExponentialSign, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn remainder() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("%".to_string(), TokenType::Remainder, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::Remainder, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn absolute_value() {
+        let tokens = vec![
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::AbsoluteValue, None, None, Some(1)),
+                (1, Definition::Integer, Some(0), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn opposite() {
+        let tokens = vec![
+            LexerToken::new("--".to_string(), TokenType::Opposite, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Opposite, None, None, Some(1)),
+                (1, Definition::Integer, Some(0), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn bitwise_not() {
+        let tokens = vec![
+            LexerToken::new("!".to_string(), TokenType::BitwiseNot, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::BitwiseNot, None, None, Some(1)),
+                (1, Definition::Integer, Some(0), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn bitwise_and() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("&".to_string(), TokenType::BitwiseAnd, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::BitwiseAnd, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn bitwise_or() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("|".to_string(), TokenType::BitwiseOr, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::BitwiseOr, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn bitwise_xor() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("^".to_string(), TokenType::BitwiseXor, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::BitwiseXor, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn bitwise_left_shift() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("<<".to_string(), TokenType::BitwiseLeftShift, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::BitwiseLeftShift, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn bitwise_right_shift() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(">>".to_string(), TokenType::BitwiseRightShift, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::BitwiseRightShift, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn and() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("&&".to_string(), TokenType::And, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::And, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn or() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("||".to_string(), TokenType::Or, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::Or, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn xor() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("^^".to_string(), TokenType::Xor, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::Xor, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn not() {
+        let tokens = vec![
+            LexerToken::new("!!".to_string(), TokenType::Not, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Not, None, None, Some(1)),
+                (1, Definition::Integer, Some(0), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn type_cast() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("~#".to_string(), TokenType::TypeCast, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::TypeCast, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn type_equality() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("#=".to_string(), TokenType::TypeEqual, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::TypeEqual, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
     fn equality() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
@@ -2017,6 +2485,111 @@ mod tests {
             &[
                 (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Equality, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn inequality() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("!=".to_string(), TokenType::Inequality, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::Inequality, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn less_than() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("<".to_string(), TokenType::LessThan, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::LessThan, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn less_than_or_equal() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("<=".to_string(), TokenType::LessThanOrEqual, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::LessThanOrEqual, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn greater_than() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(">".to_string(), TokenType::GreaterThan, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::GreaterThan, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn greater_than_or_equal() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(">=".to_string(), TokenType::GreaterThanOrEqual, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::GreaterThanOrEqual, None, Some(0), Some(2)),
                 (2, Definition::Integer, Some(1), None, None),
             ],
         );
@@ -2308,25 +2881,6 @@ mod tests {
                 (0, Definition::Identifier, Some(1), None, None),
                 (1, Definition::Subexpression, None, Some(0), Some(2)),
                 (2, Definition::Identifier, Some(1), None, None),
-            ],
-        );
-    }
-
-    #[test]
-    fn absolute_value() {
-        let tokens = vec![
-            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-        ];
-
-        let result = parse(tokens).unwrap();
-
-        assert_result(
-            &result,
-            0,
-            &[
-                (0, Definition::AbsoluteValue, None, None, Some(1)),
-                (1, Definition::Integer, Some(0), None, None),
             ],
         );
     }

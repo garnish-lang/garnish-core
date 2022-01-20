@@ -59,11 +59,31 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         | Definition::True => {
             ((false, node.get_left()), (false, node.get_right()))
         }
-        Definition::AccessLeftInternal => ((true, node.get_right()), (false, None)),
-        Definition::AbsoluteValue => todo!(),
+        Definition::AccessLeftInternal | Definition::AbsoluteValue | Definition::Opposite | Definition::BitwiseNot | Definition::Not => ((true, node.get_right()), (false, None)),
         Definition::EmptyApply | Definition::AccessLengthInternal | Definition::AccessRightInternal => ((true, node.get_left()), (false, None)),
         Definition::Addition
+        | Definition::Subtraction
+        | Definition::MultiplicationSign
+        | Definition::Division
+        | Definition::IntegerDivision
+        | Definition::ExponentialSign
+        | Definition::Remainder
+        | Definition::BitwiseAnd
+        | Definition::BitwiseOr
+        | Definition::BitwiseXor
+        | Definition::BitwiseLeftShift
+        | Definition::BitwiseRightShift
+        | Definition::And
+        | Definition::Or
+        | Definition::Xor
+        | Definition::TypeCast
+        | Definition::TypeEqual
         | Definition::Equality
+        | Definition::Inequality
+        | Definition::LessThan
+        | Definition::LessThanOrEqual
+        | Definition::GreaterThan
+        | Definition::GreaterThanOrEqual
         | Definition::Pair
         | Definition::Access
         | Definition::Subexpression // Same order for child resolution but has special check, might need to move out of here eventually
@@ -158,15 +178,89 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
             let addr = data.add_false()?;
             data.push_instruction(Instruction::Put, Some(addr))?;
         }
-        Definition::AbsoluteValue => todo!(), // not currently in runtime
         Definition::EmptyApply => {
             data.push_instruction(Instruction::EmptyApply, None)?;
         }
         Definition::Addition => {
             data.push_instruction(Instruction::Add, None)?;
         }
+        Definition::Subtraction => {
+            data.push_instruction(Instruction::Subtract, None)?;
+        }
+        Definition::MultiplicationSign => {
+            data.push_instruction(Instruction::Multiply, None)?;
+        }
+        Definition::Division => {
+            data.push_instruction(Instruction::Divide, None)?;
+        }
+        Definition::IntegerDivision => {
+            data.push_instruction(Instruction::IntegerDivide, None)?;
+        }
+        Definition::ExponentialSign => {
+            data.push_instruction(Instruction::Power, None)?;
+        }
+        Definition::Remainder => {
+            data.push_instruction(Instruction::Remainder, None)?;
+        }
+        Definition::Opposite => {
+            data.push_instruction(Instruction::Opposite, None)?;
+        }
+        Definition::AbsoluteValue => {
+            data.push_instruction(Instruction::AbsoluteValue, None)?;
+        }
+        Definition::BitwiseNot => {
+            data.push_instruction(Instruction::BitwiseNot, None)?;
+        }
+        Definition::BitwiseAnd => {
+            data.push_instruction(Instruction::BitwiseAnd, None)?;
+        }
+        Definition::BitwiseOr => {
+            data.push_instruction(Instruction::BitwiseOr, None)?;
+        }
+        Definition::BitwiseXor => {
+            data.push_instruction(Instruction::BitwiseXor, None)?;
+        }
+        Definition::BitwiseLeftShift => {
+            data.push_instruction(Instruction::BitwiseShiftLeft, None)?;
+        }
+        Definition::BitwiseRightShift => {
+            data.push_instruction(Instruction::BitwiseShiftRight, None)?;
+        }
+        Definition::And => {
+            data.push_instruction(Instruction::And, None)?;
+        }
+        Definition::Or => {
+            data.push_instruction(Instruction::Or, None)?;
+        }
+        Definition::Xor => {
+            data.push_instruction(Instruction::Xor, None)?;
+        }
+        Definition::Not => {
+            data.push_instruction(Instruction::Not, None)?;
+        }
+        Definition::TypeCast => {
+            data.push_instruction(Instruction::ApplyType, None)?;
+        }
+        Definition::TypeEqual => {
+            data.push_instruction(Instruction::TypeEqual, None)?;
+        }
         Definition::Equality => {
             data.push_instruction(Instruction::Equal, None)?;
+        }
+        Definition::Inequality => {
+            data.push_instruction(Instruction::NotEqual, None)?;
+        }
+        Definition::LessThan => {
+            data.push_instruction(Instruction::LessThan, None)?;
+        }
+        Definition::LessThanOrEqual => {
+            data.push_instruction(Instruction::LessThanOrEqual, None)?;
+        }
+        Definition::GreaterThan => {
+            data.push_instruction(Instruction::GreaterThan, None)?;
+        }
+        Definition::GreaterThanOrEqual => {
+            data.push_instruction(Instruction::GreaterThanOrEqual, None)?;
         }
         Definition::Pair => {
             data.push_instruction(Instruction::MakePair, None)?;
@@ -1179,7 +1273,14 @@ mod operations {
             1,
             vec![
                 (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
-                (Definition::StartExclusiveRange, None, Some(0), Some(2), ">..", TokenType::StartExclusiveRange),
+                (
+                    Definition::StartExclusiveRange,
+                    None,
+                    Some(0),
+                    Some(2),
+                    ">..",
+                    TokenType::StartExclusiveRange,
+                ),
                 (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
