@@ -2,7 +2,7 @@ use crate::{
     next_ref, next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, RuntimeError,
 };
 
-pub fn and<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn and<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let (left, right) = next_two_raw_ref(this)?;
 
     let result = match (is_true_value(this, left)?, is_true_value(this, right)?) {
@@ -35,7 +35,7 @@ pub fn xor<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeE
     push_boolean(this, result)
 }
 
-pub fn not<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn not<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let addr = next_ref(this)?;
     let result = is_true_value(this, addr)?;
     push_boolean(this, !result)

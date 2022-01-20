@@ -980,6 +980,38 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                             if left_node.definition.is_optional() {
                                 left_node.right = None;
                             }
+
+                            // if its a subexpression with no right
+                            // it was at the end of the expression and should be dropped
+                            if left_node.definition == Definition::Subexpression && left_node.get_right() == Some(id) {
+                                // set the subexpression's left's parent to its parent
+                                let new_parent = left_node.get_parent();
+                                let l = left_node.get_left();
+                                let token = left_node.get_lex_token();
+
+                                // left should be the root of the nested e
+                                match l {
+                                    None => (), // need to test and see if this is reachable
+                                    Some(left) => match nodes.get_mut(left) {
+                                        None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", left), &token)?,
+                                        Some(left) => {
+                                            left.parent = new_parent;
+
+                                            // next is to update new parent's right to be this left node
+
+                                            match new_parent {
+                                                None => (), // unreachable ?
+                                                Some(p) => match nodes.get_mut(p) {
+                                                    None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", p), &token)?,
+                                                    Some(parent) => {
+                                                        parent.right = l;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
                         }
                     },
                 }
@@ -1007,6 +1039,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 } else {
                     // only one in a row
                     // check if last parser node is a subexpression
+                    // or right after a nested expression
                     // drop this token if so
                     let drop = match last_left {
                         None => false, // not a subexpression node
@@ -1019,7 +1052,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                                     left_node.right = None;
                                 }
 
-                                left_node.definition == Definition::Subexpression
+                                left_node.definition == Definition::Subexpression || left_node.definition == Definition::NestedExpression
                             }
                         },
                     };
@@ -4330,6 +4363,60 @@ mod groups {
                 (3, Definition::Integer, Some(4), None, None),
                 (4, Definition::Subexpression, Some(2), Some(3), Some(5)),
                 (5, Definition::Integer, Some(4), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn multiple_start_of_subexpression_are_dropped() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::Addition, None, Some(0), Some(2)),
+                (2, Definition::NestedExpression, Some(1), None, Some(3)),
+                (3, Definition::Integer, Some(2), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn multiple_end_of_subexpression_are_dropped() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::Addition, None, Some(0), Some(2)),
+                (2, Definition::NestedExpression, Some(1), None, Some(3)),
+                (3, Definition::Integer, Some(2), None, None),
             ],
         );
     }
