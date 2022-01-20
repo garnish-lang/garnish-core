@@ -4,7 +4,7 @@ use std::convert::TryInto;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
-use crate::{EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, RuntimeError, SimpleDataEnum, SimpleDataList};
+use crate::{EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, RuntimeError, SimpleData, SimpleDataList};
 
 pub mod data;
 
@@ -56,7 +56,7 @@ impl SimpleRuntimeData {
         }
     }
 
-    pub(crate) fn get(&self, index: usize) -> Result<&SimpleDataEnum, DataError> {
+    pub(crate) fn get(&self, index: usize) -> Result<&SimpleData, DataError> {
         match self.data.get(index) {
             None => Err(format!("No data at addr {:?}", index))?,
             Some(d) => Ok(d),
@@ -136,7 +136,7 @@ impl SimpleRuntimeData {
         Ok(())
     }
 
-    fn cache_add(&mut self, value: SimpleDataEnum) -> Result<usize, DataError> {
+    fn cache_add(&mut self, value: SimpleData) -> Result<usize, DataError> {
         let mut h = DefaultHasher::new();
         value.hash(&mut h);
         value.get_data_type().hash(&mut h);
@@ -455,48 +455,48 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn add_number(&mut self, value: i32) -> Result<usize, Self::Error> {
-        self.cache_add(SimpleDataEnum::Number(value))
+        self.cache_add(SimpleData::Number(value))
     }
 
     fn add_char(&mut self, value: Self::Char) -> Result<Self::Size, Self::Error> {
-        self.cache_add(SimpleDataEnum::Char(value))
+        self.cache_add(SimpleData::Char(value))
     }
 
     fn add_byte(&mut self, value: Self::Byte) -> Result<Self::Size, Self::Error> {
-        self.cache_add(SimpleDataEnum::Byte(value))
+        self.cache_add(SimpleData::Byte(value))
     }
 
     fn add_symbol(&mut self, value: &str) -> Result<usize, Self::Error> {
         let sym_val = symbol_value(value);
         self.symbols.insert(sym_val, value.to_string());
-        self.cache_add(SimpleDataEnum::Symbol(sym_val))
+        self.cache_add(SimpleData::Symbol(sym_val))
     }
 
     fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error> {
-        self.cache_add(SimpleDataEnum::Expression(value))
+        self.cache_add(SimpleData::Expression(value))
     }
 
     fn add_external(&mut self, value: usize) -> Result<usize, Self::Error> {
-        self.cache_add(SimpleDataEnum::External(value))
+        self.cache_add(SimpleData::External(value))
     }
 
     fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error> {
-        self.data.push(SimpleDataEnum::Pair(value.0, value.1));
+        self.data.push(SimpleData::Pair(value.0, value.1));
         Ok(self.data.len() - 1)
     }
 
     fn add_range(&mut self, start: Self::Size, end: Self::Size) -> Result<Self::Size, Self::Error> {
-        self.data.push(SimpleDataEnum::Range(start, end));
+        self.data.push(SimpleData::Range(start, end));
         Ok(self.data.len() - 1)
     }
 
     fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
-        self.data.push(SimpleDataEnum::Slice(list, range));
+        self.data.push(SimpleData::Slice(list, range));
         Ok(self.data.len() - 1)
     }
 
     fn add_link(&mut self, value: Self::Size, linked: Self::Size, is_append: bool) -> Result<Self::Size, Self::Error> {
-        self.data.push(SimpleDataEnum::Link(value, linked, is_append));
+        self.data.push(SimpleData::Link(value, linked, is_append));
         Ok(self.data.len() - 1)
     }
 
@@ -545,7 +545,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
                     ordered[i] = item;
                 }
 
-                self.data.push(SimpleDataEnum::List(items.to_vec(), ordered));
+                self.data.push(SimpleData::List(items.to_vec(), ordered));
                 Ok(self.data.len() - 1)
             }
         }
@@ -568,7 +568,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn end_char_list(&mut self) -> Result<Self::Size, Self::Error> {
         let data = match &self.current_char_list {
             None => Err(format!("Attempting to end unstarted char list."))?,
-            Some(s) => SimpleDataEnum::CharList(s.clone()),
+            Some(s) => SimpleData::CharList(s.clone()),
         };
 
         let addr = self.cache_add(data)?;
@@ -595,7 +595,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error> {
         let data = match &self.current_byte_list {
             None => Err(format!("Attempting to end unstarted byte list."))?,
-            Some(l) => SimpleDataEnum::ByteList(l.clone()),
+            Some(l) => SimpleData::ByteList(l.clone()),
         };
 
         let addr = self.cache_add(data)?;
@@ -829,7 +829,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         }
         let hv = h.finish();
 
-        self.cache_add(SimpleDataEnum::Symbol(hv))
+        self.cache_add(SimpleData::Symbol(hv))
     }
 
     fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
