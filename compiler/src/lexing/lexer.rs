@@ -5,11 +5,26 @@ use std::{collections::HashMap, iter, vec};
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum TokenType {
     Unknown,
+    UnitLiteral,
     PlusSign,
-    AbsoluteValue,
+    Subtraction,
+    Division,
     MultiplicationSign,
     ExponentialSign,
-    UnitLiteral,
+    IntegerDivision,
+    Remainder,
+    AbsoluteValue,
+    Opposite,
+    BitwiseNot,
+    BitwiseAnd,
+    BitwiseOr,
+    BitwiseXor,
+    BitwiseLeftShift,
+    BitwiseRightShift,
+    And,
+    Or,
+    Xor,
+    Not,
     StartExpression,
     EndExpression,
     StartGroup,
@@ -34,7 +49,13 @@ pub enum TokenType {
     ApplyTo,
     Reapply,
     EmptyApply,
+    TypeEqual,
     Equality,
+    Inequality,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
     Period,
     LeftInternal,
     RightInternal,
@@ -285,8 +306,23 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
     let operator_tree = create_operator_tree(vec![
         ("+", TokenType::PlusSign),
         ("++", TokenType::AbsoluteValue),
+        ("-", TokenType::Subtraction),
+        ("--", TokenType::Opposite),
         ("*", TokenType::MultiplicationSign),
         ("**", TokenType::ExponentialSign),
+        ("/", TokenType::Division),
+        ("//", TokenType::IntegerDivision),
+        ("%", TokenType::Remainder),
+        ("!", TokenType::BitwiseNot),
+        ("&", TokenType::BitwiseAnd),
+        ("|", TokenType::BitwiseOr),
+        ("^", TokenType::BitwiseXor),
+        ("<<", TokenType::BitwiseLeftShift),
+        (">>", TokenType::BitwiseRightShift),
+        ("&&", TokenType::And),
+        ("||", TokenType::Or),
+        ("^^", TokenType::Xor),
+        ("!!", TokenType::Not),
         ("()", TokenType::UnitLiteral),
         ("{", TokenType::StartExpression),
         ("}", TokenType::EndExpression),
@@ -305,7 +341,13 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
         ("~>", TokenType::ApplyTo),
         ("^~", TokenType::Reapply),
         ("~~", TokenType::EmptyApply),
+        ("#=", TokenType::TypeEqual),
         ("==", TokenType::Equality),
+        ("!=", TokenType::Inequality),
+        ("<", TokenType::LessThan),
+        ("<=", TokenType::LessThanOrEqual),
+        (">", TokenType::GreaterThan),
+        (">=", TokenType::GreaterThanOrEqual),
         ("=", TokenType::Pair),
         (".", TokenType::Period),
         ("._", TokenType::RightInternal),
@@ -740,7 +782,7 @@ mod tests {
     }
 
     #[test]
-    fn lex_single_one_character_symbol() {
+    fn plus_sign() {
         let result = lex(&"+".to_string()).unwrap();
 
         assert_eq!(
@@ -748,6 +790,216 @@ mod tests {
             vec![LexerToken {
                 text: "+".to_string(),
                 token_type: TokenType::PlusSign,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn subtraction() {
+        let result = lex(&"-".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "-".to_string(),
+                token_type: TokenType::Subtraction,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn multiplication() {
+        let result = lex(&"*".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "*".to_string(),
+                token_type: TokenType::MultiplicationSign,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn division() {
+        let result = lex(&"/".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "/".to_string(),
+                token_type: TokenType::Division,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn exponential() {
+        let result = lex(&"**".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "**".to_string(),
+                token_type: TokenType::ExponentialSign,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn integer_division() {
+        let result = lex(&"//".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "//".to_string(),
+                token_type: TokenType::IntegerDivision,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn remainder() {
+        let result = lex(&"%".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "%".to_string(),
+                token_type: TokenType::Remainder,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn opposite() {
+        let result = lex(&"--".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "--".to_string(),
+                token_type: TokenType::Opposite,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn absolute_value() {
+        let result = lex(&"++".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "++".to_string(),
+                token_type: TokenType::AbsoluteValue,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn bitwise_not() {
+        let result = lex(&"!".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "!".to_string(),
+                token_type: TokenType::BitwiseNot,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn bitwise_and() {
+        let result = lex(&"&".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "&".to_string(),
+                token_type: TokenType::BitwiseAnd,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn bitwise_or() {
+        let result = lex(&"|".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "|".to_string(),
+                token_type: TokenType::BitwiseOr,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn bitwise_xor() {
+        let result = lex(&"^".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "^".to_string(),
+                token_type: TokenType::BitwiseXor,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn bitwise_left_shift() {
+        let result = lex(&"<<".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "<<".to_string(),
+                token_type: TokenType::BitwiseLeftShift,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn bitwise_right_shift() {
+        let result = lex(&">>".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ">>".to_string(),
+                token_type: TokenType::BitwiseRightShift,
                 column: 0,
                 row: 0
             }]
@@ -830,21 +1082,6 @@ mod tests {
     }
 
     #[test]
-    fn absolute_value() {
-        let result = lex(&"++".to_string()).unwrap();
-
-        assert_eq!(
-            result,
-            vec![LexerToken {
-                text: "++".to_string(),
-                token_type: TokenType::AbsoluteValue,
-                column: 0,
-                row: 0
-            }]
-        )
-    }
-
-    #[test]
     fn apply_if_true_symbol() {
         let result = lex(&"?>".to_string()).unwrap();
 
@@ -890,6 +1127,66 @@ mod tests {
     }
 
     #[test]
+    fn and() {
+        let result = lex(&"&&".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "&&".to_string(),
+                token_type: TokenType::And,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn or() {
+        let result = lex(&"||".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "||".to_string(),
+                token_type: TokenType::Or,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn xor() {
+        let result = lex(&"^^".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "^^".to_string(),
+                token_type: TokenType::Xor,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn not() {
+        let result = lex(&"!!".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "!!".to_string(),
+                token_type: TokenType::Not,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
     fn equality_symbol() {
         let result = lex(&"==".to_string()).unwrap();
 
@@ -898,6 +1195,96 @@ mod tests {
             vec![LexerToken {
                 text: "==".to_string(),
                 token_type: TokenType::Equality,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn inequality() {
+        let result = lex(&"!=".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "!=".to_string(),
+                token_type: TokenType::Inequality,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn less_than() {
+        let result = lex(&"<".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "<".to_string(),
+                token_type: TokenType::LessThan,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn less_than_or_equal() {
+        let result = lex(&"<=".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "<=".to_string(),
+                token_type: TokenType::LessThanOrEqual,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn greater_than() {
+        let result = lex(&">".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ">".to_string(),
+                token_type: TokenType::GreaterThan,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn greater_than_or_equal() {
+        let result = lex(&">=".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ">=".to_string(),
+                token_type: TokenType::GreaterThanOrEqual,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn type_equal() {
+        let result = lex(&"#=".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "#=".to_string(),
+                token_type: TokenType::TypeEqual,
                 column: 0,
                 row: 0
             }]

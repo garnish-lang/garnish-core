@@ -97,6 +97,7 @@ pub enum SecondaryDefinition {
 
 fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
     match token_type {
+
         // Values
         TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
         TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
@@ -138,6 +139,27 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::PrependLink => (Definition::PrependLink, SecondaryDefinition::BinaryRightToLeft),
         TokenType::MultiplicationSign => todo!(),
         TokenType::ExponentialSign => todo!(),
+        TokenType::Subtraction => todo!(),
+        TokenType::Division => todo!(),
+        TokenType::IntegerDivision => todo!(),
+        TokenType::Remainder => todo!(),
+        TokenType::Opposite => todo!(),
+        TokenType::BitwiseNot => todo!(),
+        TokenType::BitwiseAnd => todo!(),
+        TokenType::BitwiseOr => todo!(),
+        TokenType::BitwiseXor => todo!(),
+        TokenType::BitwiseLeftShift => todo!(),
+        TokenType::BitwiseRightShift => todo!(),
+        TokenType::And => todo!(),
+        TokenType::Or => todo!(),
+        TokenType::Xor => todo!(),
+        TokenType::Not => todo!(),
+        TokenType::TypeEqual => todo!(),
+        TokenType::Inequality => todo!(),
+        TokenType::LessThan => todo!(),
+        TokenType::LessThanOrEqual => todo!(),
+        TokenType::GreaterThan => todo!(),
+        TokenType::GreaterThanOrEqual => todo!(),
         TokenType::Apply => (Definition::Apply, SecondaryDefinition::BinaryLeftToRight),
         TokenType::ApplyTo => (Definition::ApplyTo, SecondaryDefinition::BinaryLeftToRight),
         TokenType::LeftInternal => (Definition::AccessLeftInternal, SecondaryDefinition::UnaryPrefix),
