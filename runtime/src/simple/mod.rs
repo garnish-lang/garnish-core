@@ -171,6 +171,9 @@ impl SimpleRuntimeData {
                 self.add_to_char_list('$')?;
                 self.add_to_char_list('!')?;
             }
+            ExpressionDataType::Type => {
+
+            }
             ExpressionDataType::Number => {
                 let x = self.get_number(from)?;
                 let s = x.to_string();
@@ -362,6 +365,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.get(index)?.as_number()
     }
 
+    fn get_type(&self, addr: Self::Size) -> Result<ExpressionDataType, Self::Error> {
+        self.get(addr)?.as_type()
+    }
+
     fn get_char(&self, index: Self::Size) -> Result<Self::Char, Self::Error> {
         self.get(index)?.as_char()
     }
@@ -452,6 +459,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn add_true(&mut self) -> Result<usize, Self::Error> {
         Ok(2)
+    }
+
+    fn add_type(&mut self, value: ExpressionDataType) -> Result<Self::Size, Self::Error> {
+        self.cache_add(SimpleData::Type(value))
     }
 
     fn add_number(&mut self, value: i32) -> Result<usize, Self::Error> {

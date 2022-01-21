@@ -1,3 +1,4 @@
+use std::f32::consts::E;
 use crate::{DataError, ExpressionDataType};
 
 #[derive(Debug, Eq, PartialEq)]
@@ -41,6 +42,7 @@ pub enum SimpleData {
     Unit,
     True,
     False,
+    Type(ExpressionDataType),
     Number(i32),
     Char(char),
     Byte(u8),
@@ -62,6 +64,7 @@ impl SimpleData {
             SimpleData::Unit => ExpressionDataType::Unit,
             SimpleData::True => ExpressionDataType::True,
             SimpleData::False => ExpressionDataType::False,
+            SimpleData::Type(_) => ExpressionDataType::Type,
             SimpleData::Number(_) => ExpressionDataType::Number,
             SimpleData::Char(_) => ExpressionDataType::Char,
             SimpleData::Byte(_) => ExpressionDataType::Byte,
@@ -96,6 +99,13 @@ impl SimpleData {
         match self {
             SimpleData::False => true,
             _ => false
+        }
+    }
+
+    pub fn as_type(&self) -> DataCastResult<ExpressionDataType> {
+        match self {
+            SimpleData::Type(v) => Ok(*v),
+            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
         }
     }
 
@@ -244,6 +254,16 @@ mod tests {
     #[test]
     fn is_false_not_false() {
         assert!(!SimpleData::Unit.is_false());
+    }
+
+    #[test]
+    fn is_type() {
+        assert_eq!(SimpleData::Type(ExpressionDataType::Unit).as_type().unwrap(), ExpressionDataType::Unit);
+    }
+
+    #[test]
+    fn as_type_not_type() {
+        assert!(SimpleData::Unit.as_type().is_err());
     }
 
     #[test]

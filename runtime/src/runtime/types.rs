@@ -3,6 +3,7 @@
 pub enum ExpressionDataType {
     Unit = 1,
     Number,
+    Type,
     Char,
     CharList,
     Byte,
