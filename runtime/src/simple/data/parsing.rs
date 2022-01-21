@@ -1,8 +1,19 @@
 fn parse_char_list(input: &str) -> String {
     let mut new = String::new();
 
-    let mut check_escape = false;
+    let mut start_quote_count = 0;
     for c in input.chars() {
+        if c == '"' {
+            start_quote_count += 1;
+        } else {
+            break;
+        }
+    }
+
+    let real_len = input.len() - start_quote_count * 2;
+
+    let mut check_escape = false;
+    for c in input.chars().skip(start_quote_count).take(real_len) {
         if check_escape {
             match c {
                 'n' => new.push('\n'),
@@ -29,8 +40,14 @@ fn parse_char_list(input: &str) -> String {
 }
 
 #[cfg(test)]
-mod tests {
+mod char_list {
     use crate::simple::data::parsing::parse_char_list;
+
+    #[test]
+    fn skip_starting_and_ending_quotes() {
+        let input = "\"\"\"Some String\"\"\"";
+        assert_eq!(parse_char_list(input), "Some String".to_string())
+    }
 
     #[test]
     fn convert_newlines() {
