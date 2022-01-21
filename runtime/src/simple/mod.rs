@@ -172,7 +172,10 @@ impl SimpleRuntimeData {
                 self.add_to_char_list('!')?;
             }
             ExpressionDataType::Type => {
-
+                let s = format!("{:?}", self.get_type(from)?);
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
             }
             ExpressionDataType::Number => {
                 let x = self.get_number(from)?;
@@ -1197,7 +1200,7 @@ mod to_byte_list {
 
 #[cfg(test)]
 mod to_char_list {
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     fn assert_to_char_list<Func>(expected: &str, setup: Func)
     where
@@ -1243,6 +1246,11 @@ mod to_char_list {
     #[test]
     fn char() {
         assert_to_char_list("c", |runtime| runtime.add_char('c').unwrap())
+    }
+
+    #[test]
+    fn type_data() {
+        assert_to_char_list("Unit", |runtime| runtime.add_type(ExpressionDataType::Unit).unwrap())
     }
 
     #[test]
