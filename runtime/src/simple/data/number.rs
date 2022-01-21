@@ -53,10 +53,10 @@ fn do_op<IntOp, FloatOp>(left: &SimpleNumber, right: &SimpleNumber, int_op: IntO
 where IntOp: Fn(i32, i32) -> i32, FloatOp: Fn(f64, f64) -> f64
 {
     Some(match (left, right) {
-        (SimpleNumber::Integer(v1), SimpleNumber::Integer(v2)) => Integer(int_op(*v1, *v2)),
-        (SimpleNumber::Float(v1), SimpleNumber::Float(v2)) => Float(float_op(*v1, *v2)),
-        (SimpleNumber::Integer(v1), SimpleNumber::Float(v2)) => Float(float_op(f64::from(*v1), *v2)),
-        (SimpleNumber::Float(v1), SimpleNumber::Integer(v2)) => Float(float_op(*v1, f64::from(*v2))),
+        (Integer(v1), Integer(v2)) => Integer(int_op(*v1, *v2)),
+        (Float(v1), Float(v2)) => Float(float_op(*v1, *v2)),
+        (Integer(v1), Float(v2)) => Float(float_op(f64::from(*v1), *v2)),
+        (Float(v1), Integer(v2)) => Float(float_op(*v1, f64::from(*v2))),
     })
 }
 
@@ -79,28 +79,28 @@ impl GarnishNumber for SimpleNumber {
 
     fn power(self, rhs: Self) -> Option<Self> {
         Some(match (self, rhs) {
-            (SimpleNumber::Integer(v1), SimpleNumber::Integer(v2)) => {
+            (Integer(v1), Integer(v2)) => {
                 if v2 < 0 {
                     return None;
                 }
 
                 Integer(v1.pow(v2 as u32))
             },
-            (SimpleNumber::Float(v1), SimpleNumber::Float(v2)) => {
+            (Float(v1), Float(v2)) => {
                 if v2 < 0.0 {
                     return None;
                 }
 
                 Float(v1.powf(v2))
             },
-            (SimpleNumber::Integer(v1), SimpleNumber::Float(v2)) => {
+            (Integer(v1), Float(v2)) => {
                 if v2 < 0.0 {
                     return None;
                 }
 
                 Float(f64::from(v1).powf(v2))
             },
-            (SimpleNumber::Float(v1), SimpleNumber::Integer(v2)) => {
+            (Float(v1), Integer(v2)) => {
                 if v2 < 0 {
                     return None;
                 }
@@ -112,10 +112,10 @@ impl GarnishNumber for SimpleNumber {
 
     fn integer_divide(self, rhs: Self) -> Option<Self> {
         Some(match (self, rhs) {
-            (SimpleNumber::Integer(v1), SimpleNumber::Integer(v2)) => Integer(v1 / v2),
-            (SimpleNumber::Float(v1), SimpleNumber::Float(v2)) => Integer(v1 as i32 / v2 as i32),
-            (SimpleNumber::Integer(v1), SimpleNumber::Float(v2)) => Integer(v1 / v2 as i32),
-            (SimpleNumber::Float(v1), SimpleNumber::Integer(v2)) => Integer(v1 as i32 / v2),
+            (Integer(v1), Integer(v2)) => Integer(v1 / v2),
+            (Float(v1), Float(v2)) => Integer(v1 as i32 / v2 as i32),
+            (Integer(v1), Float(v2)) => Integer(v1 / v2 as i32),
+            (Float(v1), Integer(v2)) => Integer(v1 as i32 / v2),
         })
     }
 
@@ -124,11 +124,17 @@ impl GarnishNumber for SimpleNumber {
     }
 
     fn absolute_value(self) -> Option<Self> {
-        todo!()
+        Some(match self {
+            Integer(v) => Integer(v.abs()),
+            Float(v) => Float(v.abs()),
+        })
     }
 
     fn opposite(self) -> Option<Self> {
-        todo!()
+        Some(match self {
+            Integer(v) => Integer(-v),
+            Float(v) => Float(-v),
+        })
     }
 
     fn increment(self) -> Option<Self> {
@@ -256,5 +262,17 @@ mod tests {
         assert_eq!(Float(10.0).remainder(Float(20.0)).unwrap(), Float(10.0));
         assert_eq!(Integer(10).remainder(Float(20.0)).unwrap(), Float(10.0));
         assert_eq!(Float(10.0).remainder(Integer(20)).unwrap(), Float(10.0));
+    }
+
+    #[test]
+    fn absolute_value() {
+        assert_eq!(Integer(-10).absolute_value().unwrap(), Integer(10));
+        assert_eq!(Float(-10.0).absolute_value().unwrap(), Float(10.0));
+    }
+
+    #[test]
+    fn opposite() {
+        assert_eq!(Integer(10).opposite().unwrap(), Integer(-10));
+        assert_eq!(Float(10.0).opposite().unwrap(), Float(-10.0));
     }
 }
