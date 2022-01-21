@@ -1,3 +1,7 @@
+mod number;
+
+pub use number::*;
+
 use crate::{DataError, ExpressionDataType};
 
 #[derive(Debug, Eq, PartialEq)]
