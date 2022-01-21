@@ -227,7 +227,7 @@ mod tests {
     fn access_pair_left() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
@@ -259,7 +259,7 @@ mod tests {
     fn access_pair_right() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
@@ -291,7 +291,7 @@ mod tests {
     fn access_list_length() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();

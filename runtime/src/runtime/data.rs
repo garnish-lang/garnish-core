@@ -1,4 +1,4 @@
-use crate::{ExpressionDataType, Instruction};
+use crate::{DataError, ExpressionDataType, Instruction};
 use std::fmt::{Debug, Display};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 use std::str::FromStr;
@@ -82,7 +82,7 @@ pub trait GarnishLangRuntimeData {
     fn add_type(&mut self, value: ExpressionDataType) -> Result<Self::Size, Self::Error>;
     fn add_char(&mut self, value: Self::Char) -> Result<Self::Size, Self::Error>;
     fn add_byte(&mut self, value: Self::Byte) -> Result<Self::Size, Self::Error>;
-    fn add_symbol(&mut self, value: &str) -> Result<Self::Size, Self::Error>;
+    fn add_symbol(&mut self, value: Self::Symbol) -> Result<Self::Size, Self::Error>;
     fn add_expression(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_external(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_pair(&mut self, value: (Self::Size, Self::Size)) -> Result<Self::Size, Self::Error>;
@@ -140,6 +140,10 @@ pub trait GarnishLangRuntimeData {
 
     // parsing, to be moved to separate object
     // will require moving simple data to its own crate
+    fn parse_number(from: &str) -> Result<Self::Number, Self::Error>;
+    fn parse_symbol(from: &str) -> Result<Self::Symbol, Self::Error>;
+    fn parse_char(from: &str) -> Result<Self::Char, Self::Error>;
+    fn parse_byte(from: &str) -> Result<Self::Byte, Self::Error>;
     fn parse_char_list(from: &str) -> Vec<Self::Char>;
     fn parse_byte_list(from: &str) -> Vec<Self::Byte>;
 }

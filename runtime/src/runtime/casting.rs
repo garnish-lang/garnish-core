@@ -1553,7 +1553,7 @@ mod deferred {
 
         let d1 = runtime.add_unit().unwrap();
 
-        let s = runtime.add_symbol("sym").unwrap();
+        let s = runtime.add_symbol(SimpleRuntimeData::parse_symbol("sym").unwrap()).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(s).unwrap();

@@ -122,7 +122,6 @@ mod tests {
     fn jump() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol("false").unwrap();
         runtime.push_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
         runtime.push_instruction(Instruction::JumpTo, Some(0)).unwrap();
         runtime.push_instruction(Instruction::Add, None).unwrap();

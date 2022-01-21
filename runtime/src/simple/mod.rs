@@ -1,10 +1,13 @@
-use std::{collections::HashMap, hash::Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::convert::TryInto;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
+use std::{collections::HashMap, hash::Hasher};
 
-use crate::{EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, RuntimeError, SimpleData, SimpleDataList};
+use crate::{
+    EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction,
+    InstructionData, RuntimeError, SimpleData, SimpleDataList,
+};
 
 pub mod data;
 
@@ -480,10 +483,8 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.cache_add(SimpleData::Byte(value))
     }
 
-    fn add_symbol(&mut self, value: &str) -> Result<usize, Self::Error> {
-        let sym_val = symbol_value(value);
-        self.symbols.insert(sym_val, value.to_string());
-        self.cache_add(SimpleData::Symbol(sym_val))
+    fn add_symbol(&mut self, value: u64) -> Result<usize, Self::Error> {
+        self.cache_add(SimpleData::Symbol(value))
     }
 
     fn add_expression(&mut self, value: usize) -> Result<usize, Self::Error> {
@@ -858,10 +859,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
                 match s.parse::<u8>() {
                     Ok(v) => self.add_byte(v),
-                    Err(_) => self.add_unit()
+                    Err(_) => self.add_unit(),
                 }
             }
-            _ => self.add_unit()
+            _ => self.add_unit(),
         }
     }
 
@@ -877,16 +878,45 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
                 match s.parse::<i32>() {
                     Ok(v) => self.add_number(v),
-                    Err(_) => self.add_unit()
+                    Err(_) => self.add_unit(),
                 }
             }
-            _ => self.add_unit()
+            _ => self.add_unit(),
         }
     }
 
     //
     // Parsing
     //
+
+    fn parse_number(from: &str) -> Result<Self::Number, Self::Error> {
+        match from.parse::<i32>() {
+            Ok(v) => Ok(v),
+            Err(_) => Err(DataError::from(format!("Could not parse number from {:?}", from))),
+        }
+    }
+
+    fn parse_symbol(from: &str) -> Result<Self::Symbol, Self::Error> {
+        Ok(symbol_value(from))
+    }
+
+    fn parse_char(from: &str) -> Result<Self::Char, Self::Error> {
+        let l = SimpleRuntimeData::parse_char_list(from);
+        if l.len() == 1 {
+            Ok(l[0])
+        } else {
+            Err(DataError::from(format!("Could not parse char from {:?}", from)))
+        }
+    }
+
+    fn parse_byte(from: &str) -> Result<Self::Byte, Self::Error> {
+        let l = SimpleRuntimeData::parse_byte_list(from);
+        if l.len() == 1 {
+            Ok(l[0])
+        } else {
+            Err(DataError::from(format!("Could not parse byte from {:?}", from)))
+        }
+    }
 
     fn parse_char_list(from: &str) -> Vec<Self::Char> {
         from.trim_matches('"').chars().collect()
@@ -964,8 +994,8 @@ mod tests {
 
 #[cfg(test)]
 mod data_storage {
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
     use crate::simple::symbol_value;
+    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn unit() {
@@ -1026,17 +1056,17 @@ mod data_storage {
         let mut runtime = SimpleRuntimeData::new();
 
         let start = runtime.get_data_len();
-        let i1 = runtime.add_symbol("sym").unwrap();
-        let i2 = runtime.add_symbol("value").unwrap();
-        let i3 = runtime.add_symbol("sym").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
+        let i2 = runtime.add_symbol(2).unwrap();
+        let i3 = runtime.add_symbol(1).unwrap();
 
         assert_eq!(i1, start);
         assert_eq!(i2, start + 1);
         assert_eq!(i3, i1);
 
         assert_eq!(runtime.get_data_len(), 5);
-        assert_eq!(runtime.data.get(3).unwrap().as_symbol().unwrap(), symbol_value("sym"));
-        assert_eq!(runtime.data.get(4).unwrap().as_symbol().unwrap(), symbol_value("value"));
+        assert_eq!(runtime.data.get(3).unwrap().as_symbol().unwrap(), 1);
+        assert_eq!(runtime.data.get(4).unwrap().as_symbol().unwrap(), 2);
     }
 
     #[test]
@@ -1225,7 +1255,10 @@ mod to_char_list {
 
     #[test]
     fn symbol() {
-        assert_to_char_list("my_symbol", |runtime| runtime.add_symbol("my_symbol").unwrap())
+        let s = SimpleRuntimeData::parse_symbol("my_symbol").unwrap().to_string();
+        assert_to_char_list(s.as_str(), |runtime| {
+            runtime.add_symbol(SimpleRuntimeData::parse_symbol("my_symbol").unwrap()).unwrap()
+        })
     }
 
     #[test]

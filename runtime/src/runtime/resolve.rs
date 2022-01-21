@@ -49,13 +49,13 @@ mod tests {
     fn resolve_from_input() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
         runtime.add_to_list(i3, true).unwrap();
         let i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_symbol("one").unwrap();
+        let i5 = runtime.add_symbol(1).unwrap();
 
         runtime.push_instruction(Instruction::Resolve, None).unwrap();
 
@@ -70,13 +70,13 @@ mod tests {
     fn resolve_not_found_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
         runtime.add_to_list(i3, true).unwrap();
         let _i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_symbol("two").unwrap();
+        let i5 = runtime.add_symbol(2).unwrap();
 
         runtime.push_instruction(Instruction::Resolve, None).unwrap();
 
@@ -89,7 +89,7 @@ mod tests {
     fn resolve_from_context() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let start = runtime.get_data_len();
 
         runtime.push_instruction(Instruction::Resolve, None).unwrap();
@@ -98,7 +98,7 @@ mod tests {
 
         impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
             fn resolve(&mut self, sym_val: u64, runtime: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
-                assert_eq!(symbol_value("one"), sym_val);
+                assert_eq!(sym_val, 1);
 
                 push_number(runtime, 100)?;
                 Ok(true)

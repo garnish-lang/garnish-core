@@ -536,11 +536,11 @@ mod tests {
     fn make_list_with_associations() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
-        let i3 = runtime.add_symbol("two").unwrap();
+        let i3 = runtime.add_symbol(2).unwrap();
         let i4 = runtime.add_number(20).unwrap();
-        let i5 = runtime.add_symbol("three").unwrap();
+        let i5 = runtime.add_symbol(3).unwrap();
         let i6 = runtime.add_number(30).unwrap();
         // 6
         let i7 = runtime.add_pair((i1, i2)).unwrap();
@@ -572,13 +572,13 @@ mod tests {
     fn access() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
         runtime.add_to_list(i3, true).unwrap();
         let i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_symbol("one").unwrap();
+        let i5 = runtime.add_symbol(1).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -594,7 +594,7 @@ mod tests {
     fn access_with_integer() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
@@ -662,7 +662,7 @@ mod tests {
     fn access_with_integer_out_of_bounds_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
@@ -684,7 +684,7 @@ mod tests {
     fn access_with_number_negative_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
@@ -707,7 +707,7 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_number(10).unwrap();
-        let i2 = runtime.add_symbol("one").unwrap();
+        let i2 = runtime.add_symbol(1).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -723,7 +723,7 @@ mod tests {
     fn access_non_symbol_on_right_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
@@ -745,13 +745,13 @@ mod tests {
     fn access_no_refs_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
         runtime.add_to_list(i3, true).unwrap();
         let _i4 = runtime.end_list().unwrap();
-        let _i5 = runtime.add_symbol("one").unwrap();
+        let _i5 = runtime.add_symbol(1).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -764,13 +764,13 @@ mod tests {
     fn access_with_non_existent_key() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("one").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
         runtime.add_to_list(i3, true).unwrap();
         let i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_symbol("two").unwrap();
+        let i5 = runtime.add_symbol(2).unwrap();
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
@@ -908,7 +908,7 @@ mod slice {
         let d3 = runtime.add_number(4).unwrap();
         let d4 = runtime.add_range(d2, d3).unwrap();
         let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol("val4").unwrap();
+        let d6 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val4").unwrap()).unwrap();
 
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
@@ -927,7 +927,7 @@ mod slice {
         let d3 = runtime.add_number(4).unwrap();
         let d4 = runtime.add_range(d2, d3).unwrap();
         let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol("val1").unwrap();
+        let d6 = runtime.add_symbol(1).unwrap();
 
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
@@ -946,7 +946,7 @@ mod slice {
         let d3 = runtime.add_number(4).unwrap();
         let d4 = runtime.add_range(d2, d3).unwrap();
         let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol("val8").unwrap();
+        let d6 = runtime.add_symbol(8).unwrap();
 
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
@@ -973,7 +973,7 @@ mod slice {
         runtime.access(NO_CONTEXT).unwrap();
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val4"));
+        assert_eq!(runtime.get_symbol(left).unwrap(), SimpleRuntimeData::parse_symbol("val4").unwrap());
         assert_eq!(runtime.get_number(right).unwrap(), 5);
     }
 
@@ -986,7 +986,7 @@ mod slice {
         let d3 = runtime.add_number(5).unwrap();
         let d4 = runtime.add_range(d2, d3).unwrap();
         let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol("val4").unwrap();
+        let d6 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val4").unwrap()).unwrap();
 
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
@@ -1005,7 +1005,7 @@ mod slice {
         let d3 = runtime.add_number(5).unwrap();
         let d4 = runtime.add_range(d2, d3).unwrap();
         let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol("val8").unwrap();
+        let d6 = runtime.add_symbol(8).unwrap();
 
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
@@ -1035,7 +1035,7 @@ mod slice {
         let end = runtime.add_number(4).unwrap();
         let range = runtime.add_range(start, end).unwrap();
         let slice = runtime.add_slice(link5, range).unwrap();
-        let sym = runtime.add_symbol("pair").unwrap();
+        let sym = runtime.add_symbol(SimpleRuntimeData::parse_symbol("pair").unwrap()).unwrap();
 
         runtime.push_register(slice).unwrap();
         runtime.push_register(sym).unwrap();
@@ -1066,7 +1066,7 @@ mod link {
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_number(right).unwrap(), 4);
-        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val3"));
+        assert_eq!(runtime.get_symbol(left).unwrap(), SimpleRuntimeData::parse_symbol("val3").unwrap());
     }
 
     #[test]
@@ -1083,7 +1083,7 @@ mod link {
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_number(right).unwrap(), 4);
-        assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val3"));
+        assert_eq!(runtime.get_symbol(left).unwrap(), SimpleRuntimeData::parse_symbol("val3").unwrap());
     }
 
     #[test]
@@ -1091,7 +1091,7 @@ mod link {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = add_links(&mut runtime, 10, false);
-        let d2 = runtime.add_symbol("val2").unwrap();
+        let d2 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val2").unwrap()).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
@@ -1106,7 +1106,7 @@ mod link {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = add_links(&mut runtime, 10, true);
-        let d2 = runtime.add_symbol("val2").unwrap();
+        let d2 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val2").unwrap()).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();

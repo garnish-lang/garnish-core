@@ -1143,8 +1143,8 @@ mod symbols {
     fn equality_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_symbol("sym").unwrap();
-        let int2 = runtime.add_symbol("sym").unwrap();
+        let int1 = runtime.add_symbol(1).unwrap();
+        let int2 = runtime.add_symbol(1).unwrap();
 
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
@@ -1158,8 +1158,8 @@ mod symbols {
     fn equality_not_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_symbol("sym").unwrap();
-        let int2 = runtime.add_symbol("val").unwrap();
+        let int1 = runtime.add_symbol(0).unwrap();
+        let int2 = runtime.add_symbol(1).unwrap();
 
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
@@ -1581,15 +1581,15 @@ mod lists {
     fn equality_associations_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("val1").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
-        let i4 = runtime.add_symbol("val2").unwrap();
+        let i4 = runtime.add_symbol(2).unwrap();
         let i5 = runtime.add_number(20).unwrap();
         let i6 = runtime.add_pair((i4, i5)).unwrap();
 
-        let i7 = runtime.add_symbol("val3").unwrap();
+        let i7 = runtime.add_symbol(3).unwrap();
         let i8 = runtime.add_number(30).unwrap();
         let i9 = runtime.add_pair((i7, i8)).unwrap();
 
@@ -1599,15 +1599,15 @@ mod lists {
         runtime.add_to_list(i9, true).unwrap();
         let i10 = runtime.end_list().unwrap();
 
-        let i11 = runtime.add_symbol("val3").unwrap();
+        let i11 = runtime.add_symbol(3).unwrap();
         let i12 = runtime.add_number(30).unwrap();
         let i13 = runtime.add_pair((i11, i12)).unwrap();
 
-        let i14 = runtime.add_symbol("val1").unwrap();
+        let i14 = runtime.add_symbol(1).unwrap();
         let i15 = runtime.add_number(10).unwrap();
         let i16 = runtime.add_pair((i14, i15)).unwrap();
 
-        let i17 = runtime.add_symbol("val2").unwrap();
+        let i17 = runtime.add_symbol(2).unwrap();
         let i18 = runtime.add_number(20).unwrap();
         let i19 = runtime.add_pair((i17, i18)).unwrap();
 
@@ -1629,15 +1629,15 @@ mod lists {
     fn equality_associations_not_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("val1").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
-        let i4 = runtime.add_symbol("val2").unwrap();
+        let i4 = runtime.add_symbol(2).unwrap();
         let i5 = runtime.add_number(20).unwrap();
         let i6 = runtime.add_pair((i4, i5)).unwrap();
 
-        let i7 = runtime.add_symbol("val3").unwrap();
+        let i7 = runtime.add_symbol(3).unwrap();
         let i8 = runtime.add_number(30).unwrap();
         let i9 = runtime.add_pair((i7, i8)).unwrap();
 
@@ -1647,15 +1647,15 @@ mod lists {
         runtime.add_to_list(i9, true).unwrap();
         let i10 = runtime.end_list().unwrap();
 
-        let i11 = runtime.add_symbol("val3").unwrap();
+        let i11 = runtime.add_symbol(3).unwrap();
         let i12 = runtime.add_number(30).unwrap();
         let i13 = runtime.add_pair((i11, i12)).unwrap();
 
-        let i14 = runtime.add_symbol("val1").unwrap();
+        let i14 = runtime.add_symbol(1).unwrap();
         let i15 = runtime.add_number(10).unwrap();
         let i16 = runtime.add_pair((i14, i15)).unwrap();
 
-        let i17 = runtime.add_symbol("val2").unwrap();
+        let i17 = runtime.add_symbol(2).unwrap();
         let i18 = runtime.add_number(100).unwrap();
         let i19 = runtime.add_pair((i17, i18)).unwrap();
 
@@ -1680,13 +1680,13 @@ mod lists {
     fn equality_mixed_values_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("val1").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
         let i4 = runtime.add_number(40).unwrap();
 
-        let i5 = runtime.add_symbol("val3").unwrap();
+        let i5 = runtime.add_symbol(3).unwrap();
         let i6 = runtime.add_number(30).unwrap();
         let i7 = runtime.add_pair((i5, i6)).unwrap();
 
@@ -1696,13 +1696,13 @@ mod lists {
         runtime.add_to_list(i7, true).unwrap();
         let i8 = runtime.end_list().unwrap();
 
-        let i9 = runtime.add_symbol("val1").unwrap();
+        let i9 = runtime.add_symbol(1).unwrap();
         let i10 = runtime.add_number(10).unwrap();
         let i11 = runtime.add_pair((i9, i10)).unwrap();
 
         let i12 = runtime.add_number(40).unwrap();
 
-        let i13 = runtime.add_symbol("val3").unwrap();
+        let i13 = runtime.add_symbol(3).unwrap();
         let i14 = runtime.add_number(30).unwrap();
         let i15 = runtime.add_pair((i13, i14)).unwrap();
 
@@ -1724,13 +1724,13 @@ mod lists {
     fn equality_mixed_values_not_equal() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol("val1").unwrap();
+        let i1 = runtime.add_symbol(1).unwrap();
         let i2 = runtime.add_number(10).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
         let i4 = runtime.add_number(40).unwrap();
 
-        let i5 = runtime.add_symbol("val3").unwrap();
+        let i5 = runtime.add_symbol(3).unwrap();
         let i6 = runtime.add_number(30).unwrap();
         let i7 = runtime.add_pair((i5, i6)).unwrap();
 
@@ -1740,13 +1740,13 @@ mod lists {
         runtime.add_to_list(i7, true).unwrap();
         let i8 = runtime.end_list().unwrap();
 
-        let i9 = runtime.add_symbol("val1").unwrap();
+        let i9 = runtime.add_symbol(1).unwrap();
         let i10 = runtime.add_number(10).unwrap();
         let i11 = runtime.add_pair((i9, i10)).unwrap();
 
         let i12 = runtime.add_number(20).unwrap();
 
-        let i13 = runtime.add_symbol("val3").unwrap();
+        let i13 = runtime.add_symbol(3).unwrap();
         let i14 = runtime.add_number(30).unwrap();
         let i15 = runtime.add_pair((i13, i14)).unwrap();
 

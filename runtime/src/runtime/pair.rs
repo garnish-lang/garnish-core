@@ -15,7 +15,7 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_number(10).unwrap();
-        let i2 = runtime.add_symbol("my_symbol").unwrap();
+        let i2 = runtime.add_symbol(20).unwrap();
         let start = runtime.get_data_len();
 
         runtime.push_register(i1).unwrap();
@@ -36,7 +36,7 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         runtime.add_number(10).unwrap();
-        runtime.add_symbol("my_symbol").unwrap();
+        runtime.add_symbol(20).unwrap();
 
         runtime.push_instruction(Instruction::MakePair, None).unwrap();
 

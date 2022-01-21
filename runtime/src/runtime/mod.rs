@@ -836,7 +836,7 @@ mod tests {
 
 #[cfg(test)]
 pub mod testing_utilites {
-    use crate::{DataError, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData};
+    use crate::{DataError, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData, symbol_value};
 
     pub const DEFERRED_VALUE: usize = 1000;
 
@@ -893,7 +893,8 @@ pub mod testing_utilites {
     }
 
     pub fn add_pair(runtime: &mut SimpleRuntimeData, key: &str, value: i32) -> usize {
-        let i1 = runtime.add_symbol(key).unwrap();
+        let sym_value = SimpleRuntimeData::parse_symbol(key).unwrap();
+        let i1 = runtime.add_symbol(sym_value).unwrap();
         let i2 = runtime.add_number(value).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 

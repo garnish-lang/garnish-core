@@ -1,4 +1,4 @@
-use crate::error::{data_parse_error, implementation_error, implementation_error_with_token, CompilerError};
+use crate::error::{implementation_error, implementation_error_with_token, CompilerError};
 use garnish_lang_runtime::*;
 use log::trace;
 
@@ -120,10 +120,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
 ) -> Result<bool, CompilerError<Data::Error>> {
     match node.get_definition() {
         Definition::Integer => {
-            let addr = data.add_number(match node.get_lex_token().get_text().parse::<Data::Number>() {
-                Err(_) => data_parse_error(node.get_lex_token(), ExpressionDataType::Number)?,
-                Ok(i) => i,
-            })?;
+            let addr = data.add_number(Data::parse_number(node.get_lex_token().get_text())?)?;
 
             data.push_instruction(Instruction::Put, Some(addr))?;
         }
@@ -150,12 +147,12 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
             data.push_instruction(Instruction::Put, Some(addr))?;
         }
         Definition::Identifier => {
-            let addr = data.add_symbol(node.get_lex_token().get_text())?;
+            let addr = data.add_symbol(Data::parse_symbol(node.get_lex_token().get_text())?)?;
 
             data.push_instruction(Instruction::Resolve, Some(addr))?;
         }
         Definition::Property => {
-            let addr = data.add_symbol(node.get_lex_token().get_text())?;
+            let addr = data.add_symbol(Data::parse_symbol(node.get_lex_token().get_text())?)?;
             data.push_instruction(Instruction::Put, Some(addr))?;
         }
         Definition::Unit => {
@@ -163,7 +160,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
             data.push_instruction(Instruction::Put, Some(Data::Size::zero()))?;
         }
         Definition::Symbol => {
-            let addr = data.add_symbol(&node.get_lex_token().get_text()[1..])?;
+            let addr = data.add_symbol(Data::parse_symbol(&node.get_lex_token().get_text()[1..])?)?;
             data.push_instruction(Instruction::Put, Some(addr))?;
         }
         Definition::Value => {
