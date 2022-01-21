@@ -152,27 +152,45 @@ impl GarnishNumber for SimpleNumber {
     }
 
     fn bitwise_not(self) -> Option<Self> {
-        todo!()
+        Some(match self {
+            Integer(v) => Integer(!v),
+            Float(_) => return None
+        })
     }
 
     fn bitwise_and(self, rhs: Self) -> Option<Self> {
-        todo!()
+        Some(match (self, rhs) {
+            (Integer(v1), Integer(v2)) => Integer(v1 & v2),
+            _ => return None
+        })
     }
 
     fn bitwise_or(self, rhs: Self) -> Option<Self> {
-        todo!()
+        Some(match (self, rhs) {
+            (Integer(v1), Integer(v2)) => Integer(v1 | v2),
+            _ => return None
+        })
     }
 
     fn bitwise_xor(self, rhs: Self) -> Option<Self> {
-        todo!()
+        Some(match (self, rhs) {
+            (Integer(v1), Integer(v2)) => Integer(v1 ^ v2),
+            _ => return None
+        })
     }
 
     fn bitwise_shift_left(self, rhs: Self) -> Option<Self> {
-        todo!()
+        Some(match (self, rhs) {
+            (Integer(v1), Integer(v2)) => Integer(v1 << v2),
+            _ => return None
+        })
     }
 
     fn bitwise_shift_right(self, rhs: Self) -> Option<Self> {
-        todo!()
+        Some(match (self, rhs) {
+            (Integer(v1), Integer(v2)) => Integer(v1 >> v2),
+            _ => return None
+        })
     }
 }
 
@@ -292,5 +310,41 @@ mod tests {
     fn decrement() {
         assert_eq!(Integer(10).decrement().unwrap(), Integer(9));
         assert_eq!(Float(10.0).decrement().unwrap(), Float(9.0));
+    }
+
+    #[test]
+    fn bitwise_not() {
+        assert_eq!(Integer(10).bitwise_not().unwrap(), Integer(!10));
+        assert!(Float(10.0).bitwise_not().is_none());
+    }
+
+    #[test]
+    fn bitwise_and() {
+        assert_eq!(Integer(10).bitwise_and(Integer(20)).unwrap(), Integer(10 & 20));
+        assert!(Float(10.0).bitwise_and(Float(1.0)).is_none());
+    }
+
+    #[test]
+    fn bitwise_or() {
+        assert_eq!(Integer(10).bitwise_or(Integer(20)).unwrap(), Integer(10 | 20));
+        assert!(Float(10.0).bitwise_or(Float(1.0)).is_none());
+    }
+
+    #[test]
+    fn bitwise_xor() {
+        assert_eq!(Integer(10).bitwise_xor(Integer(20)).unwrap(), Integer(10 ^ 20));
+        assert!(Float(10.0).bitwise_xor(Float(1.0)).is_none());
+    }
+
+    #[test]
+    fn bitwise_left_shift() {
+        assert_eq!(Integer(10).bitwise_shift_left(Integer(2)).unwrap(), Integer(10 << 2));
+        assert!(Float(10.0).bitwise_shift_left(Float(1.0)).is_none());
+    }
+
+    #[test]
+    fn bitwise_right_shift() {
+        assert_eq!(Integer(10).bitwise_shift_right(Integer(2)).unwrap(), Integer(10 >> 2));
+        assert!(Float(10.0).bitwise_shift_right(Float(1.0)).is_none());
     }
 }
