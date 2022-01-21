@@ -138,11 +138,17 @@ impl GarnishNumber for SimpleNumber {
     }
 
     fn increment(self) -> Option<Self> {
-        todo!()
+        Some(match self {
+            Integer(v) => Integer(v + 1),
+            Float(v) => Float(v + 1.0),
+        })
     }
 
     fn decrement(self) -> Option<Self> {
-        todo!()
+        Some(match self {
+            Integer(v) => Integer(v - 1),
+            Float(v) => Float(v - 1.0),
+        })
     }
 
     fn bitwise_not(self) -> Option<Self> {
@@ -274,5 +280,17 @@ mod tests {
     fn opposite() {
         assert_eq!(Integer(10).opposite().unwrap(), Integer(-10));
         assert_eq!(Float(10.0).opposite().unwrap(), Float(-10.0));
+    }
+
+    #[test]
+    fn increment() {
+        assert_eq!(Integer(10).increment().unwrap(), Integer(11));
+        assert_eq!(Float(10.0).increment().unwrap(), Float(11.0));
+    }
+
+    #[test]
+    fn decrement() {
+        assert_eq!(Integer(10).decrement().unwrap(), Integer(9));
+        assert_eq!(Float(10.0).decrement().unwrap(), Float(9.0));
     }
 }
