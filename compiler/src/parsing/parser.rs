@@ -34,6 +34,7 @@ pub enum Definition {
     Xor,
     Not,
     EmptyApply,
+    TypeOf,
     TypeCast,
     TypeEqual,
     Equality,
@@ -178,6 +179,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::Or => (Definition::Or, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Xor => (Definition::Xor, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Not => (Definition::Not, SecondaryDefinition::UnaryPrefix),
+        TokenType::TypeOf => (Definition::TypeOf, SecondaryDefinition::UnaryPrefix),
         TokenType::TypeCast => (Definition::TypeCast, SecondaryDefinition::BinaryLeftToRight),
         TokenType::TypeEqual => (Definition::TypeEqual, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Inequality => (Definition::Inequality, SecondaryDefinition::BinaryLeftToRight),
@@ -304,6 +306,7 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::AccessRightInternal, 60);
     map.insert(Definition::AccessLengthInternal, 60);
 
+    map.insert(Definition::TypeOf, 69);
     map.insert(Definition::TypeCast, 70);
 
     map.insert(Definition::AbsoluteValue, 75);
@@ -2455,6 +2458,25 @@ mod tests {
             0,
             &[
                 (0, Definition::Not, None, None, Some(1)),
+                (1, Definition::Integer, Some(0), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn type_of() {
+        let tokens = vec![
+            LexerToken::new("#".to_string(), TokenType::TypeOf, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::TypeOf, None, None, Some(1)),
                 (1, Definition::Integer, Some(0), None, None),
             ],
         );

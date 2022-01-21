@@ -59,7 +59,7 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         | Definition::True => {
             ((false, node.get_left()), (false, node.get_right()))
         }
-        Definition::AccessLeftInternal | Definition::AbsoluteValue | Definition::Opposite | Definition::BitwiseNot | Definition::Not => ((true, node.get_right()), (false, None)),
+        Definition::AccessLeftInternal | Definition::AbsoluteValue | Definition::Opposite | Definition::BitwiseNot | Definition::Not | Definition::TypeOf => ((true, node.get_right()), (false, None)),
         Definition::EmptyApply | Definition::AccessLengthInternal | Definition::AccessRightInternal => ((true, node.get_left()), (false, None)),
         Definition::Addition
         | Definition::Subtraction
@@ -237,6 +237,9 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         }
         Definition::Not => {
             data.push_instruction(Instruction::Not, None)?;
+        }
+        Definition::TypeOf => {
+            data.push_instruction(Instruction::TypeOf, None)?;
         }
         Definition::TypeCast => {
             data.push_instruction(Instruction::ApplyType, None)?;
@@ -1328,6 +1331,23 @@ mod operations {
     }
 
     #[test]
+    fn type_of() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::TypeOf, None, None, Some(1), "#", TokenType::TypeOf),
+                (Definition::Identifier, Some(0), None, None, "value", TokenType::Identifier),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::TypeOf, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(SimpleData::Symbol(symbol_value("value"))),
+        );
+    }
+
+    #[test]
     fn apply_type() {
         assert_instruction_data(
             1,
@@ -1466,7 +1486,14 @@ mod operations {
             1,
             vec![
                 (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
-                (Definition::GreaterThanOrEqual, None, Some(0), Some(2), ">=", TokenType::GreaterThanOrEqual),
+                (
+                    Definition::GreaterThanOrEqual,
+                    None,
+                    Some(0),
+                    Some(2),
+                    ">=",
+                    TokenType::GreaterThanOrEqual,
+                ),
                 (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![

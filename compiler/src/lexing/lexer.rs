@@ -46,6 +46,7 @@ pub enum TokenType {
     JumpIfFalse,
     JumpIfTrue,
     ElseJump,
+    TypeOf,
     ApplyTo,
     Reapply,
     EmptyApply,
@@ -342,6 +343,7 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
         ("~>", TokenType::ApplyTo),
         ("^~", TokenType::Reapply),
         ("~~", TokenType::EmptyApply),
+        ("#", TokenType::TypeOf),
         ("~#", TokenType::TypeCast),
         ("#=", TokenType::TypeEqual),
         ("==", TokenType::Equality),
@@ -1272,6 +1274,21 @@ mod tests {
             vec![LexerToken {
                 text: ">=".to_string(),
                 token_type: TokenType::GreaterThanOrEqual,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn type_of() {
+        let result = lex(&"#".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "#".to_string(),
+                token_type: TokenType::TypeOf,
                 column: 0,
                 row: 0
             }]
