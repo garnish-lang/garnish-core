@@ -33,9 +33,9 @@ pub trait GarnishLangRuntimeData {
     type Error: std::error::Error + 'static;
     type DataLease: Copy;
     type Symbol: Display + Debug + PartialOrd + TypeConstants + Copy;
-    type Byte: Display + Debug + PartialOrd + Ord + Copy;
-    type Char: Display + Debug + PartialOrd + Ord + Copy;
-    type Number: Display + Debug + PartialOrd + Ord + TypeConstants + Copy + GarnishNumber + FromStr;
+    type Byte: Display + Debug + PartialOrd + Copy;
+    type Char: Display + Debug + PartialOrd + Copy;
+    type Number: Display + Debug + PartialOrd + TypeConstants + Copy + GarnishNumber + FromStr;
     type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + SubAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
 
     fn get_data_len(&self) -> Self::Size;

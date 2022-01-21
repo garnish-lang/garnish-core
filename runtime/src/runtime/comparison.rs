@@ -1,31 +1,41 @@
-use crate::{
-    get_range, next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants,
-};
+use crate::{get_range, next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants, push_unit};
 use std::cmp::Ordering;
 
 pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Ordering::Greater).and_then(|result| push_boolean(this, result.is_lt()))
+    perform_comparison(this, Ordering::Greater).and_then(|result| match result {
+        Some(result) => push_boolean(this, result.is_lt()),
+        None => push_unit(this)
+    })
 }
 
 pub fn less_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Ordering::Greater).and_then(|result| push_boolean(this, result.is_le()))
+    perform_comparison(this, Ordering::Greater).and_then(|result| match result {
+        Some(result) => push_boolean(this, result.is_le()),
+        None => push_unit(this)
+    })
 }
 
 pub fn greater_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Ordering::Less).and_then(|result| push_boolean(this, result.is_gt()))
+    perform_comparison(this, Ordering::Less).and_then(|result| match result {
+        Some(result) => push_boolean(this, result.is_gt()),
+        None => push_unit(this)
+    })
 }
 
 pub fn greater_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Ordering::Less).and_then(|result| push_boolean(this, result.is_ge()))
+    perform_comparison(this, Ordering::Less).and_then(|result| match result {
+        Some(result) => push_boolean(this, result.is_ge()),
+        None => push_unit(this)
+    })
 }
 
-fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data, false_ord: Ordering) -> Result<Ordering, RuntimeError<Data::Error>> {
+fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data, false_ord: Ordering) -> Result<Option<Ordering>, RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
 
     let result = match (this.get_data_type(left)?, this.get_data_type(right)?) {
-        (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_number(left)?.cmp(&this.get_number(right)?),
-        (ExpressionDataType::Char, ExpressionDataType::Char) => this.get_char(left)?.cmp(&this.get_char(right)?),
-        (ExpressionDataType::Byte, ExpressionDataType::Byte) => this.get_byte(left)?.cmp(&this.get_byte(right)?),
+        (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_number(left)?.partial_cmp(&this.get_number(right)?),
+        (ExpressionDataType::Char, ExpressionDataType::Char) => this.get_char(left)?.partial_cmp(&this.get_char(right)?),
+        (ExpressionDataType::Byte, ExpressionDataType::Byte) => this.get_byte(left)?.partial_cmp(&this.get_byte(right)?),
         (ExpressionDataType::CharList, ExpressionDataType::CharList) => cmp_list(
             this,
             left,
@@ -77,16 +87,16 @@ fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data, false_ord: 
                         Data::get_char_list_len,
                     )?
                 }
-                _ => return Ok(false_ord),
+                _ => return Ok(Some(false_ord)),
             }
         }
-        _ => return Ok(false_ord),
+        _ => return Ok(Some(false_ord)),
     };
 
     Ok(result)
 }
 
-fn cmp_list<Data: GarnishLangRuntimeData, T: Ord, GetFunc, LenFunc>(
+fn cmp_list<Data: GarnishLangRuntimeData, T: PartialOrd, GetFunc, LenFunc>(
     this: &mut Data,
     left: Data::Size,
     right: Data::Size,
@@ -94,7 +104,7 @@ fn cmp_list<Data: GarnishLangRuntimeData, T: Ord, GetFunc, LenFunc>(
     right_start: Data::Number,
     get_func: GetFunc,
     len_func: LenFunc,
-) -> Result<Ordering, RuntimeError<Data::Error>>
+) -> Result<Option<Ordering>, RuntimeError<Data::Error>>
 where
     GetFunc: Fn(&Data, Data::Size, Data::Number) -> Result<T, Data::Error>,
     LenFunc: Fn(&Data, Data::Size) -> Result<Data::Size, Data::Error>,
@@ -108,16 +118,17 @@ where
     let mut right_index = right_start;
 
     while left_index < len1 && right_index < len2 {
-        match get_func(this, left, left_index)?.cmp(&get_func(this, right, right_index)?) {
-            Ordering::Equal => (),
-            non_eq => return Ok(non_eq),
+        match get_func(this, left, left_index)?.partial_cmp(&get_func(this, right, right_index)?) {
+            Some(Ordering::Equal) => (),
+            Some(non_eq) => return Ok(Some(non_eq)),
+            None => (), // deferr
         }
 
         left_index = left_index.increment().or_num_err()?;
         right_index = right_index.increment().or_num_err()?;
     }
 
-    Ok(len1.cmp(&len2))
+    Ok(len1.partial_cmp(&len2))
 }
 
 #[cfg(test)]
