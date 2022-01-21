@@ -15,15 +15,15 @@ Each character is considered a byte and converted to it's ASCII value. All  char
 'abc'
 
 '\'' - Single quote literal
-'\{100}' - Literal number value (any number value below, binary, octal, hex)
+''100 200 02_1111'' - Double single quote is parsed as space separated list of numbers
 
 ## Numbers
 Default is base 10. The following do not support decimals after them
 
 1_000_000 - Underscore as visual spacer
 
-0b1111_0000 - Binary (base 2)
+02_1111_0000 - Binary (base 2)
 
-0o77 - Octal (base 8)
+08_77 - Octal (base 8)
 
-0xFF - Hex (base 16)
+016_FF - Hex (base 16)

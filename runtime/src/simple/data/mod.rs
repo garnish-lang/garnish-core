@@ -1,6 +1,8 @@
 mod number;
+mod parsing;
 
 pub use number::*;
+pub use parsing::*;
 
 use crate::{DataError, ExpressionDataType};
 
