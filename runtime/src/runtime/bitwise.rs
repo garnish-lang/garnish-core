@@ -1,32 +1,99 @@
-use crate::{GarnishLangRuntimeData, GarnishNumber, RuntimeError};
 use crate::runtime::arithmetic::{perform_op, perform_unary_op};
+use crate::{GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, Instruction, RuntimeError};
 
-pub fn bitwise_not<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_unary_op(this, "bitwise not", Data::Number::bitwise_not)
+pub fn bitwise_not<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_unary_op(this, Instruction::BitwiseNot, Data::Number::bitwise_not, context)
 }
 
-pub fn bitwise_and<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, "bitwise and", Data::Number::bitwise_and)
+pub fn bitwise_and<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_op(this, Instruction::BitwiseAnd, Data::Number::bitwise_and, context)
 }
 
-pub fn bitwise_or<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, "bitwise or", Data::Number::bitwise_or)
+pub fn bitwise_or<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_op(this, Instruction::BitwiseOr, Data::Number::bitwise_or, context)
 }
 
-pub fn bitwise_xor<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, "bitwise xor", Data::Number::bitwise_xor)
+pub fn bitwise_xor<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_op(this, Instruction::BitwiseXor, Data::Number::bitwise_xor, context)
 }
 
-pub fn bitwise_shift_left<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, "bitwise shift left", Data::Number::bitwise_shift_left)
+pub fn bitwise_left_shift<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_op(this, Instruction::BitwiseShiftLeft, Data::Number::bitwise_shift_left, context)
 }
 
-pub fn bitwise_shift_right<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, "bitwise shift right", Data::Number::bitwise_shift_right)
+pub fn bitwise_right_shift<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_op(this, Instruction::BitwiseShiftRight, Data::Number::bitwise_shift_right, context)
+}
+
+#[cfg(test)]
+mod deferring {
+    use crate::runtime::GarnishRuntime;
+    use crate::testing_utilites::{deferred_op, deferred_unary_op};
+
+    #[test]
+    fn bitwise_not() {
+        deferred_unary_op(|runtime, context| {
+            runtime.bitwise_not(Some(context)).unwrap();
+        })
+    }
+
+    #[test]
+    fn bitwise_and() {
+        deferred_op(|runtime, context| {
+            runtime.bitwise_and(Some(context)).unwrap();
+        })
+    }
+
+    #[test]
+    fn bitwise_or() {
+        deferred_op(|runtime, context| {
+            runtime.bitwise_or(Some(context)).unwrap();
+        })
+    }
+
+    #[test]
+    fn bitwise_xor() {
+        deferred_op(|runtime, context| {
+            runtime.bitwise_xor(Some(context)).unwrap();
+        })
+    }
+
+    #[test]
+    fn bitwise_left_shift() {
+        deferred_op(|runtime, context| {
+            runtime.bitwise_left_shift(Some(context)).unwrap();
+        })
+    }
+
+    #[test]
+    fn bitwise_right_shift() {
+        deferred_op(|runtime, context| {
+            runtime.bitwise_right_shift(Some(context)).unwrap();
+        })
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::runtime::context::NO_CONTEXT;
     use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
@@ -38,7 +105,7 @@ mod tests {
 
         runtime.push_register(int1).unwrap();
 
-        runtime.bitwise_not().unwrap();
+        runtime.bitwise_not(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), !10);
@@ -55,7 +122,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.bitwise_and().unwrap();
+        runtime.bitwise_and(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), 10 & 20);
@@ -72,7 +139,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.bitwise_or().unwrap();
+        runtime.bitwise_or(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), 10 | 20);
@@ -89,7 +156,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.bitwise_xor().unwrap();
+        runtime.bitwise_xor(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), 10 ^ 20);
@@ -106,7 +173,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.bitwise_shift_left().unwrap();
+        runtime.bitwise_left_shift(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), 10 << 3);
@@ -123,7 +190,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.bitwise_shift_right().unwrap();
+        runtime.bitwise_right_shift(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), 10 >> 3);

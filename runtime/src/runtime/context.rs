@@ -17,6 +17,8 @@ where
     }
 }
 
+pub const NO_CONTEXT: Option<&mut EmptyContext> = None;
+
 pub struct EmptyContext {}
 
 impl<Data> GarnishLangRuntimeContext<Data> for EmptyContext where Data: GarnishLangRuntimeData {}

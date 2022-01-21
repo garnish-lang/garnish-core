@@ -1,74 +1,115 @@
 use log::trace;
 
-use crate::{next_two_raw_ref, push_number, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, next_ref};
+use crate::{
+    next_ref, next_two_raw_ref, push_number, push_unit, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber,
+    Instruction, RuntimeError, TypeConstants,
+};
 
-pub fn add<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, "addition", Data::Number::add)
+pub fn add<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_op(this, Instruction::Add, Data::Number::add, context)
 }
 
-pub fn subtract<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, "subtraction", Data::Number::subtract)
+pub fn subtract<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_op(this, Instruction::Subtract, Data::Number::subtract, context)
 }
 
-pub fn multiply<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, "multiplication", Data::Number::multiply)
+pub fn multiply<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_op(this, Instruction::Multiply, Data::Number::multiply, context)
 }
 
-pub fn power<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, "power of", Data::Number::power)
+pub fn power<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_op(this, Instruction::Power, Data::Number::power, context)
 }
 
-pub fn divide<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, "division", Data::Number::divide)
+pub fn divide<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_op(this, Instruction::Power, Data::Number::divide, context)
 }
 
-pub fn integer_divide<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, "integer division", Data::Number::integer_divide)
+pub fn integer_divide<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_op(this, Instruction::IntegerDivide, Data::Number::integer_divide, context)
 }
 
-pub fn remainder<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, "remainder", Data::Number::remainder)
+pub fn remainder<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_op(this, Instruction::Remainder, Data::Number::remainder, context)
 }
 
-pub fn absolute_value<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_unary_op(this, "absolute value", Data::Number::absolute_value)
+pub fn absolute_value<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_unary_op(this, Instruction::AbsoluteValue, Data::Number::absolute_value, context)
 }
 
-pub fn opposite<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_unary_op(this, "opposite", Data::Number::opposite)
+pub fn opposite<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
+    perform_unary_op(this, Instruction::Opposite, Data::Number::opposite, context)
 }
 
-pub(crate) fn perform_unary_op<Data: GarnishLangRuntimeData, Op>(this: &mut Data, op_name: &str, op: Op) -> Result<(), RuntimeError<Data::Error>>
-    where
-        Op: FnOnce(Data::Number) -> Option<Data::Number>,
+pub(crate) fn perform_unary_op<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>, Op>(
+    this: &mut Data,
+    op_name: Instruction,
+    op: Op,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>>
+where
+    Op: FnOnce(Data::Number) -> Option<Data::Number>,
 {
     let addr = next_ref(this)?;
 
     let t = this.get_data_type(addr)?;
-    trace!(
-        "Attempting {:?} on {:?} at {:?}",
-        op_name,
-        t,
-        addr,
-    );
+    trace!("Attempting {:?} on {:?} at {:?}", op_name, t, addr,);
 
     match t {
         ExpressionDataType::Number => {
             let value = this.get_number(addr)?;
 
             match op(value) {
-                Some(result) => push_number(this, result),
-                None => push_unit(this),
+                Some(result) => push_number(this, result)?,
+                None => push_unit(this)?,
             }
         }
-        _ => {
-            trace!("Unsupported types pushing unit");
-            push_unit(this)
-        }
+        l => match context {
+            None => push_unit(this)?,
+            Some(c) => {
+                if !c.defer_op(this, op_name, (l, addr), (ExpressionDataType::Unit, Data::Size::zero()))? {
+                    push_unit(this)?
+                }
+            }
+        },
     }
+
+    Ok(())
 }
 
-pub(crate) fn perform_op<Data: GarnishLangRuntimeData, Op>(this: &mut Data, op_name: &str, op: Op) -> Result<(), RuntimeError<Data::Error>>
+pub(crate) fn perform_op<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>, Op>(
+    this: &mut Data,
+    op_name: Instruction,
+    op: Op,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>>
 where
     Op: FnOnce(Data::Number, Data::Number) -> Option<Data::Number>,
 {
@@ -90,20 +131,95 @@ where
             let right = this.get_number(right_addr)?;
 
             match op(left, right) {
-                Some(result) => push_number(this, result),
-                None => push_unit(this),
+                Some(result) => push_number(this, result)?,
+                None => push_unit(this)?,
             }
         }
-        _ => {
-            trace!("Unsupported types pushing unit");
-            push_unit(this)
-        }
+        (l, r) => match context {
+            None => push_unit(this)?,
+            Some(c) => {
+                if !c.defer_op(this, op_name, (l, left_addr), (r, right_addr))? {
+                    push_unit(this)?
+                }
+            }
+        },
+    }
+
+    Ok(())
+}
+
+#[cfg(test)]
+mod deferring {
+    use crate::runtime::GarnishRuntime;
+    use crate::testing_utilites::{deferred_op, deferred_unary_op};
+
+    #[test]
+    fn add() {
+        deferred_op(|runtime, context| {
+            runtime.add(Some(context)).unwrap();
+        })
+    }
+
+    #[test]
+    fn subtract() {
+        deferred_op(|runtime, context| {
+            runtime.subtract(Some(context)).unwrap();
+        })
+    }
+
+    #[test]
+    fn multiply() {
+        deferred_op(|runtime, context| {
+            runtime.multiply(Some(context)).unwrap();
+        });
+    }
+
+    #[test]
+    fn divide() {
+        deferred_op(|runtime, context| {
+            runtime.divide(Some(context)).unwrap();
+        });
+    }
+
+    #[test]
+    fn integer_divide() {
+        deferred_op(|runtime, context| {
+            runtime.integer_divide(Some(context)).unwrap();
+        });
+    }
+
+    #[test]
+    fn remainder() {
+        deferred_op(|runtime, context| {
+            runtime.remainder(Some(context)).unwrap();
+        });
+    }
+
+    #[test]
+    fn power() {
+        deferred_op(|runtime, context| {
+            runtime.power(Some(context)).unwrap();
+        });
+    }
+
+    #[test]
+    fn absolute_value() {
+        deferred_unary_op(|runtime, context| {
+            runtime.absolute_value(Some(context)).unwrap();
+        });
+    }
+
+    #[test]
+    fn opposite() {
+        deferred_unary_op(|runtime, context| {
+            runtime.opposite(Some(context)).unwrap();
+        });
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, EmptyContext, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn add() {
@@ -116,7 +232,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.add().unwrap();
+        runtime.add::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), 30);
@@ -129,7 +245,7 @@ mod tests {
         runtime.add_number(10).unwrap();
         runtime.add_number(20).unwrap();
 
-        let result = runtime.add();
+        let result = runtime.add::<EmptyContext>(None);
 
         assert!(result.is_err());
     }
@@ -144,7 +260,7 @@ mod tests {
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
 
-        runtime.add().unwrap();
+        runtime.add::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -160,7 +276,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.subtract().unwrap();
+        runtime.subtract::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), -10);
@@ -177,7 +293,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.multiply().unwrap();
+        runtime.multiply::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), 200);
@@ -194,7 +310,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.divide().unwrap();
+        runtime.divide::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), 2);
@@ -211,7 +327,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.integer_divide().unwrap();
+        runtime.integer_divide::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), 2);
@@ -228,7 +344,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.power().unwrap();
+        runtime.power::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), 1000);
@@ -245,7 +361,7 @@ mod tests {
         runtime.push_register(int1).unwrap();
         runtime.push_register(int2).unwrap();
 
-        runtime.remainder().unwrap();
+        runtime.remainder::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), 3);
@@ -260,7 +376,7 @@ mod tests {
 
         runtime.push_register(int1).unwrap();
 
-        runtime.absolute_value().unwrap();
+        runtime.absolute_value::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), 10);
@@ -275,7 +391,7 @@ mod tests {
 
         runtime.push_register(int1).unwrap();
 
-        runtime.opposite().unwrap();
+        runtime.opposite::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_number(new_data_start).unwrap(), -10);

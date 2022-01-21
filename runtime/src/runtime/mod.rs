@@ -24,14 +24,14 @@ mod utilities;
 
 pub use utilities::{iterate_link, link_count};
 
-pub use context::{EmptyContext, GarnishLangRuntimeContext};
+pub use context::{EmptyContext, GarnishLangRuntimeContext, NO_CONTEXT};
 pub use data::{GarnishLangRuntimeData, GarnishNumber, TypeConstants};
 pub use error::*;
 use log::trace;
 pub(crate) use utilities::*;
 
 use crate::runtime::arithmetic::{absolute_value, add, divide, integer_divide, multiply, opposite, power, remainder, subtract};
-use crate::runtime::bitwise::{bitwise_and, bitwise_not, bitwise_or, bitwise_shift_left, bitwise_shift_right, bitwise_xor};
+use crate::runtime::bitwise::{bitwise_and, bitwise_not, bitwise_or, bitwise_left_shift, bitwise_right_shift, bitwise_xor};
 use crate::runtime::casting::type_cast;
 use crate::runtime::comparison::{greater_than, greater_than_or_equal, less_than, less_than_or_equal};
 use crate::runtime::equality::{not_equal, type_equal};
@@ -60,22 +60,22 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn reapply(&mut self, index: Data::Size) -> Result<(), RuntimeError<Data::Error>>;
     fn empty_apply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
 
-    fn add(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn subtract(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn multiply(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn power(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn divide(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn integer_divide(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn remainder(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn absolute_value(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn opposite(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn add<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn subtract<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn multiply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn power<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn divide<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn integer_divide<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn remainder<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn absolute_value<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn opposite<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
 
-    fn bitwise_not(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn bitwise_and(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn bitwise_or(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn bitwise_xor(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn bitwise_shift_left(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn bitwise_shift_right(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn bitwise_not<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn bitwise_and<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn bitwise_or<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn bitwise_xor<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn bitwise_left_shift<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn bitwise_right_shift<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
 
     fn and(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn or(&mut self) -> Result<(), RuntimeError<Data::Error>>;
@@ -147,21 +147,21 @@ where
         let mut next_instruction = self.get_instruction_cursor() + Data::Size::one();
 
         match instruction {
-            Instruction::Add => self.add()?,
-            Instruction::Subtract => self.subtract()?,
-            Instruction::Multiply => self.multiply()?,
-            Instruction::Divide => self.divide()?,
-            Instruction::IntegerDivide => self.integer_divide()?,
-            Instruction::Power => self.power()?,
-            Instruction::Opposite => self.opposite()?,
-            Instruction::AbsoluteValue => self.absolute_value()?,
-            Instruction::Remainder => self.remainder()?,
-            Instruction::BitwiseNot => self.bitwise_not()?,
-            Instruction::BitwiseAnd => self.bitwise_not()?,
-            Instruction::BitwiseOr => self.bitwise_not()?,
-            Instruction::BitwiseXor => self.bitwise_not()?,
-            Instruction::BitwiseShiftLeft => self.bitwise_not()?,
-            Instruction::BitwiseShiftRight => self.bitwise_not()?,
+            Instruction::Add => self.add(context)?,
+            Instruction::Subtract => self.subtract(context)?,
+            Instruction::Multiply => self.multiply(context)?,
+            Instruction::Divide => self.divide(context)?,
+            Instruction::IntegerDivide => self.integer_divide(context)?,
+            Instruction::Power => self.power(context)?,
+            Instruction::Opposite => self.opposite(context)?,
+            Instruction::AbsoluteValue => self.absolute_value(context)?,
+            Instruction::Remainder => self.remainder(context)?,
+            Instruction::BitwiseNot => self.bitwise_not(context)?,
+            Instruction::BitwiseAnd => self.bitwise_and(context)?,
+            Instruction::BitwiseOr => self.bitwise_or(context)?,
+            Instruction::BitwiseXor => self.bitwise_xor(context)?,
+            Instruction::BitwiseShiftLeft => self.bitwise_left_shift(context)?,
+            Instruction::BitwiseShiftRight => self.bitwise_right_shift(context)?,
             Instruction::And => self.and()?,
             Instruction::Or => self.or()?,
             Instruction::Xor => self.xor()?,
@@ -272,68 +272,68 @@ where
     // Arithmetic
     //
 
-    fn add(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        add(self)
+    fn add<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        add(self, context)
     }
 
-    fn subtract(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        subtract(self)
+    fn subtract<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        subtract(self, context)
     }
 
-    fn multiply(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        multiply(self)
+    fn multiply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        multiply(self, context)
     }
 
-    fn power(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        power(self)
+    fn power<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        power(self, context)
     }
 
-    fn divide(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        divide(self)
+    fn divide<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        divide(self, context)
     }
 
-    fn integer_divide(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        integer_divide(self)
+    fn integer_divide<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        integer_divide(self, context)
     }
 
-    fn remainder(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        remainder(self)
+    fn remainder<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        remainder(self, context)
     }
 
-    fn absolute_value(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        absolute_value(self)
+    fn absolute_value<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        absolute_value(self, context)
     }
 
-    fn opposite(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        opposite(self)
+    fn opposite<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        opposite(self, context)
     }
 
     //
     // Bitwise
     //
 
-    fn bitwise_not(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        bitwise_not(self)
+    fn bitwise_not<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        bitwise_not(self, context)
     }
 
-    fn bitwise_and(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        bitwise_and(self)
+    fn bitwise_and<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        bitwise_and(self, context)
     }
 
-    fn bitwise_or(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        bitwise_or(self)
+    fn bitwise_or<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        bitwise_or(self, context)
     }
 
-    fn bitwise_xor(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        bitwise_xor(self)
+    fn bitwise_xor<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        bitwise_xor(self, context)
     }
 
-    fn bitwise_shift_left(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        bitwise_shift_left(self)
+    fn bitwise_left_shift<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        bitwise_left_shift(self, context)
     }
 
-    fn bitwise_shift_right(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        bitwise_shift_right(self)
+    fn bitwise_right_shift<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        bitwise_right_shift(self, context)
     }
 
     //
@@ -854,6 +854,36 @@ pub mod testing_utilites {
             data.add_external(DEFERRED_VALUE).and_then(|r| data.push_register(r))?;
             Ok(true)
         }
+    }
+
+    pub fn deferred_op<F>(func: F) where F: Fn(&mut SimpleRuntimeData, &mut DeferOpTestContext) {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_expression(10).unwrap();
+        let int2 = runtime.add_expression(20).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        let mut context = DeferOpTestContext::new();
+
+        func(&mut runtime, &mut context);
+
+        assert_eq!(runtime.get_external(runtime.get_register(0).unwrap()).unwrap(), DEFERRED_VALUE);
+    }
+
+    pub fn deferred_unary_op<F>(func: F) where F: Fn(&mut SimpleRuntimeData, &mut DeferOpTestContext) {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_expression(10).unwrap();
+
+        runtime.push_register(int1).unwrap();
+
+        let mut context = DeferOpTestContext::new();
+
+        func(&mut runtime, &mut context);
+
+        assert_eq!(runtime.get_external(runtime.get_register(0).unwrap()).unwrap(), DEFERRED_VALUE);
     }
 
     pub fn add_pair(runtime: &mut SimpleRuntimeData, key: &str, value: i32) -> usize {
