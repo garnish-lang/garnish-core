@@ -354,7 +354,6 @@ impl From<String> for DataError {
 
 impl GarnishLangRuntimeData for SimpleRuntimeData {
     type Error = DataError;
-    type DataLease = usize;
     type Symbol = u64;
     type Char = char;
     type Byte = u8;
@@ -901,7 +900,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn parse_char(from: &str) -> Result<Self::Char, Self::Error> {
-        let l = SimpleRuntimeData::parse_char_list(from);
+        let l = SimpleRuntimeData::parse_char_list(from)?;
         if l.len() == 1 {
             Ok(l[0])
         } else {
@@ -910,7 +909,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn parse_byte(from: &str) -> Result<Self::Byte, Self::Error> {
-        let l = SimpleRuntimeData::parse_byte_list(from);
+        let l = SimpleRuntimeData::parse_byte_list(from)?;
         if l.len() == 1 {
             Ok(l[0])
         } else {
@@ -918,12 +917,12 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         }
     }
 
-    fn parse_char_list(from: &str) -> Vec<Self::Char> {
-        from.trim_matches('"').chars().collect()
+    fn parse_char_list(from: &str) -> Result<Vec<Self::Char>, Self::Error> {
+        Ok(from.trim_matches('"').chars().collect())
     }
 
-    fn parse_byte_list(from: &str) -> Vec<Self::Byte> {
-        from.trim_matches('\'').bytes().collect()
+    fn parse_byte_list(from: &str) -> Result<Vec<Self::Byte>, Self::Error> {
+        Ok(from.trim_matches('\'').bytes().collect())
     }
 }
 
@@ -994,7 +993,6 @@ mod tests {
 
 #[cfg(test)]
 mod data_storage {
-    use crate::simple::symbol_value;
     use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]

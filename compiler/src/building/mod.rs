@@ -119,53 +119,10 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
     nearest_expression_point: Data::Size,
 ) -> Result<bool, CompilerError<Data::Error>> {
     match node.get_definition() {
-        Definition::Integer => {
-            let addr = data.add_number(Data::parse_number(node.get_lex_token().get_text())?)?;
-
-            data.push_instruction(Instruction::Put, Some(addr))?;
-        }
-        Definition::CharList => {
-            let items = Data::parse_char_list(node.get_lex_token().get_text());
-
-            data.start_char_list()?;
-            for c in items {
-                data.add_to_char_list(c)?;
-            }
-            let addr = data.end_char_list()?;
-
-            data.push_instruction(Instruction::Put, Some(addr))?;
-        }
-        Definition::ByteList => {
-            let items = Data::parse_byte_list(node.get_lex_token().get_text());
-
-            data.start_byte_list()?;
-            for c in items {
-                data.add_to_byte_list(c)?;
-            }
-            let addr = data.end_byte_list()?;
-
-            data.push_instruction(Instruction::Put, Some(addr))?;
-        }
-        Definition::Identifier => {
-            let addr = data.add_symbol(Data::parse_symbol(node.get_lex_token().get_text())?)?;
-
-            data.push_instruction(Instruction::Resolve, Some(addr))?;
-        }
-        Definition::Property => {
-            let addr = data.add_symbol(Data::parse_symbol(node.get_lex_token().get_text())?)?;
-            data.push_instruction(Instruction::Put, Some(addr))?;
-        }
         Definition::Unit => {
             // all unit literals will use unit used in the zero element slot of data
-            data.push_instruction(Instruction::Put, Some(Data::Size::zero()))?;
-        }
-        Definition::Symbol => {
-            let addr = data.add_symbol(Data::parse_symbol(&node.get_lex_token().get_text()[1..])?)?;
+            let addr = data.add_unit()?;
             data.push_instruction(Instruction::Put, Some(addr))?;
-        }
-        Definition::Value => {
-            // all unit literals will use unit used in the zero element slot of data
-            data.push_instruction(Instruction::PutValue, None)?;
         }
         Definition::True => {
             let addr = data.add_true()?;
@@ -174,6 +131,35 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         Definition::False => {
             let addr = data.add_false()?;
             data.push_instruction(Instruction::Put, Some(addr))?;
+        }
+        Definition::Integer => {
+            let addr = data.parse_add_number(node.get_lex_token().get_text())?;
+            data.push_instruction(Instruction::Put, Some(addr))?;
+        }
+        Definition::CharList => {
+            let addr = data.parse_add_char_list(node.get_lex_token().get_text())?;
+            data.push_instruction(Instruction::Put, Some(addr))?;
+        }
+        Definition::ByteList => {
+            let addr = data.parse_add_byte_list(node.get_lex_token().get_text())?;
+            data.push_instruction(Instruction::Put, Some(addr))?;
+        }
+        Definition::Identifier => {
+            let addr = data.parse_add_symbol(node.get_lex_token().get_text())?;
+
+            data.push_instruction(Instruction::Resolve, Some(addr))?;
+        }
+        Definition::Property => {
+            let addr = data.parse_add_symbol(node.get_lex_token().get_text())?;
+            data.push_instruction(Instruction::Put, Some(addr))?;
+        }
+        Definition::Symbol => {
+            let addr = data.parse_add_symbol(&node.get_lex_token().get_text()[1..])?;
+            data.push_instruction(Instruction::Put, Some(addr))?;
+        }
+        Definition::Value => {
+            // all unit literals will use unit used in the zero element slot of data
+            data.push_instruction(Instruction::PutValue, None)?;
         }
         Definition::EmptyApply => {
             data.push_instruction(Instruction::EmptyApply, None)?;

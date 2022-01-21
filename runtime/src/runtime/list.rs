@@ -828,7 +828,6 @@ mod ranges {
 
 #[cfg(test)]
 mod slice {
-    use crate::simple::symbol_value;
     use crate::testing_utilites::{add_integer_list, add_links, add_list, add_pair, add_range};
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT};
 
@@ -855,7 +854,7 @@ mod slice {
     fn index_slice_of_char_list() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let chars = SimpleRuntimeData::parse_char_list("abcde");
+        let chars = SimpleRuntimeData::parse_char_list("abcde").unwrap();
 
         runtime.start_char_list().unwrap();
         for c in chars {
@@ -879,7 +878,7 @@ mod slice {
     fn index_slice_of_byte_list() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let bytes = SimpleRuntimeData::parse_byte_list("abcde");
+        let bytes = SimpleRuntimeData::parse_byte_list("abcde").unwrap();
 
         runtime.start_byte_list().unwrap();
         for b in bytes {
@@ -1048,7 +1047,6 @@ mod slice {
 
 #[cfg(test)]
 mod link {
-    use crate::simple::symbol_value;
     use crate::testing_utilites::add_links;
     use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT};
 

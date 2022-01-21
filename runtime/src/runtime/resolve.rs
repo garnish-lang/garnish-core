@@ -43,7 +43,6 @@ mod tests {
         GarnishLangRuntimeData, RuntimeError, Instruction, SimpleRuntimeData, ExpressionDataType
     };
     use crate::simple::DataError;
-    use crate::simple::symbol_value;
 
     #[test]
     fn resolve_from_input() {

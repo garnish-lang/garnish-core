@@ -836,7 +836,7 @@ mod tests {
 
 #[cfg(test)]
 pub mod testing_utilites {
-    use crate::{DataError, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData, symbol_value};
+    use crate::{DataError, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData};
 
     pub const DEFERRED_VALUE: usize = 1000;
 
@@ -979,7 +979,7 @@ pub mod testing_utilites {
     }
 
     pub fn add_char_list(runtime: &mut SimpleRuntimeData, s: &str) -> usize {
-        let chars = SimpleRuntimeData::parse_char_list(s);
+        let chars = SimpleRuntimeData::parse_char_list(s).unwrap();
 
         runtime.start_char_list().unwrap();
         for c in chars {
@@ -996,7 +996,7 @@ pub mod testing_utilites {
     }
 
     pub fn add_byte_list(runtime: &mut SimpleRuntimeData, s: &str) -> usize {
-        let bytes = SimpleRuntimeData::parse_byte_list(s);
+        let bytes = SimpleRuntimeData::parse_byte_list(s).unwrap();
 
         runtime.start_byte_list().unwrap();
         for b in bytes {

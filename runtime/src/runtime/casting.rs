@@ -862,7 +862,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
-        let expected = SimpleRuntimeData::parse_char_list(input);
+        let expected = SimpleRuntimeData::parse_char_list(input).unwrap();
         let mut result = vec![];
 
         for i in 0..input.len() {
@@ -888,7 +888,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
-        let expected = SimpleRuntimeData::parse_byte_list(input);
+        let expected = SimpleRuntimeData::parse_byte_list(input).unwrap();
         let mut result = vec![];
 
         for i in 0..input.len() {
@@ -978,7 +978,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
-        let expected: Vec<char> = SimpleRuntimeData::parse_char_list(input).iter().skip(2).take(6).map(|c| *c).collect();
+        let expected: Vec<char> = SimpleRuntimeData::parse_char_list(input).unwrap().iter().skip(2).take(6).map(|c| *c).collect();
         let mut result = vec![];
 
         for i in 0..expected.len() {
@@ -1006,7 +1006,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
-        let expected: Vec<u8> = SimpleRuntimeData::parse_byte_list(input).iter().skip(2).take(6).map(|c| *c).collect();
+        let expected: Vec<u8> = SimpleRuntimeData::parse_byte_list(input).unwrap().iter().skip(2).take(6).map(|c| *c).collect();
         let mut result = vec![];
 
         for i in 0..expected.len() {

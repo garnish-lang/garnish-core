@@ -1,4 +1,4 @@
-use crate::{DataError, ExpressionDataType, Instruction};
+use crate::{ExpressionDataType, Instruction};
 use std::fmt::{Debug, Display};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 use std::str::FromStr;
@@ -31,7 +31,6 @@ pub trait GarnishNumber: Sized {
 
 pub trait GarnishLangRuntimeData {
     type Error: std::error::Error + 'static;
-    type DataLease: Copy;
     type Symbol: Display + Debug + PartialOrd + TypeConstants + Copy;
     type Byte: Display + Debug + PartialOrd + Copy;
     type Char: Display + Debug + PartialOrd + Copy;
@@ -144,8 +143,41 @@ pub trait GarnishLangRuntimeData {
     fn parse_symbol(from: &str) -> Result<Self::Symbol, Self::Error>;
     fn parse_char(from: &str) -> Result<Self::Char, Self::Error>;
     fn parse_byte(from: &str) -> Result<Self::Byte, Self::Error>;
-    fn parse_char_list(from: &str) -> Vec<Self::Char>;
-    fn parse_byte_list(from: &str) -> Vec<Self::Byte>;
+    fn parse_char_list(from: &str) -> Result<Vec<Self::Char>, Self::Error>;
+    fn parse_byte_list(from: &str) -> Result<Vec<Self::Byte>, Self::Error>;
+
+    // parse and add to data
+    fn parse_add_number(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        self.add_number(Self::parse_number(from)?)
+    }
+
+    fn parse_add_symbol(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        self.add_symbol(Self::parse_symbol(from)?)
+    }
+
+    fn parse_add_char(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        self.add_char(Self::parse_char(from)?)
+    }
+
+    fn parse_add_byte(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        self.add_byte(Self::parse_byte(from)?)
+    }
+
+    fn parse_add_char_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        self.start_char_list()?;
+        for c in Self::parse_char_list(from)? {
+            self.add_to_char_list(c)?;
+        }
+        self.end_char_list()
+    }
+
+    fn parse_add_byte_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        self.start_byte_list()?;
+        for b in Self::parse_byte_list(from)? {
+            self.add_to_byte_list(b)?;
+        }
+        self.end_byte_list()
+    }
 }
 
 impl GarnishNumber for i32 {

@@ -1,5 +1,4 @@
 use crate::{LexerToken, SecondaryDefinition};
-use garnish_lang_runtime::ExpressionDataType;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -121,15 +120,4 @@ pub(crate) fn append_token_details<T, S: std::error::Error + 'static>(
     token: &LexerToken,
 ) -> Result<T, CompilerError<S>> {
     result.map_err(|e| e.append_token_details(token))
-}
-
-pub(crate) fn data_parse_error<T, S: std::error::Error + 'static>(
-    token: LexerToken,
-    desired_type: ExpressionDataType,
-) -> Result<T, CompilerError<S>> {
-    Err(CompilerError::new(
-        format!("Could not create {:?} data from string {:?}.", desired_type, token.get_text()).as_str(),
-        token.get_line(),
-        token.get_column(),
-    ))
 }
