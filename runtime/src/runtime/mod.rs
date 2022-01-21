@@ -32,7 +32,7 @@ pub(crate) use utilities::*;
 
 use crate::runtime::arithmetic::{absolute_value, add, divide, integer_divide, multiply, opposite, power, remainder, subtract};
 use crate::runtime::bitwise::{bitwise_and, bitwise_not, bitwise_or, bitwise_left_shift, bitwise_right_shift, bitwise_xor};
-use crate::runtime::casting::type_cast;
+use crate::runtime::casting::{type_cast, type_of};
 use crate::runtime::comparison::{greater_than, greater_than_or_equal, less_than, less_than_or_equal};
 use crate::runtime::equality::{not_equal, type_equal};
 use crate::runtime::internals::{access_left_internal, access_length_internal, access_right_internal};
@@ -82,6 +82,7 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn xor(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn not(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
+    fn type_of(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn type_equal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn type_cast<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
 
@@ -171,6 +172,7 @@ where
             Instruction::UpdateValue => self.update_value()?,
             Instruction::StartSideEffect => self.start_side_effect()?,
             Instruction::EndSideEffect => self.end_side_effect()?,
+            Instruction::TypeOf => self.type_of()?,
             Instruction::ApplyType => self.type_cast(context)?,
             Instruction::TypeEqual => self.type_equal()?,
             Instruction::Equal => self.equal()?,
@@ -359,6 +361,10 @@ where
     //
     // Type Ops
     //
+
+    fn type_of(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        type_of(self)
+    }
 
     fn type_cast<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
         type_cast(self, context)

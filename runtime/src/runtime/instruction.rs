@@ -1,5 +1,4 @@
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-
 pub enum Instruction {
     Put = 1,
     PutValue,
@@ -28,6 +27,7 @@ pub enum Instruction {
     Not,
     JumpIfTrue,
     JumpIfFalse,
+    TypeOf,
     ApplyType,
     TypeEqual,
     Equal,

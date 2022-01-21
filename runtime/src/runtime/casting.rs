@@ -1,6 +1,14 @@
 use crate::runtime::internals::{link_len, link_len_size};
 use crate::runtime::list::{iterate_link_internal, iterate_link_internal_rev};
-use crate::{get_range, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants, GarnishLangRuntimeContext, Instruction};
+use crate::{get_range, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, Instruction, OrNumberError, RuntimeError, TypeConstants, next_ref};
+
+pub(crate) fn type_of<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+    let a = next_ref(this)?;
+    let t = this.get_data_type(a)?;
+    this.add_type(t).and_then(|r| this.push_register(r))?;
+
+    Ok(())
+}
 
 pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
@@ -451,13 +459,31 @@ where
 #[cfg(test)]
 mod deferring {
     use crate::runtime::GarnishRuntime;
-    use crate::testing_utilites::{deferred_op};
+    use crate::testing_utilites::deferred_op;
 
     #[test]
     fn type_cast() {
         deferred_op(|runtime, context| {
             runtime.type_cast(Some(context)).unwrap();
         })
+    }
+}
+
+#[cfg(test)]
+mod type_of {
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn no_op_cast_expression() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_number(10).unwrap();
+
+        runtime.push_register(d1).unwrap();
+
+        runtime.type_of().unwrap();
+
+        assert_eq!(runtime.get_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Number);
     }
 }
 
@@ -768,9 +794,9 @@ mod primitive {
 
 #[cfg(test)]
 mod lists {
+    use crate::simple::symbol_value;
     use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
     use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT};
-    use crate::simple::symbol_value;
 
     #[test]
     fn link_to_list() {
@@ -996,9 +1022,9 @@ mod lists {
 #[cfg(test)]
 mod links {
     use crate::runtime::internals::{link_len, link_len_size};
+    use crate::simple::symbol_value;
     use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
     use crate::{iterate_link, runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT};
-    use crate::simple::symbol_value;
 
     #[test]
     fn list_to_link_append() {
@@ -1473,7 +1499,7 @@ mod links {
 
 #[cfg(test)]
 mod deferred {
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT, SimpleRuntimeData};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn char_list() {
