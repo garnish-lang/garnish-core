@@ -123,12 +123,12 @@ pub trait GarnishLangRuntimeData {
     fn pop_jump_path(&mut self) -> Option<Self::Size>;
 
     // deferred conversions
-    fn size_to_integer(from: Self::Size) -> Self::Number;
-    fn integer_to_char(from: Self::Number) -> Option<Self::Char>;
-    fn integer_to_byte(from: Self::Number) -> Option<Self::Byte>;
-    fn char_to_integer(from: Self::Char) -> Option<Self::Number>;
+    fn size_to_number(from: Self::Size) -> Self::Number;
+    fn number_to_char(from: Self::Number) -> Option<Self::Char>;
+    fn number_to_byte(from: Self::Number) -> Option<Self::Byte>;
+    fn char_to_number(from: Self::Char) -> Option<Self::Number>;
     fn char_to_byte(from: Self::Char) -> Option<Self::Byte>;
-    fn byte_to_integer(from: Self::Byte) -> Option<Self::Number>;
+    fn byte_to_number(from: Self::Byte) -> Option<Self::Number>;
     fn byte_to_char(from: Self::Byte) -> Option<Self::Char>;
 
     // mut conversions

@@ -110,8 +110,8 @@ where
     LenFunc: Fn(&Data, Data::Size) -> Result<Data::Size, Data::Error>,
 {
     let (len1, len2) = (
-        Data::size_to_integer(len_func(this, left)?),
-        Data::size_to_integer(len_func(this, right)?),
+        Data::size_to_number(len_func(this, left)?),
+        Data::size_to_number(len_func(this, right)?),
     );
 
     let mut left_index = left_start;

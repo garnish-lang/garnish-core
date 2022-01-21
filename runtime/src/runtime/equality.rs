@@ -127,7 +127,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 let mut count = Data::Size::one();
                 let mut equal = true;
                 while count < len1 {
-                    let i = Data::size_to_integer(count);
+                    let i = Data::size_to_number(count);
                     let c1 = this.get_char_list_item(left_addr, i)?;
                     let c2 = this.get_char_list_item(right_addr, i)?;
 
@@ -151,7 +151,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 let mut count = Data::Size::one();
                 let mut equal = true;
                 while count < len1 {
-                    let i = Data::size_to_integer(count);
+                    let i = Data::size_to_number(count);
                     let c1 = this.get_byte_list_item(left_addr, i)?;
                     let c2 = this.get_byte_list_item(right_addr, i)?;
 
@@ -214,8 +214,8 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                         let mut index2 = start2;
                         let mut count = Data::Number::zero();
 
-                        let list_len1 = Data::size_to_integer(this.get_char_list_len(value1)?);
-                        let list_len2 = Data::size_to_integer(this.get_char_list_len(value2)?);
+                        let list_len1 = Data::size_to_number(this.get_char_list_len(value1)?);
+                        let list_len2 = Data::size_to_number(this.get_char_list_len(value2)?);
 
                         while count < len1 {
                             let item1 = if index1 < list_len1 {
@@ -246,8 +246,8 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                         let mut index2 = start2;
                         let mut count = Data::Number::zero();
 
-                        let list_len1 = Data::size_to_integer(this.get_byte_list_len(value1)?);
-                        let list_len2 = Data::size_to_integer(this.get_byte_list_len(value2)?);
+                        let list_len1 = Data::size_to_number(this.get_byte_list_len(value1)?);
+                        let list_len2 = Data::size_to_number(this.get_byte_list_len(value2)?);
 
                         while count < len1 {
                             let item1 = if index1 < list_len1 {
@@ -278,8 +278,8 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                         let mut index2 = start2;
                         let mut count = Data::Number::zero();
 
-                        let list_len1 = Data::size_to_integer(this.get_list_len(value1)?);
-                        let list_len2 = Data::size_to_integer(this.get_list_len(value2)?);
+                        let list_len1 = Data::size_to_number(this.get_list_len(value1)?);
+                        let list_len2 = Data::size_to_number(this.get_list_len(value2)?);
 
                         while count < len1 {
                             let item1 = if index1 < list_len1 {
@@ -309,7 +309,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                         let mut index2 = start2;
                         let mut count = Data::Number::zero();
 
-                        let list_len1 = Data::size_to_integer(this.get_list_len(value1)?);
+                        let list_len1 = Data::size_to_number(this.get_list_len(value1)?);
 
                         while count < len1 {
                             let item1 = if index1 < list_len1 {
@@ -338,7 +338,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                         let mut index2 = start2;
                         let mut count = Data::Number::zero();
 
-                        let list_len2 = Data::size_to_integer(this.get_list_len(value2)?);
+                        let list_len2 = Data::size_to_number(this.get_list_len(value2)?);
 
                         while count < len1 {
                             let item1 = match index_link(this, value1, index1)? {
@@ -430,7 +430,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
         }
         (ExpressionDataType::Link, ExpressionDataType::List) => {
             let len1 = link_len(this, left_addr)?;
-            let len2 = Data::size_to_integer(this.get_list_len(right_addr)?);
+            let len2 = Data::size_to_number(this.get_list_len(right_addr)?);
 
             if len1 != len2 {
                 false
@@ -456,7 +456,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
         }
         (ExpressionDataType::List, ExpressionDataType::Link) => {
             let len1 = link_len(this, right_addr)?;
-            let len2 = Data::size_to_integer(this.get_list_len(left_addr)?);
+            let len2 = Data::size_to_number(this.get_list_len(left_addr)?);
 
             if len1 != len2 {
                 false
@@ -501,7 +501,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
             } else {
                 let mut count = Data::Size::zero();
                 while count < len1 {
-                    let i = Data::size_to_integer(count);
+                    let i = Data::size_to_number(count);
                     let left_item = this.get_list_item(left_addr, i)?;
                     let right_item = this.get_list_item(right_addr, i)?;
 

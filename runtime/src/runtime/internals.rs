@@ -101,15 +101,15 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData, Context: Garn
     let r = next_ref(this)?;
     match this.get_data_type(r)? {
         ExpressionDataType::List => {
-            let len = Data::size_to_integer(this.get_list_len(r)?);
+            let len = Data::size_to_number(this.get_list_len(r)?);
             push_number(this, len)?;
         }
         ExpressionDataType::CharList => {
-            let len = Data::size_to_integer(this.get_char_list_len(r)?);
+            let len = Data::size_to_number(this.get_char_list_len(r)?);
             push_number(this, len)?;
         }
         ExpressionDataType::ByteList => {
-            let len = Data::size_to_integer(this.get_byte_list_len(r)?);
+            let len = Data::size_to_number(this.get_byte_list_len(r)?);
             push_number(this, len)?;
         }
         ExpressionDataType::Range => {
@@ -163,7 +163,7 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData, Context: Garn
 }
 
 pub(crate) fn link_len<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Number, RuntimeError<Data::Error>> {
-    Ok(Data::size_to_integer(link_len_size(this, addr)?))
+    Ok(Data::size_to_number(link_len_size(this, addr)?))
 }
 
 pub(crate) fn link_len_size<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Size, RuntimeError<Data::Error>> {

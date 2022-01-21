@@ -88,7 +88,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             this.start_list(len)?;
 
             while count < len {
-                let i = Data::size_to_integer(count);
+                let i = Data::size_to_number(count);
                 let mut item = this.get_list_item(right_addr, i)?;
 
                 let (is_pair_mapping, sym_addr) = match this.get_data_type(item)? {

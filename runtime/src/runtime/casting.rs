@@ -72,19 +72,19 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
         }
         // Primitives
         (ExpressionDataType::Number, ExpressionDataType::Char) => {
-            primitive_cast(this, left, Data::get_number, Data::integer_to_char, Data::add_char)?;
+            primitive_cast(this, left, Data::get_number, Data::number_to_char, Data::add_char)?;
         }
         (ExpressionDataType::Number, ExpressionDataType::Byte) => {
-            primitive_cast(this, left, Data::get_number, Data::integer_to_byte, Data::add_byte)?;
+            primitive_cast(this, left, Data::get_number, Data::number_to_byte, Data::add_byte)?;
         }
         (ExpressionDataType::Char, ExpressionDataType::Number) => {
-            primitive_cast(this, left, Data::get_char, Data::char_to_integer, Data::add_number)?;
+            primitive_cast(this, left, Data::get_char, Data::char_to_number, Data::add_number)?;
         }
         (ExpressionDataType::Char, ExpressionDataType::Byte) => {
             primitive_cast(this, left, Data::get_char, Data::char_to_byte, Data::add_byte)?;
         }
         (ExpressionDataType::Byte, ExpressionDataType::Number) => {
-            primitive_cast(this, left, Data::get_byte, Data::byte_to_integer, Data::add_number)?;
+            primitive_cast(this, left, Data::get_byte, Data::byte_to_number, Data::add_number)?;
         }
         (ExpressionDataType::Byte, ExpressionDataType::Char) => {
             primitive_cast(this, left, Data::get_byte, Data::byte_to_char, Data::add_char)?;
@@ -101,7 +101,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
         }
         (ExpressionDataType::Link, ExpressionDataType::List) => {
             let len = link_len_size(this, left)?;
-            list_from_link(this, left, Data::Number::zero(), Data::size_to_integer(len))?;
+            list_from_link(this, left, Data::Number::zero(), Data::size_to_number(len))?;
         }
         (ExpressionDataType::Range, ExpressionDataType::List) => {
             let (start, end) = this.get_range(left)?;
@@ -120,11 +120,11 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
         }
         (ExpressionDataType::CharList, ExpressionDataType::List) => {
             let len = this.get_char_list_len(left)?;
-            list_from_char_list(this, left, Data::Number::zero(), Data::size_to_integer(len))?;
+            list_from_char_list(this, left, Data::Number::zero(), Data::size_to_number(len))?;
         }
         (ExpressionDataType::ByteList, ExpressionDataType::List) => {
             let len = this.get_byte_list_len(left)?;
-            list_from_byte_list(this, left, Data::Number::zero(), Data::size_to_integer(len))?;
+            list_from_byte_list(this, left, Data::Number::zero(), Data::size_to_number(len))?;
         }
         (ExpressionDataType::Slice, ExpressionDataType::List) => {
             let (value, range) = this.get_slice(left)?;
@@ -169,7 +169,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
             }
         }
         (ExpressionDataType::List, ExpressionDataType::Link) => {
-            let len = Data::size_to_integer(this.get_list_len(left)?);
+            let len = Data::size_to_number(this.get_list_len(left)?);
             create_link(this, right, Data::Number::zero(), len, |this, index| Ok(this.get_list_item(left, index)?))?;
         }
         (ExpressionDataType::Range, ExpressionDataType::Link) => {
@@ -180,14 +180,14 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
         }
         (ExpressionDataType::CharList, ExpressionDataType::Link) => {
             let len = this.get_char_list_len(left)?;
-            create_link(this, right, Data::Number::zero(), Data::size_to_integer(len), |this, index| {
+            create_link(this, right, Data::Number::zero(), Data::size_to_number(len), |this, index| {
                 let c = this.get_char_list_item(left, index)?;
                 Ok(this.add_char(c)?)
             })?;
         }
         (ExpressionDataType::ByteList, ExpressionDataType::Link) => {
             let len = this.get_byte_list_len(left)?;
-            create_link(this, right, Data::Number::zero(), Data::size_to_integer(len), |this, index| {
+            create_link(this, right, Data::Number::zero(), Data::size_to_number(len), |this, index| {
                 let c = this.get_byte_list_item(left, index)?;
                 Ok(this.add_byte(c)?)
             })?;
@@ -656,7 +656,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleRuntimeData::integer_to_char('a' as i32).unwrap();
+        let expected = SimpleRuntimeData::number_to_char('a' as i32).unwrap();
 
         assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
@@ -673,7 +673,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleRuntimeData::integer_to_byte(10).unwrap();
+        let expected = SimpleRuntimeData::number_to_byte(10).unwrap();
 
         assert_eq!(runtime.get_byte(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
@@ -690,7 +690,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleRuntimeData::char_to_integer('a').unwrap();
+        let expected = SimpleRuntimeData::char_to_number('a').unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
@@ -724,7 +724,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleRuntimeData::byte_to_integer('a' as u8).unwrap();
+        let expected = SimpleRuntimeData::byte_to_number('a' as u8).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), expected);
     }

@@ -153,7 +153,7 @@ fn index_list<Data: GarnishLangRuntimeData>(
     if index < Data::Number::zero() {
         Ok(None)
     } else {
-        if index >= Data::size_to_integer(this.get_list_len(list)?) {
+        if index >= Data::size_to_number(this.get_list_len(list)?) {
             Ok(None)
         } else {
             Ok(Some(this.get_list_item(list, index)?))
@@ -169,7 +169,7 @@ fn index_char_list<Data: GarnishLangRuntimeData>(
     if index < Data::Number::zero() {
         Ok(None)
     } else {
-        if index >= Data::size_to_integer(this.get_char_list_len(list)?) {
+        if index >= Data::size_to_number(this.get_char_list_len(list)?) {
             Ok(None)
         } else {
             let c = this.get_char_list_item(list, index)?;
@@ -187,7 +187,7 @@ fn index_byte_list<Data: GarnishLangRuntimeData>(
     if index < Data::Number::zero() {
         Ok(None)
     } else {
-        if index >= Data::size_to_integer(this.get_byte_list_len(list)?) {
+        if index >= Data::size_to_number(this.get_byte_list_len(list)?) {
             Ok(None)
         } else {
             let c = this.get_byte_list_item(list, index)?;
