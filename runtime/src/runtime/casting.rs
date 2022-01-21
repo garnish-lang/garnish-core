@@ -8,7 +8,14 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
 ) -> Result<(), RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
 
-    match (this.get_data_type(left)?, this.get_data_type(right)?) {
+    let (left_type, mut right_type) = (this.get_data_type(left)?, this.get_data_type(right)?);
+
+    if right_type == ExpressionDataType::Type {
+        // correct actual type we want to cast to
+        right_type = this.get_type(right)?;
+    }
+
+    match (left_type, right_type) {
         (ExpressionDataType::Link, ExpressionDataType::Link) => {
             let (_, _, from_is_append) = this.get_link(left)?;
             let (_, _, to_is_append) = this.get_link(right)?;
@@ -494,6 +501,21 @@ mod simple {
 
         let d1 = runtime.add_number(10).unwrap();
         let d2 = runtime.add_true().unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.type_cast(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn cast_to_true_with_type() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_number(10).unwrap();
+        let d2 = runtime.add_type(ExpressionDataType::True).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
