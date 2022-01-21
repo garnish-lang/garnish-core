@@ -1,7 +1,7 @@
 use crate::{DataCastResult, DataError, GarnishNumber};
 use std::cmp::Ordering;
 use crate::SimpleNumber::{Float, Integer};
-use std::ops::{Add, Sub, Mul, Div};
+use std::ops::{Add, Sub, Mul, Div, Rem};
 
 #[derive(Copy, Clone, Debug)]
 pub enum SimpleNumber {
@@ -111,11 +111,16 @@ impl GarnishNumber for SimpleNumber {
     }
 
     fn integer_divide(self, rhs: Self) -> Option<Self> {
-        todo!()
+        Some(match (self, rhs) {
+            (SimpleNumber::Integer(v1), SimpleNumber::Integer(v2)) => Integer(v1 / v2),
+            (SimpleNumber::Float(v1), SimpleNumber::Float(v2)) => Integer(v1 as i32 / v2 as i32),
+            (SimpleNumber::Integer(v1), SimpleNumber::Float(v2)) => Integer(v1 / v2 as i32),
+            (SimpleNumber::Float(v1), SimpleNumber::Integer(v2)) => Integer(v1 as i32 / v2),
+        })
     }
 
     fn remainder(self, rhs: Self) -> Option<Self> {
-        todo!()
+        do_op(&self, &rhs, i32::rem, f64::rem)
     }
 
     fn absolute_value(self) -> Option<Self> {
@@ -235,5 +240,21 @@ mod tests {
         assert_eq!(Float(10.0).power(Float(-3.0)), None);
         assert_eq!(Integer(10).power(Float(-3.0)), None);
         assert_eq!(Float(10.0).power(Integer(-3)), None);
+    }
+
+    #[test]
+    fn integer_divide() {
+        assert_eq!(Integer(10).integer_divide(Integer(20)).unwrap(), Integer(0));
+        assert_eq!(Float(10.0).integer_divide(Float(20.0)).unwrap(), Integer(0));
+        assert_eq!(Integer(10).integer_divide(Float(20.0)).unwrap(), Integer(0));
+        assert_eq!(Float(10.0).integer_divide(Integer(20)).unwrap(), Integer(0));
+    }
+
+    #[test]
+    fn remainder() {
+        assert_eq!(Integer(10).remainder(Integer(20)).unwrap(), Integer(10));
+        assert_eq!(Float(10.0).remainder(Float(20.0)).unwrap(), Float(10.0));
+        assert_eq!(Integer(10).remainder(Float(20.0)).unwrap(), Float(10.0));
+        assert_eq!(Float(10.0).remainder(Integer(20)).unwrap(), Float(10.0));
     }
 }
