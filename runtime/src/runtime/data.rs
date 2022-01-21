@@ -142,12 +142,6 @@ pub trait GarnishLangRuntimeData {
     // will require moving simple data to its own crate
     fn parse_char_list(from: &str) -> Vec<Self::Char>;
     fn parse_byte_list(from: &str) -> Vec<Self::Byte>;
-
-    // data lease methods
-    fn lease_tmp_stack(&mut self) -> Result<Self::DataLease, Self::Error>;
-    fn push_tmp_stack(&mut self, lease: Self::DataLease, item: Self::Size) -> Result<(), Self::Error>;
-    fn pop_tmp_stack(&mut self, lease: Self::DataLease) -> Result<Option<Self::Size>, Self::Error>;
-    fn release_tmp_stack(&mut self, lease: Self::DataLease) -> Result<(), Self::Error>;
 }
 
 impl GarnishNumber for i32 {
