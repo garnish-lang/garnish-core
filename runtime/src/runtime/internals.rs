@@ -1,6 +1,8 @@
-use log::Level::Debug;
 use crate::runtime::range::range_len;
-use crate::{next_ref, push_number, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, GarnishLangRuntimeContext, Instruction};
+use crate::{
+    next_ref, push_number, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, Instruction, RuntimeError,
+    TypeConstants,
+};
 
 pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
@@ -32,7 +34,12 @@ pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData, Context: Garnis
         t => match context {
             None => push_unit(this)?,
             Some(c) => {
-                if !c.defer_op(this, Instruction::AccessLeftInternal, (t, r), (ExpressionDataType::Unit, Data::Size::zero()))? {
+                if !c.defer_op(
+                    this,
+                    Instruction::AccessLeftInternal,
+                    (t, r),
+                    (ExpressionDataType::Unit, Data::Size::zero()),
+                )? {
                     push_unit(this)?
                 }
             }
@@ -72,7 +79,12 @@ pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData, Context: Garni
         t => match context {
             None => push_unit(this)?,
             Some(c) => {
-                if !c.defer_op(this, Instruction::AccessRightInternal, (t, r), (ExpressionDataType::Unit, Data::Size::zero()))? {
+                if !c.defer_op(
+                    this,
+                    Instruction::AccessRightInternal,
+                    (t, r),
+                    (ExpressionDataType::Unit, Data::Size::zero()),
+                )? {
                     push_unit(this)?
                 }
             }
@@ -135,7 +147,12 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData, Context: Garn
         t => match context {
             None => push_unit(this)?,
             Some(c) => {
-                if !c.defer_op(this, Instruction::AccessLengthInternal, (t, r), (ExpressionDataType::Unit, Data::Size::zero()))? {
+                if !c.defer_op(
+                    this,
+                    Instruction::AccessLengthInternal,
+                    (t, r),
+                    (ExpressionDataType::Unit, Data::Size::zero()),
+                )? {
                     push_unit(this)?
                 }
             }
@@ -178,7 +195,7 @@ pub(crate) fn link_len_size<Data: GarnishLangRuntimeData>(this: &Data, addr: Dat
 #[cfg(test)]
 mod deferring {
     use crate::runtime::GarnishRuntime;
-    use crate::testing_utilites::{deferred_op, deferred_unary_op};
+    use crate::testing_utilites::deferred_unary_op;
 
     #[test]
     fn left_internal() {

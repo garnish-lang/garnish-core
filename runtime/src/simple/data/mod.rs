@@ -1,4 +1,3 @@
-use std::f32::consts::E;
 use crate::{DataError, ExpressionDataType};
 
 #[derive(Debug, Eq, PartialEq)]
@@ -8,7 +7,10 @@ pub struct SimpleDataList {
 
 impl Default for SimpleDataList {
     fn default() -> Self {
-        SimpleDataList::new().append(SimpleData::Unit).append(SimpleData::False).append(SimpleData::True)
+        SimpleDataList::new()
+            .append(SimpleData::Unit)
+            .append(SimpleData::False)
+            .append(SimpleData::True)
     }
 }
 
@@ -55,7 +57,7 @@ pub enum SimpleData {
     Range(usize, usize),
     Slice(usize, usize),
     Link(usize, usize, bool),
-    List(Vec<usize>, Vec<usize>)
+    List(Vec<usize>, Vec<usize>),
 }
 
 impl SimpleData {
@@ -84,127 +86,127 @@ impl SimpleData {
     pub fn is_unit(&self) -> bool {
         match self {
             SimpleData::Unit => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn is_true(&self) -> bool {
         match self {
             SimpleData::True => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn is_false(&self) -> bool {
         match self {
             SimpleData::False => true,
-            _ => false
+            _ => false,
         }
     }
 
     pub fn as_type(&self) -> DataCastResult<ExpressionDataType> {
         match self {
             SimpleData::Type(v) => Ok(*v),
-            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Number", self))),
         }
     }
 
     pub fn as_number(&self) -> DataCastResult<i32> {
         match self {
             SimpleData::Number(v) => Ok(*v),
-            _ => Err(DataError::from(format!("{:?} is not a Number", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Number", self))),
         }
     }
 
     pub fn as_char(&self) -> DataCastResult<char> {
         match self {
             SimpleData::Char(v) => Ok(*v),
-            _ => Err(DataError::from(format!("{:?} is not a Char", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Char", self))),
         }
     }
 
     pub fn as_byte(&self) -> DataCastResult<u8> {
         match self {
             SimpleData::Byte(v) => Ok(*v),
-            _ => Err(DataError::from(format!("{:?} is not a Byte", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Byte", self))),
         }
     }
 
     pub fn as_symbol(&self) -> DataCastResult<u64> {
         match self {
             SimpleData::Symbol(v) => Ok(*v),
-            _ => Err(DataError::from(format!("{:?} is not a Symbol", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Symbol", self))),
         }
     }
 
     pub fn as_expression(&self) -> DataCastResult<usize> {
         match self {
             SimpleData::Expression(v) => Ok(*v),
-            _ => Err(DataError::from(format!("{:?} is not an Expression", self)))
+            _ => Err(DataError::from(format!("{:?} is not an Expression", self))),
         }
     }
 
     pub fn as_external(&self) -> DataCastResult<usize> {
         match self {
             SimpleData::External(v) => Ok(*v),
-            _ => Err(DataError::from(format!("{:?} is not an External", self)))
+            _ => Err(DataError::from(format!("{:?} is not an External", self))),
         }
     }
 
     pub fn as_char_list(&self) -> DataCastResult<String> {
         match self {
             SimpleData::CharList(v) => Ok(v.clone()),
-            _ => Err(DataError::from(format!("{:?} is not a CharList", self)))
+            _ => Err(DataError::from(format!("{:?} is not a CharList", self))),
         }
     }
 
     pub fn as_byte_list(&self) -> DataCastResult<Vec<u8>> {
         match self {
             SimpleData::ByteList(v) => Ok(v.clone()),
-            _ => Err(DataError::from(format!("{:?} is not a ByteList", self)))
+            _ => Err(DataError::from(format!("{:?} is not a ByteList", self))),
         }
     }
 
     pub fn as_pair(&self) -> DataCastResult<(usize, usize)> {
         match self {
             SimpleData::Pair(l, r) => Ok((*l, *r)),
-            _ => Err(DataError::from(format!("{:?} is not a Pair", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Pair", self))),
         }
     }
 
     pub fn as_range(&self) -> DataCastResult<(usize, usize)> {
         match self {
             SimpleData::Range(s, e) => Ok((*s, *e)),
-            _ => Err(DataError::from(format!("{:?} is not a Range", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Range", self))),
         }
     }
 
     pub fn as_link(&self) -> DataCastResult<(usize, usize, bool)> {
         match self {
             SimpleData::Link(v, l, a) => Ok((*v, *l, *a)),
-            _ => Err(DataError::from(format!("{:?} is not a Link", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Link", self))),
         }
     }
 
     pub fn as_slice(&self) -> DataCastResult<(usize, usize)> {
         match self {
             SimpleData::Slice(v, r) => Ok((*v, *r)),
-            _ => Err(DataError::from(format!("{:?} is not a Slice", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Slice", self))),
         }
     }
 
     pub fn as_list(&self) -> DataCastResult<(Vec<usize>, Vec<usize>)> {
         match self {
             SimpleData::List(v, a) => Ok((v.clone(), a.clone())),
-            _ => Err(DataError::from(format!("{:?} is not a List", self)))
+            _ => Err(DataError::from(format!("{:?} is not a List", self))),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::ExpressionDataType;
     use crate::simple::data::SimpleData;
+    use crate::ExpressionDataType;
 
     #[test]
     fn get_data_type() {
@@ -388,7 +390,10 @@ mod tests {
 
     #[test]
     fn as_list() {
-        assert_eq!(SimpleData::List(vec![10, 20], vec![20, 10]).as_list().unwrap(), (vec![10, 20], vec![20, 10]));
+        assert_eq!(
+            SimpleData::List(vec![10, 20], vec![20, 10]).as_list().unwrap(),
+            (vec![10, 20], vec![20, 10])
+        );
     }
 
     #[test]

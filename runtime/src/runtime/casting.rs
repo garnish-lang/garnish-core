@@ -444,7 +444,7 @@ where
 #[cfg(test)]
 mod deferring {
     use crate::runtime::GarnishRuntime;
-    use crate::testing_utilites::{deferred_op, deferred_unary_op};
+    use crate::testing_utilites::{deferred_op};
 
     #[test]
     fn type_cast() {
