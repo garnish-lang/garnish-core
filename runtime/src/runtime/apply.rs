@@ -1,7 +1,7 @@
 use super::context::GarnishLangRuntimeContext;
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
-use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants, Instruction};
+use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, ErrorType, RuntimeError, TypeConstants, Instruction};
 
 pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
@@ -106,19 +106,25 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                     _ => (false, Data::Size::zero()),
                 };
 
-                let (value, is_associative) = match get_access_addr(this, item, left_addr)? {
-                    Some(addr) => match this.get_data_type(addr)? {
-                        ExpressionDataType::Pair => {
-                            let (left, _right) = this.get_pair(addr)?;
-                            match this.get_data_type(left)? {
-                                ExpressionDataType::Symbol => (addr, true),
-                                _ => (addr, false),
+                let (value, is_associative) = match get_access_addr(this, item, left_addr) {
+                    Err(e) => match e.get_type() {
+                        ErrorType::UnsupportedOpTypes => (this.add_unit()?, false),
+                        _ => Err(e)?
+                    }
+                    Ok(i) => match i {
+                        Some(addr) => match this.get_data_type(addr)? {
+                            ExpressionDataType::Pair => {
+                                let (left, _right) = this.get_pair(addr)?;
+                                match this.get_data_type(left)? {
+                                    ExpressionDataType::Symbol => (addr, true),
+                                    _ => (addr, false),
+                                }
                             }
-                        }
-                        _ => (addr, false),
-                    },
-                    // make sure there is a unit value to use
-                    None => (this.add_unit()?, false),
+                            _ => (addr, false),
+                        },
+                        // make sure there is a unit value to use
+                        None => (this.add_unit()?, false),
+                    }
                 };
 
                 if is_pair_mapping {

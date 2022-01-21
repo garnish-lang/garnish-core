@@ -1,6 +1,13 @@
+use crate::{GarnishNumber, Instruction};
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
-use crate::{GarnishNumber, Instruction};
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub enum ErrorType {
+    Unknown,
+    // special code used internally to defer error during complex matching
+    UnsupportedOpTypes,
+}
 
 pub trait OrNumberError<T, Source: 'static + std::error::Error> {
     fn or_num_err(self) -> Result<T, RuntimeError<Source>>;
@@ -8,6 +15,7 @@ pub trait OrNumberError<T, Source: 'static + std::error::Error> {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct RuntimeError<Source: 'static + std::error::Error> {
+    code: ErrorType,
     message: String,
     source: Option<Source>,
 }
@@ -15,6 +23,7 @@ pub struct RuntimeError<Source: 'static + std::error::Error> {
 impl<Source: 'static + std::error::Error> RuntimeError<Source> {
     pub fn new(message: &str) -> Self {
         RuntimeError {
+            code: ErrorType::Unknown,
             message: message.to_string(),
             source: None,
         }
@@ -22,15 +31,29 @@ impl<Source: 'static + std::error::Error> RuntimeError<Source> {
 
     pub fn new_message(message: String) -> Self {
         RuntimeError {
+            code: ErrorType::Unknown,
             message,
             source: None,
         }
+    }
+
+    pub fn unsupported_types() -> Self {
+        RuntimeError {
+            code: ErrorType::UnsupportedOpTypes,
+            message: String::new(),
+            source: None,
+        }
+    }
+
+    pub fn get_type(&self) -> ErrorType {
+        self.code
     }
 }
 
 impl<Source: 'static + std::error::Error> Default for RuntimeError<Source> {
     fn default() -> Self {
         RuntimeError {
+            code: ErrorType::Unknown,
             message: String::new(),
             source: None,
         }
@@ -69,7 +92,10 @@ impl<Num: GarnishNumber, Source: 'static + std::error::Error> OrNumberError<Num,
 // Creation utilites
 
 pub(crate) fn instruction_error<T, E: std::error::Error + 'static, I: Debug>(instruction: Instruction, index: I) -> Result<T, RuntimeError<E>> {
-    Err(RuntimeError::new_message(format!("Expected instruction {:?} at index {:?} to have data. Found None.", instruction, index)))
+    Err(RuntimeError::new_message(format!(
+        "Expected instruction {:?} at index {:?} to have data. Found None.",
+        instruction, index
+    )))
 }
 
 pub(crate) fn state_error<T, E: std::error::Error>(message: String) -> Result<T, RuntimeError<E>> {

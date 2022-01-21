@@ -1,5 +1,8 @@
 use crate::runtime::range::range_len;
-use crate::{get_range, next_ref, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, TypeConstants, GarnishNumber, OrNumberError};
+use crate::{
+    get_range, next_ref, push_unit, state_error, ErrorType, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber,
+    Instruction, OrNumberError, RuntimeError, TypeConstants,
+};
 
 pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
     if len > this.get_register_len() {
@@ -45,13 +48,34 @@ pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data
     Ok(())
 }
 
-pub(crate) fn access<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn access<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
     let right_ref = next_ref(this)?;
     let left_ref = next_ref(this)?;
 
-    match get_access_addr(this, right_ref, left_ref)? {
-        None => push_unit(this)?,
-        Some(i) => this.push_register(i)?,
+    match get_access_addr(this, right_ref, left_ref) {
+        Err(e) => match e.get_type() {
+            ErrorType::UnsupportedOpTypes => match context {
+                None => push_unit(this)?,
+                Some(c) => {
+                    if !c.defer_op(
+                        this,
+                        Instruction::Access,
+                        (this.get_data_type(left_ref)?, left_ref),
+                        (this.get_data_type(right_ref)?, right_ref),
+                    )? {
+                        push_unit(this)?
+                    }
+                }
+            },
+            _ => Err(e)?,
+        },
+        Ok(i) => match i {
+            None => push_unit(this)?,
+            Some(i) => this.push_register(i)?,
+        },
     }
 
     Ok(())
@@ -71,7 +95,7 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
             let sym = this.get_symbol(right)?;
             access_with_symbol(this, sym, left)
         }
-        _ => Ok(None),
+        _ => Err(RuntimeError::unsupported_types())
     }
 }
 
@@ -104,20 +128,20 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
             }
         }
         ExpressionDataType::Slice => {
-                let (value, range) = this.get_slice(value)?;
-                let (start, _, _) = get_range(this, range)?;
-                let adjusted_index = start.add(index).or_num_err()?;
+            let (value, range) = this.get_slice(value)?;
+            let (start, _, _) = get_range(this, range)?;
+            let adjusted_index = start.add(index).or_num_err()?;
 
-                match this.get_data_type(value)? {
-                    ExpressionDataType::Link => index_link(this, value, adjusted_index),
-                    ExpressionDataType::List => index_list(this, value, adjusted_index),
-                    ExpressionDataType::CharList => index_char_list(this, value, adjusted_index),
-                    ExpressionDataType::ByteList => index_byte_list(this, value, adjusted_index),
-                    t => state_error(format!("Invalid value for slice {:?}", t)),
-                }
+            match this.get_data_type(value)? {
+                ExpressionDataType::Link => index_link(this, value, adjusted_index),
+                ExpressionDataType::List => index_list(this, value, adjusted_index),
+                ExpressionDataType::CharList => index_char_list(this, value, adjusted_index),
+                ExpressionDataType::ByteList => index_byte_list(this, value, adjusted_index),
+                t => state_error(format!("Invalid value for slice {:?}", t)),
+            }
         }
         ExpressionDataType::Link => index_link(this, value, index),
-        _ => Ok(None),
+        _ => Err(RuntimeError::unsupported_types()),
     }
 }
 
@@ -238,8 +262,8 @@ pub(crate) fn iterate_link_internal_rev<Data: GarnishLangRuntimeData, Callback>(
     link: Data::Size,
     mut func: Callback,
 ) -> Result<(), RuntimeError<Data::Error>>
-    where
-        Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
+where
+    Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
 {
     let mut current_index = Data::Number::zero();
     // keep track of starting point to any pushed values later
@@ -357,7 +381,7 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
             }
         }
         ExpressionDataType::Link => sym_access_links_slices(this, Data::Number::zero(), value, sym, Data::Number::max_value()),
-        _ => Ok(None),
+        _ => Err(RuntimeError::unsupported_types()),
     }
 }
 
@@ -454,8 +478,21 @@ fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
 }
 
 #[cfg(test)]
+mod deferring {
+    use crate::runtime::GarnishRuntime;
+    use crate::testing_utilites::{deferred_op, deferred_unary_op};
+
+    #[test]
+    fn access() {
+        deferred_op(|runtime, context| {
+            runtime.access(Some(context)).unwrap();
+        })
+    }
+}
+
+#[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn make_list() {
@@ -548,7 +585,7 @@ mod tests {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), i2);
     }
@@ -570,7 +607,7 @@ mod tests {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), i3);
     }
@@ -592,7 +629,7 @@ mod tests {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), start);
         assert_eq!(runtime.get_char(start).unwrap(), 'c');
@@ -615,7 +652,7 @@ mod tests {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), start);
         assert_eq!(runtime.get_byte(start).unwrap(), 30);
@@ -638,7 +675,7 @@ mod tests {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -660,7 +697,7 @@ mod tests {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -677,7 +714,7 @@ mod tests {
         runtime.push_register(i1).unwrap();
         runtime.push_register(i2).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -699,7 +736,7 @@ mod tests {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -718,7 +755,7 @@ mod tests {
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
-        let result = runtime.access();
+        let result = runtime.access(NO_CONTEXT);
 
         assert!(result.is_err());
     }
@@ -740,7 +777,7 @@ mod tests {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -748,7 +785,7 @@ mod tests {
 
 #[cfg(test)]
 mod ranges {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn access_with_integer() {
@@ -764,7 +801,7 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i4).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 15);
     }
@@ -783,7 +820,7 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i4).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -791,9 +828,9 @@ mod ranges {
 
 #[cfg(test)]
 mod slice {
-    use crate::testing_utilites::{add_integer_list, add_links, add_list, add_pair, add_range};
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
     use crate::simple::symbol_value;
+    use crate::testing_utilites::{add_integer_list, add_links, add_list, add_pair, add_range};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn index_slice_of_list() {
@@ -809,7 +846,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 40);
     }
@@ -833,7 +870,7 @@ mod slice {
         runtime.push_register(slice).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), 'd');
     }
@@ -857,7 +894,7 @@ mod slice {
         runtime.push_register(slice).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_byte(runtime.get_register(0).unwrap()).unwrap(), 'd' as u8);
     }
@@ -876,7 +913,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 50);
     }
@@ -895,7 +932,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -914,7 +951,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -933,7 +970,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_symbol(left).unwrap(), symbol_value("val4"));
@@ -954,7 +991,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 5);
     }
@@ -973,7 +1010,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -1003,7 +1040,7 @@ mod slice {
         runtime.push_register(slice).unwrap();
         runtime.push_register(sym).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 200);
     }
@@ -1011,9 +1048,9 @@ mod slice {
 
 #[cfg(test)]
 mod link {
-    use crate::testing_utilites::add_links;
-    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData};
     use crate::simple::symbol_value;
+    use crate::testing_utilites::add_links;
+    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn index_prepend_link_with_integer() {
@@ -1025,7 +1062,7 @@ mod link {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_number(right).unwrap(), 4);
@@ -1042,7 +1079,7 @@ mod link {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_number(right).unwrap(), 4);
@@ -1059,7 +1096,7 @@ mod link {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 3);
     }
@@ -1074,7 +1111,7 @@ mod link {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access().unwrap();
+        runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 3);
     }

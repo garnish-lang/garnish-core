@@ -1,10 +1,11 @@
 use crate::runtime::internals::{link_len, link_len_size};
 use crate::runtime::list::{iterate_link_internal, iterate_link_internal_rev};
-use crate::{
-    get_range, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants,
-};
+use crate::{get_range, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants, GarnishLangRuntimeContext, Instruction};
 
-pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+    this: &mut Data,
+    context: Option<&mut Context>,
+) -> Result<(), RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
 
     match (this.get_data_type(left)?, this.get_data_type(right)?) {
@@ -229,7 +230,14 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
         (ExpressionDataType::Unit, _) => push_unit(this)?,
         (_, ExpressionDataType::False) => this.add_false().and_then(|r| this.push_register(r))?,
         (_, ExpressionDataType::True) => this.add_true().and_then(|r| this.push_register(r))?,
-        _ => push_unit(this)?,
+        (l, r) => match context {
+            None => push_unit(this)?,
+            Some(c) => {
+                if !c.defer_op(this, Instruction::ApplyType, (l, left), (r, right))? {
+                    push_unit(this)?
+                }
+            }
+        },
     }
 
     Ok(())
@@ -434,8 +442,21 @@ where
 }
 
 #[cfg(test)]
+mod deferring {
+    use crate::runtime::GarnishRuntime;
+    use crate::testing_utilites::{deferred_op, deferred_unary_op};
+
+    #[test]
+    fn type_cast() {
+        deferred_op(|runtime, context| {
+            runtime.type_cast(Some(context)).unwrap();
+        })
+    }
+}
+
+#[cfg(test)]
 mod simple {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn no_op_cast_expression() {
@@ -447,7 +468,7 @@ mod simple {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_expression(runtime.get_register(0).unwrap()).unwrap(), 10);
     }
@@ -462,7 +483,7 @@ mod simple {
         runtime.push_register(int).unwrap();
         runtime.push_register(unit).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -477,7 +498,7 @@ mod simple {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -492,7 +513,7 @@ mod simple {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -510,7 +531,7 @@ mod simple {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -528,7 +549,7 @@ mod simple {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -546,7 +567,7 @@ mod simple {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
@@ -561,7 +582,7 @@ mod simple {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         assert_eq!(
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
@@ -573,7 +594,7 @@ mod simple {
 #[cfg(test)]
 mod primitive {
     use crate::testing_utilites::add_char_list;
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn integer_to_char() {
@@ -585,7 +606,7 @@ mod primitive {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let expected = SimpleRuntimeData::integer_to_char('a' as i32).unwrap();
 
@@ -602,7 +623,7 @@ mod primitive {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let expected = SimpleRuntimeData::integer_to_byte(10).unwrap();
 
@@ -619,7 +640,7 @@ mod primitive {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let expected = SimpleRuntimeData::char_to_integer('a').unwrap();
 
@@ -636,7 +657,7 @@ mod primitive {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let expected = SimpleRuntimeData::char_to_byte('a').unwrap();
 
@@ -653,7 +674,7 @@ mod primitive {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let expected = SimpleRuntimeData::byte_to_integer('a' as u8).unwrap();
 
@@ -670,7 +691,7 @@ mod primitive {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let expected = SimpleRuntimeData::byte_to_char('a' as u8).unwrap();
 
@@ -687,7 +708,7 @@ mod primitive {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_byte(runtime.get_register(0).unwrap()).unwrap(), 100);
     }
@@ -702,7 +723,7 @@ mod primitive {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), 'c');
     }
@@ -717,7 +738,7 @@ mod primitive {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 100);
     }
@@ -726,7 +747,7 @@ mod primitive {
 #[cfg(test)]
 mod lists {
     use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT};
     use crate::simple::symbol_value;
 
     #[test]
@@ -739,7 +760,7 @@ mod lists {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = runtime.get_list_len(addr).unwrap();
@@ -767,7 +788,7 @@ mod lists {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = runtime.get_list_len(addr).unwrap();
@@ -790,7 +811,7 @@ mod lists {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let expected = SimpleRuntimeData::parse_char_list(input);
@@ -816,7 +837,7 @@ mod lists {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let expected = SimpleRuntimeData::parse_byte_list(input);
@@ -843,7 +864,7 @@ mod lists {
         runtime.push_register(d3).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = runtime.get_list_len(addr).unwrap();
@@ -874,7 +895,7 @@ mod lists {
         runtime.push_register(d3).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = runtime.get_list_len(addr).unwrap();
@@ -906,7 +927,7 @@ mod lists {
         runtime.push_register(d3).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let expected: Vec<char> = SimpleRuntimeData::parse_char_list(input).iter().skip(2).take(6).map(|c| *c).collect();
@@ -934,7 +955,7 @@ mod lists {
         runtime.push_register(d3).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let expected: Vec<u8> = SimpleRuntimeData::parse_byte_list(input).iter().skip(2).take(6).map(|c| *c).collect();
@@ -954,7 +975,7 @@ mod lists {
 mod links {
     use crate::runtime::internals::{link_len, link_len_size};
     use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
-    use crate::{iterate_link, runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{iterate_link, runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT};
     use crate::simple::symbol_value;
 
     #[test]
@@ -967,7 +988,7 @@ mod links {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len_size(&mut runtime, addr).unwrap();
@@ -994,7 +1015,7 @@ mod links {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len_size(&mut runtime, addr).unwrap();
@@ -1021,7 +1042,7 @@ mod links {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len_size(&mut runtime, addr).unwrap();
@@ -1044,7 +1065,7 @@ mod links {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len_size(&mut runtime, addr).unwrap();
@@ -1068,7 +1089,7 @@ mod links {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len_size(&mut runtime, addr).unwrap();
@@ -1092,7 +1113,7 @@ mod links {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len_size(&mut runtime, addr).unwrap();
@@ -1116,7 +1137,7 @@ mod links {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len_size(&mut runtime, addr).unwrap();
@@ -1140,7 +1161,7 @@ mod links {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len_size(&mut runtime, addr).unwrap();
@@ -1163,7 +1184,7 @@ mod links {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len_size(&mut runtime, addr).unwrap();
@@ -1190,7 +1211,7 @@ mod links {
         runtime.push_register(d1).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len_size(&mut runtime, addr).unwrap();
@@ -1219,7 +1240,7 @@ mod links {
         runtime.push_register(d3).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len(&mut runtime, addr).unwrap();
@@ -1249,7 +1270,7 @@ mod links {
         runtime.push_register(d3).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len(&mut runtime, addr).unwrap();
@@ -1279,7 +1300,7 @@ mod links {
         runtime.push_register(d3).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len(&mut runtime, addr).unwrap();
@@ -1309,7 +1330,7 @@ mod links {
         runtime.push_register(d3).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = link_len(&mut runtime, addr).unwrap();
@@ -1340,7 +1361,7 @@ mod links {
         runtime.push_register(d3).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
 
@@ -1365,7 +1386,7 @@ mod links {
         runtime.push_register(d3).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
 
@@ -1390,7 +1411,7 @@ mod links {
         runtime.push_register(d3).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
 
@@ -1415,7 +1436,7 @@ mod links {
         runtime.push_register(d3).unwrap();
         runtime.push_register(list).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
 
@@ -1430,7 +1451,7 @@ mod links {
 
 #[cfg(test)]
 mod deferred {
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT, SimpleRuntimeData};
 
     #[test]
     fn char_list() {
@@ -1444,7 +1465,7 @@ mod deferred {
         runtime.push_register(d1).unwrap();
         runtime.push_register(s).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         let len = runtime.get_char_list_len(addr).unwrap();
@@ -1472,7 +1493,7 @@ mod deferred {
         runtime.push_register(d1).unwrap();
         runtime.push_register(s).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         assert_eq!(runtime.get_data_type(addr).unwrap(), ExpressionDataType::ByteList);
@@ -1489,7 +1510,7 @@ mod deferred {
         runtime.push_register(d1).unwrap();
         runtime.push_register(s).unwrap();
 
-        runtime.type_cast().unwrap();
+        runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
         assert_eq!(runtime.get_data_type(addr).unwrap(), ExpressionDataType::Symbol);

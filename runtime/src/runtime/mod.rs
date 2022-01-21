@@ -82,9 +82,11 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn xor(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn not(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
+    fn type_equal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn type_cast<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+
     fn equal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn not_equal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn type_equal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn less_than(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn less_than_or_equal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn greater_than(&mut self) -> Result<(), RuntimeError<Data::Error>>;
@@ -96,10 +98,10 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn end_expression(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
     fn make_list(&mut self, len: Data::Size) -> Result<(), RuntimeError<Data::Error>>;
-    fn access(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn access_left_internal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn access_right_internal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn access_length_internal(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+    fn access<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn access_left_internal<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn access_right_internal<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
+    fn access_length_internal<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
 
     fn make_range(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn make_start_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>>;
@@ -118,8 +120,6 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
 
     fn start_side_effect(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn end_side_effect(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-
-    fn type_cast(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
     fn resolve<T: GarnishLangRuntimeContext<Data>>(&mut self, data: Data::Size, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
 }
@@ -171,7 +171,7 @@ where
             Instruction::UpdateValue => self.update_value()?,
             Instruction::StartSideEffect => self.start_side_effect()?,
             Instruction::EndSideEffect => self.end_side_effect()?,
-            Instruction::ApplyType => self.type_cast()?,
+            Instruction::ApplyType => self.type_cast(context)?,
             Instruction::TypeEqual => self.type_equal()?,
             Instruction::Equal => self.equal()?,
             Instruction::NotEqual => self.not_equal()?,
@@ -180,10 +180,10 @@ where
             Instruction::GreaterThan => self.greater_than()?,
             Instruction::GreaterThanOrEqual => self.greater_than_or_equal()?,
             Instruction::MakePair => self.make_pair()?,
-            Instruction::Access => self.access()?,
-            Instruction::AccessLeftInternal => self.access_left_internal()?,
-            Instruction::AccessRightInternal => self.access_right_internal()?,
-            Instruction::AccessLengthInternal => self.access_length_internal()?,
+            Instruction::Access => self.access(context)?,
+            Instruction::AccessLeftInternal => self.access_left_internal(context)?,
+            Instruction::AccessRightInternal => self.access_right_internal(context)?,
+            Instruction::AccessLengthInternal => self.access_length_internal(context)?,
             Instruction::MakeRange => self.make_range()?,
             Instruction::MakeStartExclusiveRange => self.make_start_exclusive_range()?,
             Instruction::MakeEndExclusiveRange => self.make_end_exclusive_range()?,
@@ -357,6 +357,18 @@ where
     }
 
     //
+    // Type Ops
+    //
+
+    fn type_cast<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        type_cast(self, context)
+    }
+
+    fn type_equal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        type_equal(self)
+    }
+
+    //
     // Comparison
     //
 
@@ -366,10 +378,6 @@ where
 
     fn not_equal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
         not_equal(self)
-    }
-
-    fn type_equal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        type_equal(self)
     }
 
     fn less_than(&mut self) -> Result<(), RuntimeError<Data::Error>> {
@@ -416,20 +424,20 @@ where
         make_list(self, len)
     }
 
-    fn access(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        access(self)
+    fn access<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        access(self, context)
     }
 
-    fn access_left_internal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        access_left_internal(self)
+    fn access_left_internal<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        access_left_internal(self, context)
     }
 
-    fn access_right_internal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        access_right_internal(self)
+    fn access_right_internal<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        access_right_internal(self, context)
     }
 
-    fn access_length_internal(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        access_length_internal(self)
+    fn access_length_internal<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
+        access_length_internal(self, context)
     }
 
     //
@@ -510,14 +518,6 @@ where
 
     fn end_side_effect(&mut self) -> Result<(), RuntimeError<Data::Error>> {
         end_side_effect(self)
-    }
-
-    //
-    // Type Cast
-    //
-
-    fn type_cast(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        type_cast(self)
     }
 }
 
@@ -859,7 +859,7 @@ pub mod testing_utilites {
     pub fn deferred_op<F>(func: F) where F: Fn(&mut SimpleRuntimeData, &mut DeferOpTestContext) {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_expression(10).unwrap();
+        let int1 = runtime.add_external(10).unwrap();
         let int2 = runtime.add_expression(20).unwrap();
 
         runtime.push_register(int1).unwrap();
