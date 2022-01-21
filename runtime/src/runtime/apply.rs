@@ -189,11 +189,11 @@ pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
         (ExpressionDataType::Number, ExpressionDataType::Number, ExpressionDataType::Number) => {
             let (start_int, end_int, old_start_int) = (this.get_number(start)?, this.get_number(end)?, this.get_number(old_start)?);
 
-            match (old_start_int.add(start_int), end_int.subtract(start_int)) {
+            match (old_start_int.plus(start_int), end_int.subtract(start_int)) {
                 (Some(new_start), Some(adjusted_end)) => {
                     // end is always len away from start
                     // offset end by same amount as start
-                    match new_start.add(adjusted_end) {
+                    match new_start.plus(adjusted_end) {
                         Some(new_end) => {
                             let start_addr = this.add_number(new_start)?;
                             let end_addr = this.add_number(new_end)?;

@@ -9,7 +9,7 @@ pub fn add<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, Instruction::Add, Data::Number::add, context)
+    perform_op(this, Instruction::Add, Data::Number::plus, context)
 }
 
 pub fn subtract<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(

@@ -1,6 +1,7 @@
 use crate::{DataCastResult, DataError, GarnishNumber};
 use std::cmp::Ordering;
 use crate::SimpleNumber::{Float, Integer};
+use std::ops::{Add, Sub, Mul, Div};
 
 #[derive(Copy, Clone, Debug)]
 pub enum SimpleNumber {
@@ -48,30 +49,65 @@ impl SimpleNumber {
     }
 }
 
+fn do_op<IntOp, FloatOp>(left: &SimpleNumber, right: &SimpleNumber, int_op: IntOp, float_op: FloatOp) -> Option<SimpleNumber>
+where IntOp: Fn(i32, i32) -> i32, FloatOp: Fn(f64, f64) -> f64
+{
+    Some(match (left, right) {
+        (SimpleNumber::Integer(v1), SimpleNumber::Integer(v2)) => Integer(int_op(*v1, *v2)),
+        (SimpleNumber::Float(v1), SimpleNumber::Float(v2)) => Float(float_op(*v1, *v2)),
+        (SimpleNumber::Integer(v1), SimpleNumber::Float(v2)) => Float(float_op(f64::from(*v1), *v2)),
+        (SimpleNumber::Float(v1), SimpleNumber::Integer(v2)) => Float(float_op(*v1, f64::from(*v2))),
+    })
+}
+
 impl GarnishNumber for SimpleNumber {
-    fn add(self, rhs: Self) -> Option<Self> {
-        Some(match (self, rhs) {
-            (SimpleNumber::Integer(v1), SimpleNumber::Integer(v2)) => Integer(v1 + v2),
-            (SimpleNumber::Float(v1), SimpleNumber::Float(v2)) => Float(v1 + v2),
-            (SimpleNumber::Integer(v1), SimpleNumber::Float(v2)) => Float(f64::from(v1) + v2),
-            (SimpleNumber::Float(v1), SimpleNumber::Integer(v2)) => Float(v1 + f64::from(v2)),
-        })
+    fn plus(self, rhs: Self) -> Option<Self> {
+        do_op(&self, &rhs, i32::add, f64::add)
     }
 
     fn subtract(self, rhs: Self) -> Option<Self> {
-        todo!()
+        do_op(&self, &rhs, i32::sub, f64::sub)
     }
 
     fn multiply(self, rhs: Self) -> Option<Self> {
-        todo!()
+        do_op(&self, &rhs, i32::mul, f64::mul)
     }
 
     fn divide(self, rhs: Self) -> Option<Self> {
-        todo!()
+        do_op(&self, &rhs, i32::div, f64::div)
     }
 
     fn power(self, rhs: Self) -> Option<Self> {
-        todo!()
+        Some(match (self, rhs) {
+            (SimpleNumber::Integer(v1), SimpleNumber::Integer(v2)) => {
+                if v2 < 0 {
+                    return None;
+                }
+
+                Integer(v1.pow(v2 as u32))
+            },
+            (SimpleNumber::Float(v1), SimpleNumber::Float(v2)) => {
+                if v2 < 0.0 {
+                    return None;
+                }
+
+                Float(v1.powf(v2))
+            },
+            (SimpleNumber::Integer(v1), SimpleNumber::Float(v2)) => {
+                if v2 < 0.0 {
+                    return None;
+                }
+
+                Float(f64::from(v1).powf(v2))
+            },
+            (SimpleNumber::Float(v1), SimpleNumber::Integer(v2)) => {
+                if v2 < 0 {
+                    return None;
+                }
+
+                Float(v1.powf(f64::from(v2)))
+            }
+        })
     }
 
     fn integer_divide(self, rhs: Self) -> Option<Self> {
@@ -155,9 +191,49 @@ mod tests {
 
     #[test]
     fn add() {
-        assert_eq!(Integer(10).add(Integer(20)).unwrap(), Integer(30));
-        assert_eq!(Float(10.0).add(Float(20.0)).unwrap(), Float(30.0));
-        assert_eq!(Integer(10).add(Float(20.0)).unwrap(), Float(30.0));
-        assert_eq!(Float(10.0).add(Integer(20)).unwrap(), Float(30.0));
+        assert_eq!(Integer(10).plus(Integer(20)).unwrap(), Integer(30));
+        assert_eq!(Float(10.0).plus(Float(20.0)).unwrap(), Float(30.0));
+        assert_eq!(Integer(10).plus(Float(20.0)).unwrap(), Float(30.0));
+        assert_eq!(Float(10.0).plus(Integer(20)).unwrap(), Float(30.0));
+    }
+
+    #[test]
+    fn subtract() {
+        assert_eq!(Integer(10).subtract(Integer(20)).unwrap(), Integer(-10));
+        assert_eq!(Float(10.0).subtract(Float(20.0)).unwrap(), Float(-10.0));
+        assert_eq!(Integer(10).subtract(Float(20.0)).unwrap(), Float(-10.0));
+        assert_eq!(Float(10.0).subtract(Integer(20)).unwrap(), Float(-10.0));
+    }
+
+    #[test]
+    fn multiply() {
+        assert_eq!(Integer(10).multiply(Integer(20)).unwrap(), Integer(200));
+        assert_eq!(Float(10.0).multiply(Float(20.0)).unwrap(), Float(200.0));
+        assert_eq!(Integer(10).multiply(Float(20.0)).unwrap(), Float(200.0));
+        assert_eq!(Float(10.0).multiply(Integer(20)).unwrap(), Float(200.0));
+    }
+
+    #[test]
+    fn divide() {
+        assert_eq!(Integer(10).divide(Integer(20)).unwrap(), Integer(0));
+        assert_eq!(Float(10.0).divide(Float(20.0)).unwrap(), Float(0.5));
+        assert_eq!(Integer(10).divide(Float(20.0)).unwrap(), Float(0.5));
+        assert_eq!(Float(10.0).divide(Integer(20)).unwrap(), Float(0.5));
+    }
+
+    #[test]
+    fn power() {
+        assert_eq!(Integer(10).power(Integer(3)).unwrap(), Integer(1000));
+        assert_eq!(Float(10.0).power(Float(3.0)).unwrap(), Float(1000.0));
+        assert_eq!(Integer(10).power(Float(3.0)).unwrap(), Float(1000.0));
+        assert_eq!(Float(10.0).power(Integer(3)).unwrap(), Float(1000.0));
+    }
+
+    #[test]
+    fn negative_power_none() {
+        assert_eq!(Integer(10).power(Integer(-3)), None);
+        assert_eq!(Float(10.0).power(Float(-3.0)), None);
+        assert_eq!(Integer(10).power(Float(-3.0)), None);
+        assert_eq!(Float(10.0).power(Integer(-3)), None);
     }
 }

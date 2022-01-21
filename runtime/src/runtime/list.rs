@@ -119,7 +119,7 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                     if index >= len {
                         return Ok(None);
                     } else {
-                        let result = start_int.add(index).or_num_err()?;
+                        let result = start_int.plus(index).or_num_err()?;
                         let addr = this.add_number(result)?;
                         Ok(Some(addr))
                     }
@@ -130,7 +130,7 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
         ExpressionDataType::Slice => {
             let (value, range) = this.get_slice(value)?;
             let (start, _, _) = get_range(this, range)?;
-            let adjusted_index = start.add(index).or_num_err()?;
+            let adjusted_index = start.plus(index).or_num_err()?;
 
             match this.get_data_type(value)? {
                 ExpressionDataType::Link => index_link(this, value, adjusted_index),

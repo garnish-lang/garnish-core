@@ -10,7 +10,7 @@ pub trait TypeConstants {
 }
 
 pub trait GarnishNumber: Sized {
-    fn add(self, rhs: Self) -> Option<Self>;
+    fn plus(self, rhs: Self) -> Option<Self>;
     fn subtract(self, rhs: Self) -> Option<Self>;
     fn multiply(self, rhs: Self) -> Option<Self>;
     fn divide(self, rhs: Self) -> Option<Self>;
@@ -151,7 +151,7 @@ pub trait GarnishLangRuntimeData {
 }
 
 impl GarnishNumber for i32 {
-    fn add(self, rhs: Self) -> Option<Self> {
+    fn plus(self, rhs: Self) -> Option<Self> {
         Some(self + rhs)
     }
 
