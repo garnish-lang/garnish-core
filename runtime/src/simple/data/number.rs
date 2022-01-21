@@ -1,5 +1,6 @@
-use crate::{DataCastResult, DataError};
+use crate::{DataCastResult, DataError, GarnishNumber};
 use std::cmp::Ordering;
+use crate::SimpleNumber::{Float, Integer};
 
 #[derive(Copy, Clone, Debug)]
 pub enum SimpleNumber {
@@ -47,9 +48,85 @@ impl SimpleNumber {
     }
 }
 
+impl GarnishNumber for SimpleNumber {
+    fn add(self, rhs: Self) -> Option<Self> {
+        Some(match (self, rhs) {
+            (SimpleNumber::Integer(v1), SimpleNumber::Integer(v2)) => Integer(v1 + v2),
+            (SimpleNumber::Float(v1), SimpleNumber::Float(v2)) => Float(v1 + v2),
+            (SimpleNumber::Integer(v1), SimpleNumber::Float(v2)) => Float(f64::from(v1) + v2),
+            (SimpleNumber::Float(v1), SimpleNumber::Integer(v2)) => Float(v1 + f64::from(v2)),
+        })
+    }
+
+    fn subtract(self, rhs: Self) -> Option<Self> {
+        todo!()
+    }
+
+    fn multiply(self, rhs: Self) -> Option<Self> {
+        todo!()
+    }
+
+    fn divide(self, rhs: Self) -> Option<Self> {
+        todo!()
+    }
+
+    fn power(self, rhs: Self) -> Option<Self> {
+        todo!()
+    }
+
+    fn integer_divide(self, rhs: Self) -> Option<Self> {
+        todo!()
+    }
+
+    fn remainder(self, rhs: Self) -> Option<Self> {
+        todo!()
+    }
+
+    fn absolute_value(self) -> Option<Self> {
+        todo!()
+    }
+
+    fn opposite(self) -> Option<Self> {
+        todo!()
+    }
+
+    fn increment(self) -> Option<Self> {
+        todo!()
+    }
+
+    fn decrement(self) -> Option<Self> {
+        todo!()
+    }
+
+    fn bitwise_not(self) -> Option<Self> {
+        todo!()
+    }
+
+    fn bitwise_and(self, rhs: Self) -> Option<Self> {
+        todo!()
+    }
+
+    fn bitwise_or(self, rhs: Self) -> Option<Self> {
+        todo!()
+    }
+
+    fn bitwise_xor(self, rhs: Self) -> Option<Self> {
+        todo!()
+    }
+
+    fn bitwise_shift_left(self, rhs: Self) -> Option<Self> {
+        todo!()
+    }
+
+    fn bitwise_shift_right(self, rhs: Self) -> Option<Self> {
+        todo!()
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use crate::SimpleNumber;
+    use crate::{GarnishNumber, SimpleNumber};
+    use crate::SimpleNumber::{Float, Integer};
 
     #[test]
     fn as_integer() {
@@ -74,5 +151,13 @@ mod tests {
     #[test]
     fn comparable() {
         assert!(SimpleNumber::Integer(10) > SimpleNumber::Float(5.0));
+    }
+
+    #[test]
+    fn add() {
+        assert_eq!(Integer(10).add(Integer(20)).unwrap(), Integer(30));
+        assert_eq!(Float(10.0).add(Float(20.0)).unwrap(), Float(30.0));
+        assert_eq!(Integer(10).add(Float(20.0)).unwrap(), Float(30.0));
+        assert_eq!(Float(10.0).add(Integer(20)).unwrap(), Float(30.0));
     }
 }
