@@ -207,6 +207,12 @@ mod char_list {
     }
 
     #[test]
+    fn convert_multiple_newlines() {
+        let input = "Some\\n\\nString";
+        assert_eq!(parse_char_list(input).unwrap(), "Some\n\nString".to_string())
+    }
+
+    #[test]
     fn convert_tabs() {
         let input = "Some\\tString";
         assert_eq!(parse_char_list(input).unwrap(), "Some\tString".to_string())

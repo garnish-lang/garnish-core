@@ -7,7 +7,6 @@ Single double quote will skip non-escaped newlines and tabs
 "\\" - Backslash
 "\0" - Null
 "\"" - Double Quote (only needed with single quote char list)
-"\xFF" - Hex (2 digits exact)
 "\u{Number}" - Unicode character number (6 digits max). Any number value, ends on first space
 
 ## ByteList
