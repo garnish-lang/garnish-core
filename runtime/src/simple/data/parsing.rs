@@ -93,11 +93,15 @@ fn parse_number(input: &str) -> Result<SimpleNumber, DataError> {
                 let trimmed = part.trim_matches('0');
                 match u32::from_str(trimmed) {
                     Err(_) => Err(DataError::from(format!("Could not parse radix from {:?}", part)))?,
-                    Ok(v) => if v < 2 || v > 36 {
-                        Err(DataError::from(format!("Radix must be with in range [2, 36]. Found {:?}", v)))?
-                    } else {
-                        (v, &input[i+1..])
-                    } // + 1 to skip the underscore
+                    Ok(v) => {
+                        if v < 2 || v > 36 {
+                            // limit of Rust from_str_radix function below
+                            Err(DataError::from(format!("Radix must be with in range [2, 36]. Found {:?}", v)))?
+                        } else {
+                            // + 1 to skip the underscore
+                            (v, &input[i + 1..])
+                        }
+                    }
                 }
             } else {
                 (10, input)
@@ -107,10 +111,16 @@ fn parse_number(input: &str) -> Result<SimpleNumber, DataError> {
 
     match i32::from_str_radix(input, radix) {
         Ok(v) => Ok(v.into()),
-        Err(_) => match f64::from_str(input) {
-            Ok(v) => Ok(v.into()),
-            Err(_) => Err(DataError::from(format!("Could not create SimpleNumber from string {:?}", input))),
-        },
+        Err(_) => {
+            if radix == 10 {
+                match f64::from_str(input) {
+                    Ok(v) => Ok(v.into()),
+                    Err(_) => Err(DataError::from(format!("Could not create SimpleNumber from string {:?}", input))),
+                }
+            } else {
+                Err(DataError::from(format!("Decimal values only support a radix of 10. Found {:?}", radix)))
+            }
+        }
     }
 }
 
@@ -164,6 +174,18 @@ mod numbers {
     #[test]
     fn just_numbers_base_37_is_err() {
         let input = "037_1010101";
+        assert!(parse_number(input).is_err());
+    }
+
+    #[test]
+    fn radix_valid_float_is_err() {
+        let input = "02_10101.0101";
+        assert!(parse_number(input).is_err());
+    }
+
+    #[test]
+    fn radix_invalid_float_is_err() {
+        let input = "016_A6.789";
         assert!(parse_number(input).is_err());
     }
 }
