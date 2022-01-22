@@ -444,7 +444,8 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
                 }
             }
             LexingState::Number => {
-                if c.is_numeric() {
+                // after initial number, underscores are allowed as visual separator
+                if c.is_numeric() || c == '_' {
                     current_characters.push(c);
                     false
                 } else if c == '.' && can_float {
@@ -2313,6 +2314,26 @@ mod tests {
 
 #[cfg(test)]
 mod numbers {
+    use std::vec;
+
+    use crate::{lex, LexerToken, TokenType};
+
+    #[test]
+    fn with_visual_separator_underscore() {
+        let result = lex(&"12345_67890".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "12345_67890".to_string(),
+                    token_type: TokenType::Number,
+                    column: 0,
+                    row: 0
+                }
+            ]
+        );
+    }
 
     #[test]
     fn lex_integers() {
