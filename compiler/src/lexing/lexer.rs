@@ -723,7 +723,11 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
         }
     }
 
-    Ok(tokens)
+    if state != LexingState::NoToken {
+        Err(CompilerError::new_message(format!("Unfinished token of type {:?}: {:?}", current_token_type, current_characters)))
+    } else {
+        Ok(tokens)
+    }
 }
 
 #[cfg(test)]
@@ -2494,6 +2498,20 @@ mod chars_and_bytes {
     use std::vec;
 
     use crate::{lex, LexerToken, TokenType};
+
+    #[test]
+    fn character_list_uncloased() {
+        let result = lex(&"\"Hello World!".to_string());
+
+        assert!(result.is_err())
+    }
+
+    #[test]
+    fn byte_list_uncloased() {
+        let result = lex(&"'Hello World!".to_string());
+
+        assert!(result.is_err())
+    }
 
     #[test]
     fn character_list() {
