@@ -61,10 +61,10 @@ pub fn parse_char_list(input: &str) -> Result<String, DataError> {
             continue;
         }
 
-        if c == '\\' {
-            check_escape = true
-        } else {
-            new.push(c);
+        match c {
+            '\\' => check_escape = true,
+            '\n' | '\t' if start_quote_count <= 1 => (), // skip
+            _ => new.push(c),
         }
     }
 
@@ -261,6 +261,18 @@ mod char_list {
     fn skip_starting_and_ending_quotes() {
         let input = "\"\"\"Some String\"\"\"";
         assert_eq!(parse_char_list(input).unwrap(), "Some String".to_string())
+    }
+
+    #[test]
+    fn newlines_and_tabs_are_removed_in_single_double_quote() {
+        let input = "\"Some\n\t\t\tString\"";
+        assert_eq!(parse_char_list(input).unwrap(), "SomeString".to_string())
+    }
+
+    #[test]
+    fn newlines_and_tabs_are_retained_in_multi_double_quote() {
+        let input = "\"\"Some\n\t\t\tString\"\"";
+        assert_eq!(parse_char_list(input).unwrap(), "Some\n\t\t\tString".to_string())
     }
 
     #[test]
