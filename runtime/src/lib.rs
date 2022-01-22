@@ -6,4 +6,4 @@ pub use runtime::result::*;
 pub use runtime::types::*;
 pub use runtime::*;
 pub use simple::data::*;
-pub use simple::{symbol_value, DataError, SimpleRuntimeData, SimpleDataRuntimeNC};
+pub use simple::{symbol_value, DataError, SimpleDataRuntimeNC, SimpleRuntimeData};

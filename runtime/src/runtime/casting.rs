@@ -645,7 +645,7 @@ mod simple {
 #[cfg(test)]
 mod primitive {
     use crate::testing_utilites::add_char_list;
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT, SimpleDataRuntimeNC};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleDataRuntimeNC, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn integer_to_char() {
@@ -799,7 +799,7 @@ mod primitive {
 mod lists {
     use crate::simple::symbol_value;
     use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT, SimpleDataRuntimeNC};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleDataRuntimeNC, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn link_to_list() {
@@ -1514,7 +1514,7 @@ mod links {
 
 #[cfg(test)]
 mod deferred {
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT, SimpleDataRuntimeNC};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, SimpleDataRuntimeNC, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn char_list() {

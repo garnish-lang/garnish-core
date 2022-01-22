@@ -4,13 +4,13 @@ mod parsing;
 pub use number::*;
 pub use parsing::*;
 
+use crate::simple::NoCustom;
 use crate::{DataError, ExpressionDataType};
 use std::fmt::Debug;
 use std::hash::Hash;
-use crate::simple::NoCustom;
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct SimpleDataList<T=NoCustom>
+pub struct SimpleDataList<T = NoCustom>
 where
     T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
@@ -62,7 +62,7 @@ pub type DataCastResult<T> = Result<T, DataError>;
 pub type SimpleDataNC = SimpleData<NoCustom>;
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
-pub enum SimpleData<T=NoCustom>
+pub enum SimpleData<T = NoCustom>
 where
     T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {

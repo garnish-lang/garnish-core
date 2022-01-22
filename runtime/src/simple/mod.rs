@@ -20,12 +20,10 @@ pub fn symbol_value(value: &str) -> u64 {
 }
 
 #[derive(Copy, Clone, PartialOrd, PartialEq, Eq, Debug, Hash)]
-pub struct NoCustom {
-
-}
+pub struct NoCustom {}
 
 #[derive(Debug)]
-pub struct SimpleRuntimeData<T=NoCustom>
+pub struct SimpleRuntimeData<T = NoCustom>
 where
     T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
@@ -76,7 +74,6 @@ impl<T> SimpleRuntimeData<T>
 where
     T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
-
     pub(crate) fn get(&self, index: usize) -> Result<&SimpleData<T>, DataError> {
         match self.data.get(index) {
             None => Err(format!("No data at addr {:?}", index))?,
@@ -1204,8 +1201,8 @@ mod to_byte_list {
 
 #[cfg(test)]
 mod to_char_list {
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
     use crate::simple::NoCustom;
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     fn assert_to_char_list<Func>(expected: &str, setup: Func)
     where
@@ -1296,7 +1293,9 @@ mod to_char_list {
     fn symbol() {
         let s = SimpleRuntimeData::<NoCustom>::parse_symbol("my_symbol").unwrap().to_string();
         assert_to_char_list(s.as_str(), |runtime| {
-            runtime.add_symbol(SimpleRuntimeData::<NoCustom>::parse_symbol("my_symbol").unwrap()).unwrap()
+            runtime
+                .add_symbol(SimpleRuntimeData::<NoCustom>::parse_symbol("my_symbol").unwrap())
+                .unwrap()
         })
     }
 
