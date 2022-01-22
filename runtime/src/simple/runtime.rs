@@ -596,6 +596,14 @@ impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
     fn parse_byte_list(from: &str) -> Result<Vec<Self::Byte>, Self::Error> {
         parse_byte_list(from)
     }
+
+    // overrides
+
+    fn parse_add_symbol(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        let sym = Self::parse_symbol(from)?;
+        self.symbols.insert(sym, from.to_string());
+        self.add_symbol(sym)
+    }
 }
 
 #[cfg(test)]
