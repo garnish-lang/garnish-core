@@ -207,7 +207,9 @@ enum LexingState {
     LineAnnotation,
     Symbol,
     CharList,
+    StartCharList,
     ByteList,
+    StartByteList,
 }
 
 fn start_token<'a>(
@@ -279,11 +281,11 @@ fn start_token<'a>(
         *current_token_type = Some(TokenType::Symbol);
     } else if c == '"' {
         current_characters.push(c);
-        *state = LexingState::CharList;
+        *state = LexingState::StartCharList;
         *current_token_type = Some(TokenType::CharList);
     } else if c == '\'' {
         current_characters.push(c);
-        *state = LexingState::ByteList;
+        *state = LexingState::StartByteList;
         *current_token_type = Some(TokenType::ByteList);
     }
 
@@ -375,6 +377,8 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
     let mut should_create = true;
     let mut state = LexingState::NoToken;
     let mut can_float = true; // whether the next period can be a float
+    let mut start_quote_count = 0;
+    let mut end_quote_count = 0;
 
     for c in input.chars().chain(iter::once('\0')) {
         trace!("Character {:?} at ({:?}, {:?})", c, text_column, text_row);
@@ -530,24 +534,59 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
                     true
                 }
             }
+            LexingState::StartCharList => {
+                if c != '"' {
+                    start_quote_count = current_characters.len();
+                    state = LexingState::CharList;
+                }
+
+                current_characters.push(c);
+
+                false
+            }
             LexingState::CharList => {
                 if c == '"' {
-                    trace!("Ending CharList");
+                    end_quote_count += 1;
                     current_characters.push(c);
-                    should_create = false;
-                    true
+
+                    if start_quote_count == end_quote_count {
+                        trace!("Ending CharList");
+                        should_create = false;
+                        true
+                    } else {
+                        false
+                    }
                 } else {
+                    // reset end quote count every non-quote character
+                    end_quote_count = 0;
                     current_characters.push(c);
                     false
                 }
             }
+            LexingState::StartByteList => {
+                if c != '\'' {
+                    start_quote_count = current_characters.len();
+                    state = LexingState::ByteList;
+                }
+
+                current_characters.push(c);
+
+                false
+            }
             LexingState::ByteList => {
                 if c == '\'' {
-                    trace!("Ending ByteList");
+                    end_quote_count += 1;
                     current_characters.push(c);
-                    should_create = false;
-                    true
+
+                    if start_quote_count == end_quote_count {
+                        trace!("Ending CharList");
+                        should_create = false;
+                        true
+                    } else {
+                        false
+                    }
                 } else {
+                    end_quote_count = 0;
                     current_characters.push(c);
                     false
                 }
@@ -695,6 +734,8 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
             current_characters = String::new();
             current_operator = &operator_tree;
             current_token_type = None;
+            start_quote_count = 0;
+            end_quote_count = 0;
 
             if should_create {
                 trace!("Starting new token");
@@ -2511,6 +2552,36 @@ mod chars_and_bytes {
         let result = lex(&"'Hello World!".to_string());
 
         assert!(result.is_err())
+    }
+
+    #[test]
+    fn character_list_multi_quote() {
+        let result = lex(&"\"\"\"Hello \"sub quote\" World!\"\"\"".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "\"\"\"Hello \"sub quote\" World!\"\"\"".to_string(),
+                token_type: TokenType::CharList,
+                column: 0,
+                row: 0
+            }]
+        );
+    }
+
+    #[test]
+    fn byte_list_multi_quote() {
+        let result = lex(&"'''Hello ' World!'''".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "'''Hello ' World!'''".to_string(),
+                token_type: TokenType::ByteList,
+                column: 0,
+                row: 0
+            }]
+        );
     }
 
     #[test]
