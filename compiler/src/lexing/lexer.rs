@@ -460,7 +460,7 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
                 }
             }
             LexingState::Float => {
-                if c.is_numeric() {
+                if c.is_numeric() || c == '_' || c.is_alphanumeric() {
                     current_characters.push(c);
                     false
                 } else if c == '.' && current_characters.ends_with(".") {
@@ -2344,6 +2344,39 @@ mod numbers {
             vec![
                 LexerToken {
                     text: "12_ABCDF".to_string(),
+                    token_type: TokenType::Number,
+                    column: 0,
+                    row: 0
+                }
+            ]
+        );
+    }
+    #[test]
+    fn with_visual_separator_underscore_and_decimal() {
+        let result = lex(&"0.12345_67890".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "0.12345_67890".to_string(),
+                    token_type: TokenType::Number,
+                    column: 0,
+                    row: 0
+                }
+            ]
+        );
+    }
+
+    #[test]
+    fn with_letters_and_decimal() {
+        let result = lex(&"0.12_ABCDF".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "0.12_ABCDF".to_string(),
                     token_type: TokenType::Number,
                     column: 0,
                     row: 0
