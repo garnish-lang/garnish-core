@@ -1,4 +1,5 @@
-use crate::DataError;
+use std::str::FromStr;
+use crate::{DataError, SimpleNumber};
 
 pub fn parse_char_list(input: &str) -> Result<String, DataError> {
     let mut new = String::new();
@@ -80,6 +81,46 @@ pub fn parse_byte_list(input: &str) -> Result<Vec<u8>, DataError> {
     }
 
     Ok(bytes)
+}
+
+fn parse_number(input: &str) -> Result<SimpleNumber, DataError> {
+    match i32::from_str_radix(input, 10) {
+        Ok(v) => Ok(v.into()),
+        Err(_) => match f64::from_str(input) {
+            Ok(v) => Ok(v.into()),
+            Err(_) => Err(DataError::from(format!("Could not create SimpleNumber from string {:?}", input)))
+        }
+    }
+}
+
+#[cfg(test)]
+mod numbers {
+    use crate::simple::data::parsing::parse_number;
+    use crate::SimpleNumber::{Float, Integer};
+
+    #[test]
+    fn just_numbers_integer() {
+        let input = "123456";
+        assert_eq!(parse_number(input).unwrap(), Integer(123456));
+    }
+
+    #[test]
+    fn just_numbers_integer_err() {
+        let input = "123456?";
+        assert!(parse_number(input).is_err());
+    }
+
+    #[test]
+    fn just_numbers_float() {
+        let input = "123456.789";
+        assert_eq!(parse_number(input).unwrap(), Float(123456.789));
+    }
+
+    #[test]
+    fn just_numbers_float_err() {
+        let input = "123456.789?";
+        assert!(parse_number(input).is_err());
+    }
 }
 
 #[cfg(test)]
