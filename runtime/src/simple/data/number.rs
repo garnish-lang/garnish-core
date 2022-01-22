@@ -33,6 +33,12 @@ impl From<i32> for SimpleNumber {
     }
 }
 
+impl From<usize> for SimpleNumber {
+    fn from(x: usize) -> Self {
+        SimpleNumber::Integer(x as i32)
+    }
+}
+
 impl From<f64> for SimpleNumber {
     fn from(x: f64) -> Self {
         SimpleNumber::Float(x)
@@ -214,6 +220,11 @@ mod tests {
     #[test]
     fn from_i32() {
         assert_eq!(SimpleNumber::from(10i32), Integer(10));
+    }
+
+    #[test]
+    fn from_usize() {
+        assert_eq!(SimpleNumber::from(10usize), Integer(10));
     }
 
     #[test]
