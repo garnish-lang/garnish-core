@@ -1,5 +1,5 @@
-use std::str::FromStr;
 use crate::{DataError, SimpleNumber};
+use std::str::FromStr;
 
 pub fn parse_char_list(input: &str) -> Result<String, DataError> {
     let mut new = String::new();
@@ -84,12 +84,29 @@ pub fn parse_byte_list(input: &str) -> Result<Vec<u8>, DataError> {
 }
 
 fn parse_number(input: &str) -> Result<SimpleNumber, DataError> {
-    match i32::from_str_radix(input, 10) {
+    // let parts = input.split("_").collect::<Vec<&str>>();
+    let (radix, input) = match input.find('_') {
+        None => (10, input),
+        Some(i) => {
+            let part = &input[0..i];
+            if part.starts_with("0") {
+                let trimmed = part.trim_matches('0');
+                match u32::from_str(trimmed) {
+                    Err(_) => Err(DataError::from(format!("Could not parse radix from {:?}", part)))?,
+                    Ok(v) => (v, &input[i+1..]), // + 1 to skip the underscore
+                }
+            } else {
+                (10, input)
+            }
+        }
+    };
+
+    match i32::from_str_radix(input, radix) {
         Ok(v) => Ok(v.into()),
         Err(_) => match f64::from_str(input) {
             Ok(v) => Ok(v.into()),
-            Err(_) => Err(DataError::from(format!("Could not create SimpleNumber from string {:?}", input)))
-        }
+            Err(_) => Err(DataError::from(format!("Could not create SimpleNumber from string {:?}", input))),
+        },
     }
 }
 
@@ -120,6 +137,12 @@ mod numbers {
     fn just_numbers_float_err() {
         let input = "123456.789?";
         assert!(parse_number(input).is_err());
+    }
+
+    #[test]
+    fn just_numbers_base_2() {
+        let input = "02_1010101";
+        assert_eq!(parse_number(input).unwrap(), Integer(0b1010101));
     }
 }
 
