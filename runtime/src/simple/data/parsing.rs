@@ -17,7 +17,34 @@ pub fn parse_char_list(input: &str) -> Result<String, DataError> {
     let real_len = input.len() - start_quote_count * 2;
 
     let mut check_escape = false;
+    let mut in_unicode = false;
+    let mut unicode_characters = String::new();
+
     for c in input.chars().skip(start_quote_count).take(real_len) {
+        if in_unicode {
+            if c == '}' {
+                match parse_number_internal(unicode_characters.as_str(), 16)? {
+                    SimpleNumber::Float(_) => Err(DataError::from(format!("Float numbers are not allowed in Unicode escape. {:?}", unicode_characters)))?,
+                    SimpleNumber::Integer(v) => {
+                        match char::from_u32(v as u32) {
+                            None => Err(DataError::from(format!("Invalid unicode value {:?}. Max is {:?}", unicode_characters, char::MAX.to_digit(16))))?,
+                            Some(v) => {
+                                new.push(v);
+                                unicode_characters = String::new();
+                            }
+                        }
+                    }
+                }
+                in_unicode = false;
+            } else {
+                if c != '{' {
+                    unicode_characters.push(c);
+                }
+            }
+
+            continue;
+        }
+
         if check_escape {
             match c {
                 'n' => new.push('\n'),
@@ -26,6 +53,7 @@ pub fn parse_char_list(input: &str) -> Result<String, DataError> {
                 '0' => new.push('\0'),
                 '\\' => new.push('\\'),
                 '"' => new.push('"'),
+                'u' => in_unicode = true,
                 _ => return Err(DataError::from(format!("Invalid escape character '{}'", c))),
             }
 
@@ -116,9 +144,12 @@ pub fn parse_byte_list_numbers(input: &str) -> Result<Vec<u8>, DataError> {
 }
 
 fn parse_number(input: &str) -> Result<SimpleNumber, DataError> {
-    // let parts = input.split("_").collect::<Vec<&str>>();
+    parse_number_internal(input, 10)
+}
+
+fn parse_number_internal(input: &str, default_radix: u32) -> Result<SimpleNumber, DataError> {
     let (radix, input) = match input.find('_') {
-        None => (10, input),
+        None => (default_radix, input),
         Some(i) => {
             let part = &input[0..i];
             if part.starts_with("0") {
@@ -136,7 +167,7 @@ fn parse_number(input: &str) -> Result<SimpleNumber, DataError> {
                     }
                 }
             } else {
-                (10, input)
+                (default_radix, input)
             }
         }
     };
@@ -239,6 +270,12 @@ mod char_list {
     }
 
     #[test]
+    fn convert_unicode() {
+        let input = "Some\\u{25A1}String";
+        assert_eq!(parse_char_list(input).unwrap(), "Some\u{25A1}String".to_string())
+    }
+
+    #[test]
     fn convert_multiple_newlines() {
         let input = "Some\\n\\nString";
         assert_eq!(parse_char_list(input).unwrap(), "Some\n\nString".to_string())
@@ -277,6 +314,12 @@ mod char_list {
     #[test]
     fn invalid_escape_sequence() {
         let input = "Some\\yString";
+        assert!(parse_char_list(input).is_err())
+    }
+
+    #[test]
+    fn invalid_unicode() {
+        let input = "Some\\u{FFFFFF}String";
         assert!(parse_char_list(input).is_err())
     }
 }
