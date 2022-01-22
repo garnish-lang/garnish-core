@@ -4,7 +4,7 @@ use std::fmt::{Debug};
 use std::hash::Hash;
 use std::{hash::Hasher};
 
-use crate::{DataError, ExpressionDataType, GarnishLangRuntimeData, Instruction, InstructionData, SimpleData, SimpleNumber, SimpleRuntimeData, symbol_value};
+use crate::{DataError, ExpressionDataType, GarnishLangRuntimeData, Instruction, InstructionData, parse_byte_list, parse_char_list, parse_simple_number, SimpleData, SimpleNumber, SimpleRuntimeData, symbol_value};
 
 impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
     where
@@ -564,10 +564,7 @@ impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
     //
 
     fn parse_number(from: &str) -> Result<Self::Number, Self::Error> {
-        match from.parse::<i32>() {
-            Ok(v) => Ok(v.into()),
-            Err(_) => Err(DataError::from(format!("Could not parse number from {:?}", from))),
-        }
+        parse_simple_number(from)
     }
 
     fn parse_symbol(from: &str) -> Result<Self::Symbol, Self::Error> {
@@ -575,16 +572,16 @@ impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
     }
 
     fn parse_char(from: &str) -> Result<Self::Char, Self::Error> {
-        let l = SimpleRuntimeData::<T>::parse_char_list(from)?;
+        let l = parse_char_list(from)?;
         if l.len() == 1 {
-            Ok(l[0])
+            Ok(l.chars().nth(0).unwrap())
         } else {
             Err(DataError::from(format!("Could not parse char from {:?}", from)))
         }
     }
 
     fn parse_byte(from: &str) -> Result<Self::Byte, Self::Error> {
-        let l = SimpleRuntimeData::<T>::parse_byte_list(from)?;
+        let l = parse_byte_list(from)?;
         if l.len() == 1 {
             Ok(l[0])
         } else {
@@ -593,11 +590,11 @@ impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
     }
 
     fn parse_char_list(from: &str) -> Result<Vec<Self::Char>, Self::Error> {
-        Ok(from.trim_matches('"').chars().collect())
+        Ok(parse_char_list(from)?.chars().collect())
     }
 
     fn parse_byte_list(from: &str) -> Result<Vec<Self::Byte>, Self::Error> {
-        Ok(from.trim_matches('\'').bytes().collect())
+        parse_byte_list(from)
     }
 }
 

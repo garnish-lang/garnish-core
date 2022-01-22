@@ -129,7 +129,7 @@ pub fn parse_byte_list_numbers(input: &str) -> Result<Vec<u8>, DataError> {
         if c.is_numeric() || c == '_' {
             current_number.push(c);
         } else if c == ' ' && current_number.len() > 0 {
-            match parse_number(current_number.as_str())? {
+            match parse_simple_number(current_number.as_str())? {
                 SimpleNumber::Float(_) => Err(DataError::from(format!(
                     "Float numbers are not allowed in ByteLists. {:?}",
                     current_number
@@ -151,7 +151,7 @@ pub fn parse_byte_list_numbers(input: &str) -> Result<Vec<u8>, DataError> {
     Ok(numbers)
 }
 
-fn parse_number(input: &str) -> Result<SimpleNumber, DataError> {
+pub fn parse_simple_number(input: &str) -> Result<SimpleNumber, DataError> {
     parse_number_internal(input, 10)
 }
 
@@ -197,67 +197,67 @@ fn parse_number_internal(input: &str, default_radix: u32) -> Result<SimpleNumber
 
 #[cfg(test)]
 mod numbers {
-    use crate::simple::data::parsing::parse_number;
+    use crate::simple::data::parsing::parse_simple_number;
     use crate::SimpleNumber::{Float, Integer};
 
     #[test]
     fn just_numbers_integer() {
         let input = "123456";
-        assert_eq!(parse_number(input).unwrap(), Integer(123456));
+        assert_eq!(parse_simple_number(input).unwrap(), Integer(123456));
     }
 
     #[test]
     fn just_numbers_integer_err() {
         let input = "123456?";
-        assert!(parse_number(input).is_err());
+        assert!(parse_simple_number(input).is_err());
     }
 
     #[test]
     fn just_numbers_float() {
         let input = "123456.789";
-        assert_eq!(parse_number(input).unwrap(), Float(123456.789));
+        assert_eq!(parse_simple_number(input).unwrap(), Float(123456.789));
     }
 
     #[test]
     fn just_numbers_float_err() {
         let input = "123456.789?";
-        assert!(parse_number(input).is_err());
+        assert!(parse_simple_number(input).is_err());
     }
 
     #[test]
     fn just_numbers_base_2() {
         let input = "02_1010101";
-        assert_eq!(parse_number(input).unwrap(), Integer(0b1010101));
+        assert_eq!(parse_simple_number(input).unwrap(), Integer(0b1010101));
     }
 
     #[test]
     fn just_numbers_base_36() {
         let input = "036_C7R";
-        assert_eq!(parse_number(input).unwrap(), Integer(15831));
+        assert_eq!(parse_simple_number(input).unwrap(), Integer(15831));
     }
 
     #[test]
     fn just_numbers_base_1_is_err() {
         let input = "01_1010101";
-        assert!(parse_number(input).is_err());
+        assert!(parse_simple_number(input).is_err());
     }
 
     #[test]
     fn just_numbers_base_37_is_err() {
         let input = "037_1010101";
-        assert!(parse_number(input).is_err());
+        assert!(parse_simple_number(input).is_err());
     }
 
     #[test]
     fn radix_valid_float_is_err() {
         let input = "02_10101.0101";
-        assert!(parse_number(input).is_err());
+        assert!(parse_simple_number(input).is_err());
     }
 
     #[test]
     fn radix_invalid_float_is_err() {
         let input = "016_A6.789";
-        assert!(parse_number(input).is_err());
+        assert!(parse_simple_number(input).is_err());
     }
 }
 
