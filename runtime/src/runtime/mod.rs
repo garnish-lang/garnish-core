@@ -25,7 +25,7 @@ mod utilities;
 
 pub use utilities::{iterate_link, link_count};
 
-pub use context::{EmptyContext, GarnishLangRuntimeContext, NO_CONTEXT};
+pub use context::*;
 pub use data::{GarnishLangRuntimeData, GarnishNumber, TypeConstants};
 pub use error::*;
 

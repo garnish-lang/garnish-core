@@ -1,4 +1,4 @@
-use crate::{push_unit, runtime::list::get_access_addr, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError};
+use crate::{push_unit, runtime::list::get_access_addr, ErrorType, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError, ExpressionDataType};
 
 pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
@@ -8,22 +8,35 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
     // check input
     match this.get_current_value() {
         None => (),
-        Some(list_ref) => match get_access_addr(this, data, list_ref)? {
-            None => (),
-            Some(i) => {
-                this.push_register(i)?;
-                return Ok(());
+        Some(list_ref) => match get_access_addr(this, data, list_ref) {
+            Err(e) => {
+                // ignore unsupported op type, will be handled by below resolve
+                if e.get_type() != ErrorType::UnsupportedOpTypes {
+                    Err(e)?;
+                }
             }
+            Ok(v) => match v {
+                None => (),
+                Some(i) => {
+                    this.push_register(i)?;
+                    return Ok(());
+                }
+            },
         },
     }
 
     // check context
     match context {
         None => (),
-        Some(c) => match c.resolve(this.get_symbol(data)?, this)? {
-            true => return Ok(()), // context resovled end look up
-            false => (),           // not resolved fall through
-        },
+        Some(c) => match this.get_data_type(data)? {
+            ExpressionDataType::Symbol => {
+                match c.resolve(this.get_symbol(data)?, this)? {
+                    true => return Ok(()), // context resovled end look up
+                    false => (),           // not resolved fall through
+                }
+            }
+            _ => (), // not a symbol push unit below
+        }
     }
 
     // default to unit
@@ -31,7 +44,29 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
 }
 
 #[cfg(test)]
+mod deferring {
+    use crate::runtime::GarnishRuntime;
+    use crate::testing_utilites::DeferOpTestContext;
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn resolve() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_number(10.into()).unwrap();
+
+        let mut context = DeferOpTestContext::new();
+
+        runtime.resolve(int1, Some(&mut context)).unwrap();
+
+        // resolve never passes to defer make sure default unit is place when not resolved
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+    }
+}
+
+#[cfg(test)]
 mod tests {
+    use crate::runtime::context::EMPTY_CONTEXT;
     use crate::simple::DataError;
     use crate::{
         runtime::{
@@ -41,6 +76,18 @@ mod tests {
         },
         ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData,
     };
+
+    #[allow(const_item_mutation)]
+    #[test]
+    fn resolve_non_symbol() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let i2 = runtime.add_number(10.into()).unwrap();
+
+        runtime.resolve(i2, Some(&mut EMPTY_CONTEXT)).unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+    }
 
     #[test]
     fn resolve_from_input() {

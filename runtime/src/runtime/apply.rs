@@ -217,6 +217,45 @@ pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
 }
 
 #[cfg(test)]
+mod deferring {
+    use crate::runtime::GarnishRuntime;
+    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::testing_utilites::{DeferOpTestContext, DEFERRED_VALUE};
+
+    #[test]
+    fn apply() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_number(10.into()).unwrap();
+        let int2 = runtime.add_number(20.into()).unwrap();
+
+        runtime.push_register(int1).unwrap();
+        runtime.push_register(int2).unwrap();
+
+        let mut context = DeferOpTestContext::new();
+
+        runtime.apply(Some(&mut context)).unwrap();
+
+        assert_eq!(runtime.get_external(runtime.get_register(0).unwrap()).unwrap(), DEFERRED_VALUE);
+    }
+
+    #[test]
+    fn empty_apply() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let int1 = runtime.add_number(10.into()).unwrap();
+
+        runtime.push_register(int1).unwrap();
+
+        let mut context = DeferOpTestContext::new();
+
+        runtime.empty_apply(Some(&mut context)).unwrap();
+
+        assert_eq!(runtime.get_external(runtime.get_register(0).unwrap()).unwrap(), DEFERRED_VALUE);
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use crate::simple::{symbol_value, DataError, SimpleDataRuntimeNC};
     use crate::testing_utilites::{DeferOpTestContext, DEFERRED_VALUE};
