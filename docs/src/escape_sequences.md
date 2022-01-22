@@ -1,4 +1,5 @@
 ## CharList
+Single double quote will skip non-escaped newlines and tabs
 
 "\n" - Newline
 "\t" - Tab
