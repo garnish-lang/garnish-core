@@ -95,7 +95,7 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
             let sym = this.get_symbol(right)?;
             access_with_symbol(this, sym, left)
         }
-        _ => Err(RuntimeError::unsupported_types()),
+        _ => Ok(None),
     }
 }
 
@@ -477,18 +477,18 @@ fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
     Ok(item)
 }
 
-#[cfg(test)]
-mod deferring {
-    use crate::runtime::GarnishRuntime;
-    use crate::testing_utilites::deferred_op;
-
-    #[test]
-    fn access() {
-        deferred_op(|runtime, context| {
-            runtime.access(Some(context)).unwrap();
-        })
-    }
-}
+// #[cfg(test)]
+// mod deferring {
+//     use crate::runtime::GarnishRuntime;
+//     use crate::testing_utilites::deferred_op;
+//
+//     #[test]
+//     fn access() {
+//         deferred_op(|runtime, context| {
+//             runtime.access(Some(context)).unwrap();
+//         })
+//     }
+// }
 
 #[cfg(test)]
 mod tests {
