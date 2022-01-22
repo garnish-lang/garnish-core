@@ -93,7 +93,11 @@ fn parse_number(input: &str) -> Result<SimpleNumber, DataError> {
                 let trimmed = part.trim_matches('0');
                 match u32::from_str(trimmed) {
                     Err(_) => Err(DataError::from(format!("Could not parse radix from {:?}", part)))?,
-                    Ok(v) => (v, &input[i+1..]), // + 1 to skip the underscore
+                    Ok(v) => if v < 2 || v > 36 {
+                        Err(DataError::from(format!("Radix must be with in range [2, 36]. Found {:?}", v)))?
+                    } else {
+                        (v, &input[i+1..])
+                    } // + 1 to skip the underscore
                 }
             } else {
                 (10, input)
@@ -143,6 +147,24 @@ mod numbers {
     fn just_numbers_base_2() {
         let input = "02_1010101";
         assert_eq!(parse_number(input).unwrap(), Integer(0b1010101));
+    }
+
+    #[test]
+    fn just_numbers_base_36() {
+        let input = "036_C7R";
+        assert_eq!(parse_number(input).unwrap(), Integer(15831));
+    }
+
+    #[test]
+    fn just_numbers_base_1_is_err() {
+        let input = "01_1010101";
+        assert!(parse_number(input).is_err());
+    }
+
+    #[test]
+    fn just_numbers_base_37_is_err() {
+        let input = "037_1010101";
+        assert!(parse_number(input).is_err());
     }
 }
 
