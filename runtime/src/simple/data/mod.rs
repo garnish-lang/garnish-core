@@ -12,14 +12,14 @@ use std::hash::Hash;
 #[derive(Debug, Eq, PartialEq)]
 pub struct SimpleDataList<T = NoCustom>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     list: Vec<SimpleData<T>>,
 }
 
 impl<T> Default for SimpleDataList<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     fn default() -> Self {
         SimpleDataList::new()
@@ -31,7 +31,7 @@ where
 
 impl<T> SimpleDataList<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     pub fn new() -> Self {
         SimpleDataList { list: vec![] }
@@ -64,7 +64,7 @@ pub type SimpleDataNC = SimpleData<NoCustom>;
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
 pub enum SimpleData<T = NoCustom>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     Unit,
     True,
@@ -88,7 +88,7 @@ where
 
 impl<T> SimpleData<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     pub fn get_data_type(&self) -> ExpressionDataType {
         match self {
@@ -131,6 +131,13 @@ where
         match self {
             SimpleData::False => true,
             _ => false,
+        }
+    }
+
+    pub fn as_custom(&self) -> DataCastResult<T> {
+        match self {
+            SimpleData::Custom(v) => Ok(*v),
+            _ => Err(DataError::from(format!("{:?} is not a Custom", self))),
         }
     }
 
@@ -235,6 +242,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::simple::NoCustom;
     use crate::{ExpressionDataType, SimpleDataNC, SimpleNumber};
 
     #[test]
@@ -255,6 +263,7 @@ mod tests {
         assert_eq!(SimpleDataNC::Slice(0, 0).get_data_type(), ExpressionDataType::Slice);
         assert_eq!(SimpleDataNC::Link(0, 0, true).get_data_type(), ExpressionDataType::Link);
         assert_eq!(SimpleDataNC::List(vec![], vec![]).get_data_type(), ExpressionDataType::List);
+        assert_eq!(SimpleDataNC::Custom(NoCustom {}).get_data_type(), ExpressionDataType::Custom);
     }
 
     #[test]
@@ -285,6 +294,16 @@ mod tests {
     #[test]
     fn is_false_not_false() {
         assert!(!SimpleDataNC::Unit.is_false());
+    }
+
+    #[test]
+    fn is_custom() {
+        assert_eq!(SimpleDataNC::Custom(NoCustom {}).as_custom().unwrap(), NoCustom {});
+    }
+
+    #[test]
+    fn is_custom_not_custom() {
+        assert!(SimpleDataNC::Unit.as_custom().is_err());
     }
 
     #[test]

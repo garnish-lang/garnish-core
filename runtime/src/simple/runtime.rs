@@ -8,7 +8,7 @@ use crate::{DataError, ExpressionDataType, GarnishLangRuntimeData, Instruction, 
 
 impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
     where
-        T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+        T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     type Error = DataError;
     type Symbol = u64;

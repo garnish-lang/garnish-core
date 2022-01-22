@@ -28,7 +28,7 @@ pub struct NoCustom {}
 #[derive(Debug)]
 pub struct SimpleRuntimeData<T = NoCustom>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     register: Vec<usize>,
     data: SimpleDataList<T>,
@@ -75,7 +75,7 @@ impl SimpleRuntimeData<NoCustom> {
 
 impl<T> SimpleRuntimeData<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     pub fn new_custom() -> Self {
         SimpleRuntimeData {
@@ -102,6 +102,15 @@ where
             None => Err(format!("No data at addr {:?}", index))?,
             Some(d) => Ok(d),
         }
+    }
+
+    pub fn add_custom(&mut self, data: T) -> Result<usize, DataError> {
+        self.data.push(SimpleData::Custom(data));
+        Ok(self.data.len() - 1)
+    }
+
+    pub fn get_custom(&self, addr: usize) -> Result<T, DataError> {
+        self.get(addr)?.as_custom()
     }
 
     pub fn get_symbols(&self) -> &HashMap<u64, String> {
