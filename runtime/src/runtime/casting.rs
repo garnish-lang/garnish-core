@@ -1,6 +1,9 @@
 use crate::runtime::internals::{link_len, link_len_size};
 use crate::runtime::list::{iterate_link_internal, iterate_link_internal_rev};
-use crate::{get_range, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, Instruction, OrNumberError, RuntimeError, TypeConstants, next_ref};
+use crate::{
+    get_range, next_ref, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber,
+    Instruction, OrNumberError, RuntimeError, TypeConstants,
+};
 
 pub(crate) fn type_of<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let a = next_ref(this)?;
@@ -978,7 +981,13 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
-        let expected: Vec<char> = SimpleRuntimeData::parse_char_list(input).unwrap().iter().skip(2).take(6).map(|c| *c).collect();
+        let expected: Vec<char> = SimpleRuntimeData::parse_char_list(input)
+            .unwrap()
+            .iter()
+            .skip(2)
+            .take(6)
+            .map(|c| *c)
+            .collect();
         let mut result = vec![];
 
         for i in 0..expected.len() {
@@ -1006,7 +1015,13 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
-        let expected: Vec<u8> = SimpleRuntimeData::parse_byte_list(input).unwrap().iter().skip(2).take(6).map(|c| *c).collect();
+        let expected: Vec<u8> = SimpleRuntimeData::parse_byte_list(input)
+            .unwrap()
+            .iter()
+            .skip(2)
+            .take(6)
+            .map(|c| *c)
+            .collect();
         let mut result = vec![];
 
         for i in 0..expected.len() {

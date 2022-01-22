@@ -765,7 +765,10 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
     }
 
     if state != LexingState::NoToken {
-        Err(CompilerError::new_message(format!("Unfinished token of type {:?}: {:?}", current_token_type, current_characters)))
+        Err(CompilerError::new_message(format!(
+            "Unfinished token of type {:?}: {:?}",
+            current_token_type, current_characters
+        )))
     } else {
         Ok(tokens)
     }
@@ -2346,14 +2349,12 @@ mod numbers {
 
         assert_eq!(
             result,
-            vec![
-                LexerToken {
-                    text: "12345_67890".to_string(),
-                    token_type: TokenType::Number,
-                    column: 0,
-                    row: 0
-                }
-            ]
+            vec![LexerToken {
+                text: "12345_67890".to_string(),
+                token_type: TokenType::Number,
+                column: 0,
+                row: 0
+            }]
         );
     }
 
@@ -2363,14 +2364,12 @@ mod numbers {
 
         assert_eq!(
             result,
-            vec![
-                LexerToken {
-                    text: "12_ABCDF".to_string(),
-                    token_type: TokenType::Number,
-                    column: 0,
-                    row: 0
-                }
-            ]
+            vec![LexerToken {
+                text: "12_ABCDF".to_string(),
+                token_type: TokenType::Number,
+                column: 0,
+                row: 0
+            }]
         );
     }
     #[test]
@@ -2379,14 +2378,12 @@ mod numbers {
 
         assert_eq!(
             result,
-            vec![
-                LexerToken {
-                    text: "0.12345_67890".to_string(),
-                    token_type: TokenType::Number,
-                    column: 0,
-                    row: 0
-                }
-            ]
+            vec![LexerToken {
+                text: "0.12345_67890".to_string(),
+                token_type: TokenType::Number,
+                column: 0,
+                row: 0
+            }]
         );
     }
 
@@ -2396,14 +2393,12 @@ mod numbers {
 
         assert_eq!(
             result,
-            vec![
-                LexerToken {
-                    text: "0.12_ABCDF".to_string(),
-                    token_type: TokenType::Number,
-                    column: 0,
-                    row: 0
-                }
-            ]
+            vec![LexerToken {
+                text: "0.12_ABCDF".to_string(),
+                token_type: TokenType::Number,
+                column: 0,
+                row: 0
+            }]
         );
     }
 

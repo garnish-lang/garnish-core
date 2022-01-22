@@ -122,7 +122,6 @@ pub enum SecondaryDefinition {
 
 fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
     match token_type {
-
         // Values
         TokenType::Unknown => (Definition::Drop, SecondaryDefinition::Value),
         TokenType::UnitLiteral => (Definition::Unit, SecondaryDefinition::Value),
@@ -996,7 +995,10 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                                 match l {
                                     None => (), // need to test and see if this is reachable
                                     Some(left) => match nodes.get_mut(left) {
-                                        None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", left), &token)?,
+                                        None => implementation_error_with_token(
+                                            format!("Index assigned to node has no value in node list. {:?}", left),
+                                            &token,
+                                        )?,
                                         Some(left) => {
                                             left.parent = new_parent;
 
@@ -1005,14 +1007,17 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                                             match new_parent {
                                                 None => (), // unreachable ?
                                                 Some(p) => match nodes.get_mut(p) {
-                                                    None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", p), &token)?,
+                                                    None => implementation_error_with_token(
+                                                        format!("Index assigned to node has no value in node list. {:?}", p),
+                                                        &token,
+                                                    )?,
                                                     Some(parent) => {
                                                         parent.right = l;
                                                     }
-                                                }
+                                                },
                                             }
                                         }
-                                    }
+                                    },
                                 }
                             }
                         }
@@ -2456,10 +2461,7 @@ mod tests {
         assert_result(
             &result,
             0,
-            &[
-                (0, Definition::Not, None, None, Some(1)),
-                (1, Definition::Integer, Some(0), None, None),
-            ],
+            &[(0, Definition::Not, None, None, Some(1)), (1, Definition::Integer, Some(0), None, None)],
         );
     }
 

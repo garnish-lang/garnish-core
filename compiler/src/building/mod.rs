@@ -1049,7 +1049,9 @@ mod operations {
                 (Instruction::Add, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1068,7 +1070,9 @@ mod operations {
                 (Instruction::Subtract, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1087,7 +1091,9 @@ mod operations {
                 (Instruction::Multiply, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1106,7 +1112,9 @@ mod operations {
                 (Instruction::Divide, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1125,7 +1133,9 @@ mod operations {
                 (Instruction::IntegerDivide, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1144,7 +1154,9 @@ mod operations {
                 (Instruction::Power, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1163,7 +1175,9 @@ mod operations {
                 (Instruction::Remainder, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1233,7 +1247,9 @@ mod operations {
                 (Instruction::BitwiseAnd, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1252,7 +1268,9 @@ mod operations {
                 (Instruction::BitwiseOr, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1271,7 +1289,9 @@ mod operations {
                 (Instruction::BitwiseXor, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1290,7 +1310,9 @@ mod operations {
                 (Instruction::BitwiseShiftLeft, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1309,7 +1331,9 @@ mod operations {
                 (Instruction::BitwiseShiftRight, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1345,7 +1369,9 @@ mod operations {
                 (Instruction::ApplyType, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1364,7 +1390,9 @@ mod operations {
                 (Instruction::TypeEqual, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1383,7 +1411,9 @@ mod operations {
                 (Instruction::Equal, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1402,7 +1432,9 @@ mod operations {
                 (Instruction::NotEqual, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1421,7 +1453,9 @@ mod operations {
                 (Instruction::LessThan, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1440,7 +1474,9 @@ mod operations {
                 (Instruction::LessThanOrEqual, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1459,7 +1495,9 @@ mod operations {
                 (Instruction::GreaterThan, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1485,7 +1523,9 @@ mod operations {
                 (Instruction::GreaterThanOrEqual, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1521,7 +1561,9 @@ mod operations {
                 (Instruction::And, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1540,7 +1582,9 @@ mod operations {
                 (Instruction::Or, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1559,7 +1603,9 @@ mod operations {
                 (Instruction::Xor, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1578,7 +1624,9 @@ mod operations {
                 (Instruction::MakePair, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1597,7 +1645,9 @@ mod operations {
                 (Instruction::Access, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1667,7 +1717,9 @@ mod operations {
                 (Instruction::Put, Some(4)),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1686,7 +1738,9 @@ mod operations {
                 (Instruction::PrependLink, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1705,7 +1759,9 @@ mod operations {
                 (Instruction::AppendLink, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1724,7 +1780,9 @@ mod operations {
                 (Instruction::MakeRange, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1750,7 +1808,9 @@ mod operations {
                 (Instruction::MakeStartExclusiveRange, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1769,7 +1829,9 @@ mod operations {
                 (Instruction::MakeEndExclusiveRange, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1788,7 +1850,9 @@ mod operations {
                 (Instruction::MakeExclusiveRange, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1807,7 +1871,9 @@ mod operations {
                 (Instruction::Apply, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -1826,7 +1892,9 @@ mod operations {
                 (Instruction::Apply, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(10.into())).append(SimpleData::Number(5.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(10.into()))
+                .append(SimpleData::Number(5.into())),
         );
     }
 
@@ -1845,7 +1913,9 @@ mod operations {
                 (Instruction::Reapply, Some(0)),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 }
@@ -1894,7 +1964,9 @@ mod lists {
                 (Instruction::MakeList, Some(2)),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -2073,7 +2145,9 @@ mod groups {
                 (Instruction::Add, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 }
@@ -2102,7 +2176,9 @@ mod side_effects {
                 (Instruction::EndSideEffect, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
         );
     }
 
@@ -2346,7 +2422,9 @@ mod conditionals {
                 (Instruction::Put, Some(4)),
                 (Instruction::JumpTo, Some(1)),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
             vec![0, 2, 3],
         );
     }
@@ -2367,7 +2445,9 @@ mod conditionals {
                 (Instruction::Put, Some(4)),
                 (Instruction::JumpTo, Some(1)),
             ],
-            SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())),
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
             vec![0, 2, 3],
         );
     }

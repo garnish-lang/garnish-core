@@ -1,13 +1,11 @@
-use crate::{
-    next_ref, next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, RuntimeError,
-};
+use crate::{next_ref, next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
 
 pub(crate) fn and<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let (left, right) = next_two_raw_ref(this)?;
 
     let result = match (is_true_value(this, left)?, is_true_value(this, right)?) {
         (true, true) => true,
-        _ => false
+        _ => false,
     };
 
     push_boolean(this, result)
@@ -18,7 +16,7 @@ pub fn or<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeEr
 
     let result = match (is_true_value(this, left)?, is_true_value(this, right)?) {
         (false, false) => false,
-        _ => true
+        _ => true,
     };
 
     push_boolean(this, result)
@@ -29,7 +27,7 @@ pub fn xor<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeE
 
     let result = match (is_true_value(this, left)?, is_true_value(this, right)?) {
         (false, false) | (true, true) => false,
-        _ => true
+        _ => true,
     };
 
     push_boolean(this, result)
@@ -44,7 +42,7 @@ pub(crate) fn not<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), R
 fn is_true_value<Data: GarnishLangRuntimeData>(this: &mut Data, addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {
     Ok(match this.get_data_type(addr)? {
         ExpressionDataType::False | ExpressionDataType::Unit => false,
-        _ => true
+        _ => true,
     })
 }
 
@@ -79,7 +77,10 @@ mod and {
 
         runtime.and().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 
     #[test]
@@ -94,7 +95,10 @@ mod and {
 
         runtime.and().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 
     #[test]
@@ -109,7 +113,10 @@ mod and {
 
         runtime.and().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 
     #[test]
@@ -124,7 +131,10 @@ mod and {
 
         runtime.and().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 }
 
@@ -189,7 +199,10 @@ mod or {
 
         runtime.or().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 
     #[test]
@@ -204,7 +217,10 @@ mod or {
 
         runtime.or().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 }
 
@@ -224,7 +240,10 @@ mod xor {
 
         runtime.xor().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 
     #[test]
@@ -269,7 +288,10 @@ mod xor {
 
         runtime.xor().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 
     #[test]
@@ -284,7 +306,10 @@ mod xor {
 
         runtime.xor().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 }
 
@@ -302,7 +327,10 @@ mod not {
 
         runtime.not().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 
     #[test]
@@ -315,7 +343,10 @@ mod not {
 
         runtime.not().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 
     #[test]
@@ -344,4 +375,3 @@ mod not {
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
     }
 }
-

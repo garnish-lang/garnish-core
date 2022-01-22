@@ -1,9 +1,9 @@
+use crate::SimpleNumber::{Float, Integer};
 use crate::{DataCastResult, DataError, GarnishNumber, TypeConstants};
 use std::cmp::Ordering;
-use crate::SimpleNumber::{Float, Integer};
-use std::ops::{Add, Sub, Mul, Div, Rem};
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
+use std::ops::{Add, Div, Mul, Rem, Sub};
 
 #[derive(Copy, Clone, Debug)]
 pub enum SimpleNumber {
@@ -33,7 +33,7 @@ impl Display for SimpleNumber {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             Integer(v) => f.write_str(v.to_string().as_str()),
-            Float(v) => f.write_str(v.to_string().as_str())
+            Float(v) => f.write_str(v.to_string().as_str()),
         }
     }
 }
@@ -57,7 +57,7 @@ impl From<SimpleNumber> for i32 {
     fn from(x: SimpleNumber) -> Self {
         match x {
             Integer(v) => v,
-            Float(v) => v as i32
+            Float(v) => v as i32,
         }
     }
 }
@@ -72,7 +72,7 @@ impl From<SimpleNumber> for usize {
     fn from(x: SimpleNumber) -> Self {
         match x {
             Integer(v) => v as usize,
-            Float(v) => v as i32 as usize
+            Float(v) => v as i32 as usize,
         }
     }
 }
@@ -87,7 +87,7 @@ impl From<SimpleNumber> for f64 {
     fn from(x: SimpleNumber) -> Self {
         match x {
             Integer(v) => f64::from(v),
-            Float(v) => v
+            Float(v) => v,
         }
     }
 }
@@ -115,7 +115,9 @@ impl PartialOrd for SimpleNumber {
 }
 
 fn do_op<IntOp, FloatOp>(left: &SimpleNumber, right: &SimpleNumber, int_op: IntOp, float_op: FloatOp) -> Option<SimpleNumber>
-where IntOp: Fn(i32, i32) -> i32, FloatOp: Fn(f64, f64) -> f64
+where
+    IntOp: Fn(i32, i32) -> i32,
+    FloatOp: Fn(f64, f64) -> f64,
 {
     Some(match (left, right) {
         (Integer(v1), Integer(v2)) => Integer(int_op(*v1, *v2)),
@@ -196,21 +198,21 @@ impl GarnishNumber for SimpleNumber {
                 }
 
                 Integer(v1.pow(v2 as u32))
-            },
+            }
             (Float(v1), Float(v2)) => {
                 if v2 < 0.0 {
                     return None;
                 }
 
                 Float(v1.powf(v2))
-            },
+            }
             (Integer(v1), Float(v2)) => {
                 if v2 < 0.0 {
                     return None;
                 }
 
                 Float(f64::from(v1).powf(v2))
-            },
+            }
             (Float(v1), Integer(v2)) => {
                 if v2 < 0 {
                     return None;
@@ -265,51 +267,51 @@ impl GarnishNumber for SimpleNumber {
     fn bitwise_not(self) -> Option<Self> {
         Some(match self {
             Integer(v) => Integer(!v),
-            Float(_) => return None
+            Float(_) => return None,
         })
     }
 
     fn bitwise_and(self, rhs: Self) -> Option<Self> {
         Some(match (self, rhs) {
             (Integer(v1), Integer(v2)) => Integer(v1 & v2),
-            _ => return None
+            _ => return None,
         })
     }
 
     fn bitwise_or(self, rhs: Self) -> Option<Self> {
         Some(match (self, rhs) {
             (Integer(v1), Integer(v2)) => Integer(v1 | v2),
-            _ => return None
+            _ => return None,
         })
     }
 
     fn bitwise_xor(self, rhs: Self) -> Option<Self> {
         Some(match (self, rhs) {
             (Integer(v1), Integer(v2)) => Integer(v1 ^ v2),
-            _ => return None
+            _ => return None,
         })
     }
 
     fn bitwise_shift_left(self, rhs: Self) -> Option<Self> {
         Some(match (self, rhs) {
             (Integer(v1), Integer(v2)) => Integer(v1 << v2),
-            _ => return None
+            _ => return None,
         })
     }
 
     fn bitwise_shift_right(self, rhs: Self) -> Option<Self> {
         Some(match (self, rhs) {
             (Integer(v1), Integer(v2)) => Integer(v1 >> v2),
-            _ => return None
+            _ => return None,
         })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::usize;
-    use crate::{GarnishNumber, SimpleNumber};
     use crate::SimpleNumber::{Float, Integer};
+    use crate::{GarnishNumber, SimpleNumber};
+    use std::usize;
 
     #[test]
     fn from_i32() {

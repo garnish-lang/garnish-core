@@ -276,7 +276,10 @@ mod tests {
 
     #[test]
     fn as_number() {
-        assert_eq!(SimpleData::Number(SimpleNumber::Integer(10)).as_number().unwrap(), SimpleNumber::Integer(10));
+        assert_eq!(
+            SimpleData::Number(SimpleNumber::Integer(10)).as_number().unwrap(),
+            SimpleNumber::Integer(10)
+        );
     }
 
     #[test]

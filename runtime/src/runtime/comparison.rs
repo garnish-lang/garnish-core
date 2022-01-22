@@ -1,31 +1,34 @@
-use crate::{get_range, next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants, push_unit};
+use crate::{
+    get_range, next_two_raw_ref, push_boolean, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError,
+    TypeConstants,
+};
 use std::cmp::Ordering;
 
 pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     perform_comparison(this, Ordering::Greater).and_then(|result| match result {
         Some(result) => push_boolean(this, result.is_lt()),
-        None => push_unit(this)
+        None => push_unit(this),
     })
 }
 
 pub fn less_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     perform_comparison(this, Ordering::Greater).and_then(|result| match result {
         Some(result) => push_boolean(this, result.is_le()),
-        None => push_unit(this)
+        None => push_unit(this),
     })
 }
 
 pub fn greater_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     perform_comparison(this, Ordering::Less).and_then(|result| match result {
         Some(result) => push_boolean(this, result.is_gt()),
-        None => push_unit(this)
+        None => push_unit(this),
     })
 }
 
 pub fn greater_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     perform_comparison(this, Ordering::Less).and_then(|result| match result {
         Some(result) => push_boolean(this, result.is_ge()),
-        None => push_unit(this)
+        None => push_unit(this),
     })
 }
 
@@ -109,10 +112,7 @@ where
     GetFunc: Fn(&Data, Data::Size, Data::Number) -> Result<T, Data::Error>,
     LenFunc: Fn(&Data, Data::Size) -> Result<Data::Size, Data::Error>,
 {
-    let (len1, len2) = (
-        Data::size_to_number(len_func(this, left)?),
-        Data::size_to_number(len_func(this, right)?),
-    );
+    let (len1, len2) = (Data::size_to_number(len_func(this, left)?), Data::size_to_number(len_func(this, right)?));
 
     let mut left_index = left_start;
     let mut right_index = right_start;

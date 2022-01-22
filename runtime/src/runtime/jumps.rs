@@ -61,7 +61,11 @@ pub(crate) fn end_expression<Data: GarnishLangRuntimeData>(this: &mut Data) -> R
         None => {
             // no more jumps, this should be the end of the entire execution
             let r = next_ref(this)?;
-            trace!("No remaining return points. Pushing {:?} to values. Setting cursor to instruction length {:?}.", r, this.get_instruction_len());
+            trace!(
+                "No remaining return points. Pushing {:?} to values. Setting cursor to instruction length {:?}.",
+                r,
+                this.get_instruction_len()
+            );
             this.set_instruction_cursor(this.get_instruction_len())?;
             this.push_value_stack(r)?;
         }

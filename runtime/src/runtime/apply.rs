@@ -1,7 +1,7 @@
 use super::context::GarnishLangRuntimeContext;
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
-use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, ErrorType, RuntimeError, TypeConstants, Instruction};
+use crate::{state_error, ErrorType, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, Instruction, RuntimeError, TypeConstants};
 
 pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
@@ -109,8 +109,8 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                 let (value, is_associative) = match get_access_addr(this, item, left_addr) {
                     Err(e) => match e.get_type() {
                         ErrorType::UnsupportedOpTypes => (this.add_unit()?, false),
-                        _ => Err(e)?
-                    }
+                        _ => Err(e)?,
+                    },
                     Ok(i) => match i {
                         Some(addr) => match this.get_data_type(addr)? {
                             ExpressionDataType::Pair => {
@@ -124,7 +124,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                         },
                         // make sure there is a unit value to use
                         None => (this.add_unit()?, false),
-                    }
+                    },
                 };
 
                 if is_pair_mapping {
@@ -166,10 +166,12 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
         }
         (l, r) => match context {
             None => push_unit(this)?,
-            Some(c) => if !c.defer_op(this,instruction, (l, left_addr), (r, right_addr))? {
-                push_unit(this)?
+            Some(c) => {
+                if !c.defer_op(this, instruction, (l, left_addr), (r, right_addr))? {
+                    push_unit(this)?
+                }
             }
-        }
+        },
     }
 
     this.set_instruction_cursor(next_instruction)?;
@@ -217,6 +219,7 @@ pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
 #[cfg(test)]
 mod tests {
     use crate::simple::{symbol_value, DataError};
+    use crate::testing_utilites::{DeferOpTestContext, DEFERRED_VALUE};
     use crate::{
         runtime::{
             context::{EmptyContext, GarnishLangRuntimeContext},
@@ -224,7 +227,6 @@ mod tests {
         },
         ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData,
     };
-    use crate::testing_utilites::{DeferOpTestContext, DEFERRED_VALUE};
 
     #[test]
     fn deferred() {

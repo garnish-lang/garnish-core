@@ -492,7 +492,7 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, NO_CONTEXT, SimpleNumber};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleNumber, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn make_list() {

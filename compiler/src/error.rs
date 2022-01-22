@@ -95,15 +95,11 @@ pub(crate) fn composition_error<T, S: std::error::Error + 'static>(
     Err(CompilerError::new_message(format!("Syntax Error: A {:?} token cannot follow a {:?} token", second, first)).append_token_details(token))
 }
 
-pub(crate) fn unmatched_grouping_error<T, S: std::error::Error + 'static>(
-    token: &LexerToken,
-) -> Result<T, CompilerError<S>> {
+pub(crate) fn unmatched_grouping_error<T, S: std::error::Error + 'static>(token: &LexerToken) -> Result<T, CompilerError<S>> {
     Err(CompilerError::new_message(format!("Syntax Error: Unmatched grouping token")).append_token_details(token))
 }
 
-pub(crate) fn unclosed_grouping_error<T, S: std::error::Error + 'static>(
-    token: &LexerToken,
-) -> Result<T, CompilerError<S>> {
+pub(crate) fn unclosed_grouping_error<T, S: std::error::Error + 'static>(token: &LexerToken) -> Result<T, CompilerError<S>> {
     Err(CompilerError::new_message(format!("Syntax Error: Unclosed grouping")).append_token_details(token))
 }
 

@@ -1,4 +1,4 @@
-use crate::{next_ref, push_unit, GarnishLangRuntimeData, RuntimeError, state_error};
+use crate::{next_ref, push_unit, state_error, GarnishLangRuntimeData, RuntimeError};
 
 pub(crate) fn put<Data: GarnishLangRuntimeData>(this: &mut Data, i: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
     match i >= this.get_data_len() {
@@ -42,7 +42,7 @@ pub(crate) fn push_result<Data: GarnishLangRuntimeData>(this: &mut Data) -> Resu
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, ExpressionDataType};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
 
     #[test]
     fn put() {

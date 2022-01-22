@@ -12,7 +12,13 @@ where
         Ok(false)
     }
 
-    fn defer_op(&mut self, _runtime: &mut Data, _operation: Instruction, _left: (ExpressionDataType, Data::Size), _right: (ExpressionDataType, Data::Size)) -> Result<bool, RuntimeError<Data::Error>> {
+    fn defer_op(
+        &mut self,
+        _runtime: &mut Data,
+        _operation: Instruction,
+        _left: (ExpressionDataType, Data::Size),
+        _right: (ExpressionDataType, Data::Size),
+    ) -> Result<bool, RuntimeError<Data::Error>> {
         Ok(false)
     }
 }

@@ -1,4 +1,4 @@
-use crate::{next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, GarnishNumber, OrNumberError};
+use crate::{next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError};
 
 pub(crate) fn make_range<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     make_range_internal(this, false, false)
@@ -20,7 +20,11 @@ pub(crate) fn range_len<Data: GarnishLangRuntimeData>(start: Data::Number, end: 
     end.subtract(start).or_num_err()?.increment().or_num_err()
 }
 
-fn make_range_internal<Data: GarnishLangRuntimeData>(this: &mut Data, start_exclusive: bool, end_exclusive: bool) -> Result<(), RuntimeError<Data::Error>> {
+fn make_range_internal<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    start_exclusive: bool,
+    end_exclusive: bool,
+) -> Result<(), RuntimeError<Data::Error>> {
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
     let types = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
 

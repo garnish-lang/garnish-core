@@ -755,7 +755,10 @@ mod simple_types {
 
         runtime.equal().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            ExpressionDataType::False
+        );
     }
 }
 

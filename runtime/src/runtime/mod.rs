@@ -31,7 +31,7 @@ use log::trace;
 pub(crate) use utilities::*;
 
 use crate::runtime::arithmetic::{absolute_value, add, divide, integer_divide, multiply, opposite, power, remainder, subtract};
-use crate::runtime::bitwise::{bitwise_and, bitwise_not, bitwise_or, bitwise_left_shift, bitwise_right_shift, bitwise_xor};
+use crate::runtime::bitwise::{bitwise_and, bitwise_left_shift, bitwise_not, bitwise_or, bitwise_right_shift, bitwise_xor};
 use crate::runtime::casting::{type_cast, type_of};
 use crate::runtime::comparison::{greater_than, greater_than_or_equal, less_than, less_than_or_equal};
 use crate::runtime::equality::{not_equal, type_equal};
@@ -860,7 +860,10 @@ pub mod testing_utilites {
         }
     }
 
-    pub fn deferred_op<F>(func: F) where F: Fn(&mut SimpleRuntimeData, &mut DeferOpTestContext) {
+    pub fn deferred_op<F>(func: F)
+    where
+        F: Fn(&mut SimpleRuntimeData, &mut DeferOpTestContext),
+    {
         let mut runtime = SimpleRuntimeData::new();
 
         let int1 = runtime.add_external(10).unwrap();
@@ -876,7 +879,10 @@ pub mod testing_utilites {
         assert_eq!(runtime.get_external(runtime.get_register(0).unwrap()).unwrap(), DEFERRED_VALUE);
     }
 
-    pub fn deferred_unary_op<F>(func: F) where F: Fn(&mut SimpleRuntimeData, &mut DeferOpTestContext) {
+    pub fn deferred_unary_op<F>(func: F)
+    where
+        F: Fn(&mut SimpleRuntimeData, &mut DeferOpTestContext),
+    {
         let mut runtime = SimpleRuntimeData::new();
 
         let int1 = runtime.add_expression(10).unwrap();

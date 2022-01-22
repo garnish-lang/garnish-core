@@ -1,6 +1,6 @@
 use crate::{DataError, SimpleNumber};
-use std::str::FromStr;
 use std::iter;
+use std::str::FromStr;
 
 pub fn parse_char_list(input: &str) -> Result<String, DataError> {
     let mut new = String::new();
@@ -24,16 +24,21 @@ pub fn parse_char_list(input: &str) -> Result<String, DataError> {
         if in_unicode {
             if c == '}' {
                 match parse_number_internal(unicode_characters.as_str(), 16)? {
-                    SimpleNumber::Float(_) => Err(DataError::from(format!("Float numbers are not allowed in Unicode escape. {:?}", unicode_characters)))?,
-                    SimpleNumber::Integer(v) => {
-                        match char::from_u32(v as u32) {
-                            None => Err(DataError::from(format!("Invalid unicode value {:?}. Max is {:?}", unicode_characters, char::MAX.to_digit(16))))?,
-                            Some(v) => {
-                                new.push(v);
-                                unicode_characters = String::new();
-                            }
+                    SimpleNumber::Float(_) => Err(DataError::from(format!(
+                        "Float numbers are not allowed in Unicode escape. {:?}",
+                        unicode_characters
+                    )))?,
+                    SimpleNumber::Integer(v) => match char::from_u32(v as u32) {
+                        None => Err(DataError::from(format!(
+                            "Invalid unicode value {:?}. Max is {:?}",
+                            unicode_characters,
+                            char::MAX.to_digit(16)
+                        )))?,
+                        Some(v) => {
+                            new.push(v);
+                            unicode_characters = String::new();
                         }
-                    }
+                    },
                 }
                 in_unicode = false;
             } else {
@@ -125,9 +130,12 @@ pub fn parse_byte_list_numbers(input: &str) -> Result<Vec<u8>, DataError> {
             current_number.push(c);
         } else if c == ' ' && current_number.len() > 0 {
             match parse_number(current_number.as_str())? {
-                SimpleNumber::Float(_) => Err(DataError::from(format!("Float numbers are not allowed in ByteLists. {:?}", current_number)))?,
+                SimpleNumber::Float(_) => Err(DataError::from(format!(
+                    "Float numbers are not allowed in ByteLists. {:?}",
+                    current_number
+                )))?,
                 SimpleNumber::Integer(v) => {
-                    if v < 0 || v > u8::MAX as i32{
+                    if v < 0 || v > u8::MAX as i32 {
                         Err(DataError::from(format!("Number to large for byte value {:?}", current_number)))?;
                     }
 

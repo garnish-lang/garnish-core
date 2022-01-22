@@ -1,4 +1,3 @@
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ExpressionDataType {
     Unit = 1,

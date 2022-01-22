@@ -4,7 +4,10 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
-use crate::{EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, RuntimeError, SimpleData, SimpleDataList, SimpleNumber};
+use crate::{
+    EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction,
+    InstructionData, RuntimeError, SimpleData, SimpleDataList, SimpleNumber,
+};
 
 pub mod data;
 
@@ -413,12 +416,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn get_list_item(&self, list_index: usize, item_index: SimpleNumber) -> Result<usize, Self::Error> {
         match item_index {
-            SimpleNumber::Integer(item_index) => {
-                match self.get(list_index)?.as_list()?.0.get(item_index as usize) {
-                    None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
-                    Some(v) => Ok(*v),
-                }
-            }
+            SimpleNumber::Integer(item_index) => match self.get(list_index)?.as_list()?.0.get(item_index as usize) {
+                None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
+                Some(v) => Ok(*v),
+            },
             SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index list with decimal value."))), // should return None
         }
     }
@@ -429,12 +430,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn get_list_association(&self, list_index: usize, item_index: SimpleNumber) -> Result<usize, Self::Error> {
         match item_index {
-            SimpleNumber::Integer(item_index) => {
-                match self.get(list_index)?.as_list()?.1.get(item_index as usize) {
-                    None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
-                    Some(v) => Ok(*v),
-                }
-            }
+            SimpleNumber::Integer(item_index) => match self.get(list_index)?.as_list()?.1.get(item_index as usize) {
+                None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
+                Some(v) => Ok(*v),
+            },
             SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index list with decimal value."))), // should return None
         }
     }
@@ -445,12 +444,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error> {
         match item_index {
-            SimpleNumber::Integer(item_index) => {
-                match self.get(addr)?.as_char_list()?.chars().nth(item_index as usize) {
-                    None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
-                    Some(c) => Ok(c),
-                }
-            }
+            SimpleNumber::Integer(item_index) => match self.get(addr)?.as_char_list()?.chars().nth(item_index as usize) {
+                None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
+                Some(c) => Ok(c),
+            },
             SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index char list with decimal value."))), // should return None
         }
     }
@@ -461,12 +458,10 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error> {
         match item_index {
-            SimpleNumber::Integer(item_index) => {
-                match self.get(addr)?.as_byte_list()?.get(item_index as usize) {
-                    None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
-                    Some(c) => Ok(*c),
-                }
-            }
+            SimpleNumber::Integer(item_index) => match self.get(addr)?.as_byte_list()?.get(item_index as usize) {
+                None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
+                Some(c) => Ok(*c),
+            },
             SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index byte list with decimal value."))), // should return None
         }
     }
@@ -801,25 +796,21 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn number_to_char(from: Self::Number) -> Option<Self::Char> {
         match from {
-            SimpleNumber::Integer(v) => {
-                match (v as u8).try_into() {
-                    Ok(c) => Some(c),
-                    Err(_) => None,
-                }
-            }
-            SimpleNumber::Float(_) => None
+            SimpleNumber::Integer(v) => match (v as u8).try_into() {
+                Ok(c) => Some(c),
+                Err(_) => None,
+            },
+            SimpleNumber::Float(_) => None,
         }
     }
 
     fn number_to_byte(from: Self::Number) -> Option<Self::Byte> {
         match from {
-            SimpleNumber::Integer(v) => {
-                match v.try_into() {
-                    Ok(b) => Some(b),
-                    Err(_) => None,
-                }
-            }
-            SimpleNumber::Float(_) => None
+            SimpleNumber::Integer(v) => match v.try_into() {
+                Ok(b) => Some(b),
+                Err(_) => None,
+            },
+            SimpleNumber::Float(_) => None,
         }
     }
 

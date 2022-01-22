@@ -1,6 +1,4 @@
-use crate::{
-     push_unit, runtime::list::get_access_addr, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError,
-};
+use crate::{push_unit, runtime::list::get_access_addr, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError};
 
 pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
@@ -34,15 +32,15 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
 
 #[cfg(test)]
 mod tests {
+    use crate::simple::DataError;
     use crate::{
         runtime::{
             context::{EmptyContext, GarnishLangRuntimeContext},
             utilities::push_number,
             GarnishRuntime,
         },
-        GarnishLangRuntimeData, RuntimeError, Instruction, SimpleRuntimeData, ExpressionDataType
+        ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData,
     };
-    use crate::simple::DataError;
 
     #[test]
     fn resolve_from_input() {

@@ -219,7 +219,7 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, EmptyContext, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData, SimpleNumber};
+    use crate::{runtime::GarnishRuntime, EmptyContext, ExpressionDataType, GarnishLangRuntimeData, SimpleNumber, SimpleRuntimeData};
 
     #[test]
     fn add() {

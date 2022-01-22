@@ -6,7 +6,7 @@ pub(crate) fn start_side_effect<Data: GarnishLangRuntimeData>(this: &mut Data) -
             let r = this.add_unit()?;
             this.push_value_stack(r)?;
         }
-        Some(r) => this.push_value_stack(r)?
+        Some(r) => this.push_value_stack(r)?,
     }
 
     Ok(())
@@ -15,18 +15,18 @@ pub(crate) fn start_side_effect<Data: GarnishLangRuntimeData>(this: &mut Data) -
 pub(crate) fn end_side_effect<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     match this.pop_value_stack() {
         Some(_) => (),
-        None => state_error("Could not pop value at end of side effect.".to_string())?
+        None => state_error("Could not pop value at end of side effect.".to_string())?,
     }
 
     match this.pop_register() {
         Some(_) => Ok(()),
-        None => state_error("Could not pop register at end of side effect.".to_string())
+        None => state_error("Could not pop register at end of side effect.".to_string()),
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, ExpressionDataType};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn start_side_effect() {
@@ -36,7 +36,10 @@ mod tests {
 
         runtime.start_side_effect().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_current_value().unwrap()).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(
+            runtime.get_data_type(runtime.get_current_value().unwrap()).unwrap(),
+            ExpressionDataType::Unit
+        );
     }
 
     #[test]

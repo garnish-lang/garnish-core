@@ -1,8 +1,8 @@
 // use log::trace;
 
-use crate::{GarnishLangRuntimeData, RuntimeError, state_error, ExpressionDataType, TypeConstants, GarnishNumber, OrNumberError};
 use crate::runtime::list::iterate_link_internal;
 use crate::runtime::range::range_len;
+use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants};
 
 pub(crate) fn next_ref<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Data::Size, RuntimeError<Data::Error>> {
     match this.pop_register() {
@@ -18,7 +18,10 @@ pub(crate) fn next_two_raw_ref<Data: GarnishLangRuntimeData>(this: &mut Data) ->
     Ok((first_ref, second_ref))
 }
 
-pub(crate) fn get_range<Data: GarnishLangRuntimeData>(this: &mut Data, addr: Data::Size) -> Result<(Data::Number, Data::Number, Data::Number), RuntimeError<Data::Error>> {
+pub(crate) fn get_range<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    addr: Data::Size,
+) -> Result<(Data::Number, Data::Number, Data::Number), RuntimeError<Data::Error>> {
     let (start, end) = this.get_range(addr)?;
     let (start, end) = match (this.get_data_type(start)?, this.get_data_type(end)?) {
         (ExpressionDataType::Number, ExpressionDataType::Number) => (this.get_number(start)?, this.get_number(end)?),
@@ -63,15 +66,13 @@ pub fn iterate_link<Data: GarnishLangRuntimeData, Callback>(
     link: Data::Size,
     func: Callback,
 ) -> Result<(), RuntimeError<Data::Error>>
-    where
-        Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
+where
+    Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
 {
     iterate_link_internal(this, link, func)
 }
 
-pub fn link_count<Data: GarnishLangRuntimeData>(
-    this: &mut Data,
-    link: Data::Size) -> Result<Data::Number, RuntimeError<Data::Error>> {
+pub fn link_count<Data: GarnishLangRuntimeData>(this: &mut Data, link: Data::Size) -> Result<Data::Number, RuntimeError<Data::Error>> {
     let mut count = Data::Number::zero();
 
     iterate_link_internal(this, link, |_, _, _| {
@@ -120,7 +121,8 @@ mod tests {
 #[cfg(test)]
 mod internal {
     use crate::{
-        runtime::utilities::{next_ref, next_two_raw_ref}, GarnishLangRuntimeData, SimpleRuntimeData,
+        runtime::utilities::{next_ref, next_two_raw_ref},
+        GarnishLangRuntimeData, SimpleRuntimeData,
     };
 
     #[test]

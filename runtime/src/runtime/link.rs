@@ -2,7 +2,7 @@ use crate::{next_two_raw_ref, ExpressionDataType, GarnishLangRuntimeData, Runtim
 
 pub(crate) fn append_link<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
-    link_internal(this,right, left, true)
+    link_internal(this, right, left, true)
 }
 
 pub(crate) fn prepend_link<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
@@ -10,7 +10,12 @@ pub(crate) fn prepend_link<Data: GarnishLangRuntimeData>(this: &mut Data) -> Res
     link_internal(this, left, right, false)
 }
 
-pub fn link_internal<Data: GarnishLangRuntimeData>(this: &mut Data, value: Data::Size, link_to: Data::Size, is_append: bool) -> Result<(), RuntimeError<Data::Error>> {
+pub fn link_internal<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    value: Data::Size,
+    link_to: Data::Size,
+    is_append: bool,
+) -> Result<(), RuntimeError<Data::Error>> {
     match this.get_data_type(link_to)? {
         ExpressionDataType::Link => {
             let value = match this.get_data_type(value)? {
@@ -18,7 +23,7 @@ pub fn link_internal<Data: GarnishLangRuntimeData>(this: &mut Data, value: Data:
                     let (addr, ..) = this.get_link(value)?;
                     addr
                 }
-                _ => value
+                _ => value,
             };
 
             // create new link with value and link_to as linked
@@ -40,7 +45,7 @@ pub fn link_internal<Data: GarnishLangRuntimeData>(this: &mut Data, value: Data:
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, ExpressionDataType};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn append_link_create_new() {
