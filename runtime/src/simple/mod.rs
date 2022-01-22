@@ -77,6 +77,26 @@ impl<T> SimpleRuntimeData<T>
 where
     T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
+    pub fn new_custom() -> Self {
+        SimpleRuntimeData {
+            register: vec![],
+            data: SimpleDataList::<T>::default(),
+            end_of_constant_data: 0,
+            values: vec![],
+            instruction_cursor: 0,
+            instructions: vec![],
+            expression_table: vec![],
+            jump_path: vec![],
+            current_list: None,
+            current_char_list: None,
+            current_byte_list: None,
+            symbols: HashMap::new(),
+            cache: HashMap::new(),
+            lease_stack: vec![],
+            max_char_list_depth: 1000,
+        }
+    }
+
     pub(crate) fn get(&self, index: usize) -> Result<&SimpleData<T>, DataError> {
         match self.data.get(index) {
             None => Err(format!("No data at addr {:?}", index))?,
