@@ -1,5 +1,6 @@
 use crate::{DataError, SimpleNumber};
 use std::str::FromStr;
+use std::iter;
 
 pub fn parse_char_list(input: &str) -> Result<String, DataError> {
     let mut new = String::new();
@@ -56,31 +57,56 @@ pub fn parse_byte_list(input: &str) -> Result<Vec<u8>, DataError> {
 
     let real_len = input.len() - start_quote_count * 2;
 
-    let mut check_escape = false;
-    for c in input.chars().skip(start_quote_count).take(real_len) {
-        if check_escape {
-            match c {
-                'n' => bytes.push('\n' as u8),
-                't' => bytes.push('\t' as u8),
-                'r' => bytes.push('\r' as u8),
-                '0' => bytes.push('\0' as u8),
-                '\\' => bytes.push('\\' as u8),
-                '\'' => bytes.push('\'' as u8),
-                _ => return Err(DataError::from(format!("Invalid escape character '{}'", c))),
+    if start_quote_count >= 2 {
+        parse_byte_list_numbers(&input[start_quote_count..(input.len() - start_quote_count)])
+    } else {
+        let mut check_escape = false;
+        for c in input.chars().skip(start_quote_count).take(real_len) {
+            if check_escape {
+                match c {
+                    'n' => bytes.push('\n' as u8),
+                    't' => bytes.push('\t' as u8),
+                    'r' => bytes.push('\r' as u8),
+                    '0' => bytes.push('\0' as u8),
+                    '\\' => bytes.push('\\' as u8),
+                    '\'' => bytes.push('\'' as u8),
+                    _ => return Err(DataError::from(format!("Invalid escape character '{}'", c))),
+                }
+
+                check_escape = false;
+                continue;
             }
 
-            check_escape = false;
-            continue;
+            if c == '\\' {
+                check_escape = true
+            } else {
+                bytes.push(c as u8);
+            }
         }
 
-        if c == '\\' {
-            check_escape = true
-        } else {
-            bytes.push(c as u8);
+        Ok(bytes)
+    }
+}
+
+pub fn parse_byte_list_numbers(input: &str) -> Result<Vec<u8>, DataError> {
+    let mut current_number = String::new();
+    let mut numbers = vec![];
+
+    for c in input.chars().chain(iter::once(' ')) {
+        if c.is_numeric() || c == '_' {
+            current_number.push(c);
+        } else if current_number.len() > 0 {
+            match parse_number(current_number.as_str())? {
+                SimpleNumber::Float(_) => Err(DataError::from(format!("Float numbers are not allowed in ByteLists. {:?}", current_number)))?,
+                SimpleNumber::Integer(v) => {
+                    numbers.push(v as u8);
+                    current_number = String::new();
+                }
+            }
         }
     }
 
-    Ok(bytes)
+    Ok(numbers)
 }
 
 fn parse_number(input: &str) -> Result<SimpleNumber, DataError> {
@@ -299,5 +325,11 @@ mod byte_list {
     fn invalid_escape_sequence() {
         let input = "'\\y'";
         assert!(parse_byte_list(input).is_err())
+    }
+
+    #[test]
+    fn double_quote_is_series_off_byte_numbers() {
+        let input = "''100 150 200 250''";
+        assert_eq!(parse_byte_list(input).unwrap(), vec![100, 150, 200, 250])
     }
 }
