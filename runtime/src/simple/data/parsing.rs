@@ -55,7 +55,26 @@ fn parse_byte_list(input: &str) -> Vec<u8> {
 
     let mut check_escape = false;
     for c in input.chars().skip(start_quote_count).take(real_len) {
-        bytes.push(c as u8);
+        if check_escape {
+            match c {
+                'n' => bytes.push('\n' as u8),
+                't' => bytes.push('\t' as u8),
+                'r' => bytes.push('\r' as u8),
+                '0' => bytes.push('\0' as u8),
+                '\\' => bytes.push('\\' as u8),
+                '\'' => bytes.push('\'' as u8),
+                _ => (),
+            }
+
+            check_escape = false;
+            continue;
+        }
+
+        if c == '\\' {
+            check_escape = true
+        } else {
+            bytes.push(c as u8);
+        }
     }
 
     bytes
@@ -116,5 +135,41 @@ mod byte_list {
     fn skip_starting_and_ending_quotes() {
         let input = "'a'";
         assert_eq!(parse_byte_list(input), vec!['a' as u8])
+    }
+
+    #[test]
+    fn convert_newlines() {
+        let input = "'\\n'";
+        assert_eq!(parse_byte_list(input), vec!['\n' as u8])
+    }
+
+    #[test]
+    fn convert_tabs() {
+        let input = "'\\t'";
+        assert_eq!(parse_byte_list(input), vec!['\t' as u8])
+    }
+
+    #[test]
+    fn convert_carriage_return() {
+        let input = "'\\r'";
+        assert_eq!(parse_byte_list(input), vec!['\r' as u8])
+    }
+
+    #[test]
+    fn convert_null() {
+        let input = "'\\0'";
+        assert_eq!(parse_byte_list(input), vec!['\0' as u8])
+    }
+
+    #[test]
+    fn convert_backslash() {
+        let input = "'\\\\'";
+        assert_eq!(parse_byte_list(input), vec!['\\' as u8])
+    }
+
+    #[test]
+    fn convert_quote() {
+        let input = "'\\''";
+        assert_eq!(parse_byte_list(input), vec!['\'' as u8])
     }
 }
