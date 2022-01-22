@@ -1,6 +1,6 @@
 use crate::DataError;
 
-fn parse_char_list(input: &str) -> Result<String, DataError> {
+pub fn parse_char_list(input: &str) -> Result<String, DataError> {
     let mut new = String::new();
 
     let mut start_quote_count = 0;
@@ -41,7 +41,7 @@ fn parse_char_list(input: &str) -> Result<String, DataError> {
     Ok(new)
 }
 
-fn parse_byte_list(input: &str) -> Result<Vec<u8>, DataError> {
+pub fn parse_byte_list(input: &str) -> Result<Vec<u8>, DataError> {
     let mut bytes = vec![];
 
     let mut start_quote_count = 0;
