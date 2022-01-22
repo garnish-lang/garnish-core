@@ -1,4 +1,6 @@
-fn parse_char_list(input: &str) -> String {
+use crate::DataError;
+
+fn parse_char_list(input: &str) -> Result<String, DataError> {
     let mut new = String::new();
 
     let mut start_quote_count = 0;
@@ -22,7 +24,7 @@ fn parse_char_list(input: &str) -> String {
                 '0' => new.push('\0'),
                 '\\' => new.push('\\'),
                 '"' => new.push('"'),
-                _ => (),
+                _ => return Err(DataError::from(format!("Invalid escape character '{}'", c))),
             }
 
             check_escape = false;
@@ -36,7 +38,7 @@ fn parse_char_list(input: &str) -> String {
         }
     }
 
-    new
+    Ok(new)
 }
 
 fn parse_byte_list(input: &str) -> Vec<u8> {
@@ -87,43 +89,49 @@ mod char_list {
     #[test]
     fn skip_starting_and_ending_quotes() {
         let input = "\"\"\"Some String\"\"\"";
-        assert_eq!(parse_char_list(input), "Some String".to_string())
+        assert_eq!(parse_char_list(input).unwrap(), "Some String".to_string())
     }
 
     #[test]
     fn convert_newlines() {
         let input = "Some\\nString";
-        assert_eq!(parse_char_list(input), "Some\nString".to_string())
+        assert_eq!(parse_char_list(input).unwrap(), "Some\nString".to_string())
     }
 
     #[test]
     fn convert_tabs() {
         let input = "Some\\tString";
-        assert_eq!(parse_char_list(input), "Some\tString".to_string())
+        assert_eq!(parse_char_list(input).unwrap(), "Some\tString".to_string())
     }
 
     #[test]
     fn convert_carriage_return() {
         let input = "Some\\rString";
-        assert_eq!(parse_char_list(input), "Some\rString".to_string())
+        assert_eq!(parse_char_list(input).unwrap(), "Some\rString".to_string())
     }
 
     #[test]
     fn convert_null() {
         let input = "Some\\0String";
-        assert_eq!(parse_char_list(input), "Some\0String".to_string())
+        assert_eq!(parse_char_list(input).unwrap(), "Some\0String".to_string())
     }
 
     #[test]
     fn convert_backslash() {
         let input = "Some\\\\String";
-        assert_eq!(parse_char_list(input), "Some\\String".to_string())
+        assert_eq!(parse_char_list(input).unwrap(), "Some\\String".to_string())
     }
 
     #[test]
     fn convert_quote() {
         let input = "Some\\\"String";
-        assert_eq!(parse_char_list(input), "Some\"String".to_string())
+        assert_eq!(parse_char_list(input).unwrap(), "Some\"String".to_string())
+    }
+
+    #[test]
+    fn invalid_escape_sequence() {
+        let input = "Some\\yString";
+        assert!(parse_char_list(input).is_err())
     }
 }
 
