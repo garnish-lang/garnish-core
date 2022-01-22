@@ -218,7 +218,7 @@ pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
 
 #[cfg(test)]
 mod tests {
-    use crate::simple::{symbol_value, DataError};
+    use crate::simple::{symbol_value, DataError, SimpleDataRuntimeNC};
     use crate::testing_utilites::{DeferOpTestContext, DEFERRED_VALUE};
     use crate::{
         runtime::{
@@ -389,15 +389,15 @@ mod tests {
     fn apply_symbol_to_list() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val1").unwrap()).unwrap();
+        let i1 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val1").unwrap()).unwrap();
         let i2 = runtime.add_number(10.into()).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
-        let i4 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val2").unwrap()).unwrap();
+        let i4 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap();
         let i5 = runtime.add_number(20.into()).unwrap();
         let i6 = runtime.add_pair((i4, i5)).unwrap();
 
-        let i7 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val3").unwrap()).unwrap();
+        let i7 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val3").unwrap()).unwrap();
         let i8 = runtime.add_number(30.into()).unwrap();
         let i9 = runtime.add_pair((i7, i8)).unwrap();
 
@@ -407,7 +407,7 @@ mod tests {
         runtime.add_to_list(i9, true).unwrap();
         let i10 = runtime.end_list().unwrap();
 
-        let i11 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val2").unwrap()).unwrap();
+        let i11 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap();
 
         runtime.push_register(i10).unwrap();
         runtime.push_register(i11).unwrap();
@@ -421,15 +421,15 @@ mod tests {
     fn apply_list_of_sym_or_integer_to_list() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val1").unwrap()).unwrap();
+        let i1 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val1").unwrap()).unwrap();
         let i2 = runtime.add_number(10.into()).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
-        let i4 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val2").unwrap()).unwrap();
+        let i4 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap();
         let i5 = runtime.add_number(20.into()).unwrap();
         let i6 = runtime.add_pair((i4, i5)).unwrap();
 
-        let i7 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val3").unwrap()).unwrap();
+        let i7 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val3").unwrap()).unwrap();
         let i8 = runtime.add_number(30.into()).unwrap();
         let i9 = runtime.add_pair((i7, i8)).unwrap();
 
@@ -440,12 +440,12 @@ mod tests {
         let i10 = runtime.end_list().unwrap();
 
         let i11 = runtime.add_number(2.into()).unwrap(); // integer access
-        let i12 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val2").unwrap()).unwrap(); // symbol access
+        let i12 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap(); // symbol access
         let i13 = runtime.add_number(5.into()).unwrap(); // access out of bounds
         let i14 = runtime.add_expression(10).unwrap(); // invalid access type
 
-        let i15 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("new_key").unwrap()).unwrap();
-        let i16 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val1").unwrap()).unwrap();
+        let i15 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("new_key").unwrap()).unwrap();
+        let i16 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val1").unwrap()).unwrap();
         let i17 = runtime.add_pair((i15, i16)).unwrap(); // pair mapping
         runtime.start_list(2).unwrap();
         runtime.add_to_list(i11, false).unwrap();

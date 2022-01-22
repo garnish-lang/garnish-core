@@ -19,10 +19,18 @@ pub fn symbol_value(value: &str) -> u64 {
     hv
 }
 
+#[derive(Copy, Clone, PartialOrd, PartialEq, Eq, Debug, Hash)]
+pub struct NoCustom {
+
+}
+
 #[derive(Debug)]
-pub struct SimpleRuntimeData {
+pub struct SimpleRuntimeData<T=NoCustom>
+where
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+{
     register: Vec<usize>,
-    data: SimpleDataList,
+    data: SimpleDataList<T>,
     end_of_constant_data: usize,
     values: Vec<usize>,
     instructions: Vec<InstructionData>,
@@ -38,7 +46,11 @@ pub struct SimpleRuntimeData {
     max_char_list_depth: usize,
 }
 
-impl SimpleRuntimeData {
+// generic default not being inferred
+// utility type for tests, and default implementations
+pub type SimpleDataRuntimeNC = SimpleRuntimeData<NoCustom>;
+
+impl SimpleRuntimeData<NoCustom> {
     pub fn new() -> Self {
         SimpleRuntimeData {
             register: vec![],
@@ -58,8 +70,14 @@ impl SimpleRuntimeData {
             max_char_list_depth: 1000,
         }
     }
+}
 
-    pub(crate) fn get(&self, index: usize) -> Result<&SimpleData, DataError> {
+impl<T> SimpleRuntimeData<T>
+where
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+{
+
+    pub(crate) fn get(&self, index: usize) -> Result<&SimpleData<T>, DataError> {
         match self.data.get(index) {
             None => Err(format!("No data at addr {:?}", index))?,
             Some(d) => Ok(d),
@@ -86,7 +104,7 @@ impl SimpleRuntimeData {
         &self.instructions
     }
 
-    pub fn get_data(&self) -> &SimpleDataList {
+    pub fn get_data(&self) -> &SimpleDataList<T> {
         &self.data
     }
 
@@ -139,7 +157,7 @@ impl SimpleRuntimeData {
         Ok(())
     }
 
-    fn cache_add(&mut self, value: SimpleData) -> Result<usize, DataError> {
+    fn cache_add(&mut self, value: SimpleData<T>) -> Result<usize, DataError> {
         let mut h = DefaultHasher::new();
         value.hash(&mut h);
         value.get_data_type().hash(&mut h);
@@ -162,6 +180,7 @@ impl SimpleRuntimeData {
         }
 
         match self.get_data_type(from)? {
+            ExpressionDataType::Custom => todo!(),
             ExpressionDataType::Unit => {
                 self.add_to_char_list('(')?;
                 self.add_to_char_list(')')?;
@@ -352,7 +371,10 @@ impl From<String> for DataError {
     }
 }
 
-impl GarnishLangRuntimeData for SimpleRuntimeData {
+impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
+where
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+{
     type Error = DataError;
     type Symbol = u64;
     type Char = char;
@@ -918,7 +940,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn parse_char(from: &str) -> Result<Self::Char, Self::Error> {
-        let l = SimpleRuntimeData::parse_char_list(from)?;
+        let l = SimpleRuntimeData::<T>::parse_char_list(from)?;
         if l.len() == 1 {
             Ok(l[0])
         } else {
@@ -927,7 +949,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn parse_byte(from: &str) -> Result<Self::Byte, Self::Error> {
-        let l = SimpleRuntimeData::parse_byte_list(from)?;
+        let l = SimpleRuntimeData::<T>::parse_byte_list(from)?;
         if l.len() == 1 {
             Ok(l[0])
         } else {
@@ -1183,6 +1205,7 @@ mod to_byte_list {
 #[cfg(test)]
 mod to_char_list {
     use crate::{ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::simple::NoCustom;
 
     fn assert_to_char_list<Func>(expected: &str, setup: Func)
     where
@@ -1271,9 +1294,9 @@ mod to_char_list {
 
     #[test]
     fn symbol() {
-        let s = SimpleRuntimeData::parse_symbol("my_symbol").unwrap().to_string();
+        let s = SimpleRuntimeData::<NoCustom>::parse_symbol("my_symbol").unwrap().to_string();
         assert_to_char_list(s.as_str(), |runtime| {
-            runtime.add_symbol(SimpleRuntimeData::parse_symbol("my_symbol").unwrap()).unwrap()
+            runtime.add_symbol(SimpleRuntimeData::<NoCustom>::parse_symbol("my_symbol").unwrap()).unwrap()
         })
     }
 

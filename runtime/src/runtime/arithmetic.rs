@@ -219,7 +219,7 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, EmptyContext, ExpressionDataType, GarnishLangRuntimeData, SimpleNumber, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, EmptyContext, ExpressionDataType, GarnishLangRuntimeData, SimpleNumber, SimpleRuntimeData, SimpleDataRuntimeNC};
 
     #[test]
     fn add() {
@@ -252,8 +252,8 @@ mod tests {
     fn add_with_non_numbers() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_symbol(SimpleRuntimeData::parse_symbol("sym1").unwrap()).unwrap();
-        runtime.add_symbol(SimpleRuntimeData::parse_symbol("sym2").unwrap()).unwrap();
+        runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("sym1").unwrap()).unwrap();
+        runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("sym2").unwrap()).unwrap();
 
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();

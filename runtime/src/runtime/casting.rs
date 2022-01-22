@@ -645,7 +645,7 @@ mod simple {
 #[cfg(test)]
 mod primitive {
     use crate::testing_utilites::add_char_list;
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT, SimpleDataRuntimeNC};
 
     #[test]
     fn integer_to_char() {
@@ -659,7 +659,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleRuntimeData::number_to_char(('a' as i32).into()).unwrap();
+        let expected = SimpleDataRuntimeNC::number_to_char(('a' as i32).into()).unwrap();
 
         assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
@@ -676,7 +676,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleRuntimeData::number_to_byte(10.into()).unwrap();
+        let expected = SimpleDataRuntimeNC::number_to_byte(10.into()).unwrap();
 
         assert_eq!(runtime.get_byte(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
@@ -693,7 +693,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleRuntimeData::char_to_number('a').unwrap();
+        let expected = SimpleDataRuntimeNC::char_to_number('a').unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
@@ -710,7 +710,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleRuntimeData::char_to_byte('a').unwrap();
+        let expected = SimpleDataRuntimeNC::char_to_byte('a').unwrap();
 
         assert_eq!(runtime.get_byte(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
@@ -727,7 +727,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleRuntimeData::byte_to_number('a' as u8).unwrap();
+        let expected = SimpleDataRuntimeNC::byte_to_number('a' as u8).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
@@ -744,7 +744,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleRuntimeData::byte_to_char('a' as u8).unwrap();
+        let expected = SimpleDataRuntimeNC::byte_to_char('a' as u8).unwrap();
 
         assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), expected);
     }
@@ -799,7 +799,7 @@ mod primitive {
 mod lists {
     use crate::simple::symbol_value;
     use crate::testing_utilites::{add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range};
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT, SimpleDataRuntimeNC};
 
     #[test]
     fn link_to_list() {
@@ -865,7 +865,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
-        let expected = SimpleRuntimeData::parse_char_list(input).unwrap();
+        let expected = SimpleDataRuntimeNC::parse_char_list(input).unwrap();
         let mut result = vec![];
 
         for i in 0..input.len() {
@@ -891,7 +891,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
-        let expected = SimpleRuntimeData::parse_byte_list(input).unwrap();
+        let expected = SimpleDataRuntimeNC::parse_byte_list(input).unwrap();
         let mut result = vec![];
 
         for i in 0..input.len() {
@@ -981,7 +981,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
-        let expected: Vec<char> = SimpleRuntimeData::parse_char_list(input)
+        let expected: Vec<char> = SimpleDataRuntimeNC::parse_char_list(input)
             .unwrap()
             .iter()
             .skip(2)
@@ -1015,7 +1015,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_register(0).unwrap();
-        let expected: Vec<u8> = SimpleRuntimeData::parse_byte_list(input)
+        let expected: Vec<u8> = SimpleDataRuntimeNC::parse_byte_list(input)
             .unwrap()
             .iter()
             .skip(2)
@@ -1514,7 +1514,7 @@ mod links {
 
 #[cfg(test)]
 mod deferred {
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT, SimpleDataRuntimeNC};
 
     #[test]
     fn char_list() {
@@ -1568,7 +1568,7 @@ mod deferred {
 
         let d1 = runtime.add_unit().unwrap();
 
-        let s = runtime.add_symbol(SimpleRuntimeData::parse_symbol("sym").unwrap()).unwrap();
+        let s = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("sym").unwrap()).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(s).unwrap();

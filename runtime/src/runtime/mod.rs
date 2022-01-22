@@ -834,7 +834,7 @@ mod tests {
 
 #[cfg(test)]
 pub mod testing_utilites {
-    use crate::{DataError, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData};
+    use crate::{DataError, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleDataRuntimeNC, SimpleRuntimeData};
 
     pub const DEFERRED_VALUE: usize = 1000;
 
@@ -897,7 +897,7 @@ pub mod testing_utilites {
     }
 
     pub fn add_pair(runtime: &mut SimpleRuntimeData, key: &str, value: i32) -> usize {
-        let sym_value = SimpleRuntimeData::parse_symbol(key).unwrap();
+        let sym_value = SimpleDataRuntimeNC::parse_symbol(key).unwrap();
         let i1 = runtime.add_symbol(sym_value).unwrap();
         let i2 = runtime.add_number(value.into()).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
@@ -983,7 +983,7 @@ pub mod testing_utilites {
     }
 
     pub fn add_char_list(runtime: &mut SimpleRuntimeData, s: &str) -> usize {
-        let chars = SimpleRuntimeData::parse_char_list(s).unwrap();
+        let chars = SimpleDataRuntimeNC::parse_char_list(s).unwrap();
 
         runtime.start_char_list().unwrap();
         for c in chars {
@@ -1000,7 +1000,7 @@ pub mod testing_utilites {
     }
 
     pub fn add_byte_list(runtime: &mut SimpleRuntimeData, s: &str) -> usize {
-        let bytes = SimpleRuntimeData::parse_byte_list(s).unwrap();
+        let bytes = SimpleDataRuntimeNC::parse_byte_list(s).unwrap();
 
         runtime.start_byte_list().unwrap();
         for b in bytes {

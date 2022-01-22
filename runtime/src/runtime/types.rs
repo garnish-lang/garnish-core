@@ -17,4 +17,5 @@ pub enum ExpressionDataType {
     External,
     True,
     False,
+    Custom
 }

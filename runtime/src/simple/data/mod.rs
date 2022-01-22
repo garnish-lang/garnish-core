@@ -5,13 +5,22 @@ pub use number::*;
 pub use parsing::*;
 
 use crate::{DataError, ExpressionDataType};
+use std::fmt::Debug;
+use std::hash::Hash;
+use crate::simple::NoCustom;
 
 #[derive(Debug, Eq, PartialEq)]
-pub struct SimpleDataList {
-    list: Vec<SimpleData>,
+pub struct SimpleDataList<T=NoCustom>
+where
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+{
+    list: Vec<SimpleData<T>>,
 }
 
-impl Default for SimpleDataList {
+impl<T> Default for SimpleDataList<T>
+where
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+{
     fn default() -> Self {
         SimpleDataList::new()
             .append(SimpleData::Unit)
@@ -20,21 +29,24 @@ impl Default for SimpleDataList {
     }
 }
 
-impl SimpleDataList {
+impl<T> SimpleDataList<T>
+where
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+{
     pub fn new() -> Self {
         SimpleDataList { list: vec![] }
     }
 
-    pub fn append(mut self, item: SimpleData) -> Self {
+    pub fn append(mut self, item: SimpleData<T>) -> Self {
         self.list.push(item);
         self
     }
 
-    pub fn push(&mut self, item: SimpleData) {
+    pub fn push(&mut self, item: SimpleData<T>) {
         self.list.push(item);
     }
 
-    pub(crate) fn get(&self, index: usize) -> Option<&SimpleData> {
+    pub(crate) fn get(&self, index: usize) -> Option<&SimpleData<T>> {
         self.list.get(index)
     }
 
@@ -45,8 +57,15 @@ impl SimpleDataList {
 
 pub type DataCastResult<T> = Result<T, DataError>;
 
+// generic default not being inferred
+// utility type for tests, mainly
+pub type SimpleDataNC = SimpleData<NoCustom>;
+
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
-pub enum SimpleData {
+pub enum SimpleData<T=NoCustom>
+where
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+{
     Unit,
     True,
     False,
@@ -64,9 +83,13 @@ pub enum SimpleData {
     Slice(usize, usize),
     Link(usize, usize, bool),
     List(Vec<usize>, Vec<usize>),
+    Custom(T),
 }
 
-impl SimpleData {
+impl<T> SimpleData<T>
+where
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+{
     pub fn get_data_type(&self) -> ExpressionDataType {
         match self {
             SimpleData::Unit => ExpressionDataType::Unit,
@@ -86,6 +109,7 @@ impl SimpleData {
             SimpleData::Slice(_, _) => ExpressionDataType::Slice,
             SimpleData::Link(_, _, _) => ExpressionDataType::Link,
             SimpleData::List(_, _) => ExpressionDataType::List,
+            SimpleData::Custom(_) => ExpressionDataType::Custom,
         }
     }
 
@@ -211,202 +235,201 @@ impl SimpleData {
 
 #[cfg(test)]
 mod tests {
-    use crate::simple::data::SimpleData;
-    use crate::{ExpressionDataType, SimpleNumber};
+    use crate::{ExpressionDataType, SimpleDataNC, SimpleNumber};
 
     #[test]
     fn get_data_type() {
-        assert_eq!(SimpleData::Unit.get_data_type(), ExpressionDataType::Unit);
-        assert_eq!(SimpleData::True.get_data_type(), ExpressionDataType::True);
-        assert_eq!(SimpleData::False.get_data_type(), ExpressionDataType::False);
-        assert_eq!(SimpleData::Number(SimpleNumber::Integer(0)).get_data_type(), ExpressionDataType::Number);
-        assert_eq!(SimpleData::Char('a').get_data_type(), ExpressionDataType::Char);
-        assert_eq!(SimpleData::Byte(0).get_data_type(), ExpressionDataType::Byte);
-        assert_eq!(SimpleData::Symbol(0).get_data_type(), ExpressionDataType::Symbol);
-        assert_eq!(SimpleData::Expression(0).get_data_type(), ExpressionDataType::Expression);
-        assert_eq!(SimpleData::External(0).get_data_type(), ExpressionDataType::External);
-        assert_eq!(SimpleData::CharList(String::new()).get_data_type(), ExpressionDataType::CharList);
-        assert_eq!(SimpleData::ByteList(vec![]).get_data_type(), ExpressionDataType::ByteList);
-        assert_eq!(SimpleData::Pair(0, 0).get_data_type(), ExpressionDataType::Pair);
-        assert_eq!(SimpleData::Range(0, 0).get_data_type(), ExpressionDataType::Range);
-        assert_eq!(SimpleData::Slice(0, 0).get_data_type(), ExpressionDataType::Slice);
-        assert_eq!(SimpleData::Link(0, 0, true).get_data_type(), ExpressionDataType::Link);
-        assert_eq!(SimpleData::List(vec![], vec![]).get_data_type(), ExpressionDataType::List);
+        assert_eq!(SimpleDataNC::Unit.get_data_type(), ExpressionDataType::Unit);
+        assert_eq!(SimpleDataNC::True.get_data_type(), ExpressionDataType::True);
+        assert_eq!(SimpleDataNC::False.get_data_type(), ExpressionDataType::False);
+        assert_eq!(SimpleDataNC::Number(SimpleNumber::Integer(0)).get_data_type(), ExpressionDataType::Number);
+        assert_eq!(SimpleDataNC::Char('a').get_data_type(), ExpressionDataType::Char);
+        assert_eq!(SimpleDataNC::Byte(0).get_data_type(), ExpressionDataType::Byte);
+        assert_eq!(SimpleDataNC::Symbol(0).get_data_type(), ExpressionDataType::Symbol);
+        assert_eq!(SimpleDataNC::Expression(0).get_data_type(), ExpressionDataType::Expression);
+        assert_eq!(SimpleDataNC::External(0).get_data_type(), ExpressionDataType::External);
+        assert_eq!(SimpleDataNC::CharList(String::new()).get_data_type(), ExpressionDataType::CharList);
+        assert_eq!(SimpleDataNC::ByteList(vec![]).get_data_type(), ExpressionDataType::ByteList);
+        assert_eq!(SimpleDataNC::Pair(0, 0).get_data_type(), ExpressionDataType::Pair);
+        assert_eq!(SimpleDataNC::Range(0, 0).get_data_type(), ExpressionDataType::Range);
+        assert_eq!(SimpleDataNC::Slice(0, 0).get_data_type(), ExpressionDataType::Slice);
+        assert_eq!(SimpleDataNC::Link(0, 0, true).get_data_type(), ExpressionDataType::Link);
+        assert_eq!(SimpleDataNC::List(vec![], vec![]).get_data_type(), ExpressionDataType::List);
     }
 
     #[test]
     fn is_unit() {
-        assert!(SimpleData::Unit.is_unit());
+        assert!(SimpleDataNC::Unit.is_unit());
     }
 
     #[test]
     fn is_unit_not_unit() {
-        assert!(!SimpleData::True.is_unit());
+        assert!(!SimpleDataNC::True.is_unit());
     }
 
     #[test]
     fn is_true() {
-        assert!(SimpleData::True.is_true());
+        assert!(SimpleDataNC::True.is_true());
     }
 
     #[test]
     fn is_true_not_true() {
-        assert!(!SimpleData::Unit.is_true());
+        assert!(!SimpleDataNC::Unit.is_true());
     }
 
     #[test]
     fn is_false() {
-        assert!(SimpleData::False.is_false());
+        assert!(SimpleDataNC::False.is_false());
     }
 
     #[test]
     fn is_false_not_false() {
-        assert!(!SimpleData::Unit.is_false());
+        assert!(!SimpleDataNC::Unit.is_false());
     }
 
     #[test]
     fn is_type() {
-        assert_eq!(SimpleData::Type(ExpressionDataType::Unit).as_type().unwrap(), ExpressionDataType::Unit);
+        assert_eq!(SimpleDataNC::Type(ExpressionDataType::Unit).as_type().unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn as_type_not_type() {
-        assert!(SimpleData::Unit.as_type().is_err());
+        assert!(SimpleDataNC::Unit.as_type().is_err());
     }
 
     #[test]
     fn as_number() {
         assert_eq!(
-            SimpleData::Number(SimpleNumber::Integer(10)).as_number().unwrap(),
+            SimpleDataNC::Number(SimpleNumber::Integer(10)).as_number().unwrap(),
             SimpleNumber::Integer(10)
         );
     }
 
     #[test]
     fn as_number_not_number() {
-        assert!(SimpleData::Unit.as_number().is_err());
+        assert!(SimpleDataNC::Unit.as_number().is_err());
     }
 
     #[test]
     fn as_char() {
-        assert_eq!(SimpleData::Char('a').as_char().unwrap(), 'a');
+        assert_eq!(SimpleDataNC::Char('a').as_char().unwrap(), 'a');
     }
 
     #[test]
     fn as_char_not_char() {
-        assert!(SimpleData::Unit.as_char().is_err());
+        assert!(SimpleDataNC::Unit.as_char().is_err());
     }
 
     #[test]
     fn as_byte() {
-        assert_eq!(SimpleData::Byte(10).as_byte().unwrap(), 10.into());
+        assert_eq!(SimpleDataNC::Byte(10).as_byte().unwrap(), 10.into());
     }
 
     #[test]
     fn as_byte_not_byte() {
-        assert!(SimpleData::Unit.as_byte().is_err());
+        assert!(SimpleDataNC::Unit.as_byte().is_err());
     }
 
     #[test]
     fn as_symbol() {
-        assert_eq!(SimpleData::Symbol(10).as_symbol().unwrap(), 10);
+        assert_eq!(SimpleDataNC::Symbol(10).as_symbol().unwrap(), 10);
     }
 
     #[test]
     fn as_symbol_not_symbol() {
-        assert!(SimpleData::Unit.as_symbol().is_err());
+        assert!(SimpleDataNC::Unit.as_symbol().is_err());
     }
 
     #[test]
     fn as_expression() {
-        assert_eq!(SimpleData::Expression(10).as_expression().unwrap(), 10);
+        assert_eq!(SimpleDataNC::Expression(10).as_expression().unwrap(), 10);
     }
 
     #[test]
     fn as_expression_not_expression() {
-        assert!(SimpleData::Unit.as_expression().is_err());
+        assert!(SimpleDataNC::Unit.as_expression().is_err());
     }
 
     #[test]
     fn as_external() {
-        assert_eq!(SimpleData::External(10).as_external().unwrap(), 10);
+        assert_eq!(SimpleDataNC::External(10).as_external().unwrap(), 10);
     }
 
     #[test]
     fn as_external_not_external() {
-        assert!(SimpleData::Unit.as_external().is_err());
+        assert!(SimpleDataNC::Unit.as_external().is_err());
     }
 
     #[test]
     fn as_char_list() {
-        assert_eq!(SimpleData::CharList(String::new()).as_char_list().unwrap(), "");
+        assert_eq!(SimpleDataNC::CharList(String::new()).as_char_list().unwrap(), "");
     }
 
     #[test]
     fn as_char_list_not_char_list() {
-        assert!(SimpleData::Unit.as_char_list().is_err());
+        assert!(SimpleDataNC::Unit.as_char_list().is_err());
     }
 
     #[test]
     fn as_byte_list() {
-        assert_eq!(SimpleData::ByteList(vec![10]).as_byte_list().unwrap(), vec![10]);
+        assert_eq!(SimpleDataNC::ByteList(vec![10]).as_byte_list().unwrap(), vec![10]);
     }
 
     #[test]
     fn as_byte_list_not_byte_list() {
-        assert!(SimpleData::Unit.as_byte_list().is_err());
+        assert!(SimpleDataNC::Unit.as_byte_list().is_err());
     }
 
     #[test]
     fn as_pair() {
-        assert_eq!(SimpleData::Pair(10, 20).as_pair().unwrap(), (10, 20));
+        assert_eq!(SimpleDataNC::Pair(10, 20).as_pair().unwrap(), (10, 20));
     }
 
     #[test]
     fn as_pair_not_pair() {
-        assert!(SimpleData::Unit.as_pair().is_err());
+        assert!(SimpleDataNC::Unit.as_pair().is_err());
     }
 
     #[test]
     fn as_range() {
-        assert_eq!(SimpleData::Range(10, 20).as_range().unwrap(), (10, 20));
+        assert_eq!(SimpleDataNC::Range(10, 20).as_range().unwrap(), (10, 20));
     }
 
     #[test]
     fn as_range_not_range() {
-        assert!(SimpleData::Unit.as_range().is_err());
+        assert!(SimpleDataNC::Unit.as_range().is_err());
     }
 
     #[test]
     fn as_link() {
-        assert_eq!(SimpleData::Link(10, 20, true).as_link().unwrap(), (10, 20, true));
+        assert_eq!(SimpleDataNC::Link(10, 20, true).as_link().unwrap(), (10, 20, true));
     }
 
     #[test]
     fn as_link_not_link() {
-        assert!(SimpleData::Unit.as_link().is_err());
+        assert!(SimpleDataNC::Unit.as_link().is_err());
     }
 
     #[test]
     fn as_slice() {
-        assert_eq!(SimpleData::Slice(10, 20).as_slice().unwrap(), (10, 20));
+        assert_eq!(SimpleDataNC::Slice(10, 20).as_slice().unwrap(), (10, 20));
     }
 
     #[test]
     fn as_slice_not_slice() {
-        assert!(SimpleData::Unit.as_slice().is_err());
+        assert!(SimpleDataNC::Unit.as_slice().is_err());
     }
 
     #[test]
     fn as_list() {
         assert_eq!(
-            SimpleData::List(vec![10, 20], vec![20, 10]).as_list().unwrap(),
+            SimpleDataNC::List(vec![10, 20], vec![20, 10]).as_list().unwrap(),
             (vec![10, 20], vec![20, 10])
         );
     }
 
     #[test]
     fn as_list_not_list() {
-        assert!(SimpleData::Unit.as_list().is_err());
+        assert!(SimpleDataNC::Unit.as_list().is_err());
     }
 }

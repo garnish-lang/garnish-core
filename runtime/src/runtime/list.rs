@@ -829,7 +829,7 @@ mod ranges {
 #[cfg(test)]
 mod slice {
     use crate::testing_utilites::{add_integer_list, add_links, add_list, add_pair, add_range};
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT, SimpleDataRuntimeNC};
 
     #[test]
     fn index_slice_of_list() {
@@ -854,7 +854,7 @@ mod slice {
     fn index_slice_of_char_list() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let chars = SimpleRuntimeData::parse_char_list("abcde").unwrap();
+        let chars = SimpleDataRuntimeNC::parse_char_list("abcde").unwrap();
 
         runtime.start_char_list().unwrap();
         for c in chars {
@@ -878,7 +878,7 @@ mod slice {
     fn index_slice_of_byte_list() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let bytes = SimpleRuntimeData::parse_byte_list("abcde").unwrap();
+        let bytes = SimpleDataRuntimeNC::parse_byte_list("abcde").unwrap();
 
         runtime.start_byte_list().unwrap();
         for b in bytes {
@@ -907,7 +907,7 @@ mod slice {
         let d3 = runtime.add_number(4.into()).unwrap();
         let d4 = runtime.add_range(d2, d3).unwrap();
         let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val4").unwrap()).unwrap();
+        let d6 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val4").unwrap()).unwrap();
 
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
@@ -972,7 +972,7 @@ mod slice {
         runtime.access(NO_CONTEXT).unwrap();
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_symbol(left).unwrap(), SimpleRuntimeData::parse_symbol("val4").unwrap());
+        assert_eq!(runtime.get_symbol(left).unwrap(), SimpleDataRuntimeNC::parse_symbol("val4").unwrap());
         assert_eq!(runtime.get_number(right).unwrap(), 5.into());
     }
 
@@ -985,7 +985,7 @@ mod slice {
         let d3 = runtime.add_number(5.into()).unwrap();
         let d4 = runtime.add_range(d2, d3).unwrap();
         let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val4").unwrap()).unwrap();
+        let d6 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val4").unwrap()).unwrap();
 
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
@@ -1034,7 +1034,7 @@ mod slice {
         let end = runtime.add_number(4.into()).unwrap();
         let range = runtime.add_range(start, end).unwrap();
         let slice = runtime.add_slice(link5, range).unwrap();
-        let sym = runtime.add_symbol(SimpleRuntimeData::parse_symbol("pair").unwrap()).unwrap();
+        let sym = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("pair").unwrap()).unwrap();
 
         runtime.push_register(slice).unwrap();
         runtime.push_register(sym).unwrap();
@@ -1048,7 +1048,7 @@ mod slice {
 #[cfg(test)]
 mod link {
     use crate::testing_utilites::add_links;
-    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT};
+    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT, SimpleDataRuntimeNC};
 
     #[test]
     fn index_prepend_link_with_integer() {
@@ -1064,7 +1064,7 @@ mod link {
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_number(right).unwrap(), 4.into());
-        assert_eq!(runtime.get_symbol(left).unwrap(), SimpleRuntimeData::parse_symbol("val3").unwrap());
+        assert_eq!(runtime.get_symbol(left).unwrap(), SimpleDataRuntimeNC::parse_symbol("val3").unwrap());
     }
 
     #[test]
@@ -1081,7 +1081,7 @@ mod link {
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_number(right).unwrap(), 4.into());
-        assert_eq!(runtime.get_symbol(left).unwrap(), SimpleRuntimeData::parse_symbol("val3").unwrap());
+        assert_eq!(runtime.get_symbol(left).unwrap(), SimpleDataRuntimeNC::parse_symbol("val3").unwrap());
     }
 
     #[test]
@@ -1089,7 +1089,7 @@ mod link {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = add_links(&mut runtime, 10, false);
-        let d2 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val2").unwrap()).unwrap();
+        let d2 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
@@ -1104,7 +1104,7 @@ mod link {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = add_links(&mut runtime, 10, true);
-        let d2 = runtime.add_symbol(SimpleRuntimeData::parse_symbol("val2").unwrap()).unwrap();
+        let d2 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
