@@ -309,7 +309,7 @@ mod not {
     fn not_any_is_false() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_number(10).unwrap();
+        let int1 = runtime.add_number(10.into()).unwrap();
 
         runtime.push_register(int1).unwrap();
 

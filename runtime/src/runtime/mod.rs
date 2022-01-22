@@ -554,7 +554,7 @@ mod tests {
     fn add_input_reference() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_number(10).unwrap();
+        runtime.add_number(10.into()).unwrap();
         runtime.push_value_stack(0).unwrap();
 
         assert_eq!(runtime.get_value(0).unwrap().to_owned(), 0);
@@ -564,8 +564,8 @@ mod tests {
     fn add_input_reference_with_data_addr() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let _i1 = runtime.add_number(10).unwrap();
-        let i2 = runtime.add_number(10).unwrap();
+        let _i1 = runtime.add_number(10.into()).unwrap();
+        let i2 = runtime.add_number(10.into()).unwrap();
 
         runtime.push_value_stack(i2).unwrap();
 
@@ -576,9 +576,8 @@ mod tests {
     fn execute_current_instruction() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_number(10).unwrap();
-        let d2 = runtime.add_number(20).unwrap();
-        let start = runtime.get_data_len();
+        let d1 = runtime.add_number(10.into()).unwrap();
+        let d2 = runtime.add_number(20.into()).unwrap();
 
         let i1 = runtime.push_instruction(Instruction::Add, None).unwrap();
 
@@ -589,16 +588,15 @@ mod tests {
 
         runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), start);
-        assert_eq!(runtime.get_number(start).unwrap(), 30);
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 30.into());
     }
 
     #[test]
     fn execute_current_instruction_with_cursor_past_len() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_number(10).unwrap();
-        let i2 = runtime.add_number(20).unwrap();
+        let i1 = runtime.add_number(10.into()).unwrap();
+        let i2 = runtime.add_number(20.into()).unwrap();
         let _start = runtime.get_data_len();
 
         runtime.push_instruction(Instruction::Add, None).unwrap();
@@ -617,9 +615,9 @@ mod tests {
     fn execute_current_instruction_apply() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_number(10).unwrap();
+        let int1 = runtime.add_number(10.into()).unwrap();
         let exp1 = runtime.add_expression(0).unwrap();
-        let int2 = runtime.add_number(20).unwrap();
+        let int2 = runtime.add_number(20.into()).unwrap();
 
         // 1
         let i1 = runtime.push_instruction(Instruction::Put, Some(int1)).unwrap();
@@ -651,7 +649,7 @@ mod tests {
     fn execute_current_instruction_empty_apply() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_number(10).unwrap();
+        let int1 = runtime.add_number(10.into()).unwrap();
         let exp1 = runtime.add_expression(0).unwrap();
 
         // 1
@@ -684,9 +682,9 @@ mod tests {
 
         let true1 = runtime.add_true().unwrap();
         let _exp1 = runtime.add_expression(0).unwrap();
-        let int1 = runtime.add_number(20).unwrap();
-        let _int2 = runtime.add_number(30).unwrap();
-        let int3 = runtime.add_number(40).unwrap();
+        let int1 = runtime.add_number(20.into()).unwrap();
+        let _int2 = runtime.add_number(30.into()).unwrap();
+        let int3 = runtime.add_number(40.into()).unwrap();
 
         // 1
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
@@ -797,7 +795,7 @@ mod tests {
     fn execute_current_instruction_end_expression() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_number(10).unwrap();
+        let int1 = runtime.add_number(10.into()).unwrap();
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
         let i1 = runtime.push_instruction(Instruction::EndExpression, None).unwrap();
@@ -810,14 +808,14 @@ mod tests {
         runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_instruction_cursor(), runtime.get_instruction_len());
-        assert_eq!(runtime.get_number(runtime.get_current_value().unwrap()).unwrap(), 10);
+        assert_eq!(runtime.get_number(runtime.get_current_value().unwrap()).unwrap(), 10.into());
     }
 
     #[test]
     fn execute_current_instructionend_expression_with_path() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_number(10).unwrap();
+        runtime.add_number(10.into()).unwrap();
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.push_instruction(Instruction::EndExpression, Some(0)).unwrap();
@@ -895,7 +893,7 @@ pub mod testing_utilites {
     pub fn add_pair(runtime: &mut SimpleRuntimeData, key: &str, value: i32) -> usize {
         let sym_value = SimpleRuntimeData::parse_symbol(key).unwrap();
         let i1 = runtime.add_symbol(sym_value).unwrap();
-        let i2 = runtime.add_number(value).unwrap();
+        let i2 = runtime.add_number(value.into()).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
 
         return i3;
@@ -928,15 +926,15 @@ pub mod testing_utilites {
     pub fn add_integer_list(runtime: &mut SimpleRuntimeData, count: usize) -> usize {
         runtime.start_list(count).unwrap();
         for i in 0..count {
-            let d = runtime.add_number((i as i32 + 1) * 10).unwrap();
+            let d = runtime.add_number(((i as i32 + 1) * 10).into()).unwrap();
             runtime.add_to_list(d, false).unwrap();
         }
         runtime.end_list().unwrap()
     }
 
     pub fn add_range(runtime: &mut SimpleRuntimeData, start: i32, end: i32) -> usize {
-        let d1 = runtime.add_number(start).unwrap();
-        let d2 = runtime.add_number(end).unwrap();
+        let d1 = runtime.add_number(start.into()).unwrap();
+        let d2 = runtime.add_number(end.into()).unwrap();
         let d3 = runtime.add_range(d1, d2).unwrap();
         return d3;
     }

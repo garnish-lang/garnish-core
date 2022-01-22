@@ -82,7 +82,7 @@ mod tests {
     fn end_expression() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_number(10).unwrap();
+        let int1 = runtime.add_number(10.into()).unwrap();
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
         let i1 = runtime.push_instruction(Instruction::EndExpression, None).unwrap();
@@ -95,14 +95,14 @@ mod tests {
         runtime.end_expression().unwrap();
 
         assert_eq!(runtime.get_instruction_cursor(), runtime.get_instruction_len());
-        assert_eq!(runtime.get_number(runtime.get_current_value().unwrap()).unwrap(), 10);
+        assert_eq!(runtime.get_number(runtime.get_current_value().unwrap()).unwrap(), 10.into());
     }
 
     #[test]
     fn end_expression_with_path() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_number(10).unwrap();
+        runtime.add_number(10.into()).unwrap();
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.push_instruction(Instruction::EndExpression, Some(0)).unwrap();

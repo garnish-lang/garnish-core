@@ -49,7 +49,7 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol(1).unwrap();
-        let i2 = runtime.add_number(10).unwrap();
+        let i2 = runtime.add_number(10.into()).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
         runtime.add_to_list(i3, true).unwrap();
@@ -70,7 +70,7 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol(1).unwrap();
-        let i2 = runtime.add_number(10).unwrap();
+        let i2 = runtime.add_number(10.into()).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
         runtime.start_list(1).unwrap();
         runtime.add_to_list(i3, true).unwrap();
@@ -99,7 +99,7 @@ mod tests {
             fn resolve(&mut self, sym_val: u64, runtime: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
                 assert_eq!(sym_val, 1);
 
-                push_number(runtime, 100)?;
+                push_number(runtime, 100.into())?;
                 Ok(true)
             }
 

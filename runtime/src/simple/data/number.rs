@@ -1,7 +1,9 @@
-use crate::{DataCastResult, DataError, GarnishNumber};
+use crate::{DataCastResult, DataError, GarnishNumber, TypeConstants};
 use std::cmp::Ordering;
 use crate::SimpleNumber::{Float, Integer};
 use std::ops::{Add, Sub, Mul, Div, Rem};
+use std::fmt::{Display, Formatter};
+use std::hash::{Hash, Hasher};
 
 #[derive(Copy, Clone, Debug)]
 pub enum SimpleNumber {
@@ -23,6 +25,24 @@ impl SimpleNumber {
         match self {
             SimpleNumber::Float(v) => Ok(*v),
             _ => Err(DataError::from(format!("{:?} is not an Float.", self))),
+        }
+    }
+}
+
+impl Display for SimpleNumber {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Integer(v) => f.write_str(v.to_string().as_str()),
+            Float(v) => f.write_str(v.to_string().as_str())
+        }
+    }
+}
+
+impl Hash for SimpleNumber {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        match self {
+            Integer(v) => v.hash(state),
+            Float(v) => format!("{}", v).hash(state),
         }
     }
 }
@@ -103,6 +123,52 @@ where IntOp: Fn(i32, i32) -> i32, FloatOp: Fn(f64, f64) -> f64
         (Integer(v1), Float(v2)) => Float(float_op(f64::from(*v1), *v2)),
         (Float(v1), Integer(v2)) => Float(float_op(*v1, f64::from(*v2))),
     })
+}
+
+impl TypeConstants for SimpleNumber {
+    fn one() -> Self {
+        Integer(1)
+    }
+
+    fn zero() -> Self {
+        Integer(0)
+    }
+
+    fn max_value() -> Self {
+        Float(f64::MAX)
+    }
+}
+
+impl Add<i32> for SimpleNumber {
+    type Output = Self;
+
+    fn add(self, rhs: i32) -> Self::Output {
+        self.plus(rhs.into()).unwrap()
+    }
+}
+
+impl Add<SimpleNumber> for i32 {
+    type Output = SimpleNumber;
+
+    fn add(self, rhs: SimpleNumber) -> Self::Output {
+        rhs.plus(self.into()).unwrap()
+    }
+}
+
+impl Mul<i32> for SimpleNumber {
+    type Output = Self;
+
+    fn mul(self, rhs: i32) -> Self::Output {
+        self.multiply(rhs.into()).unwrap()
+    }
+}
+
+impl Add<f64> for SimpleNumber {
+    type Output = Self;
+
+    fn add(self, rhs: f64) -> Self::Output {
+        self.plus(rhs.into()).unwrap()
+    }
 }
 
 impl GarnishNumber for SimpleNumber {
@@ -292,7 +358,7 @@ mod tests {
 
     #[test]
     fn as_integer() {
-        assert_eq!(SimpleNumber::Integer(10).as_integer().unwrap(), 10);
+        assert_eq!(SimpleNumber::Integer(10).as_integer().unwrap(), 10.into());
     }
 
     #[test]

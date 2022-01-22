@@ -90,7 +90,7 @@ mod tests {
     fn add_data() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_number(100).unwrap();
+        runtime.add_number(100.into()).unwrap();
 
         assert_eq!(runtime.get_data_len(), 4);
     }
@@ -99,10 +99,10 @@ mod tests {
     fn get_data() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_number(100).unwrap();
-        let i2 = runtime.add_number(200).unwrap();
+        runtime.add_number(100.into()).unwrap();
+        let i2 = runtime.add_number(200.into()).unwrap();
 
-        assert_eq!(runtime.get_number(i2).unwrap(), 200);
+        assert_eq!(runtime.get_number(i2).unwrap(), 200.into());
     }
 
     #[test]
@@ -110,10 +110,10 @@ mod tests {
         let mut runtime = SimpleRuntimeData::new();
         let start = runtime.get_data_len();
 
-        assert_eq!(runtime.add_number(100).unwrap(), start);
-        assert_eq!(runtime.add_number(200).unwrap(), start + 1);
-        assert_eq!(runtime.add_number(300).unwrap(), start + 2);
-        assert_eq!(runtime.add_number(400).unwrap(), start + 3);
+        assert_eq!(runtime.add_number(100.into()).unwrap(), start);
+        assert_eq!(runtime.add_number(200.into()).unwrap(), start + 1);
+        assert_eq!(runtime.add_number(300.into()).unwrap(), start + 2);
+        assert_eq!(runtime.add_number(400.into()).unwrap(), start + 3);
     }
 }
 
@@ -126,8 +126,8 @@ mod internal {
     #[test]
     fn next_ref_test() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_number(10).unwrap();
-        runtime.add_number(20).unwrap();
+        runtime.add_number(10.into()).unwrap();
+        runtime.add_number(20.into()).unwrap();
 
         runtime.push_register(2).unwrap();
 
@@ -139,8 +139,8 @@ mod internal {
     #[test]
     fn next_ref_data_no_ref_is_error() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_number(10).unwrap();
-        runtime.add_number(20).unwrap();
+        runtime.add_number(10.into()).unwrap();
+        runtime.add_number(20.into()).unwrap();
 
         let result = next_ref(&mut runtime);
 
@@ -150,8 +150,8 @@ mod internal {
     #[test]
     fn next_two_ref_data() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_number(10).unwrap();
-        runtime.add_number(20).unwrap();
+        runtime.add_number(10.into()).unwrap();
+        runtime.add_number(20.into()).unwrap();
 
         runtime.push_register(1).unwrap();
         runtime.push_register(2).unwrap();
@@ -165,8 +165,8 @@ mod internal {
     #[test]
     fn next_two_ref_data_one_ref_is_error() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_number(10).unwrap();
-        runtime.add_number(20).unwrap();
+        runtime.add_number(10.into()).unwrap();
+        runtime.add_number(20.into()).unwrap();
 
         runtime.push_register(1).unwrap();
 
@@ -178,8 +178,8 @@ mod internal {
     #[test]
     fn next_two_ref_data_zero_refs_is_error() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_number(10).unwrap();
-        runtime.add_number(20).unwrap();
+        runtime.add_number(10.into()).unwrap();
+        runtime.add_number(20.into()).unwrap();
 
         let result = next_two_raw_ref(&mut runtime);
 

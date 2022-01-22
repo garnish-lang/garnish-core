@@ -57,8 +57,8 @@ mod tests {
     fn range() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_number(10).unwrap();
-        let d2 = runtime.add_number(20).unwrap();
+        let d1 = runtime.add_number(10.into()).unwrap();
+        let d2 = runtime.add_number(20.into()).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
@@ -66,16 +66,16 @@ mod tests {
         runtime.make_range().unwrap();
 
         let (start, end) = runtime.get_range(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_number(start).unwrap(), 10);
-        assert_eq!(runtime.get_number(end).unwrap(), 20);
+        assert_eq!(runtime.get_number(start).unwrap(), 10.into());
+        assert_eq!(runtime.get_number(end).unwrap(), 20.into());
     }
 
     #[test]
     fn start_exclusive() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_number(10).unwrap();
-        let d2 = runtime.add_number(20).unwrap();
+        let d1 = runtime.add_number(10.into()).unwrap();
+        let d2 = runtime.add_number(20.into()).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
@@ -83,16 +83,16 @@ mod tests {
         runtime.make_start_exclusive_range().unwrap();
 
         let (start, end) = runtime.get_range(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_number(start).unwrap(), 11);
-        assert_eq!(runtime.get_number(end).unwrap(), 20);
+        assert_eq!(runtime.get_number(start).unwrap(), 11.into());
+        assert_eq!(runtime.get_number(end).unwrap(), 20.into());
     }
 
     #[test]
     fn end_exclusive() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_number(10).unwrap();
-        let d2 = runtime.add_number(20).unwrap();
+        let d1 = runtime.add_number(10.into()).unwrap();
+        let d2 = runtime.add_number(20.into()).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
@@ -100,16 +100,16 @@ mod tests {
         runtime.make_end_exclusive_range().unwrap();
 
         let (start, end) = runtime.get_range(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_number(start).unwrap(), 10);
-        assert_eq!(runtime.get_number(end).unwrap(), 19);
+        assert_eq!(runtime.get_number(start).unwrap(), 10.into());
+        assert_eq!(runtime.get_number(end).unwrap(), 19.into());
     }
 
     #[test]
     fn exclusive() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_number(10).unwrap();
-        let d2 = runtime.add_number(20).unwrap();
+        let d1 = runtime.add_number(10.into()).unwrap();
+        let d2 = runtime.add_number(20.into()).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
@@ -117,7 +117,7 @@ mod tests {
         runtime.make_exclusive_range().unwrap();
 
         let (start, end) = runtime.get_range(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_number(start).unwrap(), 11);
-        assert_eq!(runtime.get_number(end).unwrap(), 19);
+        assert_eq!(runtime.get_number(start).unwrap(), 11.into());
+        assert_eq!(runtime.get_number(end).unwrap(), 19.into());
     }
 }

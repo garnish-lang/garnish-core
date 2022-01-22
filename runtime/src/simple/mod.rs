@@ -4,10 +4,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
-use crate::{
-    EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction,
-    InstructionData, RuntimeError, SimpleData, SimpleDataList,
-};
+use crate::{EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishRuntime, Instruction, InstructionData, RuntimeError, SimpleData, SimpleDataList, SimpleNumber};
 
 pub mod data;
 
@@ -194,7 +191,7 @@ impl SimpleRuntimeData {
             ExpressionDataType::CharList => {
                 let len = self.get_char_list_len(from)?;
                 for i in 0..len {
-                    let c = self.get_char_list_item(from, i as i32)?;
+                    let c = self.get_char_list_item(from, i.into())?;
                     self.add_to_char_list(c)?;
                 }
             }
@@ -210,7 +207,7 @@ impl SimpleRuntimeData {
                 let len = self.get_byte_list_len(from)?;
                 let mut strs = vec![];
                 for i in 0..len {
-                    let b = self.get_byte_list_item(from, i as i32)?;
+                    let b = self.get_byte_list_item(from, i.into())?;
                     strs.push(format!("'{}'", b));
                 }
                 let s = strs.join(" ");
@@ -279,7 +276,7 @@ impl SimpleRuntimeData {
                 }
 
                 for i in 0..len {
-                    let item = self.get_list_item(from, i as i32)?;
+                    let item = self.get_list_item(from, i.into())?;
                     self.add_to_current_char_list(item, depth + 1)?;
 
                     if i < len - 1 {
@@ -357,7 +354,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     type Symbol = u64;
     type Char = char;
     type Byte = u8;
-    type Number = i32;
+    type Number = SimpleNumber;
     type Size = usize;
 
     fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error> {
@@ -366,7 +363,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(d.get_data_type())
     }
 
-    fn get_number(&self, index: usize) -> Result<i32, Self::Error> {
+    fn get_number(&self, index: usize) -> Result<SimpleNumber, Self::Error> {
         self.get(index)?.as_number()
     }
 
@@ -414,10 +411,15 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.get(index)?.as_list()?.0.len())
     }
 
-    fn get_list_item(&self, list_index: usize, item_index: i32) -> Result<usize, Self::Error> {
-        match self.get(list_index)?.as_list()?.0.get(item_index as usize) {
-            None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
-            Some(v) => Ok(*v),
+    fn get_list_item(&self, list_index: usize, item_index: SimpleNumber) -> Result<usize, Self::Error> {
+        match item_index {
+            SimpleNumber::Integer(item_index) => {
+                match self.get(list_index)?.as_list()?.0.get(item_index as usize) {
+                    None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
+                    Some(v) => Ok(*v),
+                }
+            }
+            SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index list with decimal value."))), // should return None
         }
     }
 
@@ -425,10 +427,15 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         Ok(self.get(index)?.as_list()?.1.len())
     }
 
-    fn get_list_association(&self, list_index: usize, item_index: i32) -> Result<usize, Self::Error> {
-        match self.get(list_index)?.as_list()?.1.get(item_index as usize) {
-            None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
-            Some(v) => Ok(*v),
+    fn get_list_association(&self, list_index: usize, item_index: SimpleNumber) -> Result<usize, Self::Error> {
+        match item_index {
+            SimpleNumber::Integer(item_index) => {
+                match self.get(list_index)?.as_list()?.1.get(item_index as usize) {
+                    None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
+                    Some(v) => Ok(*v),
+                }
+            }
+            SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index list with decimal value."))), // should return None
         }
     }
 
@@ -437,9 +444,14 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error> {
-        match self.get(addr)?.as_char_list()?.chars().nth(item_index as usize) {
-            None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
-            Some(c) => Ok(c),
+        match item_index {
+            SimpleNumber::Integer(item_index) => {
+                match self.get(addr)?.as_char_list()?.chars().nth(item_index as usize) {
+                    None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
+                    Some(c) => Ok(c),
+                }
+            }
+            SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index char list with decimal value."))), // should return None
         }
     }
 
@@ -448,9 +460,14 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error> {
-        match self.get(addr)?.as_byte_list()?.get(item_index as usize) {
-            None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
-            Some(c) => Ok(*c),
+        match item_index {
+            SimpleNumber::Integer(item_index) => {
+                match self.get(addr)?.as_byte_list()?.get(item_index as usize) {
+                    None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
+                    Some(c) => Ok(*c),
+                }
+            }
+            SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index byte list with decimal value."))), // should return None
         }
     }
 
@@ -470,7 +487,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         self.cache_add(SimpleData::Type(value))
     }
 
-    fn add_number(&mut self, value: i32) -> Result<usize, Self::Error> {
+    fn add_number(&mut self, value: SimpleNumber) -> Result<usize, Self::Error> {
         self.cache_add(SimpleData::Number(value))
     }
 
@@ -631,7 +648,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
         loop {
             // check to make sure item has same symbol
-            let association_ref = self.get_list_association(list_addr, i as i32)?;
+            let association_ref = self.get_list_association(list_addr, i.into())?;
 
             // should have symbol on left
             match self.get_data_type(association_ref)? {
@@ -779,25 +796,35 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     //
 
     fn size_to_number(from: Self::Size) -> Self::Number {
-        from as Self::Number
+        from.into()
     }
 
     fn number_to_char(from: Self::Number) -> Option<Self::Char> {
-        match (from as u8).try_into() {
-            Ok(c) => Some(c),
-            Err(_) => None,
+        match from {
+            SimpleNumber::Integer(v) => {
+                match (v as u8).try_into() {
+                    Ok(c) => Some(c),
+                    Err(_) => None,
+                }
+            }
+            SimpleNumber::Float(_) => None
         }
     }
 
     fn number_to_byte(from: Self::Number) -> Option<Self::Byte> {
-        match from.try_into() {
-            Ok(b) => Some(b),
-            Err(_) => None,
+        match from {
+            SimpleNumber::Integer(v) => {
+                match v.try_into() {
+                    Ok(b) => Some(b),
+                    Err(_) => None,
+                }
+            }
+            SimpleNumber::Float(_) => None
         }
     }
 
     fn char_to_number(from: Self::Char) -> Option<Self::Number> {
-        Some(from as i32)
+        Some((from as i32).into())
     }
 
     fn char_to_byte(from: Self::Char) -> Option<Self::Byte> {
@@ -805,7 +832,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
     }
 
     fn byte_to_number(from: Self::Byte) -> Option<Self::Number> {
-        Some(from as i32)
+        Some((from as i32).into())
     }
 
     fn byte_to_char(from: Self::Byte) -> Option<Self::Char> {
@@ -838,7 +865,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
         let mut h = DefaultHasher::new();
 
         for i in 0..len {
-            let c = self.get_char_list_item(addr, i as i32)?;
+            let c = self.get_char_list_item(addr, i.into())?;
             c.hash(&mut h);
         }
         let hv = h.finish();
@@ -852,7 +879,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
                 let len = self.get_char_list_len(from)?;
                 let mut s = String::new();
                 for i in 0..len {
-                    let c = self.get_char_list_item(from, i as i32)?;
+                    let c = self.get_char_list_item(from, i.into())?;
                     s.push(c);
                 }
 
@@ -871,12 +898,12 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
                 let len = self.get_char_list_len(from)?;
                 let mut s = String::new();
                 for i in 0..len {
-                    let c = self.get_char_list_item(from, i as i32)?;
+                    let c = self.get_char_list_item(from, i.into())?;
                     s.push(c);
                 }
 
                 match s.parse::<i32>() {
-                    Ok(v) => self.add_number(v),
+                    Ok(v) => self.add_number(v.into()),
                     Err(_) => self.add_unit(),
                 }
             }
@@ -890,7 +917,7 @@ impl GarnishLangRuntimeData for SimpleRuntimeData {
 
     fn parse_number(from: &str) -> Result<Self::Number, Self::Error> {
         match from.parse::<i32>() {
-            Ok(v) => Ok(v),
+            Ok(v) => Ok(v.into()),
             Err(_) => Err(DataError::from(format!("Could not parse number from {:?}", from))),
         }
     }
@@ -933,7 +960,7 @@ mod tests {
     #[test]
     fn type_of() {
         let mut runtime = SimpleRuntimeData::new();
-        runtime.add_number(10).unwrap();
+        runtime.add_number(10.into()).unwrap();
 
         assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Number);
     }
@@ -1036,17 +1063,17 @@ mod data_storage {
         let mut runtime = SimpleRuntimeData::new();
 
         let start = runtime.get_data_len();
-        let i1 = runtime.add_number(10).unwrap();
-        let i2 = runtime.add_number(20).unwrap();
-        let i3 = runtime.add_number(10).unwrap();
+        let i1 = runtime.add_number(10.into()).unwrap();
+        let i2 = runtime.add_number(20.into()).unwrap();
+        let i3 = runtime.add_number(10.into()).unwrap();
 
         assert_eq!(i1, start);
         assert_eq!(i2, start + 1);
         assert_eq!(i3, i1);
 
         assert_eq!(runtime.get_data_len(), 5);
-        assert_eq!(runtime.data.get(3).unwrap().as_number().unwrap(), 10);
-        assert_eq!(runtime.data.get(4).unwrap().as_number().unwrap(), 20);
+        assert_eq!(runtime.data.get(3).unwrap().as_number().unwrap(), 10.into());
+        assert_eq!(runtime.data.get(4).unwrap().as_number().unwrap(), 20.into());
     }
 
     #[test]
@@ -1180,7 +1207,7 @@ mod to_char_list {
         let mut chars = String::new();
 
         for i in 0..len {
-            let c = runtime.get_char_list_item(addr, i as i32).unwrap();
+            let c = runtime.get_char_list_item(addr, i.into()).unwrap();
             chars.push(c);
         }
 
@@ -1204,7 +1231,7 @@ mod to_char_list {
 
     #[test]
     fn integer() {
-        assert_to_char_list("10", |runtime| runtime.add_number(10).unwrap())
+        assert_to_char_list("10", |runtime| runtime.add_number(10.into()).unwrap())
     }
 
     #[test]
@@ -1272,8 +1299,8 @@ mod to_char_list {
     #[test]
     fn range() {
         assert_to_char_list("5..10", |runtime| {
-            let d1 = runtime.add_number(5).unwrap();
-            let d2 = runtime.add_number(10).unwrap();
+            let d1 = runtime.add_number(5.into()).unwrap();
+            let d2 = runtime.add_number(10.into()).unwrap();
             runtime.add_range(d1, d2).unwrap()
         })
     }
@@ -1281,8 +1308,8 @@ mod to_char_list {
     #[test]
     fn pair() {
         assert_to_char_list("10 = 10", |runtime| {
-            let d1 = runtime.add_number(10).unwrap();
-            let d2 = runtime.add_number(10).unwrap();
+            let d1 = runtime.add_number(10.into()).unwrap();
+            let d2 = runtime.add_number(10.into()).unwrap();
             runtime.add_pair((d1, d2)).unwrap()
         })
     }
@@ -1290,9 +1317,9 @@ mod to_char_list {
     #[test]
     fn pair_nested() {
         assert_to_char_list("10 = (20 = 30)", |runtime| {
-            let d1 = runtime.add_number(10).unwrap();
-            let d2 = runtime.add_number(20).unwrap();
-            let d3 = runtime.add_number(30).unwrap();
+            let d1 = runtime.add_number(10.into()).unwrap();
+            let d2 = runtime.add_number(20.into()).unwrap();
+            let d3 = runtime.add_number(30.into()).unwrap();
             let d4 = runtime.add_pair((d2, d3)).unwrap();
             runtime.add_pair((d1, d4)).unwrap()
         })
@@ -1301,10 +1328,10 @@ mod to_char_list {
     #[test]
     fn pair_nested_two() {
         assert_to_char_list("10 = (20 = (30 = 40))", |runtime| {
-            let d1 = runtime.add_number(10).unwrap();
-            let d2 = runtime.add_number(20).unwrap();
-            let d3 = runtime.add_number(30).unwrap();
-            let d4 = runtime.add_number(40).unwrap();
+            let d1 = runtime.add_number(10.into()).unwrap();
+            let d2 = runtime.add_number(20.into()).unwrap();
+            let d3 = runtime.add_number(30.into()).unwrap();
+            let d4 = runtime.add_number(40.into()).unwrap();
             let d5 = runtime.add_pair((d3, d4)).unwrap();
             let d6 = runtime.add_pair((d2, d5)).unwrap();
             runtime.add_pair((d1, d6)).unwrap()
@@ -1314,9 +1341,9 @@ mod to_char_list {
     #[test]
     fn list() {
         assert_to_char_list("10, 20, 30", |runtime| {
-            let d1 = runtime.add_number(10).unwrap();
-            let d2 = runtime.add_number(20).unwrap();
-            let d3 = runtime.add_number(30).unwrap();
+            let d1 = runtime.add_number(10.into()).unwrap();
+            let d2 = runtime.add_number(20.into()).unwrap();
+            let d3 = runtime.add_number(30.into()).unwrap();
             runtime.start_list(3).unwrap();
             runtime.add_to_list(d1, false).unwrap();
             runtime.add_to_list(d2, false).unwrap();
@@ -1328,10 +1355,10 @@ mod to_char_list {
     #[test]
     fn list_nested() {
         assert_to_char_list("10, (20, 30), 40", |runtime| {
-            let d1 = runtime.add_number(10).unwrap();
-            let d2 = runtime.add_number(20).unwrap();
-            let d3 = runtime.add_number(30).unwrap();
-            let d4 = runtime.add_number(40).unwrap();
+            let d1 = runtime.add_number(10.into()).unwrap();
+            let d2 = runtime.add_number(20.into()).unwrap();
+            let d3 = runtime.add_number(30.into()).unwrap();
+            let d4 = runtime.add_number(40.into()).unwrap();
 
             runtime.start_list(2).unwrap();
             runtime.add_to_list(d2, false).unwrap();
@@ -1350,8 +1377,8 @@ mod to_char_list {
     fn link_append() {
         assert_to_char_list("10 -> 20", |runtime| {
             let unit = runtime.add_unit().unwrap();
-            let d1 = runtime.add_number(10).unwrap();
-            let d2 = runtime.add_number(20).unwrap();
+            let d1 = runtime.add_number(10.into()).unwrap();
+            let d2 = runtime.add_number(20.into()).unwrap();
             let link1 = runtime.add_link(d1, unit, true).unwrap();
             runtime.add_link(d2, link1, true).unwrap()
         })
@@ -1361,8 +1388,8 @@ mod to_char_list {
     fn link_prepend() {
         assert_to_char_list("10 <- 20", |runtime| {
             let unit = runtime.add_unit().unwrap();
-            let d1 = runtime.add_number(10).unwrap();
-            let d2 = runtime.add_number(20).unwrap();
+            let d1 = runtime.add_number(10.into()).unwrap();
+            let d2 = runtime.add_number(20.into()).unwrap();
             let link1 = runtime.add_link(d2, unit, false).unwrap();
             runtime.add_link(d1, link1, false).unwrap()
         })
@@ -1372,9 +1399,9 @@ mod to_char_list {
     fn link_append_multiple() {
         assert_to_char_list("10 -> 20 -> 30", |runtime| {
             let unit = runtime.add_unit().unwrap();
-            let d1 = runtime.add_number(10).unwrap();
-            let d2 = runtime.add_number(20).unwrap();
-            let d3 = runtime.add_number(30).unwrap();
+            let d1 = runtime.add_number(10.into()).unwrap();
+            let d2 = runtime.add_number(20.into()).unwrap();
+            let d3 = runtime.add_number(30.into()).unwrap();
 
             let link1 = runtime.add_link(d1, unit, true).unwrap();
             let link2 = runtime.add_link(d2, link1, true).unwrap();
@@ -1386,9 +1413,9 @@ mod to_char_list {
     fn link_prepend_multiple() {
         assert_to_char_list("10 <- 20 <- 30", |runtime| {
             let unit = runtime.add_unit().unwrap();
-            let d1 = runtime.add_number(10).unwrap();
-            let d2 = runtime.add_number(20).unwrap();
-            let d3 = runtime.add_number(30).unwrap();
+            let d1 = runtime.add_number(10.into()).unwrap();
+            let d2 = runtime.add_number(20.into()).unwrap();
+            let d3 = runtime.add_number(30.into()).unwrap();
 
             let link1 = runtime.add_link(d3, unit, false).unwrap();
             let link2 = runtime.add_link(d2, link1, false).unwrap();
@@ -1399,10 +1426,10 @@ mod to_char_list {
     #[test]
     fn slice() {
         assert_to_char_list("(10, 20, 30) ~ 5..10", |runtime| {
-            let d1 = runtime.add_number(5).unwrap();
-            let d2 = runtime.add_number(10).unwrap();
-            let d3 = runtime.add_number(20).unwrap();
-            let d4 = runtime.add_number(30).unwrap();
+            let d1 = runtime.add_number(5.into()).unwrap();
+            let d2 = runtime.add_number(10.into()).unwrap();
+            let d3 = runtime.add_number(20.into()).unwrap();
+            let d4 = runtime.add_number(30.into()).unwrap();
 
             runtime.start_list(3).unwrap();
             runtime.add_to_list(d2, false).unwrap();

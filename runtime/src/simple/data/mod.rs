@@ -45,13 +45,13 @@ impl SimpleDataList {
 
 pub type DataCastResult<T> = Result<T, DataError>;
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
 pub enum SimpleData {
     Unit,
     True,
     False,
     Type(ExpressionDataType),
-    Number(i32),
+    Number(SimpleNumber),
     Char(char),
     Byte(u8),
     Symbol(u64),
@@ -117,7 +117,7 @@ impl SimpleData {
         }
     }
 
-    pub fn as_number(&self) -> DataCastResult<i32> {
+    pub fn as_number(&self) -> DataCastResult<SimpleNumber> {
         match self {
             SimpleData::Number(v) => Ok(*v),
             _ => Err(DataError::from(format!("{:?} is not a Number", self))),
@@ -212,14 +212,14 @@ impl SimpleData {
 #[cfg(test)]
 mod tests {
     use crate::simple::data::SimpleData;
-    use crate::ExpressionDataType;
+    use crate::{ExpressionDataType, SimpleNumber};
 
     #[test]
     fn get_data_type() {
         assert_eq!(SimpleData::Unit.get_data_type(), ExpressionDataType::Unit);
         assert_eq!(SimpleData::True.get_data_type(), ExpressionDataType::True);
         assert_eq!(SimpleData::False.get_data_type(), ExpressionDataType::False);
-        assert_eq!(SimpleData::Number(0).get_data_type(), ExpressionDataType::Number);
+        assert_eq!(SimpleData::Number(SimpleNumber::Integer(0)).get_data_type(), ExpressionDataType::Number);
         assert_eq!(SimpleData::Char('a').get_data_type(), ExpressionDataType::Char);
         assert_eq!(SimpleData::Byte(0).get_data_type(), ExpressionDataType::Byte);
         assert_eq!(SimpleData::Symbol(0).get_data_type(), ExpressionDataType::Symbol);
@@ -276,7 +276,7 @@ mod tests {
 
     #[test]
     fn as_number() {
-        assert_eq!(SimpleData::Number(10).as_number().unwrap(), 10);
+        assert_eq!(SimpleData::Number(SimpleNumber::Integer(10)).as_number().unwrap(), SimpleNumber::Integer(10));
     }
 
     #[test]
@@ -296,7 +296,7 @@ mod tests {
 
     #[test]
     fn as_byte() {
-        assert_eq!(SimpleData::Byte(10).as_byte().unwrap(), 10);
+        assert_eq!(SimpleData::Byte(10).as_byte().unwrap(), 10.into());
     }
 
     #[test]

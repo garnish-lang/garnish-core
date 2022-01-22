@@ -139,8 +139,8 @@ mod general {
     fn less_than_no_references_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_number(10).unwrap();
-        runtime.add_number(10).unwrap();
+        runtime.add_number(10.into()).unwrap();
+        runtime.add_number(10.into()).unwrap();
         let result = runtime.less_than();
 
         assert!(result.is_err());
@@ -150,7 +150,7 @@ mod general {
     fn less_than_of_unsupported_comparison_is_false() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let int1 = runtime.add_number(10).unwrap();
+        let int1 = runtime.add_number(10.into()).unwrap();
         let exp1 = runtime.add_expression(10).unwrap();
 
         runtime.push_register(int1).unwrap();
@@ -232,21 +232,21 @@ mod less_than {
     #[test]
     fn numbers_less_than() {
         perform_all_compare(true, true, false, false, |runtime| {
-            (runtime.add_number(10).unwrap(), runtime.add_number(20).unwrap())
+            (runtime.add_number(10.into()).unwrap(), runtime.add_number(20.into()).unwrap())
         });
     }
 
     #[test]
     fn numbers_equal() {
         perform_all_compare(false, true, false, true, |runtime| {
-            (runtime.add_number(20).unwrap(), runtime.add_number(20).unwrap())
+            (runtime.add_number(20.into()).unwrap(), runtime.add_number(20.into()).unwrap())
         });
     }
 
     #[test]
     fn numbers_greater_than() {
         perform_all_compare(false, false, true, true, |runtime| {
-            (runtime.add_number(20).unwrap(), runtime.add_number(10).unwrap())
+            (runtime.add_number(20.into()).unwrap(), runtime.add_number(10.into()).unwrap())
         });
     }
 

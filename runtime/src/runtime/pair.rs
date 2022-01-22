@@ -14,7 +14,7 @@ mod tests {
     fn make_pair() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let i1 = runtime.add_number(10).unwrap();
+        let i1 = runtime.add_number(10.into()).unwrap();
         let i2 = runtime.add_symbol(20).unwrap();
         let start = runtime.get_data_len();
 
@@ -35,7 +35,7 @@ mod tests {
     fn make_pair_no_refs_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_number(10).unwrap();
+        runtime.add_number(10.into()).unwrap();
         runtime.add_symbol(20).unwrap();
 
         runtime.push_instruction(Instruction::MakePair, None).unwrap();

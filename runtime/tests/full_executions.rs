@@ -118,7 +118,7 @@
 //     let (first_left, first_right) = pool.get_pair(pool.get_result().unwrap()).unwrap();
 //     let (second_left, second_right) = pool.get_pair(first_left).unwrap();
 
-//     assert_eq!(pool.get_integer(first_right).unwrap(), 100);
+//     assert_eq!(pool.get_integer(first_right).unwrap(), 100.into());
 //     assert_eq!(pool.get_integer(second_left).unwrap(), 200);
 //     assert_eq!(pool.get_integer(second_right).unwrap(), 300);
 // }

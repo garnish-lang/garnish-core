@@ -32,7 +32,7 @@ mod tests {
     fn start_side_effect() {
         let mut runtime = SimpleRuntimeData::new();
 
-        runtime.add_number(10).unwrap();
+        runtime.add_number(10.into()).unwrap();
 
         runtime.start_side_effect().unwrap();
 
@@ -43,7 +43,7 @@ mod tests {
     fn start_side_effect_with_value() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_number(10).unwrap();
+        let d1 = runtime.add_number(10.into()).unwrap();
 
         runtime.push_value_stack(d1).unwrap();
 
@@ -56,7 +56,7 @@ mod tests {
     fn end_side_effect() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_number(10).unwrap();
+        let d1 = runtime.add_number(10.into()).unwrap();
 
         runtime.push_register(d1).unwrap();
         runtime.push_value_stack(d1).unwrap();
@@ -71,7 +71,7 @@ mod tests {
     fn end_side_effect_no_value_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_number(10).unwrap();
+        let d1 = runtime.add_number(10.into()).unwrap();
 
         runtime.push_register(d1).unwrap();
 
@@ -84,7 +84,7 @@ mod tests {
     fn end_side_effect_no_register_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
-        let d1 = runtime.add_number(10).unwrap();
+        let d1 = runtime.add_number(10.into()).unwrap();
 
         runtime.push_value_stack(d1).unwrap();
 
