@@ -1897,109 +1897,6 @@ mod tests {
     }
 
     #[test]
-    fn lex_integers() {
-        let result = lex(&"12345 67890".to_string()).unwrap();
-
-        assert_eq!(
-            result,
-            vec![
-                LexerToken {
-                    text: "12345".to_string(),
-                    token_type: TokenType::Number,
-                    column: 0,
-                    row: 0
-                },
-                LexerToken {
-                    text: " ".to_string(),
-                    token_type: TokenType::Whitespace,
-                    column: 5,
-                    row: 0
-                },
-                LexerToken {
-                    text: "67890".to_string(),
-                    token_type: TokenType::Number,
-                    column: 6,
-                    row: 0
-                },
-            ]
-        );
-    }
-
-    #[test]
-    fn lex_integers_with_symbol() {
-        let result = lex(&"12345+67890".to_string()).unwrap();
-
-        assert_eq!(
-            result,
-            vec![
-                LexerToken {
-                    text: "12345".to_string(),
-                    token_type: TokenType::Number,
-                    column: 0,
-                    row: 0
-                },
-                LexerToken {
-                    text: "+".to_string(),
-                    token_type: TokenType::PlusSign,
-                    column: 5,
-                    row: 0
-                },
-                LexerToken {
-                    text: "67890".to_string(),
-                    token_type: TokenType::Number,
-                    column: 6,
-                    row: 0
-                },
-            ]
-        );
-    }
-
-    #[test]
-    fn float() {
-        let result = lex("3.14").unwrap();
-
-        assert_eq!(
-            result,
-            vec![LexerToken {
-                text: "3.14".to_string(),
-                token_type: TokenType::Number,
-                column: 0,
-                row: 0
-            }]
-        )
-    }
-
-    #[test]
-    fn float_start_with_period() {
-        let result = lex(".14").unwrap();
-
-        assert_eq!(
-            result,
-            vec![LexerToken {
-                text: ".14".to_string(),
-                token_type: TokenType::Number,
-                column: 0,
-                row: 0
-            }]
-        )
-    }
-
-    #[test]
-    fn float_end_with_period() {
-        let result = lex("3.").unwrap();
-
-        assert_eq!(
-            result,
-            vec![LexerToken {
-                text: "3.".to_string(),
-                token_type: TokenType::Number,
-                column: 0,
-                row: 0
-            }]
-        )
-    }
-
-    #[test]
     fn integer_range() {
         let result = lex("3..").unwrap();
 
@@ -2411,6 +2308,113 @@ mod tests {
                 }
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod numbers {
+
+    #[test]
+    fn lex_integers() {
+        let result = lex(&"12345 67890".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "12345".to_string(),
+                    token_type: TokenType::Number,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::Whitespace,
+                    column: 5,
+                    row: 0
+                },
+                LexerToken {
+                    text: "67890".to_string(),
+                    token_type: TokenType::Number,
+                    column: 6,
+                    row: 0
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn lex_integers_with_symbol() {
+        let result = lex(&"12345+67890".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "12345".to_string(),
+                    token_type: TokenType::Number,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "+".to_string(),
+                    token_type: TokenType::PlusSign,
+                    column: 5,
+                    row: 0
+                },
+                LexerToken {
+                    text: "67890".to_string(),
+                    token_type: TokenType::Number,
+                    column: 6,
+                    row: 0
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn float() {
+        let result = lex("3.14").unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "3.14".to_string(),
+                token_type: TokenType::Number,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn float_start_with_period() {
+        let result = lex(".14").unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ".14".to_string(),
+                token_type: TokenType::Number,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn float_end_with_period() {
+        let result = lex("3.").unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "3.".to_string(),
+                token_type: TokenType::Number,
+                column: 0,
+                row: 0
+            }]
+        )
     }
 }
 
