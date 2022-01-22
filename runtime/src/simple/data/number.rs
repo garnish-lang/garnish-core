@@ -33,15 +33,42 @@ impl From<i32> for SimpleNumber {
     }
 }
 
+impl From<SimpleNumber> for i32 {
+    fn from(x: SimpleNumber) -> Self {
+        match x {
+            Integer(v) => v,
+            Float(v) => v as i32
+        }
+    }
+}
+
 impl From<usize> for SimpleNumber {
     fn from(x: usize) -> Self {
         SimpleNumber::Integer(x as i32)
     }
 }
 
+impl From<SimpleNumber> for usize {
+    fn from(x: SimpleNumber) -> Self {
+        match x {
+            Integer(v) => v as usize,
+            Float(v) => v as i32 as usize
+        }
+    }
+}
+
 impl From<f64> for SimpleNumber {
     fn from(x: f64) -> Self {
         SimpleNumber::Float(x)
+    }
+}
+
+impl From<SimpleNumber> for f64 {
+    fn from(x: SimpleNumber) -> Self {
+        match x {
+            Integer(v) => f64::from(v),
+            Float(v) => v
+        }
     }
 }
 
@@ -214,6 +241,7 @@ impl GarnishNumber for SimpleNumber {
 
 #[cfg(test)]
 mod tests {
+    use std::usize;
     use crate::{GarnishNumber, SimpleNumber};
     use crate::SimpleNumber::{Float, Integer};
 
@@ -223,13 +251,43 @@ mod tests {
     }
 
     #[test]
+    fn number_integer_into_i32() {
+        assert_eq!(i32::from(Integer(10)), 10);
+    }
+
+    #[test]
+    fn number_float_into_i32() {
+        assert_eq!(i32::from(Float(10.0)), 10);
+    }
+
+    #[test]
     fn from_usize() {
         assert_eq!(SimpleNumber::from(10usize), Integer(10));
     }
 
     #[test]
+    fn number_integer_into_usize() {
+        assert_eq!(usize::from(Integer(10)), 10);
+    }
+
+    #[test]
+    fn number_float_into_usize() {
+        assert_eq!(usize::from(Float(10.0)), 10);
+    }
+
+    #[test]
     fn from_f64() {
         assert_eq!(SimpleNumber::from(10.0f64), Float(10.0));
+    }
+
+    #[test]
+    fn number_integer_into_f64() {
+        assert_eq!(f64::from(Integer(10)), 10.0);
+    }
+
+    #[test]
+    fn number_float_into_f64() {
+        assert_eq!(f64::from(Float(10.0)), 10.0);
     }
 
     #[test]
