@@ -95,14 +95,20 @@ pub fn parse_byte_list_numbers(input: &str) -> Result<Vec<u8>, DataError> {
     for c in input.chars().chain(iter::once(' ')) {
         if c.is_numeric() || c == '_' {
             current_number.push(c);
-        } else if current_number.len() > 0 {
+        } else if c == ' ' && current_number.len() > 0 {
             match parse_number(current_number.as_str())? {
                 SimpleNumber::Float(_) => Err(DataError::from(format!("Float numbers are not allowed in ByteLists. {:?}", current_number)))?,
                 SimpleNumber::Integer(v) => {
+                    if v < 0 || v > u8::MAX as i32{
+                        Err(DataError::from(format!("Number to large for byte value {:?}", current_number)))?;
+                    }
+
                     numbers.push(v as u8);
                     current_number = String::new();
                 }
             }
+        } else {
+            Err(DataError::from(format!("Invalid character in byte number {:?}", c)))?;
         }
     }
 
@@ -331,5 +337,29 @@ mod byte_list {
     fn double_quote_is_series_off_byte_numbers() {
         let input = "''100 150 200 250''";
         assert_eq!(parse_byte_list(input).unwrap(), vec![100, 150, 200, 250])
+    }
+
+    #[test]
+    fn double_quote_is_series_off_byte_numbers_radix_two() {
+        let input = "''02_1111 02_0101 02_1001''";
+        assert_eq!(parse_byte_list(input).unwrap(), vec![0b1111, 0b0101, 0b1001])
+    }
+
+    #[test]
+    fn double_quote_is_series_off_byte_numbers_invalid_number() {
+        let input = "''abc 150 200 250''";
+        assert!(parse_byte_list(input).is_err())
+    }
+
+    #[test]
+    fn double_quote_is_series_off_byte_numbers_number_to_large() {
+        let input = "''100 300 150''";
+        assert!(parse_byte_list(input).is_err())
+    }
+
+    #[test]
+    fn double_quote_is_series_off_byte_numbers_number_negative() {
+        let input = "''100 -150 200''";
+        assert!(parse_byte_list(input).is_err())
     }
 }
