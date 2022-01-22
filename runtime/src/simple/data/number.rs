@@ -11,6 +11,34 @@ pub enum SimpleNumber {
 
 impl Eq for SimpleNumber {}
 
+impl SimpleNumber {
+    pub fn as_integer(&self) -> DataCastResult<i32> {
+        match self {
+            SimpleNumber::Integer(v) => Ok(*v),
+            _ => Err(DataError::from(format!("{:?} is not an Integer.", self))),
+        }
+    }
+
+    pub fn as_float(&self) -> DataCastResult<f64> {
+        match self {
+            SimpleNumber::Float(v) => Ok(*v),
+            _ => Err(DataError::from(format!("{:?} is not an Float.", self))),
+        }
+    }
+}
+
+impl From<i32> for SimpleNumber {
+    fn from(x: i32) -> Self {
+        SimpleNumber::Integer(x)
+    }
+}
+
+impl From<f64> for SimpleNumber {
+    fn from(x: f64) -> Self {
+        SimpleNumber::Float(x)
+    }
+}
+
 impl PartialEq for SimpleNumber {
     fn eq(&self, other: &Self) -> bool {
         match (self, other) {
@@ -29,22 +57,6 @@ impl PartialOrd for SimpleNumber {
             (SimpleNumber::Float(v1), SimpleNumber::Float(v2)) => v1.partial_cmp(v2),
             (SimpleNumber::Integer(v1), SimpleNumber::Float(v2)) => f64::from(*v1).partial_cmp(v2),
             (SimpleNumber::Float(v1), SimpleNumber::Integer(v2)) => (v1).partial_cmp(&f64::from(*v2)),
-        }
-    }
-}
-
-impl SimpleNumber {
-    pub fn as_integer(&self) -> DataCastResult<i32> {
-        match self {
-            SimpleNumber::Integer(v) => Ok(*v),
-            _ => Err(DataError::from(format!("{:?} is not an Integer.", self))),
-        }
-    }
-
-    pub fn as_float(&self) -> DataCastResult<f64> {
-        match self {
-            SimpleNumber::Float(v) => Ok(*v),
-            _ => Err(DataError::from(format!("{:?} is not an Float.", self))),
         }
     }
 }
@@ -198,6 +210,16 @@ impl GarnishNumber for SimpleNumber {
 mod tests {
     use crate::{GarnishNumber, SimpleNumber};
     use crate::SimpleNumber::{Float, Integer};
+
+    #[test]
+    fn from_i32() {
+        assert_eq!(SimpleNumber::from(10i32), Integer(10));
+    }
+
+    #[test]
+    fn from_f64() {
+        assert_eq!(SimpleNumber::from(10.0f64), Float(10.0));
+    }
 
     #[test]
     fn as_integer() {
