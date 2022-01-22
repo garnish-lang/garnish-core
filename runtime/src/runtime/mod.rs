@@ -31,25 +31,7 @@ pub use error::*;
 
 pub(crate) use utilities::*;
 
-
-
-
-
-
-
-
-
-
-
-
-
 use crate::GarnishLangRuntimeInfo;
-
-
-
-
-
-
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
