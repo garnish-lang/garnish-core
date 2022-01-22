@@ -41,7 +41,7 @@ fn parse_char_list(input: &str) -> Result<String, DataError> {
     Ok(new)
 }
 
-fn parse_byte_list(input: &str) -> Vec<u8> {
+fn parse_byte_list(input: &str) -> Result<Vec<u8>, DataError> {
     let mut bytes = vec![];
 
     let mut start_quote_count = 0;
@@ -65,7 +65,7 @@ fn parse_byte_list(input: &str) -> Vec<u8> {
                 '0' => bytes.push('\0' as u8),
                 '\\' => bytes.push('\\' as u8),
                 '\'' => bytes.push('\'' as u8),
-                _ => (),
+                _ => return Err(DataError::from(format!("Invalid escape character '{}'", c))),
             }
 
             check_escape = false;
@@ -79,7 +79,7 @@ fn parse_byte_list(input: &str) -> Vec<u8> {
         }
     }
 
-    bytes
+    Ok(bytes)
 }
 
 #[cfg(test)]
@@ -142,42 +142,48 @@ mod byte_list {
     #[test]
     fn skip_starting_and_ending_quotes() {
         let input = "'a'";
-        assert_eq!(parse_byte_list(input), vec!['a' as u8])
+        assert_eq!(parse_byte_list(input).unwrap(), vec!['a' as u8])
     }
 
     #[test]
     fn convert_newlines() {
         let input = "'\\n'";
-        assert_eq!(parse_byte_list(input), vec!['\n' as u8])
+        assert_eq!(parse_byte_list(input).unwrap(), vec!['\n' as u8])
     }
 
     #[test]
     fn convert_tabs() {
         let input = "'\\t'";
-        assert_eq!(parse_byte_list(input), vec!['\t' as u8])
+        assert_eq!(parse_byte_list(input).unwrap(), vec!['\t' as u8])
     }
 
     #[test]
     fn convert_carriage_return() {
         let input = "'\\r'";
-        assert_eq!(parse_byte_list(input), vec!['\r' as u8])
+        assert_eq!(parse_byte_list(input).unwrap(), vec!['\r' as u8])
     }
 
     #[test]
     fn convert_null() {
         let input = "'\\0'";
-        assert_eq!(parse_byte_list(input), vec!['\0' as u8])
+        assert_eq!(parse_byte_list(input).unwrap(), vec!['\0' as u8])
     }
 
     #[test]
     fn convert_backslash() {
         let input = "'\\\\'";
-        assert_eq!(parse_byte_list(input), vec!['\\' as u8])
+        assert_eq!(parse_byte_list(input).unwrap(), vec!['\\' as u8])
     }
 
     #[test]
     fn convert_quote() {
         let input = "'\\''";
-        assert_eq!(parse_byte_list(input), vec!['\'' as u8])
+        assert_eq!(parse_byte_list(input).unwrap(), vec!['\'' as u8])
+    }
+
+    #[test]
+    fn invalid_escape_sequence() {
+        let input = "'\\y'";
+        assert!(parse_byte_list(input).is_err())
     }
 }
