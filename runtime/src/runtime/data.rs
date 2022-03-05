@@ -56,6 +56,7 @@ pub trait GarnishLangRuntimeData {
     fn get_expression(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_external(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_pair(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
+    fn get_concatentation(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
     fn get_range(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
     fn get_slice(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
     fn get_link(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size, bool), Self::Error>;
@@ -84,6 +85,7 @@ pub trait GarnishLangRuntimeData {
     fn add_expression(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_external(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_pair(&mut self, value: (Self::Size, Self::Size)) -> Result<Self::Size, Self::Error>;
+    fn add_concatenation(&mut self, left: Self::Size, right: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_range(&mut self, start: Self::Size, end: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_link(&mut self, value: Self::Size, linked: Self::Size, is_append: bool) -> Result<Self::Size, Self::Error>;

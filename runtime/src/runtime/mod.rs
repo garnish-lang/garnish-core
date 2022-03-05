@@ -3,6 +3,7 @@ mod arithmetic;
 mod bitwise;
 mod casting;
 mod comparison;
+mod concat;
 mod context;
 mod data;
 mod equality;
@@ -96,6 +97,8 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn prepend_link(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
     fn make_pair(&mut self) -> Result<(), RuntimeError<Data::Error>>;
+
+    fn concat(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
     fn put(&mut self, i: Data::Size) -> Result<(), RuntimeError<Data::Error>>;
     fn put_value(&mut self) -> Result<(), RuntimeError<Data::Error>>;

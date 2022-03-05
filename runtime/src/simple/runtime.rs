@@ -55,6 +55,10 @@ impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
         self.get(index)?.as_pair()
     }
 
+    fn get_concatentation(&self, index: usize) -> Result<(usize, usize), Self::Error> {
+        self.get(index)?.as_concatentation()
+    }
+
     fn get_range(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
         self.get(addr)?.as_range()
     }
@@ -165,6 +169,11 @@ impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
 
     fn add_pair(&mut self, value: (usize, usize)) -> Result<usize, Self::Error> {
         self.data.push(SimpleData::Pair(value.0, value.1));
+        Ok(self.data.len() - 1)
+    }
+
+    fn add_concatenation(&mut self, left: Self::Size, right: Self::Size) -> Result<Self::Size, Self::Error> {
+        self.data.push(SimpleData::Concatentaion(left, right));
         Ok(self.data.len() - 1)
     }
 

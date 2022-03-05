@@ -83,6 +83,7 @@ where
     Slice(usize, usize),
     Link(usize, usize, bool),
     List(Vec<usize>, Vec<usize>),
+    Concatentaion(usize, usize),
     Custom(T),
 }
 
@@ -105,6 +106,7 @@ where
             SimpleData::CharList(_) => ExpressionDataType::CharList,
             SimpleData::ByteList(_) => ExpressionDataType::ByteList,
             SimpleData::Pair(_, _) => ExpressionDataType::Pair,
+            SimpleData::Concatentaion(_, _) => ExpressionDataType::Concatentation,
             SimpleData::Range(_, _) => ExpressionDataType::Range,
             SimpleData::Slice(_, _) => ExpressionDataType::Slice,
             SimpleData::Link(_, _, _) => ExpressionDataType::Link,
@@ -211,6 +213,13 @@ where
         }
     }
 
+    pub fn as_concatentation(&self) -> DataCastResult<(usize, usize)> {
+        match self {
+            SimpleData::Concatentaion(l, r) => Ok((*l, *r)),
+            _ => Err(DataError::from(format!("{:?} is not a Concatentation", self)))
+        }
+    }
+
     pub fn as_range(&self) -> DataCastResult<(usize, usize)> {
         match self {
             SimpleData::Range(s, e) => Ok((*s, *e)),
@@ -259,6 +268,7 @@ mod tests {
         assert_eq!(SimpleDataNC::CharList(String::new()).get_data_type(), ExpressionDataType::CharList);
         assert_eq!(SimpleDataNC::ByteList(vec![]).get_data_type(), ExpressionDataType::ByteList);
         assert_eq!(SimpleDataNC::Pair(0, 0).get_data_type(), ExpressionDataType::Pair);
+        assert_eq!(SimpleDataNC::Concatentaion(0, 0).get_data_type(), ExpressionDataType::Concatentation);
         assert_eq!(SimpleDataNC::Range(0, 0).get_data_type(), ExpressionDataType::Range);
         assert_eq!(SimpleDataNC::Slice(0, 0).get_data_type(), ExpressionDataType::Slice);
         assert_eq!(SimpleDataNC::Link(0, 0, true).get_data_type(), ExpressionDataType::Link);
@@ -407,6 +417,16 @@ mod tests {
     #[test]
     fn as_pair_not_pair() {
         assert!(SimpleDataNC::Unit.as_pair().is_err());
+    }
+
+    #[test]
+    fn as_concatentation() {
+        assert_eq!(SimpleDataNC::Concatentaion(10, 20).as_concatentation().unwrap(), (10, 20));
+    }
+
+    #[test]
+    fn as_concatentation_not_concatentation() {
+        assert!(SimpleDataNC::Unit.as_concatentation().is_err());
     }
 
     #[test]

@@ -24,6 +24,7 @@ use crate::runtime::sideeffect::*;
 use crate::runtime::GarnishLangRuntimeInfo;
 use crate::runtime::GarnishRuntime;
 use log::trace;
+use crate::runtime::concat::concat;
 
 impl<Data> GarnishRuntime<Data> for Data
 where
@@ -92,6 +93,7 @@ where
             Instruction::MakeExclusiveRange => self.make_exclusive_range()?,
             Instruction::AppendLink => self.append_link()?,
             Instruction::PrependLink => self.prepend_link()?,
+            Instruction::Concat => self.concat()?,
             Instruction::Put => match data {
                 None => instruction_error(instruction, self.get_instruction_cursor())?,
                 Some(i) => self.put(i)?,
@@ -384,6 +386,14 @@ where
 
     fn make_pair(&mut self) -> Result<(), RuntimeError<Data::Error>> {
         make_pair(self)
+    }
+
+    //
+    // Concatentation
+    //
+
+    fn concat(&mut self) -> Result<(), RuntimeError<Data::Error>> {
+        concat(self)
     }
 
     //

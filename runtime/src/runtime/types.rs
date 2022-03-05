@@ -10,6 +10,7 @@ pub enum ExpressionDataType {
     Symbol,
     Pair,
     Range,
+    Concatentation,
     Slice,
     Link,
     List,

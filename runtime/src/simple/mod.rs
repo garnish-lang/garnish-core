@@ -319,6 +319,9 @@ where
                     self.add_to_char_list(')')?;
                 }
             }
+            ExpressionDataType::Concatentation => {
+                todo!()
+            }
             ExpressionDataType::List => {
                 let len = self.get_list_len(from)?;
 

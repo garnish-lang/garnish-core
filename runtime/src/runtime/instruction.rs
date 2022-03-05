@@ -54,6 +54,7 @@ pub enum Instruction {
     MakeExclusiveRange,
     AppendLink,
     PrependLink,
+    Concat,
 }
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
