@@ -1,14 +1,16 @@
-use crate::{next_two_raw_ref, push_pair, GarnishLangRuntimeData, RuntimeError};
+use crate::{next_two_raw_ref, GarnishLangRuntimeData, RuntimeError};
 
 pub(crate) fn concat<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
-    push_pair(this, left_addr, right_addr)
+    this.add_concatenation(left_addr, right_addr).and_then(|v| this.push_register(v))?;
+
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn make_pair() {
@@ -21,12 +23,10 @@ mod tests {
         runtime.push_register(i1).unwrap();
         runtime.push_register(i2).unwrap();
 
-        runtime.push_instruction(Instruction::MakePair, None).unwrap();
+        runtime.concat().unwrap();
 
-        runtime.make_pair().unwrap();
-
-        assert_eq!(runtime.get_data_type(start).unwrap(), ExpressionDataType::Pair);
-        assert_eq!(runtime.get_pair(start).unwrap(), (i1, i2));
+        assert_eq!(runtime.get_data_type(start).unwrap(), ExpressionDataType::Concatentation);
+        assert_eq!(runtime.get_concatentation(start).unwrap(), (i1, i2));
 
         assert_eq!(runtime.get_register(0).unwrap(), start);
     }
@@ -38,9 +38,7 @@ mod tests {
         runtime.add_number(10.into()).unwrap();
         runtime.add_symbol(20).unwrap();
 
-        runtime.push_instruction(Instruction::MakePair, None).unwrap();
-
-        let result = runtime.make_pair();
+        let result = runtime.concat();
 
         assert!(result.is_err());
     }
