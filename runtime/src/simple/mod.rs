@@ -43,7 +43,6 @@ where
     current_byte_list: Option<Vec<u8>>,
     symbols: HashMap<u64, String>,
     cache: HashMap<u64, usize>,
-    lease_stack: Vec<usize>,
     max_char_list_depth: usize,
 }
 
@@ -67,7 +66,6 @@ impl SimpleRuntimeData<NoCustom> {
             current_byte_list: None,
             symbols: HashMap::new(),
             cache: HashMap::new(),
-            lease_stack: vec![],
             max_char_list_depth: 1000,
         }
     }
@@ -92,7 +90,6 @@ where
             current_byte_list: None,
             symbols: HashMap::new(),
             cache: HashMap::new(),
-            lease_stack: vec![],
             max_char_list_depth: 1000,
         }
     }

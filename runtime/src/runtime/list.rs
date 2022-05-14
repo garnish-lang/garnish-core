@@ -140,6 +140,46 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
+        ExpressionDataType::Concatentation => {
+            let (current, next) = this.get_concatentation(value)?;
+            let mut count = Data::Number::zero();
+            let start_register = this.get_register_len();
+
+            this.push_register(next)?;
+            this.push_register(current)?;
+
+            let mut result = None;
+
+            while this.get_register_len() > start_register {
+                match this.pop_register() {
+                    None => state_error(format!("Popping more registers than placed during concatenation indexing."))?,
+                    Some(r) => {
+                        match this.get_data_type(r)? {
+                            ExpressionDataType::Concatentation => {
+                                let (current, next) = this.get_concatentation(r)?;
+                                this.push_register(next)?;
+                                this.push_register(current)?;
+                            }
+                            _ => {
+                                if count == index {
+                                    result = Some(r);
+                                    break;
+                                }
+
+                                count = count.increment().or_num_err()?;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // clear borrowed registers
+            while this.get_register_len() > start_register {
+                this.pop_register();
+            }
+
+            Ok(result)
+        }
         ExpressionDataType::Link => index_link(this, value, index),
         _ => Err(RuntimeError::unsupported_types()),
     }
@@ -1112,5 +1152,26 @@ mod link {
         runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 3.into());
+    }
+}
+
+#[cfg(test)]
+mod concatenation {
+    use crate::testing_utilites::{add_concatenation_with_start};
+    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT};
+
+    #[test]
+    fn index_concat_of_items_with_number() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_concatenation_with_start(&mut runtime, 10, 20);
+        let d2 = runtime.add_number(3.into()).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.access(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 23.into());
     }
 }
