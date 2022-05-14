@@ -160,6 +160,23 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                                 this.push_register(next)?;
                                 this.push_register(current)?;
                             }
+                            ExpressionDataType::List => {
+                                let list_len = this.get_list_len(r)?;
+
+                                // already know that index is greater than count
+                                if index < count.plus(Data::size_to_number(list_len)).or_num_err()? {
+                                    // item is in this list
+                                    let list_index = index.subtract(count).or_num_err()?;
+                                    let list_r = this.get_list_item(r, list_index)?;
+
+                                    result = Some(list_r);
+                                    break;
+                                } else {
+                                    // otherwise skip this list
+                                    // and increment count by list length
+                                    count = count.plus(Data::size_to_number(list_len)).or_num_err()?;
+                                }
+                            }
                             _ => {
                                 if count == index {
                                     result = Some(r);
@@ -1157,7 +1174,7 @@ mod link {
 
 #[cfg(test)]
 mod concatenation {
-    use crate::testing_utilites::{add_concatenation_with_start};
+    use crate::testing_utilites::{add_concatenation_with_start, add_integer_list_with_start};
     use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
@@ -1173,5 +1190,22 @@ mod concatenation {
         runtime.access(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 23.into());
+    }
+
+    #[test]
+    fn index_concat_of_lists_with_number() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_integer_list_with_start(&mut runtime, 10, 20);
+        let d2 = add_integer_list_with_start(&mut runtime, 10, 40);
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+        let d4 = runtime.add_number(13.into()).unwrap();
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d4).unwrap();
+
+        runtime.access(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 43.into());
     }
 }

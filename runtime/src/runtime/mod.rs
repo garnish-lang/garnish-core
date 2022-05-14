@@ -208,6 +208,16 @@ pub mod testing_utilites {
         runtime.end_list().unwrap()
     }
 
+    pub fn add_integer_list_with_start(runtime: &mut SimpleRuntimeData, count: usize, start_value: i32) -> usize {
+        runtime.start_list(count).unwrap();
+        for i in 0..count {
+            let v = start_value + i as i32;
+            let d = runtime.add_number(v.into()).unwrap();
+            runtime.add_to_list(d, false).unwrap();
+        }
+        runtime.end_list().unwrap()
+    }
+
     pub fn add_integer_list(runtime: &mut SimpleRuntimeData, count: usize) -> usize {
         runtime.start_list(count).unwrap();
         for i in 0..count {
