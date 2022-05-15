@@ -1189,7 +1189,8 @@ mod concatenation {
 
         runtime.access(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 23.into());
+        let (_left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_number(right).unwrap(), 23.into());
     }
 
     #[test]

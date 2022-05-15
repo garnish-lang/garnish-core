@@ -272,10 +272,12 @@ pub mod testing_utilites {
     }
 
     pub fn add_concatenation_with_start(runtime: &mut SimpleRuntimeData, count: usize, start: i32) -> usize {
-        let mut left = runtime.add_number(start.into()).unwrap();
+        let v = start as i32;
+        let mut left = add_pair(runtime, format!("val{}", v).as_str(), v);
 
-        for i in 0..count {
-            let right = runtime.add_number((start + 1 + i as i32).into()).unwrap();
+        for i in 1..count {
+            let v = start + i as i32;
+            let right = add_pair(runtime, format!("val{}", v).as_str(), v);
             left = runtime.add_concatenation(left, right).unwrap();
         }
 
