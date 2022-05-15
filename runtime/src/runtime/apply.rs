@@ -151,6 +151,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             this.push_register(addr)?;
         }
         (ExpressionDataType::List, ExpressionDataType::Range)
+        | (ExpressionDataType::Concatentation, ExpressionDataType::Range)
         | (ExpressionDataType::CharList, ExpressionDataType::Range)
         | (ExpressionDataType::ByteList, ExpressionDataType::Range)
         | (ExpressionDataType::Link, ExpressionDataType::Range) => {
@@ -784,7 +785,7 @@ mod tests {
 
 #[cfg(test)]
 mod slices {
-    use crate::testing_utilites::{add_list, add_range};
+    use crate::testing_utilites::{add_concatenation_with_start, add_list, add_range};
     use crate::{
         runtime::{context::EmptyContext, GarnishRuntime},
         GarnishLangRuntimeData, SimpleRuntimeData,
@@ -795,6 +796,23 @@ mod slices {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = add_list(&mut runtime, 10);
+        let d2 = add_range(&mut runtime, 1, 5);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.apply::<EmptyContext>(None).unwrap();
+
+        let (list, range) = runtime.get_slice(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(list, d1);
+        assert_eq!(range, d2);
+    }
+
+    #[test]
+    fn create_with_concatenation() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_concatenation_with_start(&mut runtime, 10, 10);
         let d2 = add_range(&mut runtime, 1, 5);
 
         runtime.push_register(d1).unwrap();

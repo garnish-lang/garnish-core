@@ -1,7 +1,7 @@
 use crate::runtime::range::range_len;
 use crate::{
-    get_range, next_ref, push_unit, state_error, ErrorType, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber,
-    Instruction, OrNumberError, RuntimeError, TypeConstants,
+    get_range, state_error, ExpressionDataType, GarnishLangRuntimeData,
+    GarnishNumber, OrNumberError, RuntimeError, TypeConstants,
 };
 
 pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
@@ -44,39 +44,6 @@ pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data
     }
 
     this.end_list().and_then(|r| this.push_register(r))?;
-
-    Ok(())
-}
-
-pub(crate) fn access<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut Context>,
-) -> Result<(), RuntimeError<Data::Error>> {
-    let right_ref = next_ref(this)?;
-    let left_ref = next_ref(this)?;
-
-    match get_access_addr(this, right_ref, left_ref) {
-        Err(e) => match e.get_type() {
-            ErrorType::UnsupportedOpTypes => match context {
-                None => push_unit(this)?,
-                Some(c) => {
-                    if !c.defer_op(
-                        this,
-                        Instruction::Access,
-                        (this.get_data_type(left_ref)?, left_ref),
-                        (this.get_data_type(right_ref)?, right_ref),
-                    )? {
-                        push_unit(this)?
-                    }
-                }
-            },
-            _ => Err(e)?,
-        },
-        Ok(i) => match i {
-            None => push_unit(this)?,
-            Some(i) => this.push_register(i)?,
-        },
-    }
 
     Ok(())
 }
