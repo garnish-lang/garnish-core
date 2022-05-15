@@ -438,6 +438,81 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
             }
         }
         ExpressionDataType::Link => sym_access_links_slices(this, Data::Number::zero(), value, sym, Data::Number::max_value()),
+        ExpressionDataType::Concatentation => {
+            let (current, next) = this.get_concatentation(value)?;
+            let start_register = this.get_register_len();
+
+            this.push_register(next)?;
+            this.push_register(current)?;
+
+            let mut result = None;
+
+            while this.get_register_len() > start_register {
+                match this.pop_register() {
+                    None => state_error(format!("Popping more registers than placed during concatenation indexing."))?,
+                    Some(r) => {
+                        match this.get_data_type(r)? {
+                            ExpressionDataType::Concatentation => {
+                                let (current, next) = this.get_concatentation(r)?;
+                                this.push_register(next)?;
+                                this.push_register(current)?;
+                            }
+                            ExpressionDataType::List => {
+                                let list_len = Data::size_to_number(this.get_list_len(r)?);
+                                let mut list_i = Data::Number::zero();
+
+                                while list_i < list_len {
+                                    let list_item = this.get_list_item(r, list_i)?;
+                                    match this.get_data_type(list_item)? {
+                                        ExpressionDataType::Pair => {
+                                            let (left, right) = this.get_pair(list_item)?;
+                                            match this.get_data_type(left)? {
+                                                ExpressionDataType::Symbol => {
+                                                    if this.get_symbol(left)? == sym {
+                                                        result = Some(right);
+                                                        // found item break both loops
+                                                        break;
+                                                    }
+                                                }
+                                                _ => (),
+                                            }
+                                        }
+                                        _ => (),
+                                    }
+
+                                    list_i = list_i.increment().or_num_err()?;
+                                }
+                            }
+                            _ => {
+                                match this.get_data_type(r)? {
+                                    ExpressionDataType::Pair => {
+                                        let (left, right) = this.get_pair(r)?;
+                                        match this.get_data_type(left)? {
+                                            ExpressionDataType::Symbol => {
+                                                if this.get_symbol(left)? == sym {
+                                                    result = Some(right);
+                                                    // found item break both loops
+                                                    break;
+                                                }
+                                            }
+                                            _ => (),
+                                        }
+                                    }
+                                    _ => (),
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // clear borrowed registers
+            while this.get_register_len() > start_register {
+                this.pop_register();
+            }
+
+            Ok(result)
+        }
         _ => Err(RuntimeError::unsupported_types()),
     }
 }
@@ -1174,8 +1249,8 @@ mod link {
 
 #[cfg(test)]
 mod concatenation {
-    use crate::testing_utilites::{add_concatenation_with_start, add_integer_list_with_start};
-    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT};
+    use crate::testing_utilites::{add_concatenation_with_start, add_integer_list_with_start, add_list_with_start};
+    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT, SimpleDataRuntimeNC};
 
     #[test]
     fn index_concat_of_items_with_number() {
@@ -1194,6 +1269,21 @@ mod concatenation {
     }
 
     #[test]
+    fn index_concat_of_items_with_symbol() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_concatenation_with_start(&mut runtime, 10, 20);
+        let d2 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap()).unwrap();
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.access(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 23.into());
+    }
+
+    #[test]
     fn index_concat_of_lists_with_number() {
         let mut runtime = SimpleRuntimeData::new();
 
@@ -1201,6 +1291,23 @@ mod concatenation {
         let d2 = add_integer_list_with_start(&mut runtime, 10, 40);
         let d3 = runtime.add_concatenation(d1, d2).unwrap();
         let d4 = runtime.add_number(13.into()).unwrap();
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d4).unwrap();
+
+        runtime.access(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 43.into());
+    }
+
+    #[test]
+    fn index_concat_of_lists_with_symbol() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 20);
+        let d2 = add_list_with_start(&mut runtime, 10, 40);
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+        let d4 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val43").unwrap()).unwrap();
 
         runtime.push_register(d3).unwrap();
         runtime.push_register(d4).unwrap();
