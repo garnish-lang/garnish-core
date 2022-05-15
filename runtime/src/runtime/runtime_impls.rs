@@ -83,7 +83,7 @@ where
             Instruction::GreaterThan => self.greater_than()?,
             Instruction::GreaterThanOrEqual => self.greater_than_or_equal()?,
             Instruction::MakePair => self.make_pair()?,
-            Instruction::Access => self.access(context)?,
+            Instruction::Access => self.apply(context)?,
             Instruction::AccessLeftInternal => self.access_left_internal(context)?,
             Instruction::AccessRightInternal => self.access_right_internal(context)?,
             Instruction::AccessLengthInternal => self.access_length_internal(context)?,
@@ -330,10 +330,6 @@ where
 
     fn make_list(&mut self, len: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
         make_list(self, len)
-    }
-
-    fn access<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {
-        apply(self, context)
     }
 
     fn access_left_internal<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>> {

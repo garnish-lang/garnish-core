@@ -655,7 +655,7 @@ mod tests {
     }
 
     #[test]
-    fn access() {
+    fn apply() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol(1).unwrap();
@@ -671,13 +671,13 @@ mod tests {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), i2);
     }
 
     #[test]
-    fn access_with_integer() {
+    fn apply_with_integer() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol(1).unwrap();
@@ -693,13 +693,13 @@ mod tests {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), i3);
     }
 
     #[test]
-    fn access_char_list_with_integer() {
+    fn apply_char_list_with_integer() {
         let mut runtime = SimpleRuntimeData::new();
 
         runtime.start_char_list().unwrap();
@@ -715,14 +715,14 @@ mod tests {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), start);
         assert_eq!(runtime.get_char(start).unwrap(), 'c');
     }
 
     #[test]
-    fn access_byte_list_with_integer() {
+    fn apply_byte_list_with_integer() {
         let mut runtime = SimpleRuntimeData::new();
 
         runtime.start_byte_list().unwrap();
@@ -738,14 +738,14 @@ mod tests {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_register(0).unwrap(), start);
         assert_eq!(runtime.get_byte(start).unwrap(), 30.into());
     }
 
     #[test]
-    fn access_with_integer_out_of_bounds_is_unit() {
+    fn apply_with_integer_out_of_bounds_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol(1).unwrap();
@@ -761,13 +761,13 @@ mod tests {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
-    fn access_with_number_negative_is_unit() {
+    fn apply_with_number_negative_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol(1).unwrap();
@@ -783,13 +783,13 @@ mod tests {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
-    fn access_non_list_on_left_is_unit() {
+    fn apply_non_list_on_left_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_number(10.into()).unwrap();
@@ -800,13 +800,13 @@ mod tests {
         runtime.push_register(i1).unwrap();
         runtime.push_register(i2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
-    fn access_non_symbol_on_right_is_unit() {
+    fn apply_non_symbol_on_right_is_unit() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol(1).unwrap();
@@ -822,13 +822,13 @@ mod tests {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
-    fn access_no_refs_is_err() {
+    fn apply_no_refs_is_err() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol(1).unwrap();
@@ -841,13 +841,13 @@ mod tests {
 
         runtime.push_instruction(Instruction::Access, None).unwrap();
 
-        let result = runtime.access(NO_CONTEXT);
+        let result = runtime.apply(NO_CONTEXT);
 
         assert!(result.is_err());
     }
 
     #[test]
-    fn access_with_non_existent_key() {
+    fn apply_with_non_existent_key() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_symbol(1).unwrap();
@@ -863,7 +863,7 @@ mod tests {
         runtime.push_register(i4).unwrap();
         runtime.push_register(i5).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -874,7 +874,7 @@ mod ranges {
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
-    fn access_with_integer() {
+    fn apply_with_integer() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_number(10.into()).unwrap();
@@ -887,13 +887,13 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i4).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 15.into());
     }
 
     #[test]
-    fn access_with_integer_out_of_range() {
+    fn apply_with_integer_out_of_range() {
         let mut runtime = SimpleRuntimeData::new();
 
         let i1 = runtime.add_number(10.into()).unwrap();
@@ -906,7 +906,7 @@ mod ranges {
         runtime.push_register(i3).unwrap();
         runtime.push_register(i4).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -931,7 +931,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 40.into());
     }
@@ -955,7 +955,7 @@ mod slice {
         runtime.push_register(slice).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), 'd');
     }
@@ -979,7 +979,7 @@ mod slice {
         runtime.push_register(slice).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_byte(runtime.get_register(0).unwrap()).unwrap(), 'd' as u8);
     }
@@ -998,7 +998,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 50.into());
     }
@@ -1017,7 +1017,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -1036,7 +1036,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -1055,7 +1055,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_symbol(left).unwrap(), SimpleDataRuntimeNC::parse_symbol("val4").unwrap());
@@ -1076,7 +1076,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 5.into());
     }
@@ -1095,7 +1095,7 @@ mod slice {
         runtime.push_register(d5).unwrap();
         runtime.push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
@@ -1125,7 +1125,7 @@ mod slice {
         runtime.push_register(slice).unwrap();
         runtime.push_register(sym).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 200.into());
     }
@@ -1146,7 +1146,7 @@ mod link {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_number(right).unwrap(), 4.into());
@@ -1163,7 +1163,7 @@ mod link {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_number(right).unwrap(), 4.into());
@@ -1180,7 +1180,7 @@ mod link {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 3.into());
     }
@@ -1195,7 +1195,7 @@ mod link {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 3.into());
     }
@@ -1216,7 +1216,7 @@ mod concatenation {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         let (_left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
         assert_eq!(runtime.get_number(right).unwrap(), 23.into());
@@ -1232,7 +1232,7 @@ mod concatenation {
         runtime.push_register(d1).unwrap();
         runtime.push_register(d2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 23.into());
     }
@@ -1249,7 +1249,7 @@ mod concatenation {
         runtime.push_register(d3).unwrap();
         runtime.push_register(d4).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 43.into());
     }
@@ -1266,7 +1266,7 @@ mod concatenation {
         runtime.push_register(d3).unwrap();
         runtime.push_register(d4).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 43.into());
     }

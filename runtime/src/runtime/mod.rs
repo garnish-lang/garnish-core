@@ -83,7 +83,6 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn end_expression(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
     fn make_list(&mut self, len: Data::Size) -> Result<(), RuntimeError<Data::Error>>;
-    fn access<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
     fn access_left_internal<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
     fn access_right_internal<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
     fn access_length_internal<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<(), RuntimeError<Data::Error>>;
