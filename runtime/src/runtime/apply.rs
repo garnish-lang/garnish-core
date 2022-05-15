@@ -158,7 +158,21 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             let addr = this.add_slice(left_addr, right_addr)?;
             this.push_register(addr)?;
         }
-        (ExpressionDataType::List, _) | (ExpressionDataType::CharList, _) | (ExpressionDataType::ByteList, _) | (ExpressionDataType::Range, _) => {
+        (ExpressionDataType::List, ExpressionDataType::Number)
+        | (ExpressionDataType::List, ExpressionDataType::Symbol)
+        | (ExpressionDataType::CharList, ExpressionDataType::Number)
+        | (ExpressionDataType::CharList, ExpressionDataType::Symbol)
+        | (ExpressionDataType::ByteList, ExpressionDataType::Number)
+        | (ExpressionDataType::ByteList, ExpressionDataType::Symbol)
+        | (ExpressionDataType::Range, ExpressionDataType::Number)
+        | (ExpressionDataType::Range, ExpressionDataType::Symbol)
+        | (ExpressionDataType::Concatentation, ExpressionDataType::Number)
+        | (ExpressionDataType::Concatentation, ExpressionDataType::Symbol)
+        | (ExpressionDataType::Link, ExpressionDataType::Number)
+        | (ExpressionDataType::Link, ExpressionDataType::Symbol)
+        | (ExpressionDataType::Slice, ExpressionDataType::Number)
+        | (ExpressionDataType::Slice, ExpressionDataType::Symbol)
+        => {
             match get_access_addr(this, right_addr, left_addr)? {
                 None => push_unit(this)?,
                 Some(i) => this.push_register(i)?,

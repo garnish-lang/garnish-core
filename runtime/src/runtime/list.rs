@@ -610,19 +610,6 @@ fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
 }
 
 #[cfg(test)]
-mod deferring {
-    use crate::runtime::GarnishRuntime;
-    use crate::testing_utilites::deferred_op;
-
-    #[test]
-    fn access() {
-        deferred_op(|runtime, context| {
-            runtime.access(Some(context)).unwrap();
-        })
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleNumber, SimpleRuntimeData, NO_CONTEXT};
 
