@@ -441,79 +441,55 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
         }
         ExpressionDataType::Link => sym_access_links_slices(this, Data::Number::zero(), value, sym, Data::Number::max_value()),
         ExpressionDataType::Concatentation => {
-            let (current, next) = this.get_concatentation(value)?;
-            let start_register = this.get_register_len();
+            index_concatentation(
+                this,
+                value,
+                &mut 0,
+                |this, _state, addr| {
+                    let list_len = Data::size_to_number(this.get_list_len(addr)?);
+                    let mut list_i = Data::Number::zero();
 
-            this.push_register(next)?;
-            this.push_register(current)?;
-
-            let mut result = None;
-
-            while this.get_register_len() > start_register {
-                match this.pop_register() {
-                    None => state_error(format!("Popping more registers than placed during concatenation indexing."))?,
-                    Some(r) => {
-                        match this.get_data_type(r)? {
-                            ExpressionDataType::Concatentation => {
-                                let (current, next) = this.get_concatentation(r)?;
-                                this.push_register(next)?;
-                                this.push_register(current)?;
-                            }
-                            ExpressionDataType::List => {
-                                let list_len = Data::size_to_number(this.get_list_len(r)?);
-                                let mut list_i = Data::Number::zero();
-
-                                while list_i < list_len {
-                                    let list_item = this.get_list_item(r, list_i)?;
-                                    match this.get_data_type(list_item)? {
-                                        ExpressionDataType::Pair => {
-                                            let (left, right) = this.get_pair(list_item)?;
-                                            match this.get_data_type(left)? {
-                                                ExpressionDataType::Symbol => {
-                                                    if this.get_symbol(left)? == sym {
-                                                        result = Some(right);
-                                                        // found item break both loops
-                                                        break;
-                                                    }
-                                                }
-                                                _ => (),
-                                            }
-                                        }
-                                        _ => (),
-                                    }
-
-                                    list_i = list_i.increment().or_num_err()?;
-                                }
-                            }
-                            _ => {
-                                match this.get_data_type(r)? {
-                                    ExpressionDataType::Pair => {
-                                        let (left, right) = this.get_pair(r)?;
-                                        match this.get_data_type(left)? {
-                                            ExpressionDataType::Symbol => {
-                                                if this.get_symbol(left)? == sym {
-                                                    result = Some(right);
-                                                    // found item break both loops
-                                                    break;
-                                                }
-                                            }
-                                            _ => (),
+                    while list_i < list_len {
+                        let list_item = this.get_list_item(addr, list_i)?;
+                        match this.get_data_type(list_item)? {
+                            ExpressionDataType::Pair => {
+                                let (left, right) = this.get_pair(list_item)?;
+                                match this.get_data_type(left)? {
+                                    ExpressionDataType::Symbol => {
+                                        if this.get_symbol(left)? == sym {
+                                            return Ok(Some(right));
                                         }
                                     }
                                     _ => (),
                                 }
                             }
+                            _ => (),
                         }
+
+                        list_i = list_i.increment().or_num_err()?;
                     }
-                }
-            }
 
-            // clear borrowed registers
-            while this.get_register_len() > start_register {
-                this.pop_register();
-            }
+                    Ok(None)
+                },
+                |this, _state, addr| {
+                    match this.get_data_type(addr)? {
+                        ExpressionDataType::Pair => {
+                            let (left, right) = this.get_pair(addr)?;
+                            match this.get_data_type(left)? {
+                                ExpressionDataType::Symbol => {
+                                    if this.get_symbol(left)? == sym {
+                                        return Ok(Some(right));
+                                    }
+                                }
+                                _ => (),
+                            }
+                        }
+                        _ => (),
+                    }
 
-            Ok(result)
+                    Ok(None)
+                },
+            )
         }
         _ => Err(RuntimeError::unsupported_types()),
     }
