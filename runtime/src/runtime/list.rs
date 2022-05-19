@@ -1,8 +1,5 @@
 use crate::runtime::range::range_len;
-use crate::{
-    get_range, state_error, ExpressionDataType, GarnishLangRuntimeData,
-    GarnishNumber, OrNumberError, RuntimeError, TypeConstants,
-};
+use crate::{get_range, state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants};
 
 pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
     if len > this.get_register_len() {
@@ -108,65 +105,103 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
             }
         }
         ExpressionDataType::Concatentation => {
-            let (current, next) = this.get_concatentation(value)?;
             let mut count = Data::Number::zero();
-            let start_register = this.get_register_len();
 
-            this.push_register(next)?;
-            this.push_register(current)?;
+            index_concatentation(
+                this,
+                value,
+                &mut count,
+                |this, state, addr| {
+                    let list_len = this.get_list_len(addr)?;
 
-            let mut result = None;
+                    // already know that index is greater than count
+                    if index < state.plus(Data::size_to_number(list_len)).or_num_err()? {
+                        // item is in this list
+                        let list_index = index.subtract(*state).or_num_err()?;
+                        let list_r = this.get_list_item(addr, list_index)?;
 
-            while this.get_register_len() > start_register {
-                match this.pop_register() {
-                    None => state_error(format!("Popping more registers than placed during concatenation indexing."))?,
-                    Some(r) => {
-                        match this.get_data_type(r)? {
-                            ExpressionDataType::Concatentation => {
-                                let (current, next) = this.get_concatentation(r)?;
-                                this.push_register(next)?;
-                                this.push_register(current)?;
-                            }
-                            ExpressionDataType::List => {
-                                let list_len = this.get_list_len(r)?;
-
-                                // already know that index is greater than count
-                                if index < count.plus(Data::size_to_number(list_len)).or_num_err()? {
-                                    // item is in this list
-                                    let list_index = index.subtract(count).or_num_err()?;
-                                    let list_r = this.get_list_item(r, list_index)?;
-
-                                    result = Some(list_r);
-                                    break;
-                                } else {
-                                    // otherwise skip this list
-                                    // and increment count by list length
-                                    count = count.plus(Data::size_to_number(list_len)).or_num_err()?;
-                                }
-                            }
-                            _ => {
-                                if count == index {
-                                    result = Some(r);
-                                    break;
-                                }
-
-                                count = count.increment().or_num_err()?;
-                            }
-                        }
+                        return Ok(Some(list_r));
                     }
-                }
-            }
 
-            // clear borrowed registers
-            while this.get_register_len() > start_register {
-                this.pop_register();
-            }
+                    // otherwise skip this list
+                    // and increment count by list length
+                    *state = (*state).plus(Data::size_to_number(list_len)).or_num_err()?;
 
-            Ok(result)
+                    Ok(None)
+                },
+                |_this, state, addr| {
+                    if (*state) == index {
+                        return Ok(Some(addr));
+                    }
+
+                    *state = (*state).increment().or_num_err()?;
+                    Ok(None)
+                },
+            )
         }
         ExpressionDataType::Link => index_link(this, value, index),
         _ => Err(RuntimeError::unsupported_types()),
     }
+}
+
+fn index_concatentation<Data: GarnishLangRuntimeData, IndexState, ListCheckFn, CheckFn>(
+    this: &mut Data,
+    addr: Data::Size,
+    state: &mut IndexState,
+    mut list_check_fn: ListCheckFn,
+    mut check_fn: CheckFn,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>
+where
+    ListCheckFn: FnMut(&mut Data, &mut IndexState, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
+    CheckFn: FnMut(&mut Data, &mut IndexState, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
+{
+    let (current, next) = this.get_concatentation(addr)?;
+    let start_register = this.get_register_len();
+
+    this.push_register(next)?;
+    this.push_register(current)?;
+
+    let mut result = None;
+
+    while this.get_register_len() > start_register {
+        match this.pop_register() {
+            None => state_error(format!("Popping more registers than placed during concatenation indexing."))?,
+            Some(r) => {
+                match this.get_data_type(r)? {
+                    ExpressionDataType::Concatentation => {
+                        let (current, next) = this.get_concatentation(r)?;
+                        this.push_register(next)?;
+                        this.push_register(current)?;
+                    }
+                    ExpressionDataType::List => {
+                        match list_check_fn(this, state, r)? {
+                            Some(n) => {
+                                result = Some(n);
+                                break;
+                            }
+                            _ => (), // continue
+                        }
+                    }
+                    _ => {
+                        match check_fn(this, state, r)? {
+                            Some(n) => {
+                                result = Some(n);
+                                break;
+                            }
+                            _ => (), // continue
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // clear borrowed registers
+    while this.get_register_len() > start_register {
+        this.pop_register();
+    }
+
+    Ok(result)
 }
 
 fn index_list<Data: GarnishLangRuntimeData>(
@@ -1204,7 +1239,7 @@ mod link {
 #[cfg(test)]
 mod concatenation {
     use crate::testing_utilites::{add_concatenation_with_start, add_integer_list_with_start, add_list_with_start};
-    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleRuntimeData, NO_CONTEXT, SimpleDataRuntimeNC};
+    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleDataRuntimeNC, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn index_concat_of_items_with_number() {
