@@ -440,59 +440,38 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
             }
         }
         ExpressionDataType::Link => sym_access_links_slices(this, Data::Number::zero(), value, sym, Data::Number::max_value()),
-        ExpressionDataType::Concatentation => {
-            index_concatentation(
-                this,
-                value,
-                &mut 0,
-                |this, _state, addr| {
-                    let list_len = Data::size_to_number(this.get_list_len(addr)?);
-                    let mut list_i = Data::Number::zero();
-
-                    while list_i < list_len {
-                        let list_item = this.get_list_item(addr, list_i)?;
-                        match this.get_data_type(list_item)? {
-                            ExpressionDataType::Pair => {
-                                let (left, right) = this.get_pair(list_item)?;
-                                match this.get_data_type(left)? {
-                                    ExpressionDataType::Symbol => {
-                                        if this.get_symbol(left)? == sym {
-                                            return Ok(Some(right));
-                                        }
-                                    }
-                                    _ => (),
-                                }
-                            }
-                            _ => (),
-                        }
-
-                        list_i = list_i.increment().or_num_err()?;
-                    }
-
-                    Ok(None)
-                },
-                |this, _state, addr| {
-                    match this.get_data_type(addr)? {
-                        ExpressionDataType::Pair => {
-                            let (left, right) = this.get_pair(addr)?;
-                            match this.get_data_type(left)? {
-                                ExpressionDataType::Symbol => {
-                                    if this.get_symbol(left)? == sym {
-                                        return Ok(Some(right));
-                                    }
-                                }
-                                _ => (),
-                            }
-                        }
-                        _ => (),
-                    }
-
-                    Ok(None)
-                },
-            )
-        }
+        ExpressionDataType::Concatentation => index_concatentation(
+            this,
+            value,
+            &mut 0,
+            |this, _state, addr| Ok(this.get_list_item_with_symbol(addr, sym)?),
+            |this, _state, addr| get_value_if_association(this, addr, sym),
+        ),
         _ => Err(RuntimeError::unsupported_types()),
     }
+}
+
+fn get_value_if_association<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    addr: Data::Size,
+    sym: Data::Symbol,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    match this.get_data_type(addr)? {
+        ExpressionDataType::Pair => {
+            let (left, right) = this.get_pair(addr)?;
+            match this.get_data_type(left)? {
+                ExpressionDataType::Symbol => {
+                    if this.get_symbol(left)? == sym {
+                        return Ok(Some(right));
+                    }
+                }
+                _ => (),
+            }
+        }
+        _ => (),
+    }
+
+    Ok(None)
 }
 
 fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
