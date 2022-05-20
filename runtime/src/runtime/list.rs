@@ -102,96 +102,82 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 ExpressionDataType::CharList => index_char_list(this, value, adjusted_index),
                 ExpressionDataType::ByteList => index_byte_list(this, value, adjusted_index),
                 ExpressionDataType::Concatentation => {
-                    let mut count = Data::Number::zero();
-
-                    index_concatentation(
+                    Ok(iterate_concatenation_internal(
                         this,
                         value,
-                        &mut count,
-                        |this, state, addr| {
+                        |this, index, addr| {
                             let list_len = this.get_list_len(addr)?;
 
                             // already know that index is greater than count
-                            if adjusted_index < state.plus(Data::size_to_number(list_len)).or_num_err()? {
+                            if adjusted_index < index.plus(Data::size_to_number(list_len)).or_num_err()? {
                                 // item is in this list
-                                let list_index = adjusted_index.subtract(*state).or_num_err()?;
+                                let list_index = adjusted_index.subtract(index).or_num_err()?;
                                 let list_r = this.get_list_item(addr, list_index)?;
 
                                 return Ok(Some(list_r));
                             }
 
-                            // otherwise skip this list
-                            // and increment count by list length
-                            *state = (*state).plus(Data::size_to_number(list_len)).or_num_err()?;
-
                             Ok(None)
                         },
-                        |_this, state, addr| {
-                            if (*state) == adjusted_index {
+                        |_this, index, addr| {
+                            if index == adjusted_index {
                                 return Ok(Some(addr));
                             }
 
-                            *state = (*state).increment().or_num_err()?;
                             Ok(None)
                         },
-                    )
+                    )?
+                    .0)
                 }
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
         ExpressionDataType::Concatentation => {
-            let mut count = Data::Number::zero();
-
-            index_concatentation(
+            Ok(iterate_concatenation_internal(
                 this,
                 value,
-                &mut count,
-                |this, state, addr| {
+                |this, current_index, addr| {
                     let list_len = this.get_list_len(addr)?;
 
                     // already know that index is greater than count
-                    if index < state.plus(Data::size_to_number(list_len)).or_num_err()? {
+                    if index < current_index.plus(Data::size_to_number(list_len)).or_num_err()? {
                         // item is in this list
-                        let list_index = index.subtract(*state).or_num_err()?;
+                        let list_index = index.subtract(current_index).or_num_err()?;
                         let list_r = this.get_list_item(addr, list_index)?;
 
                         return Ok(Some(list_r));
                     }
 
-                    // otherwise skip this list
-                    // and increment count by list length
-                    *state = (*state).plus(Data::size_to_number(list_len)).or_num_err()?;
-
                     Ok(None)
                 },
-                |_this, state, addr| {
-                    if (*state) == index {
+                |_this, current_index, addr| {
+                    if current_index == index {
                         return Ok(Some(addr));
                     }
 
-                    *state = (*state).increment().or_num_err()?;
                     Ok(None)
                 },
-            )
+            )?
+            .0)
         }
         ExpressionDataType::Link => index_link(this, value, index),
         _ => Err(RuntimeError::unsupported_types()),
     }
 }
 
-fn index_concatentation<Data: GarnishLangRuntimeData, IndexState, ListCheckFn, CheckFn>(
+pub(crate) fn iterate_concatenation_internal<Data: GarnishLangRuntimeData, ListCheckFn, CheckFn>(
     this: &mut Data,
     addr: Data::Size,
-    state: &mut IndexState,
     mut list_check_fn: ListCheckFn,
     mut check_fn: CheckFn,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>
+) -> Result<(Option<Data::Size>, Data::Number), RuntimeError<Data::Error>>
 where
-    ListCheckFn: FnMut(&mut Data, &mut IndexState, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
-    CheckFn: FnMut(&mut Data, &mut IndexState, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
+    ListCheckFn: FnMut(&mut Data, Data::Number, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
+    CheckFn: FnMut(&mut Data, Data::Number, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
 {
     let (current, next) = this.get_concatentation(addr)?;
     let start_register = this.get_register_len();
+    let mut index = Data::Number::zero();
 
     this.push_register(next)?;
     this.push_register(current)?;
@@ -202,6 +188,7 @@ where
         match this.pop_register() {
             None => state_error(format!("Popping more registers than placed during concatenation indexing."))?,
             Some(r) => {
+                let mut temp_result = None;
                 match this.get_data_type(r)? {
                     ExpressionDataType::Concatentation => {
                         let (current, next) = this.get_concatentation(r)?;
@@ -209,23 +196,22 @@ where
                         this.push_register(current)?;
                     }
                     ExpressionDataType::List => {
-                        match list_check_fn(this, state, r)? {
-                            Some(n) => {
-                                result = Some(n);
-                                break;
-                            }
-                            _ => (), // continue
-                        }
+                        temp_result = list_check_fn(this, index, r)?;
+                        let list_len = Data::size_to_number(this.get_list_len(r)?);
+                        index = index.plus(list_len).or_num_err()?;
                     }
                     _ => {
-                        match check_fn(this, state, r)? {
-                            Some(n) => {
-                                result = Some(n);
-                                break;
-                            }
-                            _ => (), // continue
-                        }
+                        temp_result = check_fn(this, index, r)?;
+                        index = index.increment().or_num_err()?;
                     }
+                }
+
+                match temp_result {
+                    Some(_) => {
+                        result = temp_result;
+                        break;
+                    }
+                    _ => (), // continue
                 }
             }
         }
@@ -236,7 +222,7 @@ where
         this.pop_register();
     }
 
-    Ok(result)
+    Ok((result, index))
 }
 
 fn index_list<Data: GarnishLangRuntimeData>(
@@ -472,28 +458,25 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                     Ok(item)
                 }
                 ExpressionDataType::Concatentation => {
-                    let mut count = Data::Number::zero();
-                    index_concatentation(
+                    Ok(iterate_concatenation_internal(
                         this,
                         value,
-                        &mut count,
-                        |this, state, addr| {
+                        |this, index, addr| {
                             // check if current count is in desired range
                             let list_len = Data::size_to_number(this.get_list_len(addr)?);
-                            let list_end = (*state).plus(list_len).or_num_err()?;
+                            let list_end = index.plus(list_len).or_num_err()?;
 
                             // start and end relative to current list
                             // start should be greater than 0 and less than end
                             // end should be less than len and greater than start
-                            let adjusted_start = if (*state) > start { Data::Number::zero() } else { start.subtract(*state).or_num_err()? };
-                            let adjusted_end = if end > list_end { list_len } else { end.subtract(*state).or_num_err()? };
-
-                            // always update state to reflect having checked this list
-                            // shouldn't be used after this
-                            *state = list_end;
+                            let adjusted_start = if index > start {
+                                Data::Number::zero()
+                            } else {
+                                start.subtract(index).or_num_err()?
+                            };
+                            let adjusted_end = if end > list_end { list_len } else { end.subtract(index).or_num_err()? };
 
                             if adjusted_start < list_end && adjusted_end >= Data::Number::zero() {
-
                                 let mut i = adjusted_start;
                                 let mut item: Option<Data::Size> = None;
                                 while i < adjusted_end {
@@ -522,28 +505,28 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                                 Ok(None)
                             }
                         },
-                        |this, state, addr| {
-                            if *state > start && *state <= end {
+                        |this, index, addr| {
+                            if index > start && index <= end {
                                 // in range
                                 get_value_if_association(this, addr, sym)
                             } else {
-                                *state = (*state).increment().or_num_err()?;
                                 Ok(None)
                             }
                         },
-                    )
+                    )?
+                    .0)
                 }
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
         ExpressionDataType::Link => sym_access_links_slices(this, Data::Number::zero(), value, sym, Data::Number::max_value()),
-        ExpressionDataType::Concatentation => index_concatentation(
+        ExpressionDataType::Concatentation => Ok(iterate_concatenation_internal(
             this,
             value,
-            &mut 0,
-            |this, _state, addr| Ok(this.get_list_item_with_symbol(addr, sym)?),
-            |this, _state, addr| get_value_if_association(this, addr, sym),
-        ),
+            |this, _index, addr| Ok(this.get_list_item_with_symbol(addr, sym)?),
+            |this, _index, addr| get_value_if_association(this, addr, sym),
+        )?
+        .0),
         _ => Err(RuntimeError::unsupported_types()),
     }
 }
@@ -1291,7 +1274,7 @@ mod link {
 #[cfg(test)]
 mod concatenation {
     use crate::testing_utilites::{add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range};
-    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleDataRuntimeNC, SimpleRuntimeData, NO_CONTEXT, ExpressionDataType};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, SimpleDataRuntimeNC, SimpleRuntimeData, NO_CONTEXT};
 
     #[test]
     fn index_concat_of_items_with_number() {

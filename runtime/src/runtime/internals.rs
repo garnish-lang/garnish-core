@@ -1,3 +1,4 @@
+use crate::runtime::list::iterate_concatenation_internal;
 use crate::runtime::range::range_len;
 use crate::{
     next_ref, push_number, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, Instruction, RuntimeError,
@@ -30,6 +31,10 @@ pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData, Context: Garnis
         ExpressionDataType::Link => {
             let (value, ..) = this.get_link(r)?;
             this.push_register(value)?;
+        }
+        ExpressionDataType::Concatentation => {
+            let (left, _) = this.get_concatentation(r)?;
+            this.push_register(left)?;
         }
         t => match context {
             None => push_unit(this)?,
@@ -75,6 +80,10 @@ pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData, Context: Garni
         ExpressionDataType::Link => {
             let (_, linked, _) = this.get_link(r)?;
             this.push_register(linked)?;
+        }
+        ExpressionDataType::Concatentation => {
+            let (_, right) = this.get_concatentation(r)?;
+            this.push_register(right)?;
         }
         t => match context {
             None => push_unit(this)?,
@@ -141,6 +150,11 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData, Context: Garn
         }
         ExpressionDataType::Link => {
             let count = link_len(this, r)?;
+            let addr = this.add_number(count)?;
+            this.push_register(addr)?;
+        }
+        ExpressionDataType::Concatentation => {
+            let count = iterate_concatenation_internal(this, r, |_, _, _| Ok(None), |_, _, _| Ok(None))?.1;
             let addr = this.add_number(count)?;
             this.push_register(addr)?;
         }
@@ -553,5 +567,71 @@ mod links {
         runtime.access_length_internal(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 3.into());
+    }
+}
+
+#[cfg(test)]
+mod concatenation {
+    use crate::testing_utilites::{add_concatenation_with_start, add_list};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT};
+
+    #[test]
+    fn left_internal_gives_value() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_number(10.into()).unwrap();
+        let d2 = runtime.add_number(20.into()).unwrap();
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+
+        runtime.push_register(d3).unwrap();
+
+        runtime.access_left_internal(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_register(0).unwrap(), d1);
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 10.into());
+    }
+
+    #[test]
+    fn right_internal_gives_next_link() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = runtime.add_number(10.into()).unwrap();
+        let d2 = runtime.add_number(20.into()).unwrap();
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+
+        runtime.push_register(d3).unwrap();
+
+        runtime.access_right_internal(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_register(0).unwrap(), d2);
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 20.into());
+    }
+
+    #[test]
+    fn len() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let list = add_concatenation_with_start(&mut runtime, 10, 15);
+
+        runtime.push_register(list).unwrap();
+
+        runtime.access_length_internal(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 10.into());
+    }
+
+    #[test]
+    fn len_with_slice_and_list_chains() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list(&mut runtime, 10);
+        let d2 = add_list(&mut runtime, 5);
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+
+        runtime.push_register(d3).unwrap();
+
+        runtime.access_length_internal(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 15.into());
     }
 }
