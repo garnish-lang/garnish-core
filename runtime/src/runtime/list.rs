@@ -101,6 +101,41 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 ExpressionDataType::List => index_list(this, value, adjusted_index),
                 ExpressionDataType::CharList => index_char_list(this, value, adjusted_index),
                 ExpressionDataType::ByteList => index_byte_list(this, value, adjusted_index),
+                ExpressionDataType::Concatentation => {
+                    let mut count = Data::Number::zero();
+
+                    index_concatentation(
+                        this,
+                        value,
+                        &mut count,
+                        |this, state, addr| {
+                            let list_len = this.get_list_len(addr)?;
+
+                            // already know that index is greater than count
+                            if adjusted_index < state.plus(Data::size_to_number(list_len)).or_num_err()? {
+                                // item is in this list
+                                let list_index = adjusted_index.subtract(*state).or_num_err()?;
+                                let list_r = this.get_list_item(addr, list_index)?;
+
+                                return Ok(Some(list_r));
+                            }
+
+                            // otherwise skip this list
+                            // and increment count by list length
+                            *state = (*state).plus(Data::size_to_number(list_len)).or_num_err()?;
+
+                            Ok(None)
+                        },
+                        |_this, state, addr| {
+                            if (*state) == adjusted_index {
+                                return Ok(Some(addr));
+                            }
+
+                            *state = (*state).increment().or_num_err()?;
+                            Ok(None)
+                        },
+                    )
+                }
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
@@ -435,6 +470,68 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                     }
 
                     Ok(item)
+                }
+                ExpressionDataType::Concatentation => {
+                    let mut count = Data::Number::zero();
+                    index_concatentation(
+                        this,
+                        value,
+                        &mut count,
+                        |this, state, addr| {
+                            // check if current count is in desired range
+                            let list_len = Data::size_to_number(this.get_list_len(addr)?);
+                            let list_end = (*state).plus(list_len).or_num_err()?;
+
+                            // start and end relative to current list
+                            // start should be greater than 0 and less than end
+                            // end should be less than len and greater than start
+                            let adjusted_start = if (*state) > start { Data::Number::zero() } else { start.subtract(*state).or_num_err()? };
+                            let adjusted_end = if end > list_end { list_len } else { end.subtract(*state).or_num_err()? };
+
+                            // always update state to reflect having checked this list
+                            // shouldn't be used after this
+                            *state = list_end;
+
+                            if adjusted_start < list_end && adjusted_end >= Data::Number::zero() {
+
+                                let mut i = adjusted_start;
+                                let mut item: Option<Data::Size> = None;
+                                while i < adjusted_end {
+                                    let list_item = this.get_list_item(addr, i)?;
+                                    match this.get_data_type(list_item)? {
+                                        ExpressionDataType::Pair => {
+                                            let (left, right) = this.get_pair(list_item)?;
+                                            match this.get_data_type(left)? {
+                                                ExpressionDataType::Symbol => {
+                                                    if this.get_symbol(left)? == sym {
+                                                        item = Some(right);
+                                                        break;
+                                                    }
+                                                }
+                                                _ => (),
+                                            }
+                                        }
+                                        _ => (),
+                                    }
+
+                                    i = i.increment().or_num_err()?;
+                                }
+
+                                Ok(item)
+                            } else {
+                                Ok(None)
+                            }
+                        },
+                        |this, state, addr| {
+                            if *state > start && *state <= end {
+                                // in range
+                                get_value_if_association(this, addr, sym)
+                            } else {
+                                *state = (*state).increment().or_num_err()?;
+                                Ok(None)
+                            }
+                        },
+                    )
                 }
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
@@ -1193,8 +1290,8 @@ mod link {
 
 #[cfg(test)]
 mod concatenation {
-    use crate::testing_utilites::{add_concatenation_with_start, add_integer_list_with_start, add_list_with_start};
-    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleDataRuntimeNC, SimpleRuntimeData, NO_CONTEXT};
+    use crate::testing_utilites::{add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range};
+    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleDataRuntimeNC, SimpleRuntimeData, NO_CONTEXT, ExpressionDataType};
 
     #[test]
     fn index_concat_of_items_with_number() {
@@ -1259,5 +1356,135 @@ mod concatenation {
         runtime.apply(NO_CONTEXT).unwrap();
 
         assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 43.into());
+    }
+
+    #[test]
+    fn index_slice_of_concat_of_items_with_number() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_concatenation_with_start(&mut runtime, 10, 20);
+        let d2 = add_range(&mut runtime, 2, 5);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let d4 = runtime.add_number(1.into()).unwrap();
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d4).unwrap();
+
+        runtime.apply(NO_CONTEXT).unwrap();
+
+        let (_left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
+        assert_eq!(runtime.get_number(right).unwrap(), 23.into());
+    }
+
+    #[test]
+    fn index_slice_of_concat_of_items_with_symbol() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_concatenation_with_start(&mut runtime, 10, 20);
+        let d2 = add_range(&mut runtime, 2, 5);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let d4 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap()).unwrap();
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d4).unwrap();
+
+        runtime.apply(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 23.into());
+    }
+
+    #[test]
+    fn index_slice_of_concat_of_lists_with_number() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_integer_list_with_start(&mut runtime, 10, 20);
+        let d2 = add_integer_list_with_start(&mut runtime, 10, 40);
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+        let d4 = add_range(&mut runtime, 12, 15);
+        let d5 = runtime.add_slice(d3, d4).unwrap();
+        let d6 = runtime.add_number(1.into()).unwrap();
+
+        runtime.push_register(d5).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.apply(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 43.into());
+    }
+
+    #[test]
+    fn index_slice_of_concat_of_lists_with_symbol() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 20);
+        let d2 = add_list_with_start(&mut runtime, 10, 40);
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+        let d4 = add_range(&mut runtime, 12, 15);
+        let d5 = runtime.add_slice(d3, d4).unwrap();
+        let d6 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val43").unwrap()).unwrap();
+
+        runtime.push_register(d5).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.apply(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 43.into());
+    }
+
+    #[test]
+    fn index_slice_of_concat_of_lists_with_symbol_range_across_lists() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 20);
+        let d2 = add_list_with_start(&mut runtime, 10, 40);
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+        let d4 = add_range(&mut runtime, 8, 12);
+        let d5 = runtime.add_slice(d3, d4).unwrap();
+        let d6 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val40").unwrap()).unwrap();
+
+        runtime.push_register(d5).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.apply(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 40.into());
+    }
+
+    #[test]
+    fn index_slice_of_concat_of_lists_with_symbol_out_of_bounds() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 20);
+        let d2 = add_list_with_start(&mut runtime, 10, 40);
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+        let d4 = add_range(&mut runtime, 12, 15);
+        let d5 = runtime.add_slice(d3, d4).unwrap();
+        let d6 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap()).unwrap();
+
+        runtime.push_register(d5).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.apply(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+    }
+
+    #[test]
+    fn index_slice_of_concat_of_lists_with_symbol_out_of_bounds_same_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 20);
+        let d2 = add_list_with_start(&mut runtime, 10, 40);
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+        let d4 = add_range(&mut runtime, 12, 15);
+        let d5 = runtime.add_slice(d3, d4).unwrap();
+        let d6 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val48").unwrap()).unwrap();
+
+        runtime.push_register(d5).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.apply(NO_CONTEXT).unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
     }
 }
