@@ -477,7 +477,7 @@ mod type_of {
     use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
-    fn no_op_cast_expression() {
+    fn type_of_number() {
         let mut runtime = SimpleRuntimeData::new();
 
         let d1 = runtime.add_number(10.into()).unwrap();
