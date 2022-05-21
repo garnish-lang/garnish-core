@@ -1539,9 +1539,8 @@ mod links {
 
 #[cfg(test)]
 mod concatentation {
-    use crate::runtime::list::iterate_concatenation_internal;
-    use crate::testing_utilites::{add_byte_list, add_char_list, add_concatenation_with_start, add_list_with_start, add_range};
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, GarnishNumber, SimpleRuntimeData, NO_CONTEXT, symbol_value};
+    use crate::testing_utilites::{add_concatenation_with_start, add_list_with_start};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT, symbol_value};
 
     #[test]
     fn concatenation_to_list() {

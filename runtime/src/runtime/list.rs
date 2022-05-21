@@ -557,7 +557,7 @@ pub(crate) fn get_value_if_association<Data: GarnishLangRuntimeData>(
 pub(crate) fn is_value_association<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {
     Ok(match this.get_data_type(addr)? {
         ExpressionDataType::Pair => {
-            let (left, right) = this.get_pair(addr)?;
+            let (left, _right) = this.get_pair(addr)?;
             match this.get_data_type(left)? {
                 ExpressionDataType::Symbol => true,
                 _ => false,
