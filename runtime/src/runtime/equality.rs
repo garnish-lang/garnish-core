@@ -1,8 +1,8 @@
 use log::trace;
 use std::fmt::Debug;
 
-use crate::runtime::internals::link_len;
-use crate::runtime::list::index_link;
+use crate::runtime::internals::{concatenation_len, link_len};
+use crate::runtime::list::{index_concatenation_for, index_link};
 use crate::{
     get_range, next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError,
     TypeConstants,
@@ -194,6 +194,90 @@ fn data_equal<Data: GarnishLangRuntimeData>(
             this.push_register(right2)?;
 
             true
+        }
+        (ExpressionDataType::Concatentation, ExpressionDataType::Concatentation) => {
+            let len1 = concatenation_len(this, left_addr)?;
+            let len2 = concatenation_len(this, right_addr)?;
+
+            if len1 != len2 {
+                false
+            } else {
+                let mut count = Data::Number::zero();
+                let len = Data::size_to_number(len1);
+
+                while count < len {
+                    // need to find faster way
+                    // curent way is to index each concatenation one item at a time
+                    match (index_concatenation_for(this, left_addr, count)?, index_concatenation_for(this, right_addr, count)?) {
+                        (Some(left), Some(right)) => {
+                            this.push_register(left)?;
+                            this.push_register(right)?;
+                        }
+                        _ => {
+                            return Ok(false)
+                        }
+                    }
+                    count = count.increment().or_num_err()?;
+                }
+
+                true
+            }
+        }
+        (ExpressionDataType::List, ExpressionDataType::Concatentation) => {
+            let len1 = this.get_list_len(left_addr)?;
+            let len2 = concatenation_len(this, right_addr)?;
+
+            if len1 != len2 {
+                false
+            } else {
+                let mut count = Data::Number::zero();
+                let len = Data::size_to_number(len1);
+
+                while count < len {
+                    // need to find faster way
+                    // curent way is to index each concatenation one item at a time
+                    match (this.get_list_item(left_addr, count)?, index_concatenation_for(this, right_addr, count)?) {
+                        (left, Some(right)) => {
+                            this.push_register(left)?;
+                            this.push_register(right)?;
+                        }
+                        _ => {
+                            return Ok(false)
+                        }
+                    }
+                    count = count.increment().or_num_err()?;
+                }
+
+                true
+            }
+        }
+        (ExpressionDataType::Concatentation, ExpressionDataType::List) => {
+            let len1 = concatenation_len(this, left_addr)?;
+            let len2 = this.get_list_len(right_addr)?;
+
+            if len1 != len2 {
+                false
+            } else {
+                let mut count = Data::Number::zero();
+                let len = Data::size_to_number(len1);
+
+                while count < len {
+                    // need to find faster way
+                    // curent way is to index each concatenation one item at a time
+                    match (index_concatenation_for(this, left_addr, count)?, this.get_list_item(right_addr, count)?) {
+                        (Some(left), right) => {
+                            this.push_register(left)?;
+                            this.push_register(right)?;
+                        }
+                        _ => {
+                            return Ok(false)
+                        }
+                    }
+                    count = count.increment().or_num_err()?;
+                }
+
+                true
+            }
         }
         (ExpressionDataType::Slice, ExpressionDataType::Slice) => {
             let (value1, range1) = this.get_slice(left_addr)?;
@@ -1768,6 +1852,136 @@ mod lists {
             runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
             ExpressionDataType::False
         );
+    }
+}
+
+#[cfg(test)]
+mod concatenation {
+    use crate::testing_utilites::{add_concatenation_with_start, add_list_with_start};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+
+    #[test]
+    fn concatenation_concatenation_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_concatenation_with_start(&mut runtime, 10, 10);
+        let d2 = add_concatenation_with_start(&mut runtime, 10, 10);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.equal().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn concatenation_concatenation_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_concatenation_with_start(&mut runtime, 10, 10);
+        let d2 = add_concatenation_with_start(&mut runtime, 10, 20);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.equal().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn concatenation_of_list_concatenation_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 5, 10);
+        let d2 = add_list_with_start(&mut runtime, 5, 15);
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+        let d4 = add_concatenation_with_start(&mut runtime, 10, 10);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d4).unwrap();
+
+        runtime.equal().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn concatenation_of_list_concatenation_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 5, 10);
+        let d2 = add_list_with_start(&mut runtime, 5, 15);
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+        let d4 = add_concatenation_with_start(&mut runtime, 11, 10);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d4).unwrap();
+
+        runtime.equal().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn concatenation_list_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_concatenation_with_start(&mut runtime, 10, 10);
+        let d2 = add_list_with_start(&mut runtime, 10, 10);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.equal().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn concatenation_list_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_concatenation_with_start(&mut runtime, 10, 10);
+        let d2 = add_list_with_start(&mut runtime, 11, 10);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.equal().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn list_concatenation_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 10);
+        let d2 = add_concatenation_with_start(&mut runtime, 10, 10);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.equal().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn lsit_concatenation_not_equal() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let d1 = add_list_with_start(&mut runtime, 10, 10);
+        let d2 = add_concatenation_with_start(&mut runtime, 11, 10);
+
+        runtime.push_register(d1).unwrap();
+        runtime.push_register(d2).unwrap();
+
+        runtime.equal().unwrap();
+
+        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::False);
     }
 }
 

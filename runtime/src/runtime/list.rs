@@ -132,37 +132,43 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
-        ExpressionDataType::Concatentation => {
-            Ok(iterate_concatenation_internal(
-                this,
-                value,
-                |this, current_index, addr| {
-                    let list_len = this.get_list_len(addr)?;
-
-                    // already know that index is greater than count
-                    if index < current_index.plus(Data::size_to_number(list_len)).or_num_err()? {
-                        // item is in this list
-                        let list_index = index.subtract(current_index).or_num_err()?;
-                        let list_r = this.get_list_item(addr, list_index)?;
-
-                        return Ok(Some(list_r));
-                    }
-
-                    Ok(None)
-                },
-                |_this, current_index, addr| {
-                    if current_index == index {
-                        return Ok(Some(addr));
-                    }
-
-                    Ok(None)
-                },
-            )?
-            .0)
-        }
+        ExpressionDataType::Concatentation => index_concatenation_for(this, value, index),
         ExpressionDataType::Link => index_link(this, value, index),
         _ => Err(RuntimeError::unsupported_types()),
     }
+}
+
+pub(crate) fn index_concatenation_for<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    addr: Data::Size,
+    index: Data::Number,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    Ok(iterate_concatenation_internal(
+        this,
+        addr,
+        |this, current_index, addr| {
+            let list_len = this.get_list_len(addr)?;
+
+            // already know that index is greater than count
+            if index < current_index.plus(Data::size_to_number(list_len)).or_num_err()? {
+                // item is in this list
+                let list_index = index.subtract(current_index).or_num_err()?;
+                let list_r = this.get_list_item(addr, list_index)?;
+
+                return Ok(Some(list_r));
+            }
+
+            Ok(None)
+        },
+        |_this, current_index, addr| {
+            if current_index == index {
+                return Ok(Some(addr));
+            }
+
+            Ok(None)
+        },
+    )?
+    .0)
 }
 
 pub(crate) fn iterate_concatenation_internal<Data: GarnishLangRuntimeData, ListCheckFn, CheckFn>(
