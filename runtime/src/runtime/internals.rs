@@ -154,8 +154,8 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData, Context: Garn
             this.push_register(addr)?;
         }
         ExpressionDataType::Concatentation => {
-            let count = iterate_concatenation_internal(this, r, |_, _, _| Ok(None), |_, _, _| Ok(None))?.1;
-            let addr = this.add_number(count)?;
+            let count = concatenation_len(this, r)?;
+            let addr = this.add_number(Data::size_to_number(count))?;
             this.push_register(addr)?;
         }
         t => match context {
@@ -174,6 +174,10 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData, Context: Garn
     }
 
     Ok(())
+}
+
+pub(crate) fn concatenation_len<Data: GarnishLangRuntimeData>(this: &mut Data, addr: Data::Size) -> Result<Data::Size, RuntimeError<Data::Error>> {
+    Ok(iterate_concatenation_internal(this, addr, |_, _, _| Ok(None), |_, _, _| Ok(None))?.1)
 }
 
 pub(crate) fn link_len<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Number, RuntimeError<Data::Error>> {

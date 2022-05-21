@@ -170,14 +170,14 @@ pub(crate) fn iterate_concatenation_internal<Data: GarnishLangRuntimeData, ListC
     addr: Data::Size,
     mut list_check_fn: ListCheckFn,
     mut check_fn: CheckFn,
-) -> Result<(Option<Data::Size>, Data::Number), RuntimeError<Data::Error>>
+) -> Result<(Option<Data::Size>, Data::Size), RuntimeError<Data::Error>>
 where
     ListCheckFn: FnMut(&mut Data, Data::Number, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
     CheckFn: FnMut(&mut Data, Data::Number, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
 {
     let (current, next) = this.get_concatentation(addr)?;
     let start_register = this.get_register_len();
-    let mut index = Data::Number::zero();
+    let mut index = Data::Size::zero();
 
     this.push_register(next)?;
     this.push_register(current)?;
@@ -196,13 +196,13 @@ where
                         this.push_register(current)?;
                     }
                     ExpressionDataType::List => {
-                        temp_result = list_check_fn(this, index, r)?;
-                        let list_len = Data::size_to_number(this.get_list_len(r)?);
-                        index = index.plus(list_len).or_num_err()?;
+                        temp_result = list_check_fn(this, Data::size_to_number(index), r)?;
+                        let list_len = this.get_list_len(r)?;
+                        index = index + list_len;
                     }
                     _ => {
-                        temp_result = check_fn(this, index, r)?;
-                        index = index.increment().or_num_err()?;
+                        temp_result = check_fn(this, Data::size_to_number(index), r)?;
+                        index += Data::Size::one();
                     }
                 }
 
@@ -531,7 +531,7 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
     }
 }
 
-fn get_value_if_association<Data: GarnishLangRuntimeData>(
+pub(crate) fn get_value_if_association<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     addr: Data::Size,
     sym: Data::Symbol,
@@ -552,6 +552,19 @@ fn get_value_if_association<Data: GarnishLangRuntimeData>(
     }
 
     Ok(None)
+}
+
+pub(crate) fn is_value_association<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {
+    Ok(match this.get_data_type(addr)? {
+        ExpressionDataType::Pair => {
+            let (left, right) = this.get_pair(addr)?;
+            match this.get_data_type(left)? {
+                ExpressionDataType::Symbol => true,
+                _ => false,
+            }
+        }
+        _ => false,
+    })
 }
 
 fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
