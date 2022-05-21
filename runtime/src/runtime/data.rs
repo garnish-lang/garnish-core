@@ -124,6 +124,7 @@ pub trait GarnishLangRuntimeData {
 
     // deferred conversions
     fn size_to_number(from: Self::Size) -> Self::Number;
+    fn number_to_size(from: Self::Number) -> Option<Self::Size>;
     fn number_to_char(from: Self::Number) -> Option<Self::Char>;
     fn number_to_byte(from: Self::Number) -> Option<Self::Byte>;
     fn char_to_number(from: Self::Char) -> Option<Self::Number>;

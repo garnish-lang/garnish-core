@@ -131,7 +131,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
         }
         (ExpressionDataType::Slice, ExpressionDataType::List) => {
             let (value, range) = this.get_slice(left)?;
-            let (start, end, _) = get_range(this, range)?;
+            let (start, end, len) = get_range(this, range)?;
             match this.get_data_type(value)? {
                 ExpressionDataType::List => {
                     let len = this.get_list_len(value)?;
@@ -167,6 +167,63 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
                 }
                 ExpressionDataType::ByteList => {
                     list_from_byte_list(this, value, start, end.increment().or_num_err()?)?;
+                }
+                ExpressionDataType::Concatentation => {
+                    this.start_list(Data::number_to_size(len).or_num_err()?)?;
+
+                    iterate_concatenation_internal(this, value, |this, current_index, addr| {
+                        let list_len = Data::size_to_number(this.get_list_len(addr)?);
+                        let list_end = current_index.plus(list_len).or_num_err()?;
+
+                        if start > list_end {
+                            return Ok(None)
+                        }
+
+                        if end <= current_index {
+                            // providing value will end iteration
+                            // even tho we don't need the return value
+                            return Ok(Some(addr));
+                        }
+
+                        let adjusted_start = if current_index > start {
+                            Data::Number::zero()
+                        } else {
+                            start.subtract(current_index).or_num_err()?
+                        };
+
+                        let adjusted_end = if end > list_end { list_len.decrement().or_num_err()? } else { end.subtract(current_index).or_num_err()? };
+
+                        if adjusted_start < list_end && adjusted_end >= adjusted_start {
+                            let mut index = adjusted_start;
+
+                            while index <= adjusted_end {
+                                let item_addr = this.get_list_item(addr, index)?;
+                                let is_associative = is_value_association(this, item_addr)?;
+                                this.add_to_list(item_addr, is_associative)?;
+
+                                index = index.increment().or_num_err()?;
+                            }
+                        }
+
+                        Ok(None)
+                    }, |this, current_index, addr| {
+                        if current_index < start {
+                            return Ok(None)
+                        }
+
+                        if current_index >= end {
+                            // providing value will end iteration
+                            // even tho we don't need the return value
+                            return Ok(Some(addr));
+                        }
+
+                        let is_associative = is_value_association(this, addr)?;
+                        this.add_to_list(addr, is_associative)?;
+                        Ok(None)
+                    })?;
+
+                    let addr = this.end_list()?;
+                    this.push_register(addr)?;
                 }
                 _ => push_unit(this)?,
             }
@@ -1539,7 +1596,7 @@ mod links {
 
 #[cfg(test)]
 mod concatentation {
-    use crate::testing_utilites::{add_concatenation_with_start, add_list_with_start};
+    use crate::testing_utilites::{add_concatenation_with_start, add_list_with_start, add_range};
     use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT, symbol_value};
 
     #[test]
@@ -1572,6 +1629,38 @@ mod concatentation {
     }
 
     #[test]
+    fn slice_of_concatenation_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let start_value = 20;
+        let d1 = add_concatenation_with_start(&mut runtime, 10, start_value);
+        let d2 = add_range(&mut runtime, 2, 8);
+        let d3 = runtime.add_slice(d1, d2).unwrap();
+        let d4 = add_list_with_start(&mut runtime, 0, 0);
+
+        runtime.push_register(d3).unwrap();
+        runtime.push_register(d4).unwrap();
+
+        runtime.type_cast(NO_CONTEXT).unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = runtime.get_list_len(addr).unwrap();
+        assert_eq!(len, 6);
+
+        for i in 0..6 {
+            let item_addr = runtime.get_list_item(addr, i.into()).unwrap();
+            let (left, right) = runtime.get_pair(item_addr).unwrap();
+            let v = start_value + 2 + i;
+            let s = symbol_value(format!("val{}", v).as_ref());
+            assert_eq!(runtime.get_symbol(left).unwrap(), s);
+            assert_eq!(runtime.get_number(right).unwrap(), v.into());
+
+            let association = runtime.get_list_item_with_symbol(addr, s).unwrap().unwrap();
+            assert_eq!(runtime.get_number(association).unwrap(), v.into())
+        }
+    }
+
+    #[test]
     fn concatenation_of_lists_to_list() {
         let mut runtime = SimpleRuntimeData::new();
 
@@ -1599,6 +1688,40 @@ mod concatentation {
 
             let association = runtime.get_list_item_with_symbol(addr, s).unwrap().unwrap();
             assert_eq!(runtime.get_number(association).unwrap(), (start_value + i).into())
+        }
+    }
+
+    #[test]
+    fn slice_of_concatenation_of_lists_to_list() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        let start_value = 20;
+        let d1 = add_list_with_start(&mut runtime, 10, start_value);
+        let d2 = add_list_with_start(&mut runtime, 10, start_value + 10);
+        let d3 = runtime.add_concatenation(d1, d2).unwrap();
+        let d4 = add_range(&mut runtime, 8, 12);
+        let d5 = runtime.add_slice(d3, d4).unwrap();
+        let d6 = add_list_with_start(&mut runtime, 0, 0);
+
+        runtime.push_register(d5).unwrap();
+        runtime.push_register(d6).unwrap();
+
+        runtime.type_cast(NO_CONTEXT).unwrap();
+
+        let addr = runtime.get_register(0).unwrap();
+        let len = runtime.get_list_len(addr).unwrap();
+        assert_eq!(len, 5);
+
+        for i in 0..5 {
+            let item_addr = runtime.get_list_item(addr, i.into()).unwrap();
+            let (left, right) = runtime.get_pair(item_addr).unwrap();
+            let v = start_value + 8 + i;
+            let s = symbol_value(format!("val{}", v).as_ref());
+            assert_eq!(runtime.get_symbol(left).unwrap(), s);
+            assert_eq!(runtime.get_number(right).unwrap(), v.into());
+
+            let association = runtime.get_list_item_with_symbol(addr, s).unwrap().unwrap();
+            assert_eq!(runtime.get_number(association).unwrap(), v.into())
         }
     }
 }

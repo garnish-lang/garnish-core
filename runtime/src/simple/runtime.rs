@@ -460,6 +460,10 @@ impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
         from.into()
     }
 
+    fn number_to_size(from: Self::Number) -> Option<Self::Size> {
+        Some(from.into())
+    }
+
     fn number_to_char(from: Self::Number) -> Option<Self::Char> {
         match from {
             SimpleNumber::Integer(v) => match (v as u8).try_into() {

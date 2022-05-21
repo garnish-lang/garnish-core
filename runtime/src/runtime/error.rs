@@ -1,4 +1,4 @@
-use crate::{GarnishNumber, Instruction};
+use crate::{Instruction};
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
@@ -83,8 +83,14 @@ impl<Source: 'static + std::error::Error> From<Source> for RuntimeError<Source> 
     }
 }
 
-impl<Num: GarnishNumber, Source: 'static + std::error::Error> OrNumberError<Num, Source> for Option<Num> {
-    fn or_num_err(self) -> Result<Num, RuntimeError<Source>> {
+// impl<Num: GarnishNumber, Source: 'static + std::error::Error> OrNumberError<Num, Source> for Option<Num> {
+//     fn or_num_err(self) -> Result<Num, RuntimeError<Source>> {
+//         self.ok_or(RuntimeError::new("Number error"))
+//     }
+// }
+
+impl<T, Source: 'static + std::error::Error> OrNumberError<T, Source> for Option<T> {
+    fn or_num_err(self) -> Result<T, RuntimeError<Source>> {
         self.ok_or(RuntimeError::new("Number error"))
     }
 }
