@@ -94,10 +94,10 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         | Definition::StartExclusiveRange
         | Definition::ExclusiveRange
         | Definition::AppendLink
-        | Definition::PrependLink => {
+        | Definition::PrependLink
+        | Definition::Concatenation => {
             ((true, node.get_left()), (true, node.get_right()))
         }
-        Definition::Concatenation => unimplemented!(),
         Definition::ApplyTo => ((true, node.get_right()), (true, node.get_left())),
         Definition::List => ((true, node.get_left()), (true, node.get_right())),
         Definition::CommaList => ((false, node.get_left()), (false, node.get_right())),
@@ -264,7 +264,9 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         Definition::ExclusiveRange => {
             data.push_instruction(Instruction::MakeExclusiveRange, None)?;
         }
-        Definition::Concatenation => unimplemented!(),
+        Definition::Concatenation => {
+            data.push_instruction(Instruction::Concat, None)?;
+        }
         Definition::AppendLink => {
             data.push_instruction(Instruction::AppendLink, None)?;
         }
@@ -1717,6 +1719,27 @@ mod operations {
                 (Instruction::Put, Some(3)),
                 (Instruction::UpdateValue, None),
                 (Instruction::Put, Some(4)),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
+        );
+    }
+
+    #[test]
+    fn concatenation() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Integer, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Concatenation, None, Some(0), Some(2), "<-", TokenType::Concatenation),
+                (Definition::Integer, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Concat, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default()
