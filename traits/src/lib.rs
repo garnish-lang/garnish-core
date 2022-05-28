@@ -73,7 +73,7 @@ pub enum ExpressionDataType {
     Symbol,
     Pair,
     Range,
-    Concatentation,
+    Concatenation,
     Slice,
     Link,
     List,
