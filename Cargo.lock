@@ -33,6 +33,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "garnish_traits"
+version = "0.0.1-alpha"
+
+[[package]]
 name = "log"
 version = "0.4.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
