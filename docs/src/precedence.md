@@ -18,7 +18,7 @@
 |     16     | .. >.. ..< >..< |   Create Range    |  left-right   |
 |     17     |        =        |    Create Pair    |  left-right   |
 |     18     |      10 20      |    Space List     |  left-right   |
-|     19     |       ->        |    Append Link    |  left-right   |
+|     19     |      <> ->      |    Append Link    |  left-right   |
 |     20     |       <-        |   Prepend Link    |  right-left   |
 |     21     |    < <= > >=    |    Relational     |  left-right   |
 |     22     |    == != #=     |     Equality      |  left-right   |

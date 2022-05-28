@@ -48,6 +48,7 @@ pub enum Definition {
     StartExclusiveRange,
     EndExclusiveRange,
     ExclusiveRange,
+    Concatenation,
     AppendLink,
     PrependLink,
     Access,
@@ -159,7 +160,6 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::StartExclusiveRange => (Definition::StartExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
         TokenType::EndExclusiveRange => (Definition::EndExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
         TokenType::ExclusiveRange => (Definition::ExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
-        TokenType::Concatenation => unimplemented!(),
         TokenType::AppendLink => (Definition::AppendLink, SecondaryDefinition::BinaryLeftToRight),
         TokenType::PrependLink => (Definition::PrependLink, SecondaryDefinition::BinaryRightToLeft),
         TokenType::MultiplicationSign => (Definition::MultiplicationSign, SecondaryDefinition::BinaryLeftToRight),
@@ -189,6 +189,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::GreaterThanOrEqual => (Definition::GreaterThanOrEqual, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Apply => (Definition::Apply, SecondaryDefinition::BinaryLeftToRight),
         TokenType::ApplyTo => (Definition::ApplyTo, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Concatenation => (Definition::Concatenation, SecondaryDefinition::BinaryLeftToRight),
         TokenType::LeftInternal => (Definition::AccessLeftInternal, SecondaryDefinition::UnaryPrefix),
         TokenType::RightInternal => (Definition::AccessRightInternal, SecondaryDefinition::UnarySuffix),
         TokenType::LengthInternal => (Definition::AccessLengthInternal, SecondaryDefinition::UnarySuffix),
@@ -358,6 +359,7 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     // choosing to make it explicit
     map.insert(Definition::AppendLink, 239);
     map.insert(Definition::PrependLink, 240);
+    map.insert(Definition::Concatenation, 240);
 
     map.insert(Definition::Apply, 250);
     map.insert(Definition::ApplyTo, 250);
@@ -2795,6 +2797,27 @@ mod tests {
             &[
                 (0, Definition::Integer, Some(1), None, None),
                 (1, Definition::Reapply, None, Some(0), Some(2)),
+                (2, Definition::Integer, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn concatenation() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("<>".to_string(), TokenType::Concatenation, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Integer, Some(1), None, None),
+                (1, Definition::Concatenation, None, Some(0), Some(2)),
                 (2, Definition::Integer, Some(1), None, None),
             ],
         );

@@ -97,6 +97,7 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         | Definition::PrependLink => {
             ((true, node.get_left()), (true, node.get_right()))
         }
+        Definition::Concatenation => unimplemented!(),
         Definition::ApplyTo => ((true, node.get_right()), (true, node.get_left())),
         Definition::List => ((true, node.get_left()), (true, node.get_right())),
         Definition::CommaList => ((false, node.get_left()), (false, node.get_right())),
@@ -263,6 +264,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         Definition::ExclusiveRange => {
             data.push_instruction(Instruction::MakeExclusiveRange, None)?;
         }
+        Definition::Concatenation => unimplemented!(),
         Definition::AppendLink => {
             data.push_instruction(Instruction::AppendLink, None)?;
         }
