@@ -63,6 +63,7 @@ pub enum TokenType {
     RightInternal,
     LengthInternal,
     Pair,
+    Concatenation,
     AppendLink,
     PrependLink,
     Range,
@@ -359,6 +360,7 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
         ("._", TokenType::RightInternal),
         ("_.", TokenType::LeftInternal),
         (".|", TokenType::LengthInternal),
+        ("<>", TokenType::Concatenation),
         ("->", TokenType::AppendLink),
         ("<-", TokenType::PrependLink),
         ("..", TokenType::Range),
@@ -1473,6 +1475,21 @@ mod tests {
             vec![LexerToken {
                 text: "~>".to_string(),
                 token_type: TokenType::ApplyTo,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn concatentation() {
+        let result = lex(&"<>".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "<>".to_string(),
+                token_type: TokenType::Concatenation,
                 column: 0,
                 row: 0
             }]

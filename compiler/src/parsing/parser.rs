@@ -159,6 +159,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::StartExclusiveRange => (Definition::StartExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
         TokenType::EndExclusiveRange => (Definition::EndExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
         TokenType::ExclusiveRange => (Definition::ExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Concatenation => unimplemented!(),
         TokenType::AppendLink => (Definition::AppendLink, SecondaryDefinition::BinaryLeftToRight),
         TokenType::PrependLink => (Definition::PrependLink, SecondaryDefinition::BinaryRightToLeft),
         TokenType::MultiplicationSign => (Definition::MultiplicationSign, SecondaryDefinition::BinaryLeftToRight),
