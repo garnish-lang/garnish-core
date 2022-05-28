@@ -46,97 +46,106 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
 #[cfg(test)]
 mod deferring {
     use crate::runtime::GarnishRuntime;
-    use crate::testing_utilites::DeferOpTestContext;
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::testing_utilites::{create_simple_runtime, DeferOpTestContext};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData};
 
     #[test]
     fn resolve() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_number(10.into()).unwrap();
+
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
 
         let mut context = DeferOpTestContext::new();
 
         runtime.resolve(int1, Some(&mut context)).unwrap();
 
         // resolve never passes to defer make sure default unit is place when not resolved
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use crate::runtime::context::EMPTY_CONTEXT;
-    use crate::simple::DataError;
+    use crate::simple::{DataError, SimpleRuntimeData};
     use crate::{
         runtime::{
             context::{EmptyContext, GarnishLangRuntimeContext},
             utilities::push_number,
             GarnishRuntime,
         },
-        ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleRuntimeData,
+        ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError,
     };
+    use crate::testing_utilites::create_simple_runtime;
 
     #[allow(const_item_mutation)]
     #[test]
     fn resolve_non_symbol() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i2 = runtime.add_number(10.into()).unwrap();
+
+        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
 
         runtime.resolve(i2, Some(&mut EMPTY_CONTEXT)).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn resolve_from_input() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_symbol(1).unwrap();
-        let i2 = runtime.add_number(10.into()).unwrap();
-        let i3 = runtime.add_pair((i1, i2)).unwrap();
-        runtime.start_list(1).unwrap();
-        runtime.add_to_list(i3, true).unwrap();
-        let i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_symbol(1).unwrap();
 
-        runtime.push_instruction(Instruction::Resolve, None).unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
+        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
+        runtime.get_data_mut().start_list(1).unwrap();
+        runtime.get_data_mut().add_to_list(i3, true).unwrap();
+        let i4 = runtime.get_data_mut().end_list().unwrap();
+        let i5 = runtime.get_data_mut().add_symbol(1).unwrap();
 
-        runtime.push_value_stack(i4).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Resolve, None).unwrap();
+
+        runtime.get_data_mut().push_value_stack(i4).unwrap();
 
         runtime.resolve::<EmptyContext>(i5, None).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), i2);
+        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), i2);
     }
 
     #[test]
     fn resolve_not_found_is_unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_symbol(1).unwrap();
-        let i2 = runtime.add_number(10.into()).unwrap();
-        let i3 = runtime.add_pair((i1, i2)).unwrap();
-        runtime.start_list(1).unwrap();
-        runtime.add_to_list(i3, true).unwrap();
-        let _i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_symbol(2).unwrap();
 
-        runtime.push_instruction(Instruction::Resolve, None).unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
+        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
+        runtime.get_data_mut().start_list(1).unwrap();
+        runtime.get_data_mut().add_to_list(i3, true).unwrap();
+        let _i4 = runtime.get_data_mut().end_list().unwrap();
+        let i5 = runtime.get_data_mut().add_symbol(2).unwrap();
+
+        runtime.get_data_mut().push_instruction(Instruction::Resolve, None).unwrap();
 
         runtime.resolve::<EmptyContext>(i5, None).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn resolve_from_context() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_symbol(1).unwrap();
-        let start = runtime.get_data_len();
 
-        runtime.push_instruction(Instruction::Resolve, None).unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
+        let start = runtime.get_data_mut().get_data_len();
+
+        runtime.get_data_mut().push_instruction(Instruction::Resolve, None).unwrap();
 
         struct MyContext {}
 
@@ -157,6 +166,6 @@ mod tests {
 
         runtime.resolve(i1, Some(&mut context)).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), start);
+        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), start);
     }
 }

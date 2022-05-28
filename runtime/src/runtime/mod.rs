@@ -38,7 +38,9 @@ pub use garnish_traits::GarnishRuntime;
 
 #[cfg(test)]
 pub mod testing_utilites {
-    use crate::{DataError, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleDataRuntimeNC, SimpleRuntimeData};
+    use crate::{DataError, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, Instruction, RuntimeError, SimpleDataRuntimeNC};
+    use crate::runtime_impls::SimpleGarnishRuntime;
+    use crate::simple::SimpleRuntimeData;
 
     pub const DEFERRED_VALUE: usize = 1000;
 
@@ -66,38 +68,46 @@ pub mod testing_utilites {
 
     pub fn deferred_op<F>(func: F)
     where
-        F: Fn(&mut SimpleRuntimeData, &mut DeferOpTestContext),
+        F: Fn(&mut SimpleGarnishRuntime<SimpleRuntimeData>, &mut DeferOpTestContext),
     {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
+        
 
-        let int1 = runtime.add_external(10).unwrap();
-        let int2 = runtime.add_expression(20).unwrap();
+        let int1 = runtime.get_data_mut().add_external(10).unwrap();
+        let int2 = runtime.get_data_mut().add_expression(20).unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         let mut context = DeferOpTestContext::new();
 
         func(&mut runtime, &mut context);
 
-        assert_eq!(runtime.get_external(runtime.get_register(0).unwrap()).unwrap(), DEFERRED_VALUE);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_external(i).unwrap(), DEFERRED_VALUE);
     }
 
     pub fn deferred_unary_op<F>(func: F)
     where
-        F: Fn(&mut SimpleRuntimeData, &mut DeferOpTestContext),
+        F: Fn(&mut SimpleGarnishRuntime<SimpleRuntimeData>, &mut DeferOpTestContext),
     {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
+        
 
-        let int1 = runtime.add_expression(10).unwrap();
+        let int1 = runtime.get_data_mut().add_expression(10).unwrap();
 
-        runtime.push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int1).unwrap();
 
         let mut context = DeferOpTestContext::new();
 
         func(&mut runtime, &mut context);
 
-        assert_eq!(runtime.get_external(runtime.get_register(0).unwrap()).unwrap(), DEFERRED_VALUE);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_external(i).unwrap(), DEFERRED_VALUE);
+    }
+
+    pub fn create_simple_runtime() -> SimpleGarnishRuntime<SimpleRuntimeData> {
+        SimpleGarnishRuntime::new(SimpleRuntimeData::new())
     }
 
     pub fn add_pair(runtime: &mut SimpleRuntimeData, key: &str, value: i32) -> usize {

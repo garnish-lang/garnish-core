@@ -26,57 +26,56 @@ pub(crate) fn end_side_effect<Data: GarnishLangRuntimeData>(this: &mut Data) -> 
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::testing_utilites::create_simple_runtime;
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData};
 
     #[test]
     fn start_side_effect() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        runtime.add_number(10.into()).unwrap();
+        runtime.get_data_mut().add_number(10.into()).unwrap();
 
         runtime.start_side_effect().unwrap();
 
-        assert_eq!(
-            runtime.get_data_type(runtime.get_current_value().unwrap()).unwrap(),
-            ExpressionDataType::Unit
-        );
+        let i = runtime.get_data_mut().get_current_value().unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn start_side_effect_with_value() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = runtime.add_number(10.into()).unwrap();
+        let d1 = runtime.get_data_mut().add_number(10.into()).unwrap();
 
-        runtime.push_value_stack(d1).unwrap();
+        runtime.get_data_mut().push_value_stack(d1).unwrap();
 
         runtime.start_side_effect().unwrap();
 
-        assert_eq!(runtime.get_current_value().unwrap(), d1);
+        assert_eq!(runtime.get_data_mut().get_current_value().unwrap(), d1);
     }
 
     #[test]
     fn end_side_effect() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = runtime.add_number(10.into()).unwrap();
+        let d1 = runtime.get_data_mut().add_number(10.into()).unwrap();
 
-        runtime.push_register(d1).unwrap();
-        runtime.push_value_stack(d1).unwrap();
+        runtime.get_data_mut().push_register(d1).unwrap();
+        runtime.get_data_mut().push_value_stack(d1).unwrap();
 
         runtime.end_side_effect().unwrap();
 
-        assert_eq!(runtime.get_register_len(), 0);
-        assert_eq!(runtime.get_current_value(), None);
+        assert_eq!(runtime.get_data_mut().get_register_len(), 0);
+        assert_eq!(runtime.get_data_mut().get_current_value(), None);
     }
 
     #[test]
     fn end_side_effect_no_value_is_err() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = runtime.add_number(10.into()).unwrap();
+        let d1 = runtime.get_data_mut().add_number(10.into()).unwrap();
 
-        runtime.push_register(d1).unwrap();
+        runtime.get_data_mut().push_register(d1).unwrap();
 
         let result = runtime.end_side_effect();
 
@@ -85,11 +84,11 @@ mod tests {
 
     #[test]
     fn end_side_effect_no_register_is_err() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = runtime.add_number(10.into()).unwrap();
+        let d1 = runtime.get_data_mut().add_number(10.into()).unwrap();
 
-        runtime.push_value_stack(d1).unwrap();
+        runtime.get_data_mut().push_value_stack(d1).unwrap();
 
         let result = runtime.end_side_effect();
 

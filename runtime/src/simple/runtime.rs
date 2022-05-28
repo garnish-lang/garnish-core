@@ -1,14 +1,18 @@
 use std::collections::hash_map::DefaultHasher;
 use std::convert::TryInto;
-use std::fmt::{Debug};
+use std::fmt::Debug;
 use std::hash::Hash;
-use std::{hash::Hasher};
+use std::hash::Hasher;
 
-use crate::{DataError, ExpressionDataType, GarnishLangRuntimeData, Instruction, InstructionData, parse_byte_list, parse_char_list, parse_simple_number, SimpleData, SimpleNumber, SimpleRuntimeData, symbol_value};
+use crate::{
+    parse_byte_list, parse_char_list, parse_simple_number, symbol_value, DataError, ExpressionDataType, GarnishLangRuntimeData, Instruction,
+    InstructionData, SimpleData, SimpleNumber,
+};
+use crate::simple::SimpleRuntimeData;
 
 impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
-    where
-        T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+where
+    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     type Error = DataError;
     type Symbol = u64;
@@ -621,7 +625,8 @@ impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, Instruction};
+    use crate::simple::SimpleRuntimeData;
 
     #[test]
     fn type_of() {

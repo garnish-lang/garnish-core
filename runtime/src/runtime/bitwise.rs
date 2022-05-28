@@ -1,5 +1,5 @@
-use crate::runtime::arithmetic::{perform_op, perform_unary_op};
 use crate::{GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, Instruction, RuntimeError};
+use crate::runtime::arithmetic::{perform_op, perform_unary_op};
 
 pub fn bitwise_not<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
@@ -93,106 +93,113 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
+    use crate::{GarnishLangRuntimeData, runtime::GarnishRuntime};
     use crate::runtime::context::NO_CONTEXT;
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::testing_utilites::create_simple_runtime;
 
     #[test]
     fn bitwise_not() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
+        
 
-        let int1 = runtime.add_number(10.into()).unwrap();
-        let new_data_start = runtime.get_data_len();
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let new_data_start = runtime.get_data_mut().get_data_len();
 
-        runtime.push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int1).unwrap();
 
         runtime.bitwise_not(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_number(new_data_start).unwrap(), (!10).into());
+        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), new_data_start);
+        assert_eq!(runtime.get_data_mut().get_number(new_data_start).unwrap(), (!10).into());
     }
 
     #[test]
     fn bitwise_and() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
+        
 
-        let int1 = runtime.add_number(10.into()).unwrap();
-        let int2 = runtime.add_number(20.into()).unwrap();
-        let new_data_start = runtime.get_data_len();
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let int2 = runtime.get_data_mut().add_number(20.into()).unwrap();
+        let new_data_start = runtime.get_data_mut().get_data_len();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.bitwise_and(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_number(new_data_start).unwrap(), (10 & 20).into());
+        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), new_data_start);
+        assert_eq!(runtime.get_data_mut().get_number(new_data_start).unwrap(), (10 & 20).into());
     }
 
     #[test]
     fn bitwise_or() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
+        
 
-        let int1 = runtime.add_number(10.into()).unwrap();
-        let int2 = runtime.add_number(20.into()).unwrap();
-        let new_data_start = runtime.get_data_len();
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let int2 = runtime.get_data_mut().add_number(20.into()).unwrap();
+        let new_data_start = runtime.get_data_mut().get_data_len();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.bitwise_or(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_number(new_data_start).unwrap(), (10 | 20).into());
+        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), new_data_start);
+        assert_eq!(runtime.get_data_mut().get_number(new_data_start).unwrap(), (10 | 20).into());
     }
 
     #[test]
     fn bitwise_xor() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
+        
 
-        let int1 = runtime.add_number(10.into()).unwrap();
-        let int2 = runtime.add_number(20.into()).unwrap();
-        let new_data_start = runtime.get_data_len();
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let int2 = runtime.get_data_mut().add_number(20.into()).unwrap();
+        let new_data_start = runtime.get_data_mut().get_data_len();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.bitwise_xor(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_number(new_data_start).unwrap(), (10 ^ 20).into());
+        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), new_data_start);
+        assert_eq!(runtime.get_data_mut().get_number(new_data_start).unwrap(), (10 ^ 20).into());
     }
 
     #[test]
     fn bitwise_shift_left() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
+        
 
-        let int1 = runtime.add_number(10.into()).unwrap();
-        let int2 = runtime.add_number(3.into()).unwrap();
-        let new_data_start = runtime.get_data_len();
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let int2 = runtime.get_data_mut().add_number(3.into()).unwrap();
+        let new_data_start = runtime.get_data_mut().get_data_len();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.bitwise_left_shift(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_number(new_data_start).unwrap(), (10 << 3).into());
+        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), new_data_start);
+        assert_eq!(runtime.get_data_mut().get_number(new_data_start).unwrap(), (10 << 3).into());
     }
 
     #[test]
     fn bitwise_shift_right() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
+        
 
-        let int1 = runtime.add_number(10.into()).unwrap();
-        let int2 = runtime.add_number(3.into()).unwrap();
-        let new_data_start = runtime.get_data_len();
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let int2 = runtime.get_data_mut().add_number(3.into()).unwrap();
+        let new_data_start = runtime.get_data_mut().get_data_len();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.bitwise_right_shift(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), new_data_start);
-        assert_eq!(runtime.get_number(new_data_start).unwrap(), (10 >> 3).into());
+        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), new_data_start);
+        assert_eq!(runtime.get_data_mut().get_number(new_data_start).unwrap(), (10 >> 3).into());
     }
 }

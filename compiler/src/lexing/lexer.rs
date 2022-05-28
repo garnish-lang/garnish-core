@@ -1482,7 +1482,7 @@ mod tests {
     }
 
     #[test]
-    fn Concatenation() {
+    fn concatenation() {
         let result = lex(&"<>".to_string()).unwrap();
 
         assert_eq!(

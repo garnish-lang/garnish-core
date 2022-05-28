@@ -420,12 +420,12 @@ mod tests {
     }
 
     #[test]
-    fn as_Concatenation() {
+    fn as_concatenation() {
         assert_eq!(SimpleDataNC::Concatentaion(10, 20).as_concatenation().unwrap(), (10, 20));
     }
 
     #[test]
-    fn as_Concatenation_not_Concatenation() {
+    fn as_concatenation_not_concatenation() {
         assert!(SimpleDataNC::Unit.as_concatenation().is_err());
     }
 

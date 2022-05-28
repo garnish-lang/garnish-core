@@ -383,7 +383,8 @@ where
 
 #[cfg(test)]
 mod data_storage {
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{GarnishLangRuntimeData};
+    use crate::simple::SimpleRuntimeData;
 
     #[test]
     fn unit() {
@@ -517,7 +518,8 @@ mod to_symbol {
     use std::hash::Hash;
     use std::hash::Hasher;
 
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{GarnishLangRuntimeData};
+    use crate::simple::SimpleRuntimeData;
 
     #[test]
     fn unit() {
@@ -538,7 +540,8 @@ mod to_symbol {
 
 #[cfg(test)]
 mod to_byte_list {
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{GarnishLangRuntimeData};
+    use crate::simple::SimpleRuntimeData;
 
     #[test]
     fn unit() {
@@ -554,8 +557,8 @@ mod to_byte_list {
 
 #[cfg(test)]
 mod to_char_list {
-    use crate::simple::NoCustom;
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::simple::{NoCustom, SimpleRuntimeData};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData};
 
     fn assert_to_char_list<Func>(expected: &str, setup: Func)
     where

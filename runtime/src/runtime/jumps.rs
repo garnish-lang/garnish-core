@@ -80,76 +80,82 @@ pub(crate) fn end_expression<Data: GarnishLangRuntimeData>(this: &mut Data) -> R
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, Instruction};
+    use crate::testing_utilites::create_simple_runtime;
 
     #[test]
     fn end_expression() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_number(10.into()).unwrap();
-        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
-        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
-        let i1 = runtime.push_instruction(Instruction::EndExpression, None).unwrap();
-        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
-        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
 
-        runtime.set_instruction_cursor(i1).unwrap();
-        runtime.push_register(int1).unwrap();
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
+        let i1 = runtime.get_data_mut().push_instruction(Instruction::EndExpression, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
+
+        runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
+        runtime.get_data_mut().push_register(int1).unwrap();
 
         runtime.end_expression().unwrap();
 
-        assert_eq!(runtime.get_instruction_cursor(), runtime.get_instruction_len());
-        assert_eq!(runtime.get_number(runtime.get_current_value().unwrap()).unwrap(), 10.into());
+        let i = runtime.get_data_mut().get_current_value().unwrap();
+        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), runtime.get_data_mut().get_instruction_len());
+        assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 10.into());
     }
 
     #[test]
     fn end_expression_with_path() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        runtime.add_number(10.into()).unwrap();
-        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
-        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
-        runtime.push_instruction(Instruction::EndExpression, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::Put, Some(1)).unwrap();
-        runtime.push_instruction(Instruction::EmptyApply, None).unwrap();
 
-        runtime.push_register(1).unwrap();
-        runtime.push_jump_path(4).unwrap();
-        runtime.set_instruction_cursor(2).unwrap();
+        runtime.get_data_mut().add_number(10.into()).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::EndExpression, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::EmptyApply, None).unwrap();
+
+        runtime.get_data_mut().push_register(1).unwrap();
+        runtime.get_data_mut().push_jump_path(4).unwrap();
+        runtime.get_data_mut().set_instruction_cursor(2).unwrap();
 
         runtime.end_expression().unwrap();
 
-        assert_eq!(runtime.get_instruction_cursor(), 4);
+        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), 4);
     }
 
     #[test]
     fn jump() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        runtime.push_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
-        runtime.push_instruction(Instruction::JumpTo, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        let i1 = runtime.push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.push_jump_point(i1).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::JumpTo, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        let i1 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+
+        runtime.get_data_mut().push_jump_point(i1).unwrap();
 
         runtime.jump(0).unwrap();
 
-        assert!(runtime.get_jump_path_vec().is_empty());
-        assert_eq!(runtime.get_instruction_cursor(), i1);
+        assert!(runtime.get_data_mut().get_jump_path_vec().is_empty());
+        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i1);
     }
 
     #[test]
     fn jump_if_true_no_ref_is_err() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        runtime.add_true().unwrap();
-        runtime.push_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.push_jump_point(3).unwrap();
+        runtime.get_data_mut().add_true().unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::JumpIfTrue, Some(3)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+
+        runtime.get_data_mut().push_jump_point(3).unwrap();
 
         let result = runtime.jump_if_true(0);
 
@@ -158,15 +164,16 @@ mod tests {
 
     #[test]
     fn jump_if_false_no_ref_is_error() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        runtime.add_true().unwrap();
-        runtime.push_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.push_jump_point(3).unwrap();
+        runtime.get_data_mut().add_true().unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::JumpIfFalse, Some(3)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+
+        runtime.get_data_mut().push_jump_point(3).unwrap();
 
         let result = runtime.jump_if_false(0);
 
@@ -175,129 +182,135 @@ mod tests {
 
     #[test]
     fn jump_if_true_when_true() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let ta = runtime.add_true().unwrap();
-        let i1 = runtime.push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.push_jump_point(i2).unwrap();
+        let ta = runtime.get_data_mut().add_true().unwrap();
+        let i1 = runtime.get_data_mut().push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.set_instruction_cursor(i1).unwrap();
+        runtime.get_data_mut().push_jump_point(i2).unwrap();
 
-        runtime.push_register(ta).unwrap();
+        runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
+
+        runtime.get_data_mut().push_register(ta).unwrap();
 
         runtime.jump_if_true(0).unwrap();
 
-        assert_eq!(runtime.get_register_len(), 0);
-        assert_eq!(runtime.get_data_len(), 3);
-        assert_eq!(runtime.get_instruction_cursor(), i2);
+        assert_eq!(runtime.get_data_mut().get_register_len(), 0);
+        assert_eq!(runtime.get_data_mut().get_data_len(), 3);
+        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i2);
     }
 
     #[test]
     fn jump_if_true_when_unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let ua = runtime.add_unit().unwrap();
-        runtime.push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.push_jump_point(3).unwrap();
-        runtime.set_instruction_cursor(1).unwrap();
-        runtime.push_register(ua).unwrap();
+        let ua = runtime.get_data_mut().add_unit().unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+
+        runtime.get_data_mut().push_jump_point(3).unwrap();
+        runtime.get_data_mut().set_instruction_cursor(1).unwrap();
+        runtime.get_data_mut().push_register(ua).unwrap();
 
         runtime.jump_if_true(0).unwrap();
 
-        assert_eq!(runtime.get_register_len(), 0);
-        assert_eq!(runtime.get_data_len(), 3);
-        assert_eq!(runtime.get_instruction_cursor(), 1);
+        assert_eq!(runtime.get_data_mut().get_register_len(), 0);
+        assert_eq!(runtime.get_data_mut().get_data_len(), 3);
+        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), 1);
     }
 
     #[test]
     fn jump_if_true_when_false() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let fa = runtime.add_false().unwrap();
-        runtime.push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.push_jump_point(3).unwrap();
-        runtime.set_instruction_cursor(1).unwrap();
-        runtime.push_register(fa).unwrap();
+        let fa = runtime.get_data_mut().add_false().unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+
+        runtime.get_data_mut().push_jump_point(3).unwrap();
+        runtime.get_data_mut().set_instruction_cursor(1).unwrap();
+        runtime.get_data_mut().push_register(fa).unwrap();
 
         runtime.jump_if_true(0).unwrap();
 
-        assert_eq!(runtime.get_register_len(), 0);
-        assert_eq!(runtime.get_data_len(), 3);
-        assert_eq!(runtime.get_instruction_cursor(), 1);
+        assert_eq!(runtime.get_data_mut().get_register_len(), 0);
+        assert_eq!(runtime.get_data_mut().get_data_len(), 3);
+        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), 1);
     }
 
     #[test]
     fn jump_if_false_when_true() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let ta = runtime.add_true().unwrap();
-        runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.push_jump_point(3).unwrap();
-        runtime.set_instruction_cursor(1).unwrap();
-        runtime.push_register(ta).unwrap();
+        let ta = runtime.get_data_mut().add_true().unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+
+        runtime.get_data_mut().push_jump_point(3).unwrap();
+        runtime.get_data_mut().set_instruction_cursor(1).unwrap();
+        runtime.get_data_mut().push_register(ta).unwrap();
 
         runtime.jump_if_false(0).unwrap();
 
-        assert_eq!(runtime.get_register_len(), 0);
-        assert_eq!(runtime.get_data_len(), 3);
-        assert_eq!(runtime.get_instruction_cursor(), 1);
+        assert_eq!(runtime.get_data_mut().get_register_len(), 0);
+        assert_eq!(runtime.get_data_mut().get_data_len(), 3);
+        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), 1);
     }
 
     #[test]
     fn jump_if_false_when_unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let ua = runtime.add_unit().unwrap();
-        let i1 = runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.push_jump_point(i2).unwrap();
-        runtime.set_instruction_cursor(i1).unwrap();
-        runtime.push_register(ua).unwrap();
+        let ua = runtime.get_data_mut().add_unit().unwrap();
+        let i1 = runtime.get_data_mut().push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+
+        runtime.get_data_mut().push_jump_point(i2).unwrap();
+        runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
+        runtime.get_data_mut().push_register(ua).unwrap();
 
         runtime.jump_if_false(0).unwrap();
 
-        assert_eq!(runtime.get_register_len(), 0);
-        assert_eq!(runtime.get_data_len(), 3);
-        assert_eq!(runtime.get_instruction_cursor(), i2);
+        assert_eq!(runtime.get_data_mut().get_register_len(), 0);
+        assert_eq!(runtime.get_data_mut().get_data_len(), 3);
+        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i2);
     }
 
     #[test]
     fn jump_if_false_when_false() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let fa = runtime.add_false().unwrap();
-        let i1 = runtime.push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
-        let i2 = runtime.push_instruction(Instruction::Add, None).unwrap();
-        runtime.push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.push_jump_point(i2).unwrap();
-        runtime.set_instruction_cursor(i1).unwrap();
-        runtime.push_register(fa).unwrap();
+        let fa = runtime.get_data_mut().add_false().unwrap();
+        let i1 = runtime.get_data_mut().push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+
+        runtime.get_data_mut().push_jump_point(i2).unwrap();
+        runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
+        runtime.get_data_mut().push_register(fa).unwrap();
 
         runtime.jump_if_false(0).unwrap();
 
-        assert_eq!(runtime.get_register_len(), 0);
-        assert_eq!(runtime.get_data_len(), 3);
-        assert_eq!(runtime.get_instruction_cursor(), i2);
+        assert_eq!(runtime.get_data_mut().get_register_len(), 0);
+        assert_eq!(runtime.get_data_mut().get_data_len(), 3);
+        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i2);
     }
 }

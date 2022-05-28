@@ -48,91 +48,102 @@ fn is_true_value<Data: GarnishLangRuntimeData>(this: &mut Data, addr: Data::Size
 
 #[cfg(test)]
 mod and {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData};
+    use crate::testing_utilites::create_simple_runtime;
 
     #[test]
     fn and_true_booleans() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_true().unwrap();
-        let int2 = runtime.add_true().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_true().unwrap();
+        let int2 = runtime.get_data_mut().add_true().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.and().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
     fn and_false_on_left() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_false().unwrap();
-        let int2 = runtime.add_true().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_false().unwrap();
+        let int2 = runtime.get_data_mut().add_true().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.and().unwrap();
 
+        let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            runtime.get_data_mut().get_data_type(i).unwrap(),
             ExpressionDataType::False
         );
     }
 
     #[test]
     fn and_false_on_right() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_true().unwrap();
-        let int2 = runtime.add_false().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_true().unwrap();
+        let int2 = runtime.get_data_mut().add_false().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.and().unwrap();
 
+        let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            runtime.get_data_mut().get_data_type(i).unwrap(),
             ExpressionDataType::False
         );
     }
 
     #[test]
     fn and_false_booleans() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_false().unwrap();
-        let int2 = runtime.add_false().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_false().unwrap();
+        let int2 = runtime.get_data_mut().add_false().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.and().unwrap();
 
+        let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            runtime.get_data_mut().get_data_type(i).unwrap(),
             ExpressionDataType::False
         );
     }
 
     #[test]
     fn and_false_unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_unit().unwrap();
-        let int2 = runtime.add_unit().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_unit().unwrap();
+        let int2 = runtime.get_data_mut().add_unit().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.and().unwrap();
 
+        let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            runtime.get_data_mut().get_data_type(i).unwrap(),
             ExpressionDataType::False
         );
     }
@@ -140,85 +151,96 @@ mod and {
 
 #[cfg(test)]
 mod or {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData};
+    use crate::testing_utilites::create_simple_runtime;
 
     #[test]
     fn or_true_booleans() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_true().unwrap();
-        let int2 = runtime.add_true().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_true().unwrap();
+        let int2 = runtime.get_data_mut().add_true().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.or().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
     fn or_false_on_left() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_false().unwrap();
-        let int2 = runtime.add_true().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_false().unwrap();
+        let int2 = runtime.get_data_mut().add_true().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.or().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
     fn or_false_on_right() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_true().unwrap();
-        let int2 = runtime.add_false().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_true().unwrap();
+        let int2 = runtime.get_data_mut().add_false().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.or().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
     fn or_false_booleans() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_false().unwrap();
-        let int2 = runtime.add_false().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_false().unwrap();
+        let int2 = runtime.get_data_mut().add_false().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.or().unwrap();
 
+        let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            runtime.get_data_mut().get_data_type(i).unwrap(),
             ExpressionDataType::False
         );
     }
 
     #[test]
     fn or_false_unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_unit().unwrap();
-        let int2 = runtime.add_unit().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_unit().unwrap();
+        let int2 = runtime.get_data_mut().add_unit().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.or().unwrap();
 
+        let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            runtime.get_data_mut().get_data_type(i).unwrap(),
             ExpressionDataType::False
         );
     }
@@ -226,88 +248,99 @@ mod or {
 
 #[cfg(test)]
 mod xor {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData};
+    use crate::testing_utilites::create_simple_runtime;
 
     #[test]
     fn xor_true_booleans() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_true().unwrap();
-        let int2 = runtime.add_true().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_true().unwrap();
+        let int2 = runtime.get_data_mut().add_true().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.xor().unwrap();
 
+        let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            runtime.get_data_mut().get_data_type(i).unwrap(),
             ExpressionDataType::False
         );
     }
 
     #[test]
     fn xor_false_on_left() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_false().unwrap();
-        let int2 = runtime.add_true().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_false().unwrap();
+        let int2 = runtime.get_data_mut().add_true().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.xor().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
     fn xor_false_on_right() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_true().unwrap();
-        let int2 = runtime.add_false().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_true().unwrap();
+        let int2 = runtime.get_data_mut().add_false().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.xor().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
     fn xor_false_booleans() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_false().unwrap();
-        let int2 = runtime.add_false().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_false().unwrap();
+        let int2 = runtime.get_data_mut().add_false().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.xor().unwrap();
 
+        let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            runtime.get_data_mut().get_data_type(i).unwrap(),
             ExpressionDataType::False
         );
     }
 
     #[test]
     fn xor_false_unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_unit().unwrap();
-        let int2 = runtime.add_unit().unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(int2).unwrap();
+        let int1 = runtime.get_data_mut().add_unit().unwrap();
+        let int2 = runtime.get_data_mut().add_unit().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
 
         runtime.xor().unwrap();
 
+        let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            runtime.get_data_mut().get_data_type(i).unwrap(),
             ExpressionDataType::False
         );
     }
@@ -315,63 +348,72 @@ mod xor {
 
 #[cfg(test)]
 mod not {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData};
+    use crate::testing_utilites::create_simple_runtime;
 
     #[test]
     fn not_true_is_false() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_true().unwrap();
 
-        runtime.push_register(int1).unwrap();
+        let int1 = runtime.get_data_mut().add_true().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
 
         runtime.not().unwrap();
 
+        let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            runtime.get_data_mut().get_data_type(i).unwrap(),
             ExpressionDataType::False
         );
     }
 
     #[test]
     fn not_any_is_false() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_number(10.into()).unwrap();
 
-        runtime.push_register(int1).unwrap();
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
 
         runtime.not().unwrap();
 
+        let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            runtime.get_data_mut().get_data_type(i).unwrap(),
             ExpressionDataType::False
         );
     }
 
     #[test]
     fn not_false_is_true() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_false().unwrap();
 
-        runtime.push_register(int1).unwrap();
+        let int1 = runtime.get_data_mut().add_false().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
 
         runtime.not().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
     }
 
     #[test]
     fn not_unit_is_true() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_unit().unwrap();
 
-        runtime.push_register(int1).unwrap();
+        let int1 = runtime.get_data_mut().add_unit().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
 
         runtime.not().unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::True);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
     }
 }

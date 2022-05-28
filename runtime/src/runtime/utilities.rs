@@ -85,7 +85,8 @@ pub fn link_count<Data: GarnishLangRuntimeData>(this: &mut Data, link: Data::Siz
 
 #[cfg(test)]
 mod tests {
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{GarnishLangRuntimeData};
+    use crate::simple::SimpleRuntimeData;
 
     #[test]
     fn add_data() {
@@ -122,8 +123,9 @@ mod tests {
 mod internal {
     use crate::{
         runtime::utilities::{next_ref, next_two_raw_ref},
-        GarnishLangRuntimeData, SimpleRuntimeData,
+        GarnishLangRuntimeData,
     };
+    use crate::simple::SimpleRuntimeData;
 
     #[test]
     fn next_ref_test() {

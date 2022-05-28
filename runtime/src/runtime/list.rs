@@ -1,5 +1,5 @@
+use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, get_range, OrNumberError, RuntimeError, state_error, TypeConstants};
 use crate::runtime::range::range_len;
-use crate::{get_range, state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants};
 
 pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
     if len > this.get_register_len() {
@@ -127,7 +127,7 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                             Ok(None)
                         },
                     )?
-                    .0)
+                        .0)
                 }
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
@@ -168,7 +168,7 @@ pub(crate) fn index_concatenation_for<Data: GarnishLangRuntimeData>(
             Ok(None)
         },
     )?
-    .0)
+        .0)
 }
 
 pub(crate) fn iterate_concatenation_internal<Data: GarnishLangRuntimeData, ListCheckFn, CheckFn>(
@@ -177,9 +177,9 @@ pub(crate) fn iterate_concatenation_internal<Data: GarnishLangRuntimeData, ListC
     mut list_check_fn: ListCheckFn,
     mut check_fn: CheckFn,
 ) -> Result<(Option<Data::Size>, Data::Size), RuntimeError<Data::Error>>
-where
-    ListCheckFn: FnMut(&mut Data, Data::Number, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
-    CheckFn: FnMut(&mut Data, Data::Number, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
+    where
+        ListCheckFn: FnMut(&mut Data, Data::Number, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
+        CheckFn: FnMut(&mut Data, Data::Number, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
 {
     let (current, next) = this.get_concatenation(addr)?;
     let start_register = this.get_register_len();
@@ -288,8 +288,8 @@ pub(crate) fn iterate_link_internal<Data: GarnishLangRuntimeData, Callback>(
     link: Data::Size,
     mut func: Callback,
 ) -> Result<(), RuntimeError<Data::Error>>
-where
-    Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
+    where
+        Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
 {
     let mut current_index = Data::Number::zero();
     // keep track of starting point to any pushed values later
@@ -348,8 +348,8 @@ pub(crate) fn iterate_link_internal_rev<Data: GarnishLangRuntimeData, Callback>(
     link: Data::Size,
     mut func: Callback,
 ) -> Result<(), RuntimeError<Data::Error>>
-where
-    Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
+    where
+        Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
 {
     let mut current_index = Data::Number::zero();
     // keep track of starting point to any pushed values later
@@ -409,7 +409,7 @@ pub(crate) fn index_link<Data: GarnishLangRuntimeData>(
     index: Data::Number,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let mut item: Option<Data::Size> = None;
-    iterate_link_internal(this, link, |_runtime, item_addr, current_index| {
+    iterate_link_internal(this, link, |_data, item_addr, current_index| {
         if current_index == index {
             item = Some(item_addr);
             Ok(true)
@@ -520,7 +520,7 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                             }
                         },
                     )?
-                    .0)
+                        .0)
                 }
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
@@ -532,7 +532,7 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
             |this, _index, addr| Ok(this.get_list_item_with_symbol(addr, sym)?),
             |this, _index, addr| get_value_if_association(this, addr, sym),
         )?
-        .0),
+            .0),
         _ => Err(RuntimeError::unsupported_types()),
     }
 }
@@ -667,40 +667,41 @@ fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
 
 #[cfg(test)]
 mod tests {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleNumber, SimpleRuntimeData, NO_CONTEXT};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, Instruction, NO_CONTEXT, runtime::GarnishRuntime, SimpleNumber};
+    use crate::testing_utilites::create_simple_runtime;
 
     #[test]
     fn make_list() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_number(10.into()).unwrap();
-        let i2 = runtime.add_number(20.into()).unwrap();
-        let i3 = runtime.add_number(20.into()).unwrap();
-        let start = runtime.get_data_len();
+        let i1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i2 = runtime.get_data_mut().add_number(20.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_number(20.into()).unwrap();
+        let start = runtime.get_data_mut().get_data_len();
 
-        runtime.push_register(i1).unwrap();
-        runtime.push_register(i2).unwrap();
-        runtime.push_register(i3).unwrap();
+        runtime.get_data_mut().push_register(i1).unwrap();
+        runtime.get_data_mut().push_register(i2).unwrap();
+        runtime.get_data_mut().push_register(i3).unwrap();
 
-        runtime.push_instruction(Instruction::MakeList, Some(3)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::MakeList, Some(3)).unwrap();
 
         runtime.make_list(3).unwrap();
 
-        assert_eq!(runtime.get_list_len(start).unwrap(), 3);
-        assert_eq!(runtime.get_list_item(start, 0.into()).unwrap(), i1);
-        assert_eq!(runtime.get_list_item(start, 1.into()).unwrap(), i2);
-        assert_eq!(runtime.get_list_item(start, 2.into()).unwrap(), i3);
+        assert_eq!(runtime.get_data_mut().get_list_len(start).unwrap(), 3);
+        assert_eq!(runtime.get_data_mut().get_list_item(start, 0.into()).unwrap(), i1);
+        assert_eq!(runtime.get_data_mut().get_list_item(start, 1.into()).unwrap(), i2);
+        assert_eq!(runtime.get_data_mut().get_list_item(start, 2.into()).unwrap(), i3);
     }
 
     #[test]
     fn make_list_no_refs_is_err() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        runtime.add_number(10.into()).unwrap();
-        runtime.add_number(20.into()).unwrap();
-        runtime.add_number(20.into()).unwrap();
+        runtime.get_data_mut().add_number(10.into()).unwrap();
+        runtime.get_data_mut().add_number(20.into()).unwrap();
+        runtime.get_data_mut().add_number(20.into()).unwrap();
 
-        runtime.push_instruction(Instruction::MakeList, Some(3)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::MakeList, Some(3)).unwrap();
 
         let result = runtime.make_list(3);
 
@@ -709,226 +710,230 @@ mod tests {
 
     #[test]
     fn make_list_with_associations() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_symbol(1).unwrap();
-        let i2 = runtime.add_number(10.into()).unwrap();
-        let i3 = runtime.add_symbol(2).unwrap();
-        let i4 = runtime.add_number(20.into()).unwrap();
-        let i5 = runtime.add_symbol(3).unwrap();
-        let i6 = runtime.add_number(30.into()).unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
+        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_symbol(2).unwrap();
+        let i4 = runtime.get_data_mut().add_number(20.into()).unwrap();
+        let i5 = runtime.get_data_mut().add_symbol(3).unwrap();
+        let i6 = runtime.get_data_mut().add_number(30.into()).unwrap();
         // 6
-        let i7 = runtime.add_pair((i1, i2)).unwrap();
-        let i8 = runtime.add_pair((i3, i4)).unwrap();
-        let i9 = runtime.add_pair((i5, i6)).unwrap();
+        let i7 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
+        let i8 = runtime.get_data_mut().add_pair((i3, i4)).unwrap();
+        let i9 = runtime.get_data_mut().add_pair((i5, i6)).unwrap();
 
-        let start = runtime.get_data_len();
+        let start = runtime.get_data_mut().get_data_len();
 
-        runtime.push_register(i7).unwrap();
-        runtime.push_register(i8).unwrap();
-        runtime.push_register(i9).unwrap();
+        runtime.get_data_mut().push_register(i7).unwrap();
+        runtime.get_data_mut().push_register(i8).unwrap();
+        runtime.get_data_mut().push_register(i9).unwrap();
 
-        runtime.push_instruction(Instruction::MakeList, Some(3)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::MakeList, Some(3)).unwrap();
 
         runtime.make_list(3).unwrap();
 
-        assert_eq!(runtime.get_list_len(start).unwrap(), 3);
-        assert_eq!(runtime.get_list_item(start, 0.into()).unwrap(), i7);
-        assert_eq!(runtime.get_list_item(start, 1.into()).unwrap(), i8);
-        assert_eq!(runtime.get_list_item(start, 2.into()).unwrap(), i9);
+        assert_eq!(runtime.get_data_mut().get_list_len(start).unwrap(), 3);
+        assert_eq!(runtime.get_data_mut().get_list_item(start, 0.into()).unwrap(), i7);
+        assert_eq!(runtime.get_data_mut().get_list_item(start, 1.into()).unwrap(), i8);
+        assert_eq!(runtime.get_data_mut().get_list_item(start, 2.into()).unwrap(), i9);
 
-        assert_eq!(runtime.get_list_associations_len(start).unwrap(), 3);
-        assert_eq!(runtime.get_list_association(start, 0.into()).unwrap(), i7);
-        assert_eq!(runtime.get_list_association(start, 1.into()).unwrap(), i8);
-        assert_eq!(runtime.get_list_association(start, 2.into()).unwrap(), i9);
+        assert_eq!(runtime.get_data_mut().get_list_associations_len(start).unwrap(), 3);
+        assert_eq!(runtime.get_data_mut().get_list_association(start, 0.into()).unwrap(), i7);
+        assert_eq!(runtime.get_data_mut().get_list_association(start, 1.into()).unwrap(), i8);
+        assert_eq!(runtime.get_data_mut().get_list_association(start, 2.into()).unwrap(), i9);
     }
 
     #[test]
     fn apply() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_symbol(1).unwrap();
-        let i2 = runtime.add_number(10.into()).unwrap();
-        let i3 = runtime.add_pair((i1, i2)).unwrap();
-        runtime.start_list(1).unwrap();
-        runtime.add_to_list(i3, true).unwrap();
-        let i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_symbol(1).unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
+        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
+        runtime.get_data_mut().start_list(1).unwrap();
+        runtime.get_data_mut().add_to_list(i3, true).unwrap();
+        let i4 = runtime.get_data_mut().end_list().unwrap();
+        let i5 = runtime.get_data_mut().add_symbol(1).unwrap();
 
-        runtime.push_instruction(Instruction::Access, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(i4).unwrap();
-        runtime.push_register(i5).unwrap();
+        runtime.get_data_mut().push_register(i4).unwrap();
+        runtime.get_data_mut().push_register(i5).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), i2);
+        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), i2);
     }
 
     #[test]
     fn apply_with_integer() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_symbol(1).unwrap();
-        let i2 = runtime.add_number(10.into()).unwrap();
-        let i3 = runtime.add_pair((i1, i2)).unwrap();
-        runtime.start_list(1).unwrap();
-        runtime.add_to_list(i3, true).unwrap();
-        let i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_number(0.into()).unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
+        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
+        runtime.get_data_mut().start_list(1).unwrap();
+        runtime.get_data_mut().add_to_list(i3, true).unwrap();
+        let i4 = runtime.get_data_mut().end_list().unwrap();
+        let i5 = runtime.get_data_mut().add_number(0.into()).unwrap();
 
-        runtime.push_instruction(Instruction::Access, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(i4).unwrap();
-        runtime.push_register(i5).unwrap();
+        runtime.get_data_mut().push_register(i4).unwrap();
+        runtime.get_data_mut().push_register(i5).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), i3);
+        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), i3);
     }
 
     #[test]
     fn apply_char_list_with_integer() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        runtime.start_char_list().unwrap();
-        runtime.add_to_char_list('a').unwrap();
-        runtime.add_to_char_list('b').unwrap();
-        runtime.add_to_char_list('c').unwrap();
-        let d1 = runtime.end_char_list().unwrap();
-        let d2 = runtime.add_number(2.into()).unwrap();
-        let start = runtime.get_data_len();
+        runtime.get_data_mut().start_char_list().unwrap();
+        runtime.get_data_mut().add_to_char_list('a').unwrap();
+        runtime.get_data_mut().add_to_char_list('b').unwrap();
+        runtime.get_data_mut().add_to_char_list('c').unwrap();
+        let d1 = runtime.get_data_mut().end_char_list().unwrap();
+        let d2 = runtime.get_data_mut().add_number(2.into()).unwrap();
+        let start = runtime.get_data_mut().get_data_len();
 
-        runtime.push_instruction(Instruction::Access, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
+        runtime.get_data_mut().push_register(d1).unwrap();
+        runtime.get_data_mut().push_register(d2).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), start);
-        assert_eq!(runtime.get_char(start).unwrap(), 'c');
+        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), start);
+        assert_eq!(runtime.get_data_mut().get_char(start).unwrap(), 'c');
     }
 
     #[test]
     fn apply_byte_list_with_integer() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        runtime.start_byte_list().unwrap();
-        runtime.add_to_byte_list(10).unwrap();
-        runtime.add_to_byte_list(20).unwrap();
-        runtime.add_to_byte_list(30).unwrap();
-        let d1 = runtime.end_byte_list().unwrap();
-        let d2 = runtime.add_number(2.into()).unwrap();
-        let start = runtime.get_data_len();
+        runtime.get_data_mut().start_byte_list().unwrap();
+        runtime.get_data_mut().add_to_byte_list(10).unwrap();
+        runtime.get_data_mut().add_to_byte_list(20).unwrap();
+        runtime.get_data_mut().add_to_byte_list(30).unwrap();
+        let d1 = runtime.get_data_mut().end_byte_list().unwrap();
+        let d2 = runtime.get_data_mut().add_number(2.into()).unwrap();
+        let start = runtime.get_data_mut().get_data_len();
 
-        runtime.push_instruction(Instruction::Access, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
+        runtime.get_data_mut().push_register(d1).unwrap();
+        runtime.get_data_mut().push_register(d2).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_register(0).unwrap(), start);
-        assert_eq!(runtime.get_byte(start).unwrap(), 30.into());
+        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), start);
+        assert_eq!(runtime.get_data_mut().get_byte(start).unwrap(), 30.into());
     }
 
     #[test]
     fn apply_with_integer_out_of_bounds_is_unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_symbol(1).unwrap();
-        let i2 = runtime.add_number(10.into()).unwrap();
-        let i3 = runtime.add_pair((i1, i2)).unwrap();
-        runtime.start_list(1).unwrap();
-        runtime.add_to_list(i3, true).unwrap();
-        let i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_number(10.into()).unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
+        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
+        runtime.get_data_mut().start_list(1).unwrap();
+        runtime.get_data_mut().add_to_list(i3, true).unwrap();
+        let i4 = runtime.get_data_mut().end_list().unwrap();
+        let i5 = runtime.get_data_mut().add_number(10.into()).unwrap();
 
-        runtime.push_instruction(Instruction::Access, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(i4).unwrap();
-        runtime.push_register(i5).unwrap();
+        runtime.get_data_mut().push_register(i4).unwrap();
+        runtime.get_data_mut().push_register(i5).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn apply_with_number_negative_is_unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_symbol(1).unwrap();
-        let i2 = runtime.add_number(10.into()).unwrap();
-        let i3 = runtime.add_pair((i1, i2)).unwrap();
-        runtime.start_list(1).unwrap();
-        runtime.add_to_list(i3, true).unwrap();
-        let i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_number(SimpleNumber::Integer(-1)).unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
+        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
+        runtime.get_data_mut().start_list(1).unwrap();
+        runtime.get_data_mut().add_to_list(i3, true).unwrap();
+        let i4 = runtime.get_data_mut().end_list().unwrap();
+        let i5 = runtime.get_data_mut().add_number(SimpleNumber::Integer(-1)).unwrap();
 
-        runtime.push_instruction(Instruction::Access, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(i4).unwrap();
-        runtime.push_register(i5).unwrap();
+        runtime.get_data_mut().push_register(i4).unwrap();
+        runtime.get_data_mut().push_register(i5).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn apply_non_list_on_left_is_unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_number(10.into()).unwrap();
-        let i2 = runtime.add_symbol(1).unwrap();
+        let i1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i2 = runtime.get_data_mut().add_symbol(1).unwrap();
 
-        runtime.push_instruction(Instruction::Access, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(i1).unwrap();
-        runtime.push_register(i2).unwrap();
+        runtime.get_data_mut().push_register(i1).unwrap();
+        runtime.get_data_mut().push_register(i2).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn apply_non_symbol_on_right_is_unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_symbol(1).unwrap();
-        let i2 = runtime.add_number(10.into()).unwrap();
-        let i3 = runtime.add_pair((i1, i2)).unwrap();
-        runtime.start_list(1).unwrap();
-        runtime.add_to_list(i3, true).unwrap();
-        let i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_expression(10).unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
+        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
+        runtime.get_data_mut().start_list(1).unwrap();
+        runtime.get_data_mut().add_to_list(i3, true).unwrap();
+        let i4 = runtime.get_data_mut().end_list().unwrap();
+        let i5 = runtime.get_data_mut().add_expression(10).unwrap();
 
-        runtime.push_instruction(Instruction::Access, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(i4).unwrap();
-        runtime.push_register(i5).unwrap();
+        runtime.get_data_mut().push_register(i4).unwrap();
+        runtime.get_data_mut().push_register(i5).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn apply_no_refs_is_err() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_symbol(1).unwrap();
-        let i2 = runtime.add_number(10.into()).unwrap();
-        let i3 = runtime.add_pair((i1, i2)).unwrap();
-        runtime.start_list(1).unwrap();
-        runtime.add_to_list(i3, true).unwrap();
-        let _i4 = runtime.end_list().unwrap();
-        let _i5 = runtime.add_symbol(1).unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
+        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
+        runtime.get_data_mut().start_list(1).unwrap();
+        runtime.get_data_mut().add_to_list(i3, true).unwrap();
+        let _i4 = runtime.get_data_mut().end_list().unwrap();
+        let _i5 = runtime.get_data_mut().add_symbol(1).unwrap();
 
-        runtime.push_instruction(Instruction::Access, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
         let result = runtime.apply(NO_CONTEXT);
 
@@ -937,556 +942,720 @@ mod tests {
 
     #[test]
     fn apply_with_non_existent_key() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_symbol(1).unwrap();
-        let i2 = runtime.add_number(10.into()).unwrap();
-        let i3 = runtime.add_pair((i1, i2)).unwrap();
-        runtime.start_list(1).unwrap();
-        runtime.add_to_list(i3, true).unwrap();
-        let i4 = runtime.end_list().unwrap();
-        let i5 = runtime.add_symbol(2).unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
+        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
+        runtime.get_data_mut().start_list(1).unwrap();
+        runtime.get_data_mut().add_to_list(i3, true).unwrap();
+        let i4 = runtime.get_data_mut().end_list().unwrap();
+        let i5 = runtime.get_data_mut().add_symbol(2).unwrap();
 
-        runtime.push_instruction(Instruction::Access, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(i4).unwrap();
-        runtime.push_register(i5).unwrap();
+        runtime.get_data_mut().push_register(i4).unwrap();
+        runtime.get_data_mut().push_register(i5).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 }
 
 #[cfg(test)]
 mod ranges {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction, SimpleRuntimeData, NO_CONTEXT};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, Instruction, NO_CONTEXT, runtime::GarnishRuntime};
+    use crate::testing_utilites::create_simple_runtime;
 
     #[test]
     fn apply_with_integer() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_number(10.into()).unwrap();
-        let i2 = runtime.add_number(20.into()).unwrap();
-        let i3 = runtime.add_range(i1, i2).unwrap();
-        let i4 = runtime.add_number(5.into()).unwrap();
+        let i1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i2 = runtime.get_data_mut().add_number(20.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_range(i1, i2).unwrap();
+        let i4 = runtime.get_data_mut().add_number(5.into()).unwrap();
 
-        runtime.push_instruction(Instruction::Access, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(i3).unwrap();
-        runtime.push_register(i4).unwrap();
+        runtime.get_data_mut().push_register(i3).unwrap();
+        runtime.get_data_mut().push_register(i4).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 15.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            15.into()
+        );
     }
 
     #[test]
     fn apply_with_integer_out_of_range() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.add_number(10.into()).unwrap();
-        let i2 = runtime.add_number(20.into()).unwrap();
-        let i3 = runtime.add_range(i1, i2).unwrap();
-        let i4 = runtime.add_number(30.into()).unwrap();
+        let i1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let i2 = runtime.get_data_mut().add_number(20.into()).unwrap();
+        let i3 = runtime.get_data_mut().add_range(i1, i2).unwrap();
+        let i4 = runtime.get_data_mut().add_number(30.into()).unwrap();
 
-        runtime.push_instruction(Instruction::Access, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
-        runtime.push_register(i3).unwrap();
-        runtime.push_register(i4).unwrap();
+        runtime.get_data_mut().push_register(i3).unwrap();
+        runtime.get_data_mut().push_register(i4).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 }
 
 #[cfg(test)]
 mod slice {
-    use crate::testing_utilites::{add_integer_list, add_links, add_list, add_pair, add_range};
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleDataRuntimeNC, SimpleRuntimeData, NO_CONTEXT};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, NO_CONTEXT, runtime::GarnishRuntime, SimpleDataRuntimeNC};
+    use crate::testing_utilites::{add_integer_list, add_links, add_list, add_pair, add_range, create_simple_runtime};
 
     #[test]
     fn index_slice_of_list() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_integer_list(&mut runtime, 10);
-        let d2 = runtime.add_number(1.into()).unwrap();
-        let d3 = runtime.add_number(4.into()).unwrap();
-        let d4 = runtime.add_range(d2, d3).unwrap();
-        let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_number(2.into()).unwrap();
+        let d1 = add_integer_list(runtime.get_data_mut(), 10);
+        let d2 = runtime.get_data_mut().add_number(1.into()).unwrap();
+        let d3 = runtime.get_data_mut().add_number(4.into()).unwrap();
+        let d4 = runtime.get_data_mut().add_range(d2, d3).unwrap();
+        let d5 = runtime.get_data_mut().add_slice(d1, d4).unwrap();
+        let d6 = runtime.get_data_mut().add_number(2.into()).unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 40.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            40.into()
+        );
     }
 
     #[test]
     fn index_slice_of_char_list() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
         let chars = SimpleDataRuntimeNC::parse_char_list("abcde").unwrap();
 
-        runtime.start_char_list().unwrap();
+        runtime.get_data_mut().start_char_list().unwrap();
         for c in chars {
-            runtime.add_to_char_list(c).unwrap();
+            runtime.get_data_mut().add_to_char_list(c).unwrap();
         }
-        let list = runtime.end_char_list().unwrap();
+        let list = runtime.get_data_mut().end_char_list().unwrap();
 
-        let range = add_range(&mut runtime, 1, 3);
-        let slice = runtime.add_slice(list, range).unwrap();
-        let d6 = runtime.add_number(2.into()).unwrap();
+        let range = add_range(runtime.get_data_mut(), 1, 3);
+        let slice = runtime.get_data_mut().add_slice(list, range).unwrap();
+        let d6 = runtime.get_data_mut().add_number(2.into()).unwrap();
 
-        runtime.push_register(slice).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(slice).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_char(runtime.get_register(0).unwrap()).unwrap(), 'd');
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime.get_data_mut().get_char(i).unwrap(),
+            'd'
+        );
     }
 
     #[test]
     fn index_slice_of_byte_list() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
         let bytes = SimpleDataRuntimeNC::parse_byte_list("abcde").unwrap();
 
-        runtime.start_byte_list().unwrap();
+        runtime.get_data_mut().start_byte_list().unwrap();
         for b in bytes {
-            runtime.add_to_byte_list(b).unwrap();
+            runtime.get_data_mut().add_to_byte_list(b).unwrap();
         }
-        let list = runtime.end_byte_list().unwrap();
+        let list = runtime.get_data_mut().end_byte_list().unwrap();
 
-        let range = add_range(&mut runtime, 1, 3);
-        let slice = runtime.add_slice(list, range).unwrap();
-        let d6 = runtime.add_number(2.into()).unwrap();
+        let range = add_range(runtime.get_data_mut(), 1, 3);
+        let slice = runtime.get_data_mut().add_slice(list, range).unwrap();
+        let d6 = runtime.get_data_mut().add_number(2.into()).unwrap();
 
-        runtime.push_register(slice).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(slice).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_byte(runtime.get_register(0).unwrap()).unwrap(), 'd' as u8);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime.get_data_mut().get_byte(i).unwrap(),
+            'd' as u8
+        );
     }
 
     #[test]
     fn sym_index_slice_of_list() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_list(&mut runtime, 10);
-        let d2 = runtime.add_number(1.into()).unwrap();
-        let d3 = runtime.add_number(4.into()).unwrap();
-        let d4 = runtime.add_range(d2, d3).unwrap();
-        let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val4").unwrap()).unwrap();
+        let d1 = add_list(runtime.get_data_mut(), 10);
+        let d2 = runtime.get_data_mut().add_number(1.into()).unwrap();
+        let d3 = runtime.get_data_mut().add_number(4.into()).unwrap();
+        let d4 = runtime.get_data_mut().add_range(d2, d3).unwrap();
+        let d5 = runtime.get_data_mut().add_slice(d1, d4).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val4").unwrap())
+            .unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 50.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            50.into()
+        );
     }
 
     #[test]
     fn sym_index_slice_of_list_sym_not_in_slice_before() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_list(&mut runtime, 10);
-        let d2 = runtime.add_number(2.into()).unwrap();
-        let d3 = runtime.add_number(4.into()).unwrap();
-        let d4 = runtime.add_range(d2, d3).unwrap();
-        let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol(1).unwrap();
+        let d1 = add_list(runtime.get_data_mut(), 10);
+        let d2 = runtime.get_data_mut().add_number(2.into()).unwrap();
+        let d3 = runtime.get_data_mut().add_number(4.into()).unwrap();
+        let d4 = runtime.get_data_mut().add_range(d2, d3).unwrap();
+        let d5 = runtime.get_data_mut().add_slice(d1, d4).unwrap();
+        let d6 = runtime.get_data_mut().add_symbol(1).unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn sym_index_slice_of_list_sym_not_in_slice() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_list(&mut runtime, 10);
-        let d2 = runtime.add_number(2.into()).unwrap();
-        let d3 = runtime.add_number(4.into()).unwrap();
-        let d4 = runtime.add_range(d2, d3).unwrap();
-        let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol(8).unwrap();
+        let d1 = add_list(runtime.get_data_mut(), 10);
+        let d2 = runtime.get_data_mut().add_number(2.into()).unwrap();
+        let d3 = runtime.get_data_mut().add_number(4.into()).unwrap();
+        let d4 = runtime.get_data_mut().add_range(d2, d3).unwrap();
+        let d5 = runtime.get_data_mut().add_slice(d1, d4).unwrap();
+        let d6 = runtime.get_data_mut().add_symbol(8).unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn index_slice_of_links() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_links(&mut runtime, 10, true);
-        let d2 = runtime.add_number(2.into()).unwrap();
-        let d3 = runtime.add_number(8.into()).unwrap();
-        let d4 = runtime.add_range(d2, d3).unwrap();
-        let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_number(2.into()).unwrap();
+        let d1 = add_links(runtime.get_data_mut(), 10, true);
+        let d2 = runtime.get_data_mut().add_number(2.into()).unwrap();
+        let d3 = runtime.get_data_mut().add_number(8.into()).unwrap();
+        let d4 = runtime.get_data_mut().add_range(d2, d3).unwrap();
+        let d5 = runtime.get_data_mut().add_slice(d1, d4).unwrap();
+        let d6 = runtime.get_data_mut().add_number(2.into()).unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_symbol(left).unwrap(), SimpleDataRuntimeNC::parse_symbol("val4").unwrap());
-        assert_eq!(runtime.get_number(right).unwrap(), 5.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        let (left, right) = runtime.get_data_mut().get_pair(i).unwrap();
+        assert_eq!(
+            runtime.get_data_mut().get_symbol(left).unwrap(),
+            SimpleDataRuntimeNC::parse_symbol("val4").unwrap()
+        );
+        assert_eq!(runtime.get_data_mut().get_number(right).unwrap(), 5.into());
     }
 
     #[test]
     fn sym_index_slice_of_links() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_links(&mut runtime, 10, true);
-        let d2 = runtime.add_number(2.into()).unwrap();
-        let d3 = runtime.add_number(5.into()).unwrap();
-        let d4 = runtime.add_range(d2, d3).unwrap();
-        let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val4").unwrap()).unwrap();
+        let d1 = add_links(runtime.get_data_mut(), 10, true);
+        let d2 = runtime.get_data_mut().add_number(2.into()).unwrap();
+        let d3 = runtime.get_data_mut().add_number(5.into()).unwrap();
+        let d4 = runtime.get_data_mut().add_range(d2, d3).unwrap();
+        let d5 = runtime.get_data_mut().add_slice(d1, d4).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val4").unwrap())
+            .unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 5.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            5.into()
+        );
     }
 
     #[test]
     fn sym_index_slice_of_links_not_found() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_links(&mut runtime, 10, true);
-        let d2 = runtime.add_number(2.into()).unwrap();
-        let d3 = runtime.add_number(5.into()).unwrap();
-        let d4 = runtime.add_range(d2, d3).unwrap();
-        let d5 = runtime.add_slice(d1, d4).unwrap();
-        let d6 = runtime.add_symbol(8).unwrap();
+        let d1 = add_links(runtime.get_data_mut(), 10, true);
+        let d2 = runtime.get_data_mut().add_number(2.into()).unwrap();
+        let d3 = runtime.get_data_mut().add_number(5.into()).unwrap();
+        let d4 = runtime.get_data_mut().add_range(d2, d3).unwrap();
+        let d5 = runtime.get_data_mut().add_slice(d1, d4).unwrap();
+        let d6 = runtime.get_data_mut().add_symbol(8).unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn sym_index_slice_of_links_mixed() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let unit = runtime.add_unit().unwrap();
-        let d1 = runtime.add_number(100.into()).unwrap();
-        let d2 = add_pair(&mut runtime, "pair", 200);
-        let d3 = runtime.add_number(300.into()).unwrap();
-        let d4 = runtime.add_pair((d1, d3)).unwrap();
+        let unit = runtime.get_data_mut().add_unit().unwrap();
+        let d1 = runtime.get_data_mut().add_number(100.into()).unwrap();
+        let d2 = add_pair(runtime.get_data_mut(), "pair", 200);
+        let d3 = runtime.get_data_mut().add_number(300.into()).unwrap();
+        let d4 = runtime.get_data_mut().add_pair((d1, d3)).unwrap();
 
-        let link1 = runtime.add_link(d1, unit, true).unwrap();
-        let link2 = runtime.add_link(d4, link1, true).unwrap();
-        let link3 = runtime.add_link(d2, link2, true).unwrap();
-        let link4 = runtime.add_link(d3, link3, true).unwrap();
-        let link5 = runtime.add_link(d4, link4, true).unwrap();
+        let link1 = runtime.get_data_mut().add_link(d1, unit, true).unwrap();
+        let link2 = runtime.get_data_mut().add_link(d4, link1, true).unwrap();
+        let link3 = runtime.get_data_mut().add_link(d2, link2, true).unwrap();
+        let link4 = runtime.get_data_mut().add_link(d3, link3, true).unwrap();
+        let link5 = runtime.get_data_mut().add_link(d4, link4, true).unwrap();
 
-        let start = runtime.add_number(1.into()).unwrap();
-        let end = runtime.add_number(4.into()).unwrap();
-        let range = runtime.add_range(start, end).unwrap();
-        let slice = runtime.add_slice(link5, range).unwrap();
-        let sym = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("pair").unwrap()).unwrap();
+        let start = runtime.get_data_mut().add_number(1.into()).unwrap();
+        let end = runtime.get_data_mut().add_number(4.into()).unwrap();
+        let range = runtime.get_data_mut().add_range(start, end).unwrap();
+        let slice = runtime.get_data_mut().add_slice(link5, range).unwrap();
+        let sym = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("pair").unwrap())
+            .unwrap();
 
-        runtime.push_register(slice).unwrap();
-        runtime.push_register(sym).unwrap();
+        runtime.get_data_mut().push_register(slice).unwrap();
+        runtime.get_data_mut().push_register(sym).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 200.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            200.into()
+        );
     }
 }
 
 #[cfg(test)]
 mod link {
-    use crate::testing_utilites::add_links;
-    use crate::{GarnishLangRuntimeData, GarnishRuntime, SimpleDataRuntimeNC, SimpleRuntimeData, NO_CONTEXT};
+    use crate::{GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT, SimpleDataRuntimeNC};
+    use crate::testing_utilites::{add_links, create_simple_runtime};
 
     #[test]
     fn index_prepend_link_with_integer() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_links(&mut runtime, 10, false);
-        let d2 = runtime.add_number(3.into()).unwrap();
+        let d1 = add_links(runtime.get_data_mut(), 10, false);
+        let d2 = runtime.get_data_mut().add_number(3.into()).unwrap();
 
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
+        runtime.get_data_mut().push_register(d1).unwrap();
+        runtime.get_data_mut().push_register(d2).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_number(right).unwrap(), 4.into());
-        assert_eq!(runtime.get_symbol(left).unwrap(), SimpleDataRuntimeNC::parse_symbol("val3").unwrap());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        let (left, right) = runtime.get_data_mut().get_pair(i).unwrap();
+        assert_eq!(runtime.get_data_mut().get_number(right).unwrap(), 4.into());
+        assert_eq!(
+            runtime.get_data_mut().get_symbol(left).unwrap(),
+            SimpleDataRuntimeNC::parse_symbol("val3").unwrap()
+        );
     }
 
     #[test]
     fn index_append_link_with_integer() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_links(&mut runtime, 10, true);
-        let d2 = runtime.add_number(3.into()).unwrap();
+        let d1 = add_links(runtime.get_data_mut(), 10, true);
+        let d2 = runtime.get_data_mut().add_number(3.into()).unwrap();
 
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
+        runtime.get_data_mut().push_register(d1).unwrap();
+        runtime.get_data_mut().push_register(d2).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        let (left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_number(right).unwrap(), 4.into());
-        assert_eq!(runtime.get_symbol(left).unwrap(), SimpleDataRuntimeNC::parse_symbol("val3").unwrap());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        let (left, right) = runtime.get_data_mut().get_pair(i).unwrap();
+        assert_eq!(runtime.get_data_mut().get_number(right).unwrap(), 4.into());
+        assert_eq!(
+            runtime.get_data_mut().get_symbol(left).unwrap(),
+            SimpleDataRuntimeNC::parse_symbol("val3").unwrap()
+        );
     }
 
     #[test]
     fn index_prepend_link_with_symbol() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_links(&mut runtime, 10, false);
-        let d2 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap();
+        let d1 = add_links(runtime.get_data_mut(), 10, false);
+        let d2 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap())
+            .unwrap();
 
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
+        runtime.get_data_mut().push_register(d1).unwrap();
+        runtime.get_data_mut().push_register(d2).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 3.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            3.into()
+        );
     }
 
     #[test]
     fn index_append_link_with_symbol() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_links(&mut runtime, 10, true);
-        let d2 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap();
+        let d1 = add_links(runtime.get_data_mut(), 10, true);
+        let d2 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap())
+            .unwrap();
 
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
+        runtime.get_data_mut().push_register(d1).unwrap();
+        runtime.get_data_mut().push_register(d2).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 3.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            3.into()
+        );
     }
 }
 
 #[cfg(test)]
 mod concatenation {
-    use crate::testing_utilites::{add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range};
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, SimpleDataRuntimeNC, SimpleRuntimeData, NO_CONTEXT};
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT, SimpleDataRuntimeNC};
+    use crate::testing_utilites::{add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range, create_simple_runtime};
 
     #[test]
     fn index_concat_of_items_with_number() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_concatenation_with_start(&mut runtime, 10, 20);
-        let d2 = runtime.add_number(3.into()).unwrap();
+        let d1 = add_concatenation_with_start(runtime.get_data_mut(), 10, 20);
+        let d2 = runtime.get_data_mut().add_number(3.into()).unwrap();
 
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
+        runtime.get_data_mut().push_register(d1).unwrap();
+        runtime.get_data_mut().push_register(d2).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        let (_left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_number(right).unwrap(), 23.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        let (_left, right) = runtime.get_data_mut().get_pair(i).unwrap();
+        assert_eq!(runtime.get_data_mut().get_number(right).unwrap(), 23.into());
     }
 
     #[test]
     fn index_concat_of_items_with_symbol() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_concatenation_with_start(&mut runtime, 10, 20);
-        let d2 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap()).unwrap();
+        let d1 = add_concatenation_with_start(runtime.get_data_mut(), 10, 20);
+        let d2 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap())
+            .unwrap();
 
-        runtime.push_register(d1).unwrap();
-        runtime.push_register(d2).unwrap();
+        runtime.get_data_mut().push_register(d1).unwrap();
+        runtime.get_data_mut().push_register(d2).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 23.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            23.into()
+        );
     }
 
     #[test]
     fn index_concat_of_lists_with_number() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_integer_list_with_start(&mut runtime, 10, 20);
-        let d2 = add_integer_list_with_start(&mut runtime, 10, 40);
-        let d3 = runtime.add_concatenation(d1, d2).unwrap();
-        let d4 = runtime.add_number(13.into()).unwrap();
+        let d1 = add_integer_list_with_start(runtime.get_data_mut(), 10, 20);
+        let d2 = add_integer_list_with_start(runtime.get_data_mut(), 10, 40);
+        let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
+        let d4 = runtime.get_data_mut().add_number(13.into()).unwrap();
 
-        runtime.push_register(d3).unwrap();
-        runtime.push_register(d4).unwrap();
+        runtime.get_data_mut().push_register(d3).unwrap();
+        runtime.get_data_mut().push_register(d4).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 43.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            43.into()
+        );
     }
 
     #[test]
     fn index_concat_of_lists_with_symbol() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_list_with_start(&mut runtime, 10, 20);
-        let d2 = add_list_with_start(&mut runtime, 10, 40);
-        let d3 = runtime.add_concatenation(d1, d2).unwrap();
-        let d4 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val43").unwrap()).unwrap();
+        let d1 = add_list_with_start(runtime.get_data_mut(), 10, 20);
+        let d2 = add_list_with_start(runtime.get_data_mut(), 10, 40);
+        let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
+        let d4 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val43").unwrap())
+            .unwrap();
 
-        runtime.push_register(d3).unwrap();
-        runtime.push_register(d4).unwrap();
+        runtime.get_data_mut().push_register(d3).unwrap();
+        runtime.get_data_mut().push_register(d4).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 43.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            43.into()
+        );
     }
 
     #[test]
     fn index_slice_of_concat_of_items_with_number() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_concatenation_with_start(&mut runtime, 10, 20);
-        let d2 = add_range(&mut runtime, 2, 5);
-        let d3 = runtime.add_slice(d1, d2).unwrap();
-        let d4 = runtime.add_number(1.into()).unwrap();
+        let d1 = add_concatenation_with_start(runtime.get_data_mut(), 10, 20);
+        let d2 = add_range(runtime.get_data_mut(), 2, 5);
+        let d3 = runtime.get_data_mut().add_slice(d1, d2).unwrap();
+        let d4 = runtime.get_data_mut().add_number(1.into()).unwrap();
 
-        runtime.push_register(d3).unwrap();
-        runtime.push_register(d4).unwrap();
+        runtime.get_data_mut().push_register(d3).unwrap();
+        runtime.get_data_mut().push_register(d4).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        let (_left, right) = runtime.get_pair(runtime.get_register(0).unwrap()).unwrap();
-        assert_eq!(runtime.get_number(right).unwrap(), 23.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        let (_left, right) = runtime.get_data_mut().get_pair(i).unwrap();
+        assert_eq!(runtime.get_data_mut().get_number(right).unwrap(), 23.into());
     }
 
     #[test]
     fn index_slice_of_concat_of_items_with_symbol() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_concatenation_with_start(&mut runtime, 10, 20);
-        let d2 = add_range(&mut runtime, 2, 5);
-        let d3 = runtime.add_slice(d1, d2).unwrap();
-        let d4 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap()).unwrap();
+        let d1 = add_concatenation_with_start(runtime.get_data_mut(), 10, 20);
+        let d2 = add_range(runtime.get_data_mut(), 2, 5);
+        let d3 = runtime.get_data_mut().add_slice(d1, d2).unwrap();
+        let d4 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap())
+            .unwrap();
 
-        runtime.push_register(d3).unwrap();
-        runtime.push_register(d4).unwrap();
+        runtime.get_data_mut().push_register(d3).unwrap();
+        runtime.get_data_mut().push_register(d4).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 23.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            23.into()
+        );
     }
 
     #[test]
     fn index_slice_of_concat_of_lists_with_number() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_integer_list_with_start(&mut runtime, 10, 20);
-        let d2 = add_integer_list_with_start(&mut runtime, 10, 40);
-        let d3 = runtime.add_concatenation(d1, d2).unwrap();
-        let d4 = add_range(&mut runtime, 12, 15);
-        let d5 = runtime.add_slice(d3, d4).unwrap();
-        let d6 = runtime.add_number(1.into()).unwrap();
+        let d1 = add_integer_list_with_start(runtime.get_data_mut(), 10, 20);
+        let d2 = add_integer_list_with_start(runtime.get_data_mut(), 10, 40);
+        let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
+        let d4 = add_range(runtime.get_data_mut(), 12, 15);
+        let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
+        let d6 = runtime.get_data_mut().add_number(1.into()).unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 43.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            43.into()
+        );
     }
 
     #[test]
     fn index_slice_of_concat_of_lists_with_symbol() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_list_with_start(&mut runtime, 10, 20);
-        let d2 = add_list_with_start(&mut runtime, 10, 40);
-        let d3 = runtime.add_concatenation(d1, d2).unwrap();
-        let d4 = add_range(&mut runtime, 12, 15);
-        let d5 = runtime.add_slice(d3, d4).unwrap();
-        let d6 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val43").unwrap()).unwrap();
+        let d1 = add_list_with_start(runtime.get_data_mut(), 10, 20);
+        let d2 = add_list_with_start(runtime.get_data_mut(), 10, 40);
+        let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
+        let d4 = add_range(runtime.get_data_mut(), 12, 15);
+        let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val43").unwrap())
+            .unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 43.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            43.into()
+        );
     }
 
     #[test]
     fn index_slice_of_concat_of_lists_with_symbol_range_across_lists() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_list_with_start(&mut runtime, 10, 20);
-        let d2 = add_list_with_start(&mut runtime, 10, 40);
-        let d3 = runtime.add_concatenation(d1, d2).unwrap();
-        let d4 = add_range(&mut runtime, 8, 12);
-        let d5 = runtime.add_slice(d3, d4).unwrap();
-        let d6 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val40").unwrap()).unwrap();
+        let d1 = add_list_with_start(runtime.get_data_mut(), 10, 20);
+        let d2 = add_list_with_start(runtime.get_data_mut(), 10, 40);
+        let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
+        let d4 = add_range(runtime.get_data_mut(), 8, 12);
+        let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val40").unwrap())
+            .unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_number(runtime.get_register(0).unwrap()).unwrap(), 40.into());
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(
+            runtime
+                .get_data_mut()
+                .get_number(i)
+                .unwrap(),
+            40.into()
+        );
     }
 
     #[test]
     fn index_slice_of_concat_of_lists_with_symbol_out_of_bounds() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_list_with_start(&mut runtime, 10, 20);
-        let d2 = add_list_with_start(&mut runtime, 10, 40);
-        let d3 = runtime.add_concatenation(d1, d2).unwrap();
-        let d4 = add_range(&mut runtime, 12, 15);
-        let d5 = runtime.add_slice(d3, d4).unwrap();
-        let d6 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap()).unwrap();
+        let d1 = add_list_with_start(runtime.get_data_mut(), 10, 20);
+        let d2 = add_list_with_start(runtime.get_data_mut(), 10, 40);
+        let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
+        let d4 = add_range(runtime.get_data_mut(), 12, 15);
+        let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap())
+            .unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 
     #[test]
     fn index_slice_of_concat_of_lists_with_symbol_out_of_bounds_same_list() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let d1 = add_list_with_start(&mut runtime, 10, 20);
-        let d2 = add_list_with_start(&mut runtime, 10, 40);
-        let d3 = runtime.add_concatenation(d1, d2).unwrap();
-        let d4 = add_range(&mut runtime, 12, 15);
-        let d5 = runtime.add_slice(d3, d4).unwrap();
-        let d6 = runtime.add_symbol(SimpleDataRuntimeNC::parse_symbol("val48").unwrap()).unwrap();
+        let d1 = add_list_with_start(runtime.get_data_mut(), 10, 20);
+        let d2 = add_list_with_start(runtime.get_data_mut(), 10, 40);
+        let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
+        let d4 = add_range(runtime.get_data_mut(), 12, 15);
+        let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val48").unwrap())
+            .unwrap();
 
-        runtime.push_register(d5).unwrap();
-        runtime.push_register(d6).unwrap();
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
 
         runtime.apply(NO_CONTEXT).unwrap();
 
-        assert_eq!(runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(), ExpressionDataType::Unit);
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
     }
 }

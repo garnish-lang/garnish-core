@@ -1,7 +1,5 @@
 #[cfg(test)]
 mod tests {
-    use garnish_lang_compiler::{build_with_data, lex, parse};
-    use garnish_lang_runtime::{GarnishLangRuntimeData, SimpleRuntimeData};
 
     #[test]
     fn basic_addition() {

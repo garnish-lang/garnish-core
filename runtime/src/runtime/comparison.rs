@@ -133,14 +133,16 @@ where
 
 #[cfg(test)]
 mod general {
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData};
+    use crate::testing_utilites::create_simple_runtime;
 
     #[test]
     fn less_than_no_references_is_err() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        runtime.add_number(10.into()).unwrap();
-        runtime.add_number(10.into()).unwrap();
+
+        runtime.get_data_mut().add_number(10.into()).unwrap();
+        runtime.get_data_mut().add_number(10.into()).unwrap();
         let result = runtime.less_than();
 
         assert!(result.is_err());
@@ -148,18 +150,20 @@ mod general {
 
     #[test]
     fn less_than_of_unsupported_comparison_is_false() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.add_number(10.into()).unwrap();
-        let exp1 = runtime.add_expression(10).unwrap();
 
-        runtime.push_register(int1).unwrap();
-        runtime.push_register(exp1).unwrap();
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let exp1 = runtime.get_data_mut().add_expression(10).unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(exp1).unwrap();
 
         runtime.less_than().unwrap();
 
+        let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(
-            runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap(),
+            runtime.get_data_mut().get_data_type(i).unwrap(),
             ExpressionDataType::False
         );
     }
@@ -167,24 +171,27 @@ mod general {
 
 #[cfg(test)]
 mod less_than {
-    use crate::testing_utilites::{add_byte_list, add_char_list, slice_of_byte_list, slice_of_char_list};
-    use crate::{runtime::GarnishRuntime, DataError, ExpressionDataType, GarnishLangRuntimeData, RuntimeError, SimpleRuntimeData};
+    use crate::testing_utilites::{add_byte_list, add_char_list, create_simple_runtime, slice_of_byte_list, slice_of_char_list};
+    use crate::{runtime::GarnishRuntime, DataError, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
+    use crate::runtime_impls::SimpleGarnishRuntime;
+    use crate::simple::SimpleRuntimeData;
 
     fn perform_compare<Setup, Op>(expected: bool, op_name: &str, op: Op, setup: Setup)
     where
-        Op: Fn(&mut SimpleRuntimeData) -> Result<(), RuntimeError<DataError>>,
+        Op: Fn(&mut SimpleGarnishRuntime<SimpleRuntimeData>) -> Result<(), RuntimeError<DataError>>,
         Setup: Copy + Fn(&mut SimpleRuntimeData) -> (usize, usize),
     {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = create_simple_runtime();
 
-        let registers = setup(&mut runtime);
+        let registers = setup(runtime.get_data_mut());
 
-        runtime.push_register(registers.0).unwrap();
-        runtime.push_register(registers.1).unwrap();
+        runtime.get_data_mut().push_register(registers.0).unwrap();
+        runtime.get_data_mut().push_register(registers.1).unwrap();
 
         op(&mut runtime).unwrap();
 
-        let result = runtime.get_data_type(runtime.get_register(0).unwrap()).unwrap();
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        let result = runtime.get_data_mut().get_data_type(i).unwrap();
         let expected_type = match expected {
             true => ExpressionDataType::True,
             false => ExpressionDataType::False,
@@ -197,250 +204,250 @@ mod less_than {
     where
         Setup: Copy + Fn(&mut SimpleRuntimeData) -> (usize, usize),
     {
-        perform_compare(less_than, "less than", SimpleRuntimeData::less_than, setup);
-        perform_compare(less_than_equal, "less than or equal", SimpleRuntimeData::less_than_or_equal, setup);
-        perform_compare(greater_than, "greater than", SimpleRuntimeData::greater_than, setup);
+        perform_compare(less_than, "less than", SimpleGarnishRuntime::less_than, setup);
+        perform_compare(less_than_equal, "less than or equal", SimpleGarnishRuntime::less_than_or_equal, setup);
+        perform_compare(greater_than, "greater than", SimpleGarnishRuntime::greater_than, setup);
         perform_compare(
             greater_than_equal,
             "greater than or equal",
-            SimpleRuntimeData::greater_than_or_equal,
+            SimpleGarnishRuntime::greater_than_or_equal,
             setup,
         );
     }
 
     #[test]
     fn units_are_false() {
-        perform_all_compare(false, false, false, false, |runtime| {
-            (runtime.add_unit().unwrap(), runtime.add_unit().unwrap())
+        perform_all_compare(false, false, false, false, |data| {
+            (data.add_unit().unwrap(), data.add_unit().unwrap())
         });
     }
-
-    #[test]
-    fn trues_are_false() {
-        perform_all_compare(false, false, false, false, |runtime| {
-            (runtime.add_true().unwrap(), runtime.add_true().unwrap())
-        });
+    
+        #[test]
+        fn trues_are_false() {
+            perform_all_compare(false, false, false, false, |data| {
+                (data.add_true().unwrap(), data.add_true().unwrap())
+            });
+        }
+    
+        #[test]
+        fn falses_are_false() {
+            perform_all_compare(false, false, false, false, |data| {
+                (data.add_false().unwrap(), data.add_false().unwrap())
+            });
+        }
+    
+        #[test]
+        fn numbers_less_than() {
+            perform_all_compare(true, true, false, false, |data| {
+                (data.add_number(10.into()).unwrap(), data.add_number(20.into()).unwrap())
+            });
+        }
+    
+        #[test]
+        fn numbers_equal() {
+            perform_all_compare(false, true, false, true, |data| {
+                (data.add_number(20.into()).unwrap(), data.add_number(20.into()).unwrap())
+            });
+        }
+    
+        #[test]
+        fn numbers_greater_than() {
+            perform_all_compare(false, false, true, true, |data| {
+                (data.add_number(20.into()).unwrap(), data.add_number(10.into()).unwrap())
+            });
+        }
+    
+        #[test]
+        fn chars_less_than() {
+            perform_all_compare(true, true, false, false, |data| {
+                (data.add_char('d').unwrap(), data.add_char('f').unwrap())
+            });
+        }
+    
+        #[test]
+        fn chars_equal() {
+            perform_all_compare(false, true, false, true, |data| {
+                (data.add_char('d').unwrap(), data.add_char('d').unwrap())
+            });
+        }
+    
+        #[test]
+        fn chars_greater_than() {
+            perform_all_compare(false, false, true, true, |data| {
+                (data.add_char('d').unwrap(), data.add_char('b').unwrap())
+            });
+        }
+    
+        #[test]
+        fn bytes_less_than() {
+            perform_all_compare(true, true, false, false, |data| {
+                (data.add_byte(10).unwrap(), data.add_byte(20).unwrap())
+            });
+        }
+    
+        #[test]
+        fn bytes_equal() {
+            perform_all_compare(false, true, false, true, |data| {
+                (data.add_byte(20).unwrap(), data.add_byte(20).unwrap())
+            });
+        }
+    
+        #[test]
+        fn bytes_greater_than() {
+            perform_all_compare(false, false, true, true, |data| {
+                (data.add_byte(20).unwrap(), data.add_byte(10).unwrap())
+            });
+        }
+    
+        #[test]
+        fn char_list_less_than() {
+            perform_all_compare(true, true, false, false, |data| {
+                (add_char_list(data, "aaa"), add_char_list(data, "bbb"))
+            });
+        }
+    
+        #[test]
+        fn char_list_less_than_dif_len() {
+            perform_all_compare(true, true, false, false, |data| {
+                (add_char_list(data, "aaa"), add_char_list(data, "aaaaa"))
+            });
+        }
+    
+        #[test]
+        fn char_list_equal() {
+            perform_all_compare(false, true, false, true, |data| {
+                (add_char_list(data, "aaa"), add_char_list(data, "aaa"))
+            });
+        }
+    
+        #[test]
+        fn char_list_greater_than() {
+            perform_all_compare(false, false, true, true, |data| {
+                (add_char_list(data, "bbb"), add_char_list(data, "aaa"))
+            });
+        }
+    
+        #[test]
+        fn char_list_greater_than_dif_len() {
+            perform_all_compare(false, false, true, true, |data| {
+                (add_char_list(data, "aaaaa"), add_char_list(data, "aaa"))
+            });
+        }
+    
+        #[test]
+        fn byte_list_less_than() {
+            perform_all_compare(true, true, false, false, |data| {
+                (add_byte_list(data, "aaa"), add_byte_list(data, "bbb"))
+            });
+        }
+    
+        #[test]
+        fn byte_list_less_than_dif_len() {
+            perform_all_compare(true, true, false, false, |data| {
+                (add_byte_list(data, "aaa"), add_byte_list(data, "aaaaa"))
+            });
+        }
+    
+        #[test]
+        fn byte_list_equal() {
+            perform_all_compare(false, true, false, true, |data| {
+                (add_byte_list(data, "aaa"), add_byte_list(data, "aaa"))
+            });
+        }
+    
+        #[test]
+        fn byte_list_greater_than() {
+            perform_all_compare(false, false, true, true, |data| {
+                (add_byte_list(data, "bbb"), add_byte_list(data, "aaa"))
+            });
+        }
+    
+        #[test]
+        fn byte_list_greater_than_dif_len() {
+            perform_all_compare(false, false, true, true, |data| {
+                (add_byte_list(data, "aaaaa"), add_byte_list(data, "aaa"))
+            });
+        }
+    
+        #[test]
+        fn slice_of_char_list_less_than() {
+            perform_all_compare(true, true, false, false, |data| {
+                (slice_of_char_list(data, "aaaaaa", 0, 3), slice_of_char_list(data, "bbbbbb", 1, 4))
+            });
+        }
+    
+        #[test]
+        fn slice_of_char_list_less_than_dif_len() {
+            perform_all_compare(true, true, false, false, |data| {
+                (
+                    slice_of_char_list(data, "aaaaaa", 1, 4),
+                    slice_of_char_list(data, "aaaaaaaaa", 1, 6),
+                )
+            });
+        }
+    
+        #[test]
+        fn slice_of_char_list_equal() {
+            perform_all_compare(false, true, false, true, |data| {
+                (slice_of_char_list(data, "aaaaaa", 0, 3), slice_of_char_list(data, "aaaaaa", 1, 4))
+            });
+        }
+    
+        #[test]
+        fn slice_of_char_list_greater_than() {
+            perform_all_compare(false, false, true, true, |data| {
+                (slice_of_char_list(data, "bbbbbb", 0, 3), slice_of_char_list(data, "aaaaaa", 1, 4))
+            });
+        }
+    
+        #[test]
+        fn slice_of_char_list_greater_than_dif_len() {
+            perform_all_compare(false, false, true, true, |data| {
+                (
+                    slice_of_char_list(data, "aaaaaaaaa", 2, 7),
+                    slice_of_char_list(data, "aaaaaa", 1, 4),
+                )
+            });
+        }
+    
+        #[test]
+        fn slice_of_byte_list_less_than() {
+            perform_all_compare(true, true, false, false, |data| {
+                (slice_of_byte_list(data, "aaaaaa", 0, 3), slice_of_byte_list(data, "bbbbbb", 1, 4))
+            });
+        }
+    
+        #[test]
+        fn slice_of_byte_list_less_than_dif_len() {
+            perform_all_compare(true, true, false, false, |data| {
+                (
+                    slice_of_byte_list(data, "aaaaaa", 1, 4),
+                    slice_of_byte_list(data, "aaaaaaaaa", 1, 6),
+                )
+            });
+        }
+    
+        #[test]
+        fn slice_of_byte_list_equal() {
+            perform_all_compare(false, true, false, true, |data| {
+                (slice_of_byte_list(data, "aaaaaa", 0, 3), slice_of_byte_list(data, "aaaaaa", 1, 4))
+            });
+        }
+    
+        #[test]
+        fn slice_of_byte_list_greater_than() {
+            perform_all_compare(false, false, true, true, |data| {
+                (slice_of_byte_list(data, "bbbbbb", 0, 3), slice_of_byte_list(data, "aaaaaa", 1, 4))
+            });
+        }
+    
+        #[test]
+        fn slice_of_byte_list_greater_than_dif_len() {
+            perform_all_compare(false, false, true, true, |data| {
+                (
+                    slice_of_byte_list(data, "aaaaaaaaa", 2, 7),
+                    slice_of_byte_list(data, "aaaaaa", 1, 4),
+                )
+            });
+        }
     }
-
-    #[test]
-    fn falses_are_false() {
-        perform_all_compare(false, false, false, false, |runtime| {
-            (runtime.add_false().unwrap(), runtime.add_false().unwrap())
-        });
-    }
-
-    #[test]
-    fn numbers_less_than() {
-        perform_all_compare(true, true, false, false, |runtime| {
-            (runtime.add_number(10.into()).unwrap(), runtime.add_number(20.into()).unwrap())
-        });
-    }
-
-    #[test]
-    fn numbers_equal() {
-        perform_all_compare(false, true, false, true, |runtime| {
-            (runtime.add_number(20.into()).unwrap(), runtime.add_number(20.into()).unwrap())
-        });
-    }
-
-    #[test]
-    fn numbers_greater_than() {
-        perform_all_compare(false, false, true, true, |runtime| {
-            (runtime.add_number(20.into()).unwrap(), runtime.add_number(10.into()).unwrap())
-        });
-    }
-
-    #[test]
-    fn chars_less_than() {
-        perform_all_compare(true, true, false, false, |runtime| {
-            (runtime.add_char('d').unwrap(), runtime.add_char('f').unwrap())
-        });
-    }
-
-    #[test]
-    fn chars_equal() {
-        perform_all_compare(false, true, false, true, |runtime| {
-            (runtime.add_char('d').unwrap(), runtime.add_char('d').unwrap())
-        });
-    }
-
-    #[test]
-    fn chars_greater_than() {
-        perform_all_compare(false, false, true, true, |runtime| {
-            (runtime.add_char('d').unwrap(), runtime.add_char('b').unwrap())
-        });
-    }
-
-    #[test]
-    fn bytes_less_than() {
-        perform_all_compare(true, true, false, false, |runtime| {
-            (runtime.add_byte(10).unwrap(), runtime.add_byte(20).unwrap())
-        });
-    }
-
-    #[test]
-    fn bytes_equal() {
-        perform_all_compare(false, true, false, true, |runtime| {
-            (runtime.add_byte(20).unwrap(), runtime.add_byte(20).unwrap())
-        });
-    }
-
-    #[test]
-    fn bytes_greater_than() {
-        perform_all_compare(false, false, true, true, |runtime| {
-            (runtime.add_byte(20).unwrap(), runtime.add_byte(10).unwrap())
-        });
-    }
-
-    #[test]
-    fn char_list_less_than() {
-        perform_all_compare(true, true, false, false, |runtime| {
-            (add_char_list(runtime, "aaa"), add_char_list(runtime, "bbb"))
-        });
-    }
-
-    #[test]
-    fn char_list_less_than_dif_len() {
-        perform_all_compare(true, true, false, false, |runtime| {
-            (add_char_list(runtime, "aaa"), add_char_list(runtime, "aaaaa"))
-        });
-    }
-
-    #[test]
-    fn char_list_equal() {
-        perform_all_compare(false, true, false, true, |runtime| {
-            (add_char_list(runtime, "aaa"), add_char_list(runtime, "aaa"))
-        });
-    }
-
-    #[test]
-    fn char_list_greater_than() {
-        perform_all_compare(false, false, true, true, |runtime| {
-            (add_char_list(runtime, "bbb"), add_char_list(runtime, "aaa"))
-        });
-    }
-
-    #[test]
-    fn char_list_greater_than_dif_len() {
-        perform_all_compare(false, false, true, true, |runtime| {
-            (add_char_list(runtime, "aaaaa"), add_char_list(runtime, "aaa"))
-        });
-    }
-
-    #[test]
-    fn byte_list_less_than() {
-        perform_all_compare(true, true, false, false, |runtime| {
-            (add_byte_list(runtime, "aaa"), add_byte_list(runtime, "bbb"))
-        });
-    }
-
-    #[test]
-    fn byte_list_less_than_dif_len() {
-        perform_all_compare(true, true, false, false, |runtime| {
-            (add_byte_list(runtime, "aaa"), add_byte_list(runtime, "aaaaa"))
-        });
-    }
-
-    #[test]
-    fn byte_list_equal() {
-        perform_all_compare(false, true, false, true, |runtime| {
-            (add_byte_list(runtime, "aaa"), add_byte_list(runtime, "aaa"))
-        });
-    }
-
-    #[test]
-    fn byte_list_greater_than() {
-        perform_all_compare(false, false, true, true, |runtime| {
-            (add_byte_list(runtime, "bbb"), add_byte_list(runtime, "aaa"))
-        });
-    }
-
-    #[test]
-    fn byte_list_greater_than_dif_len() {
-        perform_all_compare(false, false, true, true, |runtime| {
-            (add_byte_list(runtime, "aaaaa"), add_byte_list(runtime, "aaa"))
-        });
-    }
-
-    #[test]
-    fn slice_of_char_list_less_than() {
-        perform_all_compare(true, true, false, false, |runtime| {
-            (slice_of_char_list(runtime, "aaaaaa", 0, 3), slice_of_char_list(runtime, "bbbbbb", 1, 4))
-        });
-    }
-
-    #[test]
-    fn slice_of_char_list_less_than_dif_len() {
-        perform_all_compare(true, true, false, false, |runtime| {
-            (
-                slice_of_char_list(runtime, "aaaaaa", 1, 4),
-                slice_of_char_list(runtime, "aaaaaaaaa", 1, 6),
-            )
-        });
-    }
-
-    #[test]
-    fn slice_of_char_list_equal() {
-        perform_all_compare(false, true, false, true, |runtime| {
-            (slice_of_char_list(runtime, "aaaaaa", 0, 3), slice_of_char_list(runtime, "aaaaaa", 1, 4))
-        });
-    }
-
-    #[test]
-    fn slice_of_char_list_greater_than() {
-        perform_all_compare(false, false, true, true, |runtime| {
-            (slice_of_char_list(runtime, "bbbbbb", 0, 3), slice_of_char_list(runtime, "aaaaaa", 1, 4))
-        });
-    }
-
-    #[test]
-    fn slice_of_char_list_greater_than_dif_len() {
-        perform_all_compare(false, false, true, true, |runtime| {
-            (
-                slice_of_char_list(runtime, "aaaaaaaaa", 2, 7),
-                slice_of_char_list(runtime, "aaaaaa", 1, 4),
-            )
-        });
-    }
-
-    #[test]
-    fn slice_of_byte_list_less_than() {
-        perform_all_compare(true, true, false, false, |runtime| {
-            (slice_of_byte_list(runtime, "aaaaaa", 0, 3), slice_of_byte_list(runtime, "bbbbbb", 1, 4))
-        });
-    }
-
-    #[test]
-    fn slice_of_byte_list_less_than_dif_len() {
-        perform_all_compare(true, true, false, false, |runtime| {
-            (
-                slice_of_byte_list(runtime, "aaaaaa", 1, 4),
-                slice_of_byte_list(runtime, "aaaaaaaaa", 1, 6),
-            )
-        });
-    }
-
-    #[test]
-    fn slice_of_byte_list_equal() {
-        perform_all_compare(false, true, false, true, |runtime| {
-            (slice_of_byte_list(runtime, "aaaaaa", 0, 3), slice_of_byte_list(runtime, "aaaaaa", 1, 4))
-        });
-    }
-
-    #[test]
-    fn slice_of_byte_list_greater_than() {
-        perform_all_compare(false, false, true, true, |runtime| {
-            (slice_of_byte_list(runtime, "bbbbbb", 0, 3), slice_of_byte_list(runtime, "aaaaaa", 1, 4))
-        });
-    }
-
-    #[test]
-    fn slice_of_byte_list_greater_than_dif_len() {
-        perform_all_compare(false, false, true, true, |runtime| {
-            (
-                slice_of_byte_list(runtime, "aaaaaaaaa", 2, 7),
-                slice_of_byte_list(runtime, "aaaaaa", 1, 4),
-            )
-        });
-    }
-}
