@@ -32,8 +32,8 @@ pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData, Context: Garnis
             let (value, ..) = this.get_link(r)?;
             this.push_register(value)?;
         }
-        ExpressionDataType::Concatentation => {
-            let (left, _) = this.get_concatentation(r)?;
+        ExpressionDataType::Concatenation => {
+            let (left, _) = this.get_concatenation(r)?;
             this.push_register(left)?;
         }
         t => match context {
@@ -81,8 +81,8 @@ pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData, Context: Garni
             let (_, linked, _) = this.get_link(r)?;
             this.push_register(linked)?;
         }
-        ExpressionDataType::Concatentation => {
-            let (_, right) = this.get_concatentation(r)?;
+        ExpressionDataType::Concatenation => {
+            let (_, right) = this.get_concatenation(r)?;
             this.push_register(right)?;
         }
         t => match context {
@@ -153,7 +153,7 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData, Context: Garn
             let addr = this.add_number(count)?;
             this.push_register(addr)?;
         }
-        ExpressionDataType::Concatentation => {
+        ExpressionDataType::Concatenation => {
             let count = concatenation_len(this, r)?;
             let addr = this.add_number(Data::size_to_number(count))?;
             this.push_register(addr)?;

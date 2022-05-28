@@ -101,7 +101,7 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 ExpressionDataType::List => index_list(this, value, adjusted_index),
                 ExpressionDataType::CharList => index_char_list(this, value, adjusted_index),
                 ExpressionDataType::ByteList => index_byte_list(this, value, adjusted_index),
-                ExpressionDataType::Concatentation => {
+                ExpressionDataType::Concatenation => {
                     Ok(iterate_concatenation_internal(
                         this,
                         value,
@@ -132,7 +132,7 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
-        ExpressionDataType::Concatentation => index_concatenation_for(this, value, index),
+        ExpressionDataType::Concatenation => index_concatenation_for(this, value, index),
         ExpressionDataType::Link => index_link(this, value, index),
         _ => Err(RuntimeError::unsupported_types()),
     }
@@ -181,7 +181,7 @@ where
     ListCheckFn: FnMut(&mut Data, Data::Number, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
     CheckFn: FnMut(&mut Data, Data::Number, Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>,
 {
-    let (current, next) = this.get_concatentation(addr)?;
+    let (current, next) = this.get_concatenation(addr)?;
     let start_register = this.get_register_len();
     let mut index = Data::Size::zero();
 
@@ -196,8 +196,8 @@ where
             Some(r) => {
                 let mut temp_result = None;
                 match this.get_data_type(r)? {
-                    ExpressionDataType::Concatentation => {
-                        let (current, next) = this.get_concatentation(r)?;
+                    ExpressionDataType::Concatenation => {
+                        let (current, next) = this.get_concatenation(r)?;
                         this.push_register(next)?;
                         this.push_register(current)?;
                     }
@@ -463,7 +463,7 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
 
                     Ok(item)
                 }
-                ExpressionDataType::Concatentation => {
+                ExpressionDataType::Concatenation => {
                     Ok(iterate_concatenation_internal(
                         this,
                         value,
@@ -526,7 +526,7 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
             }
         }
         ExpressionDataType::Link => sym_access_links_slices(this, Data::Number::zero(), value, sym, Data::Number::max_value()),
-        ExpressionDataType::Concatentation => Ok(iterate_concatenation_internal(
+        ExpressionDataType::Concatenation => Ok(iterate_concatenation_internal(
             this,
             value,
             |this, _index, addr| Ok(this.get_list_item_with_symbol(addr, sym)?),

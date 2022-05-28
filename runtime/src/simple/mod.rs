@@ -316,7 +316,7 @@ where
                     self.add_to_char_list(')')?;
                 }
             }
-            ExpressionDataType::Concatentation => {
+            ExpressionDataType::Concatenation => {
                 todo!()
             }
             ExpressionDataType::List => {

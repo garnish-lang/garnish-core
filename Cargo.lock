@@ -20,6 +20,7 @@ dependencies = [
 name = "garnish_lang_runtime"
 version = "0.0.1-alpha"
 dependencies = [
+ "garnish_traits",
  "log",
 ]
 

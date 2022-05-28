@@ -195,7 +195,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
 
             true
         }
-        (ExpressionDataType::Concatentation, ExpressionDataType::Concatentation) => {
+        (ExpressionDataType::Concatenation, ExpressionDataType::Concatenation) => {
             let len1 = concatenation_len(this, left_addr)?;
             let len2 = concatenation_len(this, right_addr)?;
 
@@ -223,7 +223,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 true
             }
         }
-        (ExpressionDataType::List, ExpressionDataType::Concatentation) => {
+        (ExpressionDataType::List, ExpressionDataType::Concatenation) => {
             let len1 = this.get_list_len(left_addr)?;
             let len2 = concatenation_len(this, right_addr)?;
 
@@ -251,7 +251,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 true
             }
         }
-        (ExpressionDataType::Concatentation, ExpressionDataType::List) => {
+        (ExpressionDataType::Concatenation, ExpressionDataType::List) => {
             let len1 = concatenation_len(this, left_addr)?;
             let len2 = this.get_list_len(right_addr)?;
 

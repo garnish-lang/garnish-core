@@ -25,8 +25,8 @@ mod tests {
 
         runtime.concat().unwrap();
 
-        assert_eq!(runtime.get_data_type(start).unwrap(), ExpressionDataType::Concatentation);
-        assert_eq!(runtime.get_concatentation(start).unwrap(), (i1, i2));
+        assert_eq!(runtime.get_data_type(start).unwrap(), ExpressionDataType::Concatenation);
+        assert_eq!(runtime.get_concatenation(start).unwrap(), (i1, i2));
 
         assert_eq!(runtime.get_register(0).unwrap(), start);
     }

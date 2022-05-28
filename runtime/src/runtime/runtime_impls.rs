@@ -385,7 +385,7 @@ where
     }
 
     //
-    // Concatentation
+    // Concatenation
     //
 
     fn concat(&mut self) -> Result<(), RuntimeError<Data::Error>> {

@@ -151,7 +151,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             this.push_register(addr)?;
         }
         (ExpressionDataType::List, ExpressionDataType::Range)
-        | (ExpressionDataType::Concatentation, ExpressionDataType::Range)
+        | (ExpressionDataType::Concatenation, ExpressionDataType::Range)
         | (ExpressionDataType::CharList, ExpressionDataType::Range)
         | (ExpressionDataType::ByteList, ExpressionDataType::Range)
         | (ExpressionDataType::Link, ExpressionDataType::Range) => {
@@ -167,8 +167,8 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
         | (ExpressionDataType::ByteList, ExpressionDataType::Symbol)
         | (ExpressionDataType::Range, ExpressionDataType::Number)
         | (ExpressionDataType::Range, ExpressionDataType::Symbol)
-        | (ExpressionDataType::Concatentation, ExpressionDataType::Number)
-        | (ExpressionDataType::Concatentation, ExpressionDataType::Symbol)
+        | (ExpressionDataType::Concatenation, ExpressionDataType::Number)
+        | (ExpressionDataType::Concatenation, ExpressionDataType::Symbol)
         | (ExpressionDataType::Link, ExpressionDataType::Number)
         | (ExpressionDataType::Link, ExpressionDataType::Symbol)
         | (ExpressionDataType::Slice, ExpressionDataType::Number)

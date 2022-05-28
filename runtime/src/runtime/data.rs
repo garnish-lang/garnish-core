@@ -56,7 +56,7 @@ pub trait GarnishLangRuntimeData {
     fn get_expression(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_external(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_pair(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
-    fn get_concatentation(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
+    fn get_concatenation(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
     fn get_range(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
     fn get_slice(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
     fn get_link(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size, bool), Self::Error>;

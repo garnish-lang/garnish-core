@@ -168,7 +168,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
                 ExpressionDataType::ByteList => {
                     list_from_byte_list(this, value, start, end.increment().or_num_err()?)?;
                 }
-                ExpressionDataType::Concatentation => {
+                ExpressionDataType::Concatenation => {
                     this.start_list(Data::number_to_size(len).or_num_err()?)?;
 
                     iterate_concatenation_internal(this, value, |this, current_index, addr| {
@@ -252,7 +252,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
                 Ok(this.add_byte(c)?)
             })?;
         }
-        (ExpressionDataType::Concatentation, ExpressionDataType::List) => {
+        (ExpressionDataType::Concatenation, ExpressionDataType::List) => {
             let len = concatenation_len(this, left)?;
             this.start_list(len)?;
             iterate_concatenation_internal(this, left, |this, _, addr| {
@@ -1595,7 +1595,7 @@ mod links {
 }
 
 #[cfg(test)]
-mod concatentation {
+mod Concatenation {
     use crate::testing_utilites::{add_concatenation_with_start, add_list_with_start, add_range};
     use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData, SimpleRuntimeData, NO_CONTEXT, symbol_value};
 
