@@ -3,13 +3,14 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
-use crate::{ExpressionDataType, GarnishLangRuntimeData, Instruction, InstructionData, SimpleData, SimpleDataList};
+use crate::{ExpressionDataType, GarnishLangRuntimeData, SimpleData, SimpleDataList};
 
 pub mod data;
 mod error;
 mod runtime;
 
 pub use error::DataError;
+use garnish_traits::Instruction;
 
 pub fn symbol_value(value: &str) -> u64 {
     let mut h = DefaultHasher::new();
@@ -31,7 +32,7 @@ where
     data: SimpleDataList<T>,
     end_of_constant_data: usize,
     values: Vec<usize>,
-    instructions: Vec<InstructionData>,
+    instructions: Vec<Instruction>,
     instruction_cursor: usize,
     expression_table: Vec<usize>,
     jump_path: Vec<usize>,
@@ -123,9 +124,9 @@ where
         &self.expression_table
     }
 
-    pub fn get_instructions(&self) -> &Vec<InstructionData> {
-        &self.instructions
-    }
+    // pub fn get_instructions(&self) -> &Vec<InstructionData> {
+    //     &self.instructions
+    // }
 
     pub fn get_data(&self) -> &SimpleDataList<T> {
         &self.data

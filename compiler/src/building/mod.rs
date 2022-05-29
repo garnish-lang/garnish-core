@@ -1,6 +1,7 @@
 use crate::error::{implementation_error, implementation_error_with_token, CompilerError};
 use garnish_lang_runtime::*;
 use log::trace;
+use garnish_traits::Instruction;
 
 use crate::parsing::parser::*;
 
@@ -634,9 +635,12 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
 
 #[cfg(test)]
 mod test_utils {
+    use garnish_data::InstructionData;
+    use garnish_data::*;
+    use garnish_data::data::SimpleDataList;
     use crate::error::CompilerError;
     use crate::*;
-    use garnish_lang_runtime::*;
+    use garnish_traits::Instruction;
 
     pub fn assert_instruction_data(
         root: usize,
@@ -699,7 +703,9 @@ mod values {
 
     use super::test_utils::*;
     use crate::*;
-    use garnish_lang_runtime::*;
+    use garnish_data::*;
+    use garnish_data::data::{SimpleDataList, SimpleData};
+    use garnish_traits::Instruction;
 
     #[test]
     fn put_integer() {
@@ -885,7 +891,9 @@ mod operations {
 
     use super::test_utils::*;
     use crate::*;
-    use garnish_lang_runtime::*;
+    use garnish_data::*;
+    use garnish_data::data::{SimpleDataList, SimpleData};
+    use garnish_traits::Instruction;
 
     #[test]
     fn empty_apply_no_left_is_error() {
@@ -1951,7 +1959,9 @@ mod lists {
 
     use super::test_utils::*;
     use crate::*;
-    use garnish_lang_runtime::*;
+    use garnish_data::*;
+    use garnish_data::data::{SimpleDataList, SimpleData};
+    use garnish_traits::Instruction;
 
     #[test]
     fn access() {
@@ -2153,6 +2163,9 @@ mod groups {
     use super::test_utils::*;
     use crate::*;
     use garnish_lang_runtime::*;
+    use garnish_data::*;
+    use garnish_data::data::{SimpleDataList, SimpleData};
+    use garnish_traits::Instruction;
 
     #[test]
     fn single_operation() {
@@ -2182,6 +2195,9 @@ mod side_effects {
     use super::test_utils::*;
     use crate::*;
     use garnish_lang_runtime::*;
+    use garnish_data::*;
+    use garnish_data::data::{SimpleDataList, SimpleData};
+    use garnish_traits::Instruction;
 
     #[test]
     fn single_operation() {
@@ -2328,6 +2344,9 @@ mod nested_expressions {
     use super::test_utils::*;
     use crate::*;
     use garnish_lang_runtime::*;
+    use garnish_data::*;
+    use garnish_data::data::{SimpleDataList, SimpleData};
+    use garnish_traits::Instruction;
 
     #[test]
     fn single_nested() {
@@ -2430,6 +2449,9 @@ mod conditionals {
     use super::test_utils::*;
     use crate::*;
     use garnish_lang_runtime::*;
+    use garnish_data::*;
+    use garnish_data::data::{SimpleDataList, SimpleData};
+    use garnish_traits::Instruction;
 
     #[test]
     fn apply_if_true() {

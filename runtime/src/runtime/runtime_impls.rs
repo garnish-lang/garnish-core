@@ -8,7 +8,6 @@ use crate::runtime::data::{GarnishLangRuntimeData, TypeConstants};
 use crate::runtime::equality::equal;
 use crate::runtime::equality::{not_equal, type_equal};
 use crate::runtime::error::*;
-use crate::runtime::instruction::*;
 use crate::runtime::internals::{access_left_internal, access_length_internal, access_right_internal};
 use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
 use crate::runtime::link::{append_link, prepend_link};
@@ -25,6 +24,7 @@ use crate::runtime::concat::concat;
 use crate::runtime::GarnishLangRuntimeInfo;
 use crate::runtime::GarnishRuntime;
 use log::trace;
+use garnish_traits::Instruction;
 
 pub struct SimpleGarnishRuntime<Data: GarnishLangRuntimeData> {
     data: Data,

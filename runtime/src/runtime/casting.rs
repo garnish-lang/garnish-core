@@ -1,8 +1,9 @@
+use garnish_traits::Instruction;
 use crate::runtime::internals::{concatenation_len, link_len, link_len_size};
 use crate::runtime::list::{is_value_association, iterate_concatenation_internal, iterate_link_internal, iterate_link_internal_rev};
 use crate::{
     get_range, next_ref, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber,
-    Instruction, OrNumberError, RuntimeError, TypeConstants,
+    OrNumberError, RuntimeError, TypeConstants,
 };
 
 pub(crate) fn type_of<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {

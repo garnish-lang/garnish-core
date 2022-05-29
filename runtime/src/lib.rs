@@ -1,7 +1,6 @@
 mod runtime;
 mod simple;
 
-pub use runtime::instruction::*;
 pub use runtime::result::*;
 pub use runtime::types::*;
 pub use runtime::*;

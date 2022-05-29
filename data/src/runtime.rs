@@ -3,13 +3,10 @@ use std::convert::TryInto;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::hash::Hasher;
-use garnish_traits::Instruction;
+use garnish_traits::GarnishLangRuntimeData;
 
-use crate::simple::SimpleRuntimeData;
-use crate::{
-    parse_byte_list, parse_char_list, parse_simple_number, symbol_value, DataError, ExpressionDataType, GarnishLangRuntimeData,
-    SimpleData, SimpleNumber,
-};
+use crate::{symbol_value, DataError, ExpressionDataType, Instruction, SimpleData, SimpleRuntimeData, InstructionData};
+use crate::data::{parse_byte_list, parse_char_list, parse_simple_number, SimpleNumber};
 
 impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
 where
@@ -402,11 +399,12 @@ where
     }
 
     fn push_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> Result<usize, Self::Error> {
-        unimplemented!()
+        self.instructions.push(InstructionData::new(instruction, data));
+        Ok(self.instructions.len() - 1)
     }
 
     fn get_instruction(&self, index: usize) -> Option<(Instruction, Option<usize>)> {
-        unimplemented!()
+        self.instructions.get(index).and_then(|i| Some((i.instruction, i.data)))
     }
 
     fn set_instruction_cursor(&mut self, index: usize) -> Result<(), Self::Error> {
@@ -625,9 +623,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use garnish_traits::Instruction;
-    use crate::simple::SimpleRuntimeData;
-    use crate::{ExpressionDataType, GarnishLangRuntimeData};
+    use garnish_traits::GarnishLangRuntimeData;
+    use crate::{ExpressionDataType, Instruction, SimpleRuntimeData};
 
     #[test]
     fn type_of() {
@@ -647,14 +644,14 @@ mod tests {
     //     assert!(result.is_err());
     // }
 
-    // #[test]
-    // fn add_instruction() {
-    //     let mut runtime = SimpleRuntimeData::new();
-    //
-    //     runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
-    //
-    //     assert_eq!(runtime.get_instructions().len(), 1);
-    // }
+    #[test]
+    fn add_instruction() {
+        let mut runtime = SimpleRuntimeData::new();
+
+        runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
+
+        assert_eq!(runtime.get_instructions().len(), 1);
+    }
 
     #[test]
     fn get_instruction() {

@@ -2,8 +2,8 @@ pub use garnish_traits::Instruction;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub struct InstructionData {
-    pub(crate) instruction: Instruction,
-    pub(crate) data: Option<usize>,
+    pub instruction: Instruction,
+    pub data: Option<usize>,
 }
 
 impl InstructionData {

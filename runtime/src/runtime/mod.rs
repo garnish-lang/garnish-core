@@ -8,7 +8,6 @@ mod context;
 mod data;
 mod equality;
 mod error;
-pub mod instruction;
 mod internals;
 mod jumps;
 mod link;

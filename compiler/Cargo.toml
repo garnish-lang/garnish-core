@@ -8,3 +8,5 @@ edition = "2018"
 [dependencies]
 log = "0.4"
 garnish_lang_runtime = { path = "../runtime"}
+garnish_traits = { path = "../traits" }
+garnish_data = { path = "../data" }
