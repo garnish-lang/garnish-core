@@ -16,4 +16,5 @@ readme = "../README.md"
 log = "0.4"
 garnish_lang_runtime = { path = "../runtime"}
 garnish_lang_compiler = { path = "../compiler"}
+garnish_data = { path = "../data" }
 garnish_traits = { path = "../traits" }

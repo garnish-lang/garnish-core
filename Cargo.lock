@@ -37,6 +37,7 @@ dependencies = [
 name = "garnish_lang_tests"
 version = "0.0.1-alpha"
 dependencies = [
+ "garnish_data",
  "garnish_lang_compiler",
  "garnish_lang_runtime",
  "garnish_traits",

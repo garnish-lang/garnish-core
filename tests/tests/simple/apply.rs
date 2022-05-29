@@ -40,8 +40,8 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
+    use garnish_data::{DataError, SimpleDataRuntimeNC, SimpleRuntimeData, symbol_value};
     use crate::simple::testing_utilities::{create_simple_runtime, DeferOpTestContext, DEFERRED_VALUE};
-    use garnish_lang_runtime::{symbol_value, DataError, SimpleDataRuntimeNC, SimpleRuntimeData};
     use garnish_traits::{
         EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishRuntime, Instruction, RuntimeError,
     };

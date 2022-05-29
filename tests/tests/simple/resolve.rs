@@ -22,7 +22,7 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_runtime::{DataError, SimpleRuntimeData};
+    use garnish_data::{DataError, SimpleRuntimeData};
 
     use crate::simple::testing_utilities::create_simple_runtime;
     use garnish_traits::{

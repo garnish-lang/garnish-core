@@ -185,8 +185,7 @@ mod simple {
 
 #[cfg(test)]
 mod primitive {
-    use garnish_lang_runtime::SimpleDataRuntimeNC;
-
+    use garnish_data::SimpleDataRuntimeNC;
     use crate::simple::testing_utilities::{add_char_list, create_simple_runtime};
     use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
@@ -349,7 +348,7 @@ mod primitive {
 
 #[cfg(test)]
 mod lists {
-    use garnish_lang_runtime::{symbol_value, SimpleDataRuntimeNC};
+    use garnish_data::{SimpleDataRuntimeNC, symbol_value};
 
     use crate::simple::testing_utilities::{
         add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range, create_simple_runtime,
@@ -591,7 +590,8 @@ mod lists {
 
 #[cfg(test)]
 mod links {
-    use garnish_lang_runtime::{iterate_link, link_len, link_len_size, symbol_value};
+    use garnish_data::symbol_value;
+    use garnish_lang_runtime::{iterate_link, link_len, link_len_size};
 
     use crate::simple::testing_utilities::{
         add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range, create_simple_runtime,
@@ -1071,7 +1071,7 @@ mod links {
 
 #[cfg(test)]
 mod concatenation {
-    use garnish_lang_runtime::symbol_value;
+    use garnish_data::symbol_value;
 
     use crate::simple::testing_utilities::{add_concatenation_with_start, add_list_with_start, add_range, create_simple_runtime};
     use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
@@ -1205,7 +1205,7 @@ mod concatenation {
 
 #[cfg(test)]
 mod deferred {
-    use garnish_lang_runtime::SimpleDataRuntimeNC;
+    use garnish_data::SimpleDataRuntimeNC;
 
     use crate::simple::testing_utilities::create_simple_runtime;
     use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};

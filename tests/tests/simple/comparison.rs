@@ -36,7 +36,7 @@ mod general {
 mod less_than {
     use crate::simple::testing_utilities::{add_byte_list, add_char_list, create_simple_runtime, slice_of_byte_list, slice_of_char_list};
     use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
-    use garnish_lang_runtime::{DataError, SimpleRuntimeData};
+    use garnish_data::{DataError, SimpleRuntimeData};
     use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, RuntimeError};
 
     fn perform_compare<Setup, Op>(expected: bool, op_name: &str, op: Op, setup: Setup)

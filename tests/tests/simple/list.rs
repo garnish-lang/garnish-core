@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_runtime::SimpleNumber;
+    use garnish_data::data::SimpleNumber;
     use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction, NO_CONTEXT};
 
     #[test]
@@ -348,7 +348,7 @@ mod ranges {
 #[cfg(test)]
 mod slice {
     use crate::simple::testing_utilities::{add_integer_list, add_links, add_list, add_pair, add_range, create_simple_runtime};
-    use garnish_lang_runtime::SimpleDataRuntimeNC;
+    use garnish_data::SimpleDataRuntimeNC;
     use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
@@ -590,7 +590,7 @@ mod slice {
 #[cfg(test)]
 mod link {
     use crate::simple::testing_utilities::{add_links, create_simple_runtime};
-    use garnish_lang_runtime::SimpleDataRuntimeNC;
+    use garnish_data::SimpleDataRuntimeNC;
     use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
@@ -679,7 +679,7 @@ mod concatenation {
     use crate::simple::testing_utilities::{
         add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range, create_simple_runtime,
     };
-    use garnish_lang_runtime::SimpleDataRuntimeNC;
+    use garnish_data::SimpleDataRuntimeNC;
     use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
