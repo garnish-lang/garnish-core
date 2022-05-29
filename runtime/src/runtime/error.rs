@@ -6,12 +6,6 @@ pub trait OrNumberError<T, Source: 'static + std::error::Error> {
     fn or_num_err(self) -> Result<T, RuntimeError<Source>>;
 }
 
-// impl<Num: GarnishNumber, Source: 'static + std::error::Error> OrNumberError<Num, Source> for Option<Num> {
-//     fn or_num_err(self) -> Result<Num, RuntimeError<Source>> {
-//         self.ok_or(RuntimeError::new("Number error"))
-//     }
-// }
-
 impl<T, Source: 'static + std::error::Error> OrNumberError<T, Source> for Option<T> {
     fn or_num_err(self) -> Result<T, RuntimeError<Source>> {
         self.ok_or(RuntimeError::new("Number error"))
