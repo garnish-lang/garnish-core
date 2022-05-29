@@ -180,11 +180,11 @@ pub(crate) fn concatenation_len<Data: GarnishLangRuntimeData>(this: &mut Data, a
     Ok(iterate_concatenation_internal(this, addr, |_, _, _| Ok(None), |_, _, _| Ok(None))?.1)
 }
 
-pub(crate) fn link_len<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Number, RuntimeError<Data::Error>> {
+pub fn link_len<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Number, RuntimeError<Data::Error>> {
     Ok(Data::size_to_number(link_len_size(this, addr)?))
 }
 
-pub(crate) fn link_len_size<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Size, RuntimeError<Data::Error>> {
+pub fn link_len_size<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Size, RuntimeError<Data::Error>> {
     let (value, mut linked, _) = this.get_link(addr)?;
     let mut count = match this.get_data_type(value)? {
         ExpressionDataType::Link => state_error(format!("Linked found as value of link at addr {:?}", value))?,

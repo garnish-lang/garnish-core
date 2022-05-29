@@ -30,6 +30,7 @@ version = "0.0.1-alpha"
 dependencies = [
  "garnish_lang_compiler",
  "garnish_lang_runtime",
+ "garnish_traits",
  "log",
 ]
 

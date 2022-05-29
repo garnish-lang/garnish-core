@@ -1,52 +1,7 @@
-use crate::runtime::arithmetic::{perform_op, perform_unary_op};
-use crate::{GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, Instruction, RuntimeError};
-
-pub fn bitwise_not<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut Context>,
-) -> Result<(), RuntimeError<Data::Error>> {
-    perform_unary_op(this, Instruction::BitwiseNot, Data::Number::bitwise_not, context)
-}
-
-pub fn bitwise_and<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut Context>,
-) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, Instruction::BitwiseAnd, Data::Number::bitwise_and, context)
-}
-
-pub fn bitwise_or<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut Context>,
-) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, Instruction::BitwiseOr, Data::Number::bitwise_or, context)
-}
-
-pub fn bitwise_xor<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut Context>,
-) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, Instruction::BitwiseXor, Data::Number::bitwise_xor, context)
-}
-
-pub fn bitwise_left_shift<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut Context>,
-) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, Instruction::BitwiseShiftLeft, Data::Number::bitwise_shift_left, context)
-}
-
-pub fn bitwise_right_shift<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut Context>,
-) -> Result<(), RuntimeError<Data::Error>> {
-    perform_op(this, Instruction::BitwiseShiftRight, Data::Number::bitwise_shift_right, context)
-}
-
 #[cfg(test)]
 mod deferring {
-    use crate::runtime::GarnishRuntime;
-    use crate::testing_utilites::{deferred_op, deferred_unary_op};
+    use crate::simple::testing_utilities::{deferred_op, deferred_unary_op};
+    use garnish_traits::GarnishRuntime;
 
     #[test]
     fn bitwise_not() {
@@ -93,9 +48,8 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
-    use crate::runtime::context::NO_CONTEXT;
-    use crate::testing_utilites::create_simple_runtime;
-    use crate::{runtime::GarnishRuntime, GarnishLangRuntimeData};
+    use crate::simple::testing_utilities::create_simple_runtime;
+    use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn bitwise_not() {

@@ -4,11 +4,11 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::hash::Hasher;
 
+use crate::simple::SimpleRuntimeData;
 use crate::{
     parse_byte_list, parse_char_list, parse_simple_number, symbol_value, DataError, ExpressionDataType, GarnishLangRuntimeData, Instruction,
     InstructionData, SimpleData, SimpleNumber,
 };
-use crate::simple::SimpleRuntimeData;
 
 impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
 where
@@ -625,8 +625,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, Instruction};
     use crate::simple::SimpleRuntimeData;
+    use crate::{ExpressionDataType, GarnishLangRuntimeData, Instruction};
 
     #[test]
     fn type_of() {

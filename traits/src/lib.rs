@@ -85,8 +85,8 @@ pub enum ExpressionDataType {
 }
 
 pub trait GarnishLangRuntimeContext<Data>
-    where
-        Data: GarnishLangRuntimeData,
+where
+    Data: GarnishLangRuntimeData,
 {
     fn resolve(&mut self, _symbol: Data::Symbol, _runtime: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
         Ok(false)
@@ -134,7 +134,6 @@ impl GarnishLangRuntimeInfo {
         self.state
     }
 }
-
 
 //
 // use crate::{Instruction};

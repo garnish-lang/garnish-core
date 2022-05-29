@@ -3,10 +3,7 @@ use std::fmt::Debug;
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
 
-use crate::{
-    ExpressionDataType, GarnishLangRuntimeData, Instruction,
-    InstructionData, SimpleData, SimpleDataList,
-};
+use crate::{ExpressionDataType, GarnishLangRuntimeData, Instruction, InstructionData, SimpleData, SimpleDataList};
 
 pub mod data;
 mod error;
@@ -383,8 +380,8 @@ where
 
 #[cfg(test)]
 mod data_storage {
-    use crate::{GarnishLangRuntimeData};
     use crate::simple::SimpleRuntimeData;
+    use crate::GarnishLangRuntimeData;
 
     #[test]
     fn unit() {
@@ -518,8 +515,8 @@ mod to_symbol {
     use std::hash::Hash;
     use std::hash::Hasher;
 
-    use crate::{GarnishLangRuntimeData};
     use crate::simple::SimpleRuntimeData;
+    use crate::GarnishLangRuntimeData;
 
     #[test]
     fn unit() {
@@ -540,8 +537,8 @@ mod to_symbol {
 
 #[cfg(test)]
 mod to_byte_list {
-    use crate::{GarnishLangRuntimeData};
     use crate::simple::SimpleRuntimeData;
+    use crate::GarnishLangRuntimeData;
 
     #[test]
     fn unit() {

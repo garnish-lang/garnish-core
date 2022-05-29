@@ -1,55 +1,8 @@
-use crate::{
-    push_unit, runtime::list::get_access_addr, ErrorType, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError,
-};
-
-pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
-    this: &mut Data,
-    data: Data::Size,
-    context: Option<&mut T>,
-) -> Result<(), RuntimeError<Data::Error>> {
-    // check input
-    match this.get_current_value() {
-        None => (),
-        Some(list_ref) => match get_access_addr(this, data, list_ref) {
-            Err(e) => {
-                // ignore unsupported op type, will be handled by below resolve
-                if e.get_type() != ErrorType::UnsupportedOpTypes {
-                    Err(e)?;
-                }
-            }
-            Ok(v) => match v {
-                None => (),
-                Some(i) => {
-                    this.push_register(i)?;
-                    return Ok(());
-                }
-            },
-        },
-    }
-
-    // check context
-    match context {
-        None => (),
-        Some(c) => match this.get_data_type(data)? {
-            ExpressionDataType::Symbol => {
-                match c.resolve(this.get_symbol(data)?, this)? {
-                    true => return Ok(()), // context resovled end look up
-                    false => (),           // not resolved fall through
-                }
-            }
-            _ => (), // not a symbol push unit below
-        },
-    }
-
-    // default to unit
-    push_unit(this)
-}
-
 #[cfg(test)]
 mod deferring {
-    use crate::runtime::GarnishRuntime;
-    use crate::testing_utilites::{create_simple_runtime, DeferOpTestContext};
-    use crate::{ExpressionDataType, GarnishLangRuntimeData};
+
+    use crate::simple::testing_utilities::{create_simple_runtime, DeferOpTestContext};
+    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
 
     #[test]
     fn resolve() {
@@ -69,16 +22,11 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
-    use crate::runtime::context::EMPTY_CONTEXT;
-    use crate::simple::{DataError, SimpleRuntimeData};
-    use crate::testing_utilites::create_simple_runtime;
-    use crate::{
-        runtime::{
-            context::{EmptyContext, GarnishLangRuntimeContext},
-            utilities::push_number,
-            GarnishRuntime,
-        },
-        ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError,
+    use garnish_lang_runtime::{DataError, SimpleRuntimeData};
+
+    use crate::simple::testing_utilities::create_simple_runtime;
+    use garnish_traits::{
+        EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishRuntime, Instruction, RuntimeError, EMPTY_CONTEXT,
     };
 
     #[allow(const_item_mutation)]
@@ -150,7 +98,8 @@ mod tests {
             fn resolve(&mut self, sym_val: u64, runtime: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
                 assert_eq!(sym_val, 1);
 
-                push_number(runtime, 100.into())?;
+                let addr = runtime.add_number(100.into())?;
+                runtime.push_register(addr)?;
                 Ok(true)
             }
 

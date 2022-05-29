@@ -1,8 +1,4 @@
-
-
-
-
-pub use garnish_traits::{TypeConstants, GarnishLangRuntimeData, GarnishNumber};
+pub use garnish_traits::{GarnishLangRuntimeData, GarnishNumber, TypeConstants};
 
 // pub trait TypeConstants {
 //     fn zero() -> Self;

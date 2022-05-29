@@ -21,13 +21,13 @@ use crate::runtime::resolve::resolve;
 use crate::runtime::result::*;
 use crate::runtime::sideeffect::*;
 
+use crate::runtime::concat::concat;
 use crate::runtime::GarnishLangRuntimeInfo;
 use crate::runtime::GarnishRuntime;
 use log::trace;
-use crate::runtime::concat::concat;
 
 pub struct SimpleGarnishRuntime<Data: GarnishLangRuntimeData> {
-    data: Data
+    data: Data,
 }
 
 impl<Data: GarnishLangRuntimeData> SimpleGarnishRuntime<Data> {
@@ -453,12 +453,12 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::simple::SimpleRuntimeData;
+    use crate::testing_utilites::create_simple_runtime;
     use crate::{
         runtime::{context::EmptyContext, GarnishRuntime},
         ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeState, Instruction,
     };
-    use crate::simple::SimpleRuntimeData;
-    use crate::testing_utilites::create_simple_runtime;
 
     #[test]
     fn create_data() {
@@ -467,8 +467,7 @@ mod tests {
 
     #[test]
     fn add_jump_point() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         runtime.get_data_mut().push_instruction(Instruction::EndExpression, None).unwrap();
         runtime.get_data_mut().push_jump_point(1).unwrap();
@@ -479,8 +478,7 @@ mod tests {
 
     #[test]
     fn add_input_reference() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         runtime.get_data_mut().add_number(10.into()).unwrap();
         runtime.get_data_mut().push_value_stack(0).unwrap();
@@ -490,8 +488,7 @@ mod tests {
 
     #[test]
     fn add_input_reference_with_data_addr() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         let _i1 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
@@ -503,8 +500,7 @@ mod tests {
 
     #[test]
     fn execute_current_instruction() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         let d1 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let d2 = runtime.get_data_mut().add_number(20.into()).unwrap();
@@ -524,8 +520,7 @@ mod tests {
 
     #[test]
     fn execute_current_instruction_with_cursor_past_len() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         let i1 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i2 = runtime.get_data_mut().add_number(20.into()).unwrap();
@@ -545,8 +540,7 @@ mod tests {
 
     #[test]
     fn execute_current_instruction_apply() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let exp1 = runtime.get_data_mut().add_expression(0).unwrap();
@@ -580,8 +574,7 @@ mod tests {
 
     #[test]
     fn execute_current_instruction_empty_apply() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let exp1 = runtime.get_data_mut().add_expression(0).unwrap();
@@ -613,8 +606,7 @@ mod tests {
 
     #[test]
     fn execute_current_instruction_reapply_if_true() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         let true1 = runtime.get_data_mut().add_true().unwrap();
         let _exp1 = runtime.get_data_mut().add_expression(0).unwrap();
@@ -654,8 +646,7 @@ mod tests {
 
     #[test]
     fn execute_current_instruction_jump_if_true_when_true() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         let ta = runtime.get_data_mut().add_true().unwrap();
         let i1 = runtime.get_data_mut().push_instruction(Instruction::JumpIfTrue, Some(0)).unwrap();
@@ -680,8 +671,7 @@ mod tests {
 
     #[test]
     fn execute_current_instruction_jump_if_false_when_unit() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         let ua = runtime.get_data_mut().add_unit().unwrap();
         let i1 = runtime.get_data_mut().push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
@@ -706,8 +696,7 @@ mod tests {
 
     #[test]
     fn execute_current_instruction_jump_if_false_when_false() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         let fa = runtime.get_data_mut().add_false().unwrap();
         let i1 = runtime.get_data_mut().push_instruction(Instruction::JumpIfFalse, Some(0)).unwrap();
@@ -732,8 +721,7 @@ mod tests {
 
     #[test]
     fn execute_current_instruction_end_expression() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
@@ -748,14 +736,16 @@ mod tests {
         runtime.execute_current_instruction::<EmptyContext>(None).unwrap();
 
         let i = runtime.get_data_mut().get_current_value().unwrap();
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), runtime.get_data_mut().get_instruction_len());
+        assert_eq!(
+            runtime.get_data_mut().get_instruction_cursor(),
+            runtime.get_data_mut().get_instruction_len()
+        );
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 10.into());
     }
 
     #[test]
     fn execute_current_instructionend_expression_with_path() {
-                let mut runtime = create_simple_runtime();
-
+        let mut runtime = create_simple_runtime();
 
         runtime.get_data_mut().add_number(10.into()).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();

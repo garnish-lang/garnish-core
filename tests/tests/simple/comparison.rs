@@ -1,140 +1,8 @@
-use crate::{
-    get_range, next_two_raw_ref, push_boolean, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError,
-    TypeConstants,
-};
-use std::cmp::Ordering;
-
-pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Ordering::Greater).and_then(|result| match result {
-        Some(result) => push_boolean(this, result.is_lt()),
-        None => push_unit(this),
-    })
-}
-
-pub fn less_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Ordering::Greater).and_then(|result| match result {
-        Some(result) => push_boolean(this, result.is_le()),
-        None => push_unit(this),
-    })
-}
-
-pub fn greater_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Ordering::Less).and_then(|result| match result {
-        Some(result) => push_boolean(this, result.is_gt()),
-        None => push_unit(this),
-    })
-}
-
-pub fn greater_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    perform_comparison(this, Ordering::Less).and_then(|result| match result {
-        Some(result) => push_boolean(this, result.is_ge()),
-        None => push_unit(this),
-    })
-}
-
-fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data, false_ord: Ordering) -> Result<Option<Ordering>, RuntimeError<Data::Error>> {
-    let (right, left) = next_two_raw_ref(this)?;
-
-    let result = match (this.get_data_type(left)?, this.get_data_type(right)?) {
-        (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_number(left)?.partial_cmp(&this.get_number(right)?),
-        (ExpressionDataType::Char, ExpressionDataType::Char) => this.get_char(left)?.partial_cmp(&this.get_char(right)?),
-        (ExpressionDataType::Byte, ExpressionDataType::Byte) => this.get_byte(left)?.partial_cmp(&this.get_byte(right)?),
-        (ExpressionDataType::CharList, ExpressionDataType::CharList) => cmp_list(
-            this,
-            left,
-            right,
-            Data::Number::zero(),
-            Data::Number::zero(),
-            Data::get_char_list_item,
-            Data::get_char_list_len,
-        )?,
-        (ExpressionDataType::ByteList, ExpressionDataType::ByteList) => cmp_list(
-            this,
-            left,
-            right,
-            Data::Number::zero(),
-            Data::Number::zero(),
-            Data::get_byte_list_item,
-            Data::get_byte_list_len,
-        )?,
-        (ExpressionDataType::Slice, ExpressionDataType::Slice) => {
-            let (left_value, left_range) = this.get_slice(left)?;
-            let (right_value, right_range) = this.get_slice(right)?;
-
-            match (this.get_data_type(left_value)?, this.get_data_type(right_value)?) {
-                (ExpressionDataType::ByteList, ExpressionDataType::ByteList) => {
-                    let (start1, ..) = get_range(this, left_range)?;
-                    let (start2, ..) = get_range(this, right_range)?;
-
-                    cmp_list(
-                        this,
-                        left_value,
-                        right_value,
-                        start1,
-                        start2,
-                        Data::get_byte_list_item,
-                        Data::get_byte_list_len,
-                    )?
-                }
-                (ExpressionDataType::CharList, ExpressionDataType::CharList) => {
-                    let (start1, ..) = get_range(this, left_range)?;
-                    let (start2, ..) = get_range(this, right_range)?;
-
-                    cmp_list(
-                        this,
-                        left_value,
-                        right_value,
-                        start1,
-                        start2,
-                        Data::get_char_list_item,
-                        Data::get_char_list_len,
-                    )?
-                }
-                _ => return Ok(Some(false_ord)),
-            }
-        }
-        _ => return Ok(Some(false_ord)),
-    };
-
-    Ok(result)
-}
-
-fn cmp_list<Data: GarnishLangRuntimeData, T: PartialOrd, GetFunc, LenFunc>(
-    this: &mut Data,
-    left: Data::Size,
-    right: Data::Size,
-    left_start: Data::Number,
-    right_start: Data::Number,
-    get_func: GetFunc,
-    len_func: LenFunc,
-) -> Result<Option<Ordering>, RuntimeError<Data::Error>>
-where
-    GetFunc: Fn(&Data, Data::Size, Data::Number) -> Result<T, Data::Error>,
-    LenFunc: Fn(&Data, Data::Size) -> Result<Data::Size, Data::Error>,
-{
-    let (len1, len2) = (Data::size_to_number(len_func(this, left)?), Data::size_to_number(len_func(this, right)?));
-
-    let mut left_index = left_start;
-    let mut right_index = right_start;
-
-    while left_index < len1 && right_index < len2 {
-        match get_func(this, left, left_index)?.partial_cmp(&get_func(this, right, right_index)?) {
-            Some(Ordering::Equal) => (),
-            Some(non_eq) => return Ok(Some(non_eq)),
-            None => (), // deferr
-        }
-
-        left_index = left_index.increment().or_num_err()?;
-        right_index = right_index.increment().or_num_err()?;
-    }
-
-    Ok(len1.partial_cmp(&len2))
-}
-
 #[cfg(test)]
 mod general {
-    use crate::testing_utilites::create_simple_runtime;
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData};
+
+    use crate::simple::testing_utilities::create_simple_runtime;
+    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
 
     #[test]
     fn less_than_no_references_is_err() {
@@ -166,10 +34,10 @@ mod general {
 
 #[cfg(test)]
 mod less_than {
-    use crate::runtime_impls::SimpleGarnishRuntime;
-    use crate::simple::SimpleRuntimeData;
-    use crate::testing_utilites::{add_byte_list, add_char_list, create_simple_runtime, slice_of_byte_list, slice_of_char_list};
-    use crate::{runtime::GarnishRuntime, DataError, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
+    use crate::simple::testing_utilities::{add_byte_list, add_char_list, create_simple_runtime, slice_of_byte_list, slice_of_char_list};
+    use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
+    use garnish_lang_runtime::{DataError, SimpleRuntimeData};
+    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, RuntimeError};
 
     fn perform_compare<Setup, Op>(expected: bool, op_name: &str, op: Op, setup: Setup)
     where

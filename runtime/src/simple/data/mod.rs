@@ -216,7 +216,7 @@ where
     pub fn as_concatenation(&self) -> DataCastResult<(usize, usize)> {
         match self {
             SimpleData::Concatentaion(l, r) => Ok((*l, *r)),
-            _ => Err(DataError::from(format!("{:?} is not a Concatenation", self)))
+            _ => Err(DataError::from(format!("{:?} is not a Concatenation", self))),
         }
     }
 

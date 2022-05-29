@@ -1,15 +1,8 @@
-use crate::{next_two_raw_ref, push_pair, GarnishLangRuntimeData, RuntimeError};
-
-pub(crate) fn make_pair<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
-    let (right_addr, left_addr) = next_two_raw_ref(this)?;
-
-    push_pair(this, left_addr, right_addr)
-}
-
 #[cfg(test)]
 mod tests {
-    use crate::testing_utilites::create_simple_runtime;
-    use crate::{runtime::GarnishRuntime, ExpressionDataType, GarnishLangRuntimeData, Instruction};
+
+    use crate::simple::testing_utilities::create_simple_runtime;
+    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction};
 
     #[test]
     fn make_pair() {
