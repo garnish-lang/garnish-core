@@ -12,7 +12,7 @@ readme = "../README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[dev-dependencies]
+[dependencies]
 log = "0.4"
 garnish_lang_runtime = { path = "../runtime"}
 garnish_lang_compiler = { path = "../compiler"}
