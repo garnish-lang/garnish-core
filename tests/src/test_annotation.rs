@@ -197,6 +197,16 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                         current_extraction = Vec::new();
                         state = ExtractionState::Searching;
                     }
+                    TokenType::Subexpression => {
+                        // finalize mock details
+                        let non_space = get_first_non_space(&current_extraction, 0);
+                        let expression = Vec::from(&current_extraction[non_space.0..]);
+                        let details = MockAnnotationDetails::new(expression);
+                        current_mocks.push(details);
+
+                        current_extraction = Vec::new();
+                        state = ExtractionState::Searching;
+                    }
                     _ => {
                         current_extraction.push(next.clone());
                     }
@@ -282,6 +292,24 @@ mod tests {
     #[test]
     fn mock_with_new_line() {
         let tokens = lex("5 + 5\n\n@Mock value 20\n@Test \"Plus 10\" { 5 + 10 == 15 }").unwrap();
+
+        let test_details = extract_tests(&tokens).unwrap();
+
+        assert_eq!(test_details.get_expression(), &Vec::from(&tokens[..6]));
+        assert_eq!(test_details.get_annotations().len(), 1);
+
+        let detail = test_details.get_annotations().get(0).unwrap();
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[14..]));
+        assert_eq!(detail.get_mocks().len(), 1);
+
+        let mock = detail.get_mocks().get(0).unwrap();
+        assert_eq!(mock.get_expression(), &Vec::from(&tokens[8..11]));
+    }
+
+    #[test]
+    fn mock_with_sub_expression() {
+        let tokens = lex("5 + 5\n\n@Mock value 20\n\n@Test \"Plus 10\" { 5 + 10 == 15 }").unwrap();
 
         let test_details = extract_tests(&tokens).unwrap();
 
