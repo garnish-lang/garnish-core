@@ -169,7 +169,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_compiler::lex;
+    use garnish_lang_compiler::{lex, LexerToken};
 
     use crate::test_annotation::{extract_tests, TestAnnotation};
 
@@ -216,5 +216,23 @@ mod tests {
         let detail = test_details.get_annotations().get(1).unwrap();
         assert_eq!(detail.get_annotation(), TestAnnotation::Test);
         assert_eq!(detail.get_expression(), &Vec::from(&tokens[26..]));
+    }
+
+    #[test]
+    fn separate_top_expression_in_between_multiple_tests() {
+        let tokens = lex("5 + 5\n\n@Test \"Plus 10\" { 5 + 10 == 15 }\n\n$ + 10\n\n@Test \"Plus 20\" { 15 + 20 == 25 }").unwrap();
+
+        let test_details = extract_tests(&tokens).unwrap();
+        let full_top = tokens[..6].iter().chain(tokens[24..30].iter());
+        assert_eq!(test_details.get_expression(), &full_top.cloned().collect::<Vec<LexerToken>>());
+        assert_eq!(test_details.get_annotations().len(), 2);
+
+        let detail = test_details.get_annotations().get(0).unwrap();
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[8..23]));
+
+        let detail = test_details.get_annotations().get(1).unwrap();
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[32..]));
     }
 }
