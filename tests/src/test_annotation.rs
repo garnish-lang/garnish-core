@@ -52,16 +52,21 @@ impl TestAnnotationDetails {
 }
 
 pub struct TestDetails {
-    tests: Vec<TestAnnotationDetails>,
+    annotations: Vec<TestAnnotationDetails>,
+    expression: Vec<LexerToken>,
 }
 
 impl TestDetails {
-    fn new() -> Self {
-        TestDetails { tests: Vec::new() }
+    fn new(expression: Vec<LexerToken>, annotations: Vec<TestAnnotationDetails>) -> Self {
+        TestDetails { expression, annotations }
     }
 
-    pub fn get_tests(&self) -> &Vec<TestAnnotationDetails> {
-        &self.tests
+    pub fn get_annotations(&self) -> &Vec<TestAnnotationDetails> {
+        &self.annotations
+    }
+
+    pub fn get_expression(&self) -> &Vec<LexerToken> {
+        &self.expression
     }
 }
 
@@ -106,10 +111,12 @@ fn get_first_non_space(tokens: &Vec<LexerToken>, start: usize) -> (usize, LexerT
 }
 
 pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtractionError> {
-    let mut extraction_details = TestDetails::new();
     let mut state = ExtractionState::Searching;
     let unknown_token= LexerToken::new("".to_string(), TokenType::Unknown, 0, 0);
     let mut iter = tokens.iter().chain(iter::once(&unknown_token));
+
+    let mut top_expression = Vec::new();
+    let mut annotations = Vec::new();
 
     let mut current_extraction = Vec::new();
 
@@ -123,7 +130,10 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                         }
                         _ => (), // none test annotation
                     },
-                    _ => (), // go to next token
+                    _ => {
+                        // push to top expression
+                        top_expression.push(next.clone())
+                    }
                 }
             }
             ExtractionState::InTest => {
@@ -138,7 +148,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                         // create details
                         let expression = Vec::from(&current_extraction[non_space.0..]);
                         let details = TestAnnotationDetails::new(TestAnnotation::Test, expression);
-                        extraction_details.tests.push(details);
+                        annotations.push(details);
 
                         // reset
                         current_extraction = Vec::new();
@@ -152,13 +162,14 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
         }
     }
 
+    let extraction_details = TestDetails::new(top_expression, annotations);
+
     Ok(extraction_details)
 }
 
 #[cfg(test)]
 mod tests {
     use garnish_lang_compiler::lex;
-    use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
 
     use crate::test_annotation::{extract_tests, TestAnnotation};
 
@@ -168,10 +179,24 @@ mod tests {
 
         let test_details = extract_tests(&tokens).unwrap();
 
-        assert_eq!(test_details.get_tests().len(), 1);
-        let detail = test_details.get_tests().get(0).unwrap();
+        assert_eq!(test_details.get_annotations().len(), 1);
+        let detail = test_details.get_annotations().get(0).unwrap();
 
         assert_eq!(detail.get_annotation(), TestAnnotation::Test);
         assert_eq!(detail.get_expression(), &Vec::from(&tokens[2..]));
+    }
+
+    #[test]
+    fn non_test_expression_is_output() {
+        let tokens = lex("5 + 5\n\n@Test \"Plus 10\" { 5 + 10 == 15 }").unwrap();
+
+        let test_details = extract_tests(&tokens).unwrap();
+
+        assert_eq!(test_details.get_expression(), &Vec::from(&tokens[..6]));
+        assert_eq!(test_details.get_annotations().len(), 1);
+
+        let detail = test_details.get_annotations().get(0).unwrap();
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[8..]));
     }
 }
