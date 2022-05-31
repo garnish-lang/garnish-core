@@ -139,7 +139,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
             ExtractionState::InTest => {
                 // get all tokens until first un-nested Subexpression token
                 match next.get_token_type() {
-                    TokenType::Unknown => {
+                    TokenType::Unknown | TokenType::Subexpression => {
                         // finalize test annotation details
 
                         // first non space token should be a string for name
@@ -198,5 +198,23 @@ mod tests {
         let detail = test_details.get_annotations().get(0).unwrap();
         assert_eq!(detail.get_annotation(), TestAnnotation::Test);
         assert_eq!(detail.get_expression(), &Vec::from(&tokens[8..]));
+    }
+
+    #[test]
+    fn separate_multiple_tests_with_sub_expression() {
+        let tokens = lex("5 + 5\n\n@Test \"Plus 10\" { 5 + 10 == 15 }\n\n@Test \"Plus 20\" { 15 + 20 == 25 }").unwrap();
+
+        let test_details = extract_tests(&tokens).unwrap();
+
+        assert_eq!(test_details.get_expression(), &Vec::from(&tokens[..6]));
+        assert_eq!(test_details.get_annotations().len(), 2);
+
+        let detail = test_details.get_annotations().get(0).unwrap();
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[8..23]));
+
+        let detail = test_details.get_annotations().get(1).unwrap();
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[26..]));
     }
 }
