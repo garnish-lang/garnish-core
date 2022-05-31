@@ -24,18 +24,26 @@ use garnish_lang_compiler::{LexerToken, TokenType};
 ///
 ///
 
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub enum TestAnnotation {
+    Test,
+    Case,
+    Mock,
+    MockAll
+}
+
 pub struct TestAnnotationDetails {
-    name: String,
+    annotation: TestAnnotation,
     expression: Vec<LexerToken>,
 }
 
 impl TestAnnotationDetails {
-    fn new(name: String, expression: Vec<LexerToken>) -> Self {
-        TestAnnotationDetails { name, expression }
+    fn new(annotation: TestAnnotation, expression: Vec<LexerToken>) -> Self {
+        TestAnnotationDetails { annotation, expression }
     }
 
-    pub fn get_name(&self) -> &String {
-        &self.name
+    pub fn get_annotation(&self) -> TestAnnotation {
+        self.annotation
     }
 
     pub fn get_expression(&self) -> &Vec<LexerToken> {
@@ -127,15 +135,9 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                         // first non space token should be a string for name
                         let non_space = get_first_non_space(&current_extraction, 0);
 
-                        // String tokens include the quote marks, trim here
-                        let name = non_space.1.get_text().trim_matches('"').to_string();
-
-                        // next non-space token after name should be start of expression
-                        let expression_start = get_first_non_space(&current_extraction, non_space.0 + 1);
-
                         // create details
-                        let expression = Vec::from(&current_extraction[expression_start.0..]);
-                        let details = TestAnnotationDetails::new(name, expression);
+                        let expression = Vec::from(&current_extraction[non_space.0..]);
+                        let details = TestAnnotationDetails::new(TestAnnotation::Test, expression);
                         extraction_details.tests.push(details);
 
                         // reset
@@ -156,18 +158,20 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
 #[cfg(test)]
 mod tests {
     use garnish_lang_compiler::lex;
+    use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
 
-    use crate::test_annotation::extract_tests;
+    use crate::test_annotation::{extract_tests, TestAnnotation};
 
     #[test]
-    fn gathers_all_parts() {
+    fn create_test_detail() {
         let tokens = lex("@Test \"Plus 10\" { 5 + 10 == 15 }").unwrap();
 
         let test_details = extract_tests(&tokens).unwrap();
 
         assert_eq!(test_details.get_tests().len(), 1);
         let detail = test_details.get_tests().get(0).unwrap();
-        assert_eq!(detail.get_name(), &"Plus 10".to_string());
-        assert_eq!(detail.get_expression().len(), 13);
+
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[2..]));
     }
 }
