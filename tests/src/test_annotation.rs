@@ -324,4 +324,25 @@ mod tests {
         let mock = detail.get_mocks().get(0).unwrap();
         assert_eq!(mock.get_expression(), &Vec::from(&tokens[8..11]));
     }
+
+    #[test]
+    fn multiple_mocks() {
+        let tokens = lex("5 + 5\n\n@Mock value 20\n\n@Mock num 30\n@Test \"Plus 10\" { 5 + 10 == 15 }").unwrap();
+
+        let test_details = extract_tests(&tokens).unwrap();
+
+        assert_eq!(test_details.get_expression(), &Vec::from(&tokens[..6]));
+        assert_eq!(test_details.get_annotations().len(), 1);
+
+        let detail = test_details.get_annotations().get(0).unwrap();
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[20..]));
+        assert_eq!(detail.get_mocks().len(), 2);
+
+        let mock = detail.get_mocks().get(0).unwrap();
+        assert_eq!(mock.get_expression(), &Vec::from(&tokens[8..11]));
+
+        let mock = detail.get_mocks().get(1).unwrap();
+        assert_eq!(mock.get_expression(), &Vec::from(&tokens[14..17]));
+    }
 }
