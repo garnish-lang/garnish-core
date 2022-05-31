@@ -3,6 +3,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::iter;
 
 use garnish_lang_compiler::{LexerToken, TokenType};
+use crate::test_annotation::TestAnnotation::{Mock, Test};
 
 /// Test Annotations
 ///
@@ -32,14 +33,29 @@ pub enum TestAnnotation {
     MockAll
 }
 
+pub struct MockAnnotationDetails {
+    expression: Vec<LexerToken>
+}
+
+impl MockAnnotationDetails {
+    fn new(expression: Vec<LexerToken>) -> Self {
+        MockAnnotationDetails { expression }
+    }
+
+    pub fn get_expression(&self) -> &Vec<LexerToken> {
+        &self.expression
+    }
+}
+
 pub struct TestAnnotationDetails {
     annotation: TestAnnotation,
     expression: Vec<LexerToken>,
+    mocks: Vec<MockAnnotationDetails>
 }
 
 impl TestAnnotationDetails {
-    fn new(annotation: TestAnnotation, expression: Vec<LexerToken>) -> Self {
-        TestAnnotationDetails { annotation, expression }
+    fn new(annotation: TestAnnotation, expression: Vec<LexerToken>, mocks: Vec<MockAnnotationDetails>) -> Self {
+        TestAnnotationDetails { annotation, expression, mocks }
     }
 
     pub fn get_annotation(&self) -> TestAnnotation {
@@ -48,6 +64,10 @@ impl TestAnnotationDetails {
 
     pub fn get_expression(&self) -> &Vec<LexerToken> {
         &self.expression
+    }
+
+    pub fn get_mocks(&self) -> &Vec<MockAnnotationDetails> {
+        &self.mocks
     }
 }
 
@@ -92,6 +112,7 @@ impl Error for TestExtractionError {}
 enum ExtractionState {
     Searching,
     InTest,
+    InMock,
 }
 
 fn get_first_non_space(tokens: &Vec<LexerToken>, start: usize) -> (usize, LexerToken) {
@@ -118,6 +139,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
     let mut top_expression = Vec::new();
     let mut annotations = Vec::new();
 
+    let mut current_mocks = Vec::new();
     let mut current_extraction = Vec::new();
 
     while let Some(next) = iter.next() {
@@ -127,6 +149,9 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                     TokenType::Annotation => match next.get_text().as_str() {
                         "@Test" => {
                             state = ExtractionState::InTest;
+                        }
+                        "@Mock" => {
+                            state = ExtractionState::InMock;
                         }
                         _ => (), // none test annotation
                     },
@@ -147,10 +172,28 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
 
                         // create details
                         let expression = Vec::from(&current_extraction[non_space.0..]);
-                        let details = TestAnnotationDetails::new(TestAnnotation::Test, expression);
+                        let details = TestAnnotationDetails::new(TestAnnotation::Test, expression, current_mocks);
                         annotations.push(details);
 
                         // reset
+                        current_extraction = Vec::new();
+                        current_mocks = Vec::new();
+                        state = ExtractionState::Searching;
+                    }
+                    _ => {
+                        current_extraction.push(next.clone());
+                    }
+                }
+            }
+            ExtractionState::InMock => {
+                match next.get_token_type() {
+                    TokenType::Whitespace if next.get_text().contains('\n') => {
+                        // finalize mock details
+                        let non_space = get_first_non_space(&current_extraction, 0);
+                        let expression = Vec::from(&current_extraction[non_space.0..]);
+                        let details = MockAnnotationDetails::new(expression);
+                        current_mocks.push(details);
+
                         current_extraction = Vec::new();
                         state = ExtractionState::Searching;
                     }
@@ -234,5 +277,23 @@ mod tests {
         let detail = test_details.get_annotations().get(1).unwrap();
         assert_eq!(detail.get_annotation(), TestAnnotation::Test);
         assert_eq!(detail.get_expression(), &Vec::from(&tokens[32..]));
+    }
+
+    #[test]
+    fn mock_with_new_line() {
+        let tokens = lex("5 + 5\n\n@Mock value 20\n@Test \"Plus 10\" { 5 + 10 == 15 }").unwrap();
+
+        let test_details = extract_tests(&tokens).unwrap();
+
+        assert_eq!(test_details.get_expression(), &Vec::from(&tokens[..6]));
+        assert_eq!(test_details.get_annotations().len(), 1);
+
+        let detail = test_details.get_annotations().get(0).unwrap();
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[14..]));
+        assert_eq!(detail.get_mocks().len(), 1);
+
+        let mock = detail.get_mocks().get(0).unwrap();
+        assert_eq!(mock.get_expression(), &Vec::from(&tokens[8..11]));
     }
 }
