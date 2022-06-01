@@ -3,7 +3,6 @@ use std::fmt::{Debug, Display, Formatter};
 use std::iter;
 
 use garnish_lang_compiler::{LexerToken, TokenType};
-use crate::test_annotation::TestAnnotation::{Mock, Test};
 
 /// Test Annotations
 ///
@@ -28,9 +27,7 @@ use crate::test_annotation::TestAnnotation::{Mock, Test};
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum TestAnnotation {
     Test,
-    Case,
-    Mock,
-    MockAll
+    Case
 }
 
 pub struct MockAnnotationDetails {
@@ -142,12 +139,19 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
     let mut current_mocks = Vec::new();
     let mut current_extraction = Vec::new();
 
+    let mut parsing_type = TestAnnotation::Test;
+
     while let Some(next) = iter.next() {
         match state {
             ExtractionState::Searching => {
                 match next.get_token_type() {
                     TokenType::Annotation => match next.get_text().as_str() {
                         "@Test" => {
+                            parsing_type = TestAnnotation::Test;
+                            state = ExtractionState::InTest;
+                        }
+                        "@Case" => {
+                            parsing_type = TestAnnotation::Case;
                             state = ExtractionState::InTest;
                         }
                         "@Mock" => {
@@ -172,7 +176,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
 
                         // create details
                         let expression = Vec::from(&current_extraction[non_space.0..]);
-                        let details = TestAnnotationDetails::new(TestAnnotation::Test, expression, current_mocks);
+                        let details = TestAnnotationDetails::new(parsing_type, expression, current_mocks);
                         annotations.push(details);
 
                         // reset
@@ -236,6 +240,19 @@ mod tests {
         let detail = test_details.get_annotations().get(0).unwrap();
 
         assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[2..]));
+    }
+
+    #[test]
+    fn create_case_detail() {
+        let tokens = lex("@Case \"Plus 10\" 20 30").unwrap();
+
+        let test_details = extract_tests(&tokens).unwrap();
+
+        assert_eq!(test_details.get_annotations().len(), 1);
+        let detail = test_details.get_annotations().get(0).unwrap();
+
+        assert_eq!(detail.get_annotation(), TestAnnotation::Case);
         assert_eq!(detail.get_expression(), &Vec::from(&tokens[2..]));
     }
 
