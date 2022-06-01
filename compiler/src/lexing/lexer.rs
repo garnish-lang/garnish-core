@@ -602,6 +602,7 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
 
                     match could_be_sub_expression {
                         true => {
+                            trace!("Found second newline in whitespace sequence. Creating subexpression.");
                             // second newline character in whitespace sequence
                             // end token as subexpression
                             current_token_type = Some(TokenType::Subexpression);
