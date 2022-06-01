@@ -225,7 +225,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
 }
 
 #[cfg(test)]
-mod tests {
+mod extraction {
     use garnish_lang_compiler::{lex, LexerToken};
 
     use crate::test_annotation::{extract_tests, TestAnnotation};
