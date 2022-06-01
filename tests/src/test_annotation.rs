@@ -108,8 +108,8 @@ impl Error for TestExtractionError {}
 
 enum ExtractionState {
     Searching,
-    InTest,
-    InMock,
+    ExtractingTest,
+    ExtractingMock,
 }
 
 fn get_first_non_space(tokens: &Vec<LexerToken>, start: usize) -> (usize, LexerToken) {
@@ -148,14 +148,14 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                     TokenType::Annotation => match next.get_text().as_str() {
                         "@Test" => {
                             parsing_type = TestAnnotation::Test;
-                            state = ExtractionState::InTest;
+                            state = ExtractionState::ExtractingTest;
                         }
                         "@Case" => {
                             parsing_type = TestAnnotation::Case;
-                            state = ExtractionState::InTest;
+                            state = ExtractionState::ExtractingTest;
                         }
                         "@Mock" => {
-                            state = ExtractionState::InMock;
+                            state = ExtractionState::ExtractingMock;
                         }
                         _ => (), // none test annotation
                     },
@@ -165,7 +165,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                     }
                 }
             }
-            ExtractionState::InTest => {
+            ExtractionState::ExtractingTest => {
                 // get all tokens until first un-nested Subexpression token
                 match next.get_token_type() {
                     TokenType::Unknown | TokenType::Subexpression => {
@@ -189,7 +189,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                     }
                 }
             }
-            ExtractionState::InMock => {
+            ExtractionState::ExtractingMock => {
                 match next.get_token_type() {
                     TokenType::Whitespace if next.get_text().contains('\n') => {
                         // finalize mock details
