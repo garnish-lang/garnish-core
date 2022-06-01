@@ -381,6 +381,7 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
     let mut can_float = true; // whether the next period can be a float
     let mut start_quote_count = 0;
     let mut end_quote_count = 0;
+    let mut could_be_sub_expression = false;
 
     for c in input.chars().chain(iter::once('\0')) {
         trace!("Character {:?} at ({:?}, {:?})", c, text_column, text_row);
@@ -595,15 +596,33 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
             }
             LexingState::Spaces => {
                 if c == '\n' {
-                    trace!("Found newline character, switching state");
-                    current_characters.push(c);
-
-                    state = LexingState::Subexpression;
                     // wrap coordinates to new line
                     text_column = 0;
                     text_row += 1;
 
-                    false
+                    match could_be_sub_expression {
+                        true => {
+                            // second newline character in whitespace sequence
+                            // end token as subexpression
+                            current_token_type = Some(TokenType::Subexpression);
+                            current_characters.push(c);
+                            // current character is a part of this token
+                            // skip creation of new token with it
+                            should_create = false;
+
+                            true
+                        }
+                        false => {
+                            // first newline character in whitespace sequence
+                            // switch to subexpression
+                            trace!("Found newline character, switching state");
+                            current_characters.push(c);
+
+                            state = LexingState::Subexpression;
+
+                            false
+                        }
+                    }
                 } else if c != ' ' && c != '\t' {
                     trace!("Ending horizontal space");
                     true
@@ -647,8 +666,11 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
                     true
                 } else {
                     trace!("Non-newline character found");
+
                     // change to white space token and start new
                     current_token_type = Some(TokenType::Whitespace);
+                    // but could be a subexpression still if another newline is found
+                    could_be_sub_expression = true;
 
                     // if other white space, switch state and continue
                     if c == '\t' || c == ' ' {
@@ -738,6 +760,7 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
             current_token_type = None;
             start_quote_count = 0;
             end_quote_count = 0;
+            could_be_sub_expression = false;
 
             if should_create {
                 trace!("Starting new token");
@@ -1863,16 +1886,56 @@ mod tests {
     }
 
     #[test]
-    fn newline_whitespace() {
-        let result = lex(&"\n  \n  \t\n \t \n".to_string()).unwrap();
+    fn split_newlines_still_subexpression() {
+        let result = lex(&"\n   \t   \n".to_string()).unwrap();
 
         assert_eq!(
             result,
             vec![LexerToken {
-                text: "\n  \n  \t\n \t \n".to_string(),
-                token_type: TokenType::Whitespace,
+                text: "\n   \t   \n".to_string(),
+                token_type: TokenType::Subexpression,
                 column: 0,
                 row: 0
+            },]
+        )
+    }
+
+    #[test]
+    fn adjacent_split_newlines_still_subexpression() {
+        let result = lex(&"\n   \t   \n\n   \t   \n".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "\n   \t   \n".to_string(),
+                token_type: TokenType::Subexpression,
+                column: 0,
+                row: 0
+            },LexerToken {
+                text: "\n   \t   \n".to_string(),
+                token_type: TokenType::Subexpression,
+                column: 0,
+                row: 2
+            },]
+        )
+    }
+
+    #[test]
+    fn adjacent_split_newlines_separated_by_spaces_still_subexpression() {
+        let result = lex(&"\n   \t   \n     \n   \t   \n".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "\n   \t   \n".to_string(),
+                token_type: TokenType::Subexpression,
+                column: 0,
+                row: 0
+            },LexerToken {
+                text: "     \n   \t   \n".to_string(),
+                token_type: TokenType::Subexpression,
+                column: 0,
+                row: 2
             },]
         )
     }
