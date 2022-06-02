@@ -218,6 +218,9 @@ impl<Source: 'static + std::error::Error> From<Source> for RuntimeError<Source> 
 }
 
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
+    fn get_data(&self) -> &Data;
+    fn get_data_mut(&mut self) -> &mut Data;
+
     fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
         &mut self,
         context: Option<&mut T>,

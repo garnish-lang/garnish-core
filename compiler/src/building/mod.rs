@@ -332,6 +332,11 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
     nodes: Vec<ParseNode>,
     data: &mut Data,
 ) -> Result<Vec<InstructionMetadata>, CompilerError<Data::Error>> {
+    // emtpy yields empty
+    if nodes.is_empty() {
+        return Ok(vec![])
+    }
+
     let mut metadata = vec![];
 
     // since we will be popping and pushing values from root_stack
@@ -694,6 +699,13 @@ mod general {
         let result = get_instruction_data(0, vec![(Definition::Drop, None, None, None, "5", TokenType::Number)]);
 
         assert!(result.is_err())
+    }
+
+    #[test]
+    fn build_empty_node_list() {
+        let result = get_instruction_data(0, vec![]);
+
+        assert!(result.is_ok())
     }
 }
 

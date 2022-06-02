@@ -34,20 +34,21 @@ impl<Data: GarnishLangRuntimeData> SimpleGarnishRuntime<Data> {
     pub fn new(data: Data) -> SimpleGarnishRuntime<Data> {
         SimpleGarnishRuntime { data }
     }
-
-    pub fn get_data(&self) -> &Data {
-        &self.data
-    }
-
-    pub fn get_data_mut(&mut self) -> &mut Data {
-        &mut self.data
-    }
 }
 
 impl<Data> GarnishRuntime<Data> for SimpleGarnishRuntime<Data>
 where
     Data: GarnishLangRuntimeData,
 {
+
+    fn get_data(&self) -> &Data {
+        &self.data
+    }
+
+    fn get_data_mut(&mut self) -> &mut Data {
+        &mut self.data
+    }
+
     fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
         &mut self,
         context: Option<&mut T>,

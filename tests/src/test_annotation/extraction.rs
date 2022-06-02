@@ -30,6 +30,7 @@ pub enum TestAnnotation {
     Case
 }
 
+#[derive(Debug, Clone, PartialOrd, Eq, PartialEq)]
 pub struct MockAnnotationDetails {
     expression: Vec<LexerToken>
 }
@@ -44,6 +45,7 @@ impl MockAnnotationDetails {
     }
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TestAnnotationDetails {
     annotation: TestAnnotation,
     expression: Vec<LexerToken>,
