@@ -142,6 +142,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
     let mut current_extraction = Vec::new();
 
     let mut parsing_type = TestAnnotation::Test;
+    let mut nest_count = 0;
 
     while let Some(next) = iter.next() {
         match state {
@@ -170,7 +171,36 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
             ExtractionState::ExtractingTest => {
                 // get all tokens until first un-nested Subexpression token
                 match next.get_token_type() {
-                    TokenType::Unknown | TokenType::Subexpression => {
+                    TokenType::StartExpression | TokenType::StartGroup | TokenType::StartSideEffect => {
+                        nest_count += 1;
+                        current_extraction.push(next.clone());
+                    }
+                    TokenType::EndExpression | TokenType::EndGroup | TokenType::EndSideEffect => {
+                        nest_count -= 1;
+                        current_extraction.push(next.clone());
+                    }
+                    TokenType::Subexpression => {
+                        if nest_count == 0 {
+                            // finalize test annotation details
+
+                            // first non space token should be a string for name
+                            let non_space = get_first_non_space(&current_extraction, 0);
+
+                            // create details
+                            let expression = Vec::from(&current_extraction[non_space.0..]);
+                            let details = TestAnnotationDetails::new(parsing_type, expression, current_mocks);
+                            annotations.push(details);
+
+                            // reset
+                            current_extraction = Vec::new();
+                            current_mocks = Vec::new();
+                            state = ExtractionState::Searching;
+                        } else {
+                            // include in test expression
+                            current_extraction.push(next.clone());
+                        }
+                    }
+                    TokenType::Unknown => {
                         // finalize test annotation details
 
                         // first non space token should be a string for name
@@ -235,6 +265,45 @@ mod extraction {
     #[test]
     fn create_test_detail() {
         let tokens = lex("@Test \"Plus 10\" { 5 + 10 == 15 }").unwrap();
+
+        let test_details = extract_tests(&tokens).unwrap();
+
+        assert_eq!(test_details.get_annotations().len(), 1);
+        let detail = test_details.get_annotations().get(0).unwrap();
+
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[2..]));
+    }
+
+    #[test]
+    fn create_test_detail_with_sub_expressions() {
+        let tokens = lex("@Test \"Plus 10\" { 5 + 10\n\n% == 15 }").unwrap();
+
+        let test_details = extract_tests(&tokens).unwrap();
+
+        assert_eq!(test_details.get_annotations().len(), 1);
+        let detail = test_details.get_annotations().get(0).unwrap();
+
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[2..]));
+    }
+
+    #[test]
+    fn create_test_detail_with_sub_expression_in_parenthesis() {
+        let tokens = lex("@Test \"Plus 10\" (some_external_test\n\nsome_other_value)").unwrap();
+
+        let test_details = extract_tests(&tokens).unwrap();
+
+        assert_eq!(test_details.get_annotations().len(), 1);
+        let detail = test_details.get_annotations().get(0).unwrap();
+
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[2..]));
+    }
+
+    #[test]
+    fn create_case_with_inputs_spanning_lines() {
+        let tokens = lex("@Test \"Plus 10\" \n[10\n\n20\n\n30]\n(20\n\n30\n\n40)").unwrap();
 
         let test_details = extract_tests(&tokens).unwrap();
 
