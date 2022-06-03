@@ -112,6 +112,7 @@ impl Display for TestExtractionError {
 
 impl Error for TestExtractionError {}
 
+#[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 enum ExtractionState {
     Searching,
     ExtractingTest,
@@ -149,9 +150,9 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
     let mut nest_count = 0;
 
     while let Some(next) = iter.next() {
-        match state {
-            ExtractionState::Searching => {
-                match next.get_token_type() {
+        match (state, next.get_token_type()) {
+            (ExtractionState::Searching, t) => {
+                match t {
                     TokenType::Annotation => match next.get_text().as_str() {
                         "@Test" => {
                             parsing_type = TestAnnotation::Test;
@@ -172,63 +173,45 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                     }
                 }
             }
-            ExtractionState::ExtractingTest => {
-                // get all tokens until first un-nested Subexpression token
-                match next.get_token_type() {
-                    TokenType::StartExpression | TokenType::StartGroup | TokenType::StartSideEffect => {
-                        nest_count += 1;
-                        current_extraction.push(next.clone());
-                    }
-                    TokenType::EndExpression | TokenType::EndGroup | TokenType::EndSideEffect => {
-                        nest_count -= 1;
-                        current_extraction.push(next.clone());
-                    }
-                    TokenType::Unknown | TokenType::Subexpression if nest_count == 0 => {
-                        // finalize test annotation details
-
-                        // first non space token should be a string for name
-                        let non_space = get_first_non_space(&current_extraction, 0);
-
-                        // create details
-                        let expression = Vec::from(&current_extraction[non_space.0..]);
-                        let details = TestAnnotationDetails::new(parsing_type, expression, current_mocks);
-                        annotations.push(details);
-
-                        // reset
-                        current_extraction = Vec::new();
-                        current_mocks = Vec::new();
-                        state = ExtractionState::Searching;
-                    }
-                    _ => {
-                        current_extraction.push(next.clone());
-                    }
-                }
+            (_, TokenType::StartExpression | TokenType::StartGroup | TokenType::StartSideEffect) => {
+                nest_count += 1;
+                current_extraction.push(next.clone());
             }
-            ExtractionState::ExtractingMock => {
-                match next.get_token_type() {
-                    TokenType::StartExpression | TokenType::StartGroup | TokenType::StartSideEffect => {
-                        nest_count += 1;
-                        current_extraction.push(next.clone());
-                    }
-                    TokenType::EndExpression | TokenType::EndGroup | TokenType::EndSideEffect => {
-                        nest_count -= 1;
-                        current_extraction.push(next.clone());
-                    }
-                    TokenType::Subexpression | TokenType::Whitespace if next.get_text().contains('\n') && nest_count == 0 => {
-                        // finalize mock details
-                        let non_space = get_first_non_space(&current_extraction, 0);
-                        let expression = Vec::from(&current_extraction[non_space.0..]);
-                        let details = MockAnnotationDetails::new(expression);
-                        current_mocks.push(details);
-
-                        current_extraction = Vec::new();
-                        state = ExtractionState::Searching;
-                    }
-                    _ => {
-                        current_extraction.push(next.clone());
-                    }
-                }
+            (_, TokenType::EndExpression | TokenType::EndGroup | TokenType::EndSideEffect) => {
+                nest_count -= 1;
+                current_extraction.push(next.clone());
             }
+            (s, t) => match t {
+                TokenType::Unknown | TokenType::Subexpression | TokenType::Whitespace
+                    if (next.get_text().contains('\n') || next.get_text().is_empty()) && nest_count == 0 =>
+                {
+                    // finalize test annotation details
+
+                    // first non space token should be a string for name
+                    let non_space = get_first_non_space(&current_extraction, 0);
+                    let expression = Vec::from(&current_extraction[non_space.0..]);
+
+                    match s {
+                        ExtractionState::ExtractingMock => {
+                            let details = MockAnnotationDetails::new(expression);
+                            current_mocks.push(details);
+                        }
+                        ExtractionState::ExtractingTest => {
+                            let details = TestAnnotationDetails::new(parsing_type, expression, current_mocks);
+                            annotations.push(details);
+                            current_mocks = Vec::new();
+                        }
+                        s => Err(TestExtractionError::error(
+                            format!("Found {:?} during finalization of annotation.", s).as_str(),
+                        ))?,
+                    }
+
+                    // reset
+                    current_extraction = Vec::new();
+                    state = ExtractionState::Searching;
+                }
+                _ => current_extraction.push(next.clone()),
+            },
         }
     }
 
@@ -284,7 +267,7 @@ mod extraction {
 
     #[test]
     fn create_case_with_inputs_spanning_lines() {
-        let tokens = lex("@Case \"Plus 10\" \n[10\n\n20\n\n30]\n(20\n\n30\n\n40)").unwrap();
+        let tokens = lex("@Case \"Plus 10\" [\n10\n\n20\n\n30\n] (\n20\n\n30\n\n40\n)").unwrap();
 
         let test_details = extract_tests(&tokens).unwrap();
 
