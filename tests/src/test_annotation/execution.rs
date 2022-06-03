@@ -89,22 +89,7 @@ fn execute_test_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
             Ok(point) => match runtime.get_data().get_jump_point(point) {
                 None => (false, None, Some("Jump point not registered".to_string())),
                 Some(start) => {
-                    runtime
-                        .get_data_mut()
-                        .set_instruction_cursor(start)
-                        .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
-
-                    // Run test expression to get list that should contain 2 items
-                    // a name string and an expression to execute
-                    loop {
-                        match runtime.execute_current_instruction(NO_CONTEXT) {
-                            Err(e) => return Err(TestExtractionError::error(e.to_string().as_str())),
-                            Ok(data) => match data.get_state() {
-                                GarnishLangRuntimeState::Running => (),
-                                GarnishLangRuntimeState::End => break,
-                            },
-                        }
-                    }
+                    execute_until_end(runtime, start)?;
 
                     match runtime.get_data().get_current_value() {
                         None => (false, None, Some("Failed to get data from test".to_string())),
@@ -123,6 +108,28 @@ fn execute_test_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
     };
 
     Ok(TestResult::<Data>::new(success, error, value, name_value, test.clone()))
+}
+
+fn execute_until_end<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>>(
+    runtime: &mut Runtime,
+    start: Data::Size,
+) -> Result<(), TestExtractionError> {
+    runtime
+        .get_data_mut()
+        .set_instruction_cursor(start)
+        .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
+
+    loop {
+        match runtime.execute_current_instruction(NO_CONTEXT) {
+            Err(e) => return Err(TestExtractionError::error(e.to_string().as_str()))?,
+            Ok(data) => match data.get_state() {
+                GarnishLangRuntimeState::Running => (),
+                GarnishLangRuntimeState::End => break,
+            },
+        }
+    }
+
+    Ok(())
 }
 
 fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>>(
@@ -168,20 +175,7 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
                 .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
 
             // execute top expression
-            runtime
-                .get_data_mut()
-                .set_instruction_cursor(top_expression)
-                .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
-
-            loop {
-                match runtime.execute_current_instruction(NO_CONTEXT) {
-                    Err(e) => return Err(TestExtractionError::error(e.to_string().as_str())),
-                    Ok(data) => match data.get_state() {
-                        GarnishLangRuntimeState::Running => (),
-                        GarnishLangRuntimeState::End => break,
-                    },
-                }
-            }
+            execute_until_end(runtime, top_expression)?;
 
             // push current value and output value to registers
             // perform comparison
