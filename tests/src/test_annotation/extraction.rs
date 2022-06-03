@@ -223,6 +223,14 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
             }
             ExtractionState::ExtractingMock => {
                 match next.get_token_type() {
+                    TokenType::StartExpression | TokenType::StartGroup | TokenType::StartSideEffect => {
+                        nest_count += 1;
+                        current_extraction.push(next.clone());
+                    }
+                    TokenType::EndExpression | TokenType::EndGroup | TokenType::EndSideEffect => {
+                        nest_count -= 1;
+                        current_extraction.push(next.clone());
+                    }
                     TokenType::Whitespace if next.get_text().contains('\n') => {
                         // finalize mock details
                         let non_space = get_first_non_space(&current_extraction, 0);
@@ -234,14 +242,18 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                         state = ExtractionState::Searching;
                     }
                     TokenType::Subexpression => {
-                        // finalize mock details
-                        let non_space = get_first_non_space(&current_extraction, 0);
-                        let expression = Vec::from(&current_extraction[non_space.0..]);
-                        let details = MockAnnotationDetails::new(expression);
-                        current_mocks.push(details);
+                        if nest_count == 0 {
+                            // finalize mock details
+                            let non_space = get_first_non_space(&current_extraction, 0);
+                            let expression = Vec::from(&current_extraction[non_space.0..]);
+                            let details = MockAnnotationDetails::new(expression);
+                            current_mocks.push(details);
 
-                        current_extraction = Vec::new();
-                        state = ExtractionState::Searching;
+                            current_extraction = Vec::new();
+                            state = ExtractionState::Searching;
+                        } else {
+                            current_extraction.push(next.clone());
+                        }
                     }
                     _ => {
                         current_extraction.push(next.clone());
@@ -303,14 +315,14 @@ mod extraction {
 
     #[test]
     fn create_case_with_inputs_spanning_lines() {
-        let tokens = lex("@Test \"Plus 10\" \n[10\n\n20\n\n30]\n(20\n\n30\n\n40)").unwrap();
+        let tokens = lex("@Case \"Plus 10\" \n[10\n\n20\n\n30]\n(20\n\n30\n\n40)").unwrap();
 
         let test_details = extract_tests(&tokens).unwrap();
 
         assert_eq!(test_details.get_annotations().len(), 1);
         let detail = test_details.get_annotations().get(0).unwrap();
 
-        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_annotation(), TestAnnotation::Case);
         assert_eq!(detail.get_expression(), &Vec::from(&tokens[2..]));
     }
 
@@ -432,5 +444,23 @@ mod extraction {
 
         let mock = detail.get_mocks().get(1).unwrap();
         assert_eq!(mock.get_expression(), &Vec::from(&tokens[14..17]));
+    }
+
+    #[test]
+    fn mock_with_nested_subexpressions() {
+        let tokens = lex("5 + 5\n\n@Mock (value\n\nvalue2\n\nvalue3) (20\n\n30\n\n40)\n\n@Test \"Plus 10\" { 5 + 10 == 15 }").unwrap();
+
+        let test_details = extract_tests(&tokens).unwrap();
+
+        assert_eq!(test_details.get_expression(), &Vec::from(&tokens[..6]));
+        assert_eq!(test_details.get_annotations().len(), 1);
+
+        let detail = test_details.get_annotations().get(0).unwrap();
+        assert_eq!(detail.get_annotation(), TestAnnotation::Test);
+        assert_eq!(detail.get_expression(), &Vec::from(&tokens[26..]));
+        assert_eq!(detail.get_mocks().len(), 1);
+
+        let mock = detail.get_mocks().get(0).unwrap();
+        assert_eq!(mock.get_expression(), &Vec::from(&tokens[8..23]));
     }
 }
