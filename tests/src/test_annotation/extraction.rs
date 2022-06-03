@@ -27,12 +27,12 @@ use garnish_lang_compiler::{LexerToken, TokenType};
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 pub enum TestAnnotation {
     Test,
-    Case
+    Case,
 }
 
 #[derive(Debug, Clone, PartialOrd, Eq, PartialEq)]
 pub struct MockAnnotationDetails {
-    expression: Vec<LexerToken>
+    expression: Vec<LexerToken>,
 }
 
 impl MockAnnotationDetails {
@@ -49,12 +49,16 @@ impl MockAnnotationDetails {
 pub struct TestAnnotationDetails {
     annotation: TestAnnotation,
     expression: Vec<LexerToken>,
-    mocks: Vec<MockAnnotationDetails>
+    mocks: Vec<MockAnnotationDetails>,
 }
 
 impl TestAnnotationDetails {
     fn new(annotation: TestAnnotation, expression: Vec<LexerToken>, mocks: Vec<MockAnnotationDetails>) -> Self {
-        TestAnnotationDetails { annotation, expression, mocks }
+        TestAnnotationDetails {
+            annotation,
+            expression,
+            mocks,
+        }
     }
 
     pub fn get_annotation(&self) -> TestAnnotation {
@@ -115,7 +119,7 @@ enum ExtractionState {
 }
 
 fn get_first_non_space(tokens: &Vec<LexerToken>, start: usize) -> (usize, LexerToken) {
-    let unknown_token= LexerToken::new("".to_string(), TokenType::Unknown, 0, 0);
+    let unknown_token = LexerToken::new("".to_string(), TokenType::Unknown, 0, 0);
     let mut non_space = (0, unknown_token);
     for (i, token) in tokens.iter().enumerate().skip(start) {
         match token.get_token_type() {
@@ -132,7 +136,7 @@ fn get_first_non_space(tokens: &Vec<LexerToken>, start: usize) -> (usize, LexerT
 
 pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtractionError> {
     let mut state = ExtractionState::Searching;
-    let unknown_token= LexerToken::new("".to_string(), TokenType::Unknown, 0, 0);
+    let unknown_token = LexerToken::new("".to_string(), TokenType::Unknown, 0, 0);
     let mut iter = tokens.iter().chain(iter::once(&unknown_token));
 
     let mut top_expression = Vec::new();
@@ -179,26 +183,21 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                         nest_count -= 1;
                         current_extraction.push(next.clone());
                     }
-                    TokenType::Subexpression => {
-                        if nest_count == 0 {
-                            // finalize test annotation details
+                    TokenType::Subexpression if nest_count == 0 => {
+                        // finalize test annotation details
 
-                            // first non space token should be a string for name
-                            let non_space = get_first_non_space(&current_extraction, 0);
+                        // first non space token should be a string for name
+                        let non_space = get_first_non_space(&current_extraction, 0);
 
-                            // create details
-                            let expression = Vec::from(&current_extraction[non_space.0..]);
-                            let details = TestAnnotationDetails::new(parsing_type, expression, current_mocks);
-                            annotations.push(details);
+                        // create details
+                        let expression = Vec::from(&current_extraction[non_space.0..]);
+                        let details = TestAnnotationDetails::new(parsing_type, expression, current_mocks);
+                        annotations.push(details);
 
-                            // reset
-                            current_extraction = Vec::new();
-                            current_mocks = Vec::new();
-                            state = ExtractionState::Searching;
-                        } else {
-                            // include in test expression
-                            current_extraction.push(next.clone());
-                        }
+                        // reset
+                        current_extraction = Vec::new();
+                        current_mocks = Vec::new();
+                        state = ExtractionState::Searching;
                     }
                     TokenType::Unknown => {
                         // finalize test annotation details
@@ -241,19 +240,15 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                         current_extraction = Vec::new();
                         state = ExtractionState::Searching;
                     }
-                    TokenType::Subexpression => {
-                        if nest_count == 0 {
-                            // finalize mock details
-                            let non_space = get_first_non_space(&current_extraction, 0);
-                            let expression = Vec::from(&current_extraction[non_space.0..]);
-                            let details = MockAnnotationDetails::new(expression);
-                            current_mocks.push(details);
+                    TokenType::Subexpression if nest_count == 0 => {
+                        // finalize mock details
+                        let non_space = get_first_non_space(&current_extraction, 0);
+                        let expression = Vec::from(&current_extraction[non_space.0..]);
+                        let details = MockAnnotationDetails::new(expression);
+                        current_mocks.push(details);
 
-                            current_extraction = Vec::new();
-                            state = ExtractionState::Searching;
-                        } else {
-                            current_extraction.push(next.clone());
-                        }
+                        current_extraction = Vec::new();
+                        state = ExtractionState::Searching;
                     }
                     _ => {
                         current_extraction.push(next.clone());
