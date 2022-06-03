@@ -183,23 +183,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                         nest_count -= 1;
                         current_extraction.push(next.clone());
                     }
-                    TokenType::Subexpression if nest_count == 0 => {
-                        // finalize test annotation details
-
-                        // first non space token should be a string for name
-                        let non_space = get_first_non_space(&current_extraction, 0);
-
-                        // create details
-                        let expression = Vec::from(&current_extraction[non_space.0..]);
-                        let details = TestAnnotationDetails::new(parsing_type, expression, current_mocks);
-                        annotations.push(details);
-
-                        // reset
-                        current_extraction = Vec::new();
-                        current_mocks = Vec::new();
-                        state = ExtractionState::Searching;
-                    }
-                    TokenType::Unknown => {
+                    TokenType::Unknown | TokenType::Subexpression if nest_count == 0 => {
                         // finalize test annotation details
 
                         // first non space token should be a string for name
@@ -230,17 +214,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                         nest_count -= 1;
                         current_extraction.push(next.clone());
                     }
-                    TokenType::Whitespace if next.get_text().contains('\n') => {
-                        // finalize mock details
-                        let non_space = get_first_non_space(&current_extraction, 0);
-                        let expression = Vec::from(&current_extraction[non_space.0..]);
-                        let details = MockAnnotationDetails::new(expression);
-                        current_mocks.push(details);
-
-                        current_extraction = Vec::new();
-                        state = ExtractionState::Searching;
-                    }
-                    TokenType::Subexpression if nest_count == 0 => {
+                    TokenType::Subexpression | TokenType::Whitespace if next.get_text().contains('\n') && nest_count == 0 => {
                         // finalize mock details
                         let non_space = get_first_non_space(&current_extraction, 0);
                         let expression = Vec::from(&current_extraction[non_space.0..]);
