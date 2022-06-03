@@ -210,7 +210,7 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
                                     .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?
                                 {
                                     ExpressionDataType::True => (true, Some(value_addr), None),
-                                    ExpressionDataType::False => (true, Some(value_addr), None),
+                                    ExpressionDataType::False => (false, Some(value_addr), None),
                                     t => (false, Some(value_addr), Some(format!("Value after equality is {:?}, expected True or False", t))),
                                 }
                             }
@@ -359,6 +359,30 @@ mod tests {
         assert_eq!(first.error(), None);
         assert!(first.is_success());
         assert_eq!(first.value(), Some(5));
+        assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
+    }
+
+    #[test]
+    fn execute_false_case() {
+        let mut data = SimpleRuntimeData::new();
+
+        let input = lex("$ + 10\n\n@Case \"5 + 5 is 10\" 5 10").unwrap();
+        let tests = extract_tests(&input).unwrap();
+
+        // caller needs space to set up data as well, let them build top expression
+        let parse_result = parse(tests.get_expression().clone()).unwrap();
+        let top_expression = data.get_jump_table_len();
+        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
+
+        let mut runtime = SimpleGarnishRuntime::new(data);
+        let results = execute_tests(&mut runtime, &tests, Some(top_expression)).unwrap();
+
+        assert_eq!(results.get_results().len(), 1);
+
+        let first = results.get_results().get(0).unwrap();
+        assert_eq!(first.error(), None);
+        assert!(!first.is_success());
+        assert_eq!(first.value(), Some(7));
         assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
     }
 }
