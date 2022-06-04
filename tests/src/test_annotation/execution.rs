@@ -1,7 +1,10 @@
-use std::fmt::{Debug};
+use std::fmt::Debug;
 
-use garnish_lang_compiler::{build_with_data, parse};
-use garnish_traits::{ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishNumber, GarnishRuntime, Instruction, RuntimeError, TypeConstants};
+use garnish_lang_compiler::{build_with_data, parse, TokenType};
+use garnish_traits::{
+    ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishNumber, GarnishRuntime, Instruction,
+    RuntimeError, TypeConstants,
+};
 
 use crate::test_annotation::{TestAnnotation, TestAnnotationDetails, TestDetails, TestExtractionError};
 
@@ -234,39 +237,54 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
 
 struct TestExecutionContext<Data: GarnishLangRuntimeData> {
     caller_context: Option<Box<dyn GarnishLangRuntimeContext<Data>>>,
+    mocks: Vec<(Data::Symbol, Data::Size)>,
 }
 
 impl<Data: GarnishLangRuntimeData> TestExecutionContext<Data> {
     fn new(c: Option<Box<dyn GarnishLangRuntimeContext<Data>>>) -> Self {
-        TestExecutionContext { caller_context: c }
+        TestExecutionContext {
+            caller_context: c,
+            mocks: vec![],
+        }
+    }
+
+    fn register_mock(&mut self, sym: Data::Symbol, value: Data::Size) {
+        self.mocks.push((sym, value))
     }
 }
 
 impl<Data: GarnishLangRuntimeData> GarnishLangRuntimeContext<Data> for TestExecutionContext<Data> {
     fn resolve(&mut self, symbol: Data::Symbol, runtime: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
-        match &mut self.caller_context {
-            None => Ok(true),
-            Some(context) => {
-                context.resolve(symbol, runtime)
+        for (sym, value) in self.mocks.iter() {
+            if sym == &symbol {
+                runtime.push_register(*value)?;
+                return Ok(true);
             }
+        }
+
+        match &mut self.caller_context {
+            None => Ok(false),
+            Some(context) => context.resolve(symbol, runtime),
         }
     }
 
     fn apply(&mut self, external_value: Data::Size, input_addr: Data::Size, runtime: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
         match &mut self.caller_context {
-            None => Ok(true),
-            Some(context) => {
-                context.apply(external_value, input_addr, runtime)
-            }
+            None => Ok(false),
+            Some(context) => context.apply(external_value, input_addr, runtime),
         }
     }
 
-    fn defer_op(&mut self, runtime: &mut Data, operation: Instruction, left: (ExpressionDataType, Data::Size), right: (ExpressionDataType, Data::Size)) -> Result<bool, RuntimeError<Data::Error>> {
+    fn defer_op(
+        &mut self,
+        runtime: &mut Data,
+        operation: Instruction,
+        left: (ExpressionDataType, Data::Size),
+        right: (ExpressionDataType, Data::Size),
+    ) -> Result<bool, RuntimeError<Data::Error>> {
         match &mut self.caller_context {
-            None => Ok(true),
-            Some(context) => {
-                context.defer_op(runtime, operation, left, right)
-            }
+            None => Ok(false),
+            Some(context) => context.defer_op(runtime, operation, left, right),
         }
     }
 }
@@ -279,11 +297,7 @@ pub fn execute_tests<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>
     execute_tests_with_context(runtime, tests, top_expression, || None)
 }
 
-pub fn execute_tests_with_context<
-    Data: GarnishLangRuntimeData,
-    Runtime: GarnishRuntime<Data>,
-    MakeContextFn,
->(
+pub fn execute_tests_with_context<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>, MakeContextFn>(
     runtime: &mut Runtime,
     tests: &TestDetails,
     top_expression: Option<Data::Size>,
@@ -296,10 +310,60 @@ where
 
     let mut context = TestExecutionContext::new(match context_fn() {
         Some(c) => Some(c),
-        None => None
+        None => None,
     });
 
     for test in tests.get_annotations() {
+        // process mocks first
+        for mock in test.get_mocks() {
+            // remove first identifier from mock tokens
+            // this is symbol to mock
+            let mut identifier = None;
+            let mut identifier_loc = 0;
+            for (i, token) in mock.get_expression().iter().enumerate() {
+                if token.get_token_type() == TokenType::Identifier {
+                    identifier =
+                        Some(Data::parse_symbol(token.get_text().as_str()).or_else(|e| Err(TestExtractionError::error(format!("{}", e).as_str())))?);
+                    identifier_loc = i;
+                    break;
+                }
+            }
+
+            let identifier = match identifier {
+                Some(i) => i,
+                None => {
+                    // cannot mock
+                    // skip test
+                    results.push(TestResult::new(false, Some("No identifier found in mock.".to_string()), None, None, test.clone()));
+                    continue;
+                }
+            };
+
+            // exclude identifier from parse
+            let parse_result = parse(Vec::from(&mock.get_expression()[identifier_loc + 1..])).or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
+
+            let start = runtime.get_data().get_jump_table_len();
+
+            build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), runtime.get_data_mut())
+                .or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
+
+            let point = match runtime.get_data().get_jump_point(start) {
+                None => return Err(TestExtractionError::error("No starting jump point available")),
+                Some(point) => point,
+            };
+
+            execute_until_end(runtime, &mut context, point)?;
+
+            // current value after execution is mock's value
+            // register pair in context
+            match runtime.get_data().get_current_value() {
+                None => Err(TestExtractionError::error("No value in runtime after mock execution."))?,
+                Some(current_value) => {
+                    context.register_mock(identifier, current_value);
+                }
+            }
+        }
+
         let parse_result = parse(test.get_expression().clone()).or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
 
         let start = runtime.get_data().get_jump_table_len();
@@ -339,7 +403,7 @@ mod tests {
     use garnish_data::SimpleRuntimeData;
     use garnish_lang_compiler::{build_with_data, lex, parse};
     use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
-    use garnish_traits::{GarnishLangRuntimeData};
+    use garnish_traits::GarnishLangRuntimeData;
 
     use crate::test_annotation::{execute_tests, extract_tests};
 
@@ -485,6 +549,31 @@ mod context {
         assert!(first.is_success());
         assert_eq!(first.value(), Some(6));
         assert_eq!(runtime.get_data().get_number(6).unwrap(), SimpleNumber::Integer(105));
+        assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
+    }
+
+    #[test]
+    fn mocks_is_used_instead_of_caller_context() {
+        let mut data = SimpleRuntimeData::new();
+
+        let input = lex("$ + value1\n\n@Mock value1 200\n@Case \"5 + value1 is 105\" 5 205").unwrap();
+        let tests = extract_tests(&input).unwrap();
+
+        // caller needs space to set up data as well, let them build top expression
+        let parse_result = parse(tests.get_expression().clone()).unwrap();
+        let top_expression = data.get_jump_table_len();
+        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
+
+        let mut runtime = SimpleGarnishRuntime::new(data);
+        let results = execute_tests_with_context(&mut runtime, &tests, Some(top_expression), || Some(Box::new(TestContext {}))).unwrap();
+
+        assert_eq!(results.get_results().len(), 1);
+
+        let first = results.get_results().get(0).unwrap();
+        assert_eq!(first.error(), None);
+        assert!(first.is_success());
+        assert_eq!(first.value(), Some(7));
+        assert_eq!(runtime.get_data().get_number(7).unwrap(), SimpleNumber::Integer(205));
         assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
     }
 }
