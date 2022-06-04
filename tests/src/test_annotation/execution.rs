@@ -188,63 +188,66 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
         },
     };
 
-    let (success, value, error) = match input_value {
-        None => (false, None, Some("No input value given for case".to_string())),
-        Some(input_addr) => {
-            // push input value to input stack
+    let (input_addr, output_addr) = match (name_value, input_value, output_value) {
+        (Some(_), Some(input), Some(output)) => (input, output),
+        _ => {
+            return Ok(TestResult::new(
+                false,
+                Some("Missing case annotation parameters. Expected a name, input and expected output.".to_string()),
+                None,
+                name_value,
+                test.clone(),
+            ));
+        }
+    };
+
+    // push input value to input stack
+    runtime
+        .get_data_mut()
+        .push_value_stack(input_addr)
+        .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
+
+    // execute top expression
+    execute_until_end(runtime, context, top_expression)?;
+
+    let (success, value, error) = match runtime.get_data().get_current_value() {
+        None => (false, None, Some("No current value available after top expression execution".to_string())),
+        Some(value_addr) => {
             runtime
                 .get_data_mut()
-                .push_value_stack(input_addr)
+                .push_register(value_addr)
                 .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
 
-            // execute top expression
-            execute_until_end(runtime, context, top_expression)?;
+            runtime
+                .get_data_mut()
+                .push_register(output_addr)
+                .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
 
-            // push current value and output value to registers
-            // perform comparison
-            match output_value {
-                None => (false, None, Some("No output value given for case".to_string())),
-                Some(output_addr) => match runtime.get_data().get_current_value() {
-                    None => (false, None, Some("No current value available after top expression execution".to_string())),
-                    Some(value_addr) => {
-                        runtime
-                            .get_data_mut()
-                            .push_register(value_addr)
-                            .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
+            runtime
+                .equal()
+                .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
 
-                        runtime
-                            .get_data_mut()
-                            .push_register(output_addr)
-                            .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
+            runtime
+                .update_value()
+                .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
 
-                        runtime
-                            .equal()
-                            .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
-
-                        runtime
-                            .update_value()
-                            .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
-
-                        match runtime.get_data().get_current_value() {
-                            None => (false, None, Some("No value available after equality comparison".to_string())),
-                            Some(result_addr) => {
-                                match runtime
-                                    .get_data()
-                                    .get_data_type(result_addr)
-                                    .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?
-                                {
-                                    ExpressionDataType::True => (true, Some(value_addr), None),
-                                    ExpressionDataType::False => (false, Some(value_addr), None),
-                                    t => (
-                                        false,
-                                        Some(value_addr),
-                                        Some(format!("Value after equality is {:?}, expected True or False", t)),
-                                    ),
-                                }
-                            }
-                        }
+            match runtime.get_data().get_current_value() {
+                None => (false, None, Some("No value available after equality comparison".to_string())),
+                Some(result_addr) => {
+                    match runtime
+                        .get_data()
+                        .get_data_type(result_addr)
+                        .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?
+                    {
+                        ExpressionDataType::True => (true, Some(value_addr), None),
+                        ExpressionDataType::False => (false, Some(value_addr), None),
+                        t => (
+                            false,
+                            Some(value_addr),
+                            Some(format!("Value after equality is {:?}, expected True or False", t)),
+                        ),
                     }
-                },
+                }
             }
         }
     };
@@ -628,6 +631,87 @@ mod tests {
         assert_eq!(first.error(), None);
         assert!(!first.is_success());
         assert_eq!(first.value(), Some(7));
+        assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
+    }
+
+    #[test]
+    fn case_with_only_two_parameters() {
+        let mut data = SimpleRuntimeData::new();
+
+        let input = lex("$ + 5\n\n@Case \"5 + 5 is 10\" 5").unwrap();
+        let tests = extract_tests(&input).unwrap();
+
+        // caller needs space to set up data as well, let them build top expression
+        let parse_result = parse(tests.get_expression().clone()).unwrap();
+        let top_expression = data.get_jump_table_len();
+        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
+
+        let mut runtime = SimpleGarnishRuntime::new(data);
+        let results = execute_tests(&mut runtime, &tests, Some(top_expression)).unwrap();
+
+        assert_eq!(results.get_results().len(), 1);
+
+        let first = results.get_results().get(0).unwrap();
+        assert!(first
+            .error()
+            .unwrap()
+            .contains("Missing case annotation parameters. Expected a name, input and expected output."));
+        assert!(!first.is_success());
+        assert_eq!(first.value(), None);
+        assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
+    }
+
+    #[test]
+    fn case_with_only_one_parameters() {
+        let mut data = SimpleRuntimeData::new();
+
+        let input = lex("$ + 5\n\n@Case \"5 + 5 is 10\"").unwrap();
+        let tests = extract_tests(&input).unwrap();
+
+        // caller needs space to set up data as well, let them build top expression
+        let parse_result = parse(tests.get_expression().clone()).unwrap();
+        let top_expression = data.get_jump_table_len();
+        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
+
+        let mut runtime = SimpleGarnishRuntime::new(data);
+        let results = execute_tests(&mut runtime, &tests, Some(top_expression)).unwrap();
+
+        assert_eq!(results.get_results().len(), 1);
+
+        let first = results.get_results().get(0).unwrap();
+        assert!(first
+            .error()
+            .unwrap()
+            .contains("Missing case annotation parameters. Expected a name, input and expected output."));
+        assert!(!first.is_success());
+        assert_eq!(first.value(), None);
+        assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
+    }
+
+    #[test]
+    fn case_with_no_parameters() {
+        let mut data = SimpleRuntimeData::new();
+
+        let input = lex("$ + 5\n\n@Case ").unwrap();
+        let tests = extract_tests(&input).unwrap();
+
+        // caller needs space to set up data as well, let them build top expression
+        let parse_result = parse(tests.get_expression().clone()).unwrap();
+        let top_expression = data.get_jump_table_len();
+        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
+
+        let mut runtime = SimpleGarnishRuntime::new(data);
+        let results = execute_tests(&mut runtime, &tests, Some(top_expression)).unwrap();
+
+        assert_eq!(results.get_results().len(), 1);
+
+        let first = results.get_results().get(0).unwrap();
+        assert!(first
+            .error()
+            .unwrap()
+            .contains("Test expression empty"));
+        assert!(!first.is_success());
+        assert_eq!(first.value(), None);
         assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
     }
 }
