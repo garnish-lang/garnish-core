@@ -1,7 +1,7 @@
-use std::fmt::Debug;
+use std::fmt::{Debug};
 
 use garnish_lang_compiler::{build_with_data, parse};
-use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishNumber, GarnishRuntime, NO_CONTEXT, TypeConstants};
+use garnish_traits::{ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishNumber, GarnishRuntime, Instruction, RuntimeError, TypeConstants};
 
 use crate::test_annotation::{TestAnnotation, TestAnnotationDetails, TestDetails, TestExtractionError};
 
@@ -62,8 +62,9 @@ impl<Data: GarnishLangRuntimeData> ExecutionResult<Data> {
     }
 }
 
-fn execute_test_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>>(
+fn execute_test_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>, Context: GarnishLangRuntimeContext<Data>>(
     runtime: &mut Runtime,
+    context: &mut Context,
     test: &TestAnnotationDetails,
 ) -> Result<TestResult<Data>, TestExtractionError> {
     let (name_value, expression_value) = match runtime.get_data().get_current_value() {
@@ -89,7 +90,7 @@ fn execute_test_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
             Ok(point) => match runtime.get_data().get_jump_point(point) {
                 None => (false, None, Some("Jump point not registered".to_string())),
                 Some(start) => {
-                    execute_until_end(runtime, start)?;
+                    execute_until_end(runtime, context, start)?;
 
                     match runtime.get_data().get_current_value() {
                         None => (false, None, Some("Failed to get data from test".to_string())),
@@ -110,8 +111,9 @@ fn execute_test_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
     Ok(TestResult::<Data>::new(success, error, value, name_value, test.clone()))
 }
 
-fn execute_until_end<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>>(
+fn execute_until_end<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>, Context: GarnishLangRuntimeContext<Data>>(
     runtime: &mut Runtime,
+    context: &mut Context,
     start: Data::Size,
 ) -> Result<(), TestExtractionError> {
     runtime
@@ -120,7 +122,7 @@ fn execute_until_end<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>
         .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
 
     loop {
-        match runtime.execute_current_instruction(NO_CONTEXT) {
+        match runtime.execute_current_instruction(Some(context)) {
             Err(e) => return Err(TestExtractionError::error(e.to_string().as_str()))?,
             Ok(data) => match data.get_state() {
                 GarnishLangRuntimeState::Running => (),
@@ -132,8 +134,9 @@ fn execute_until_end<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>
     Ok(())
 }
 
-fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>>(
+fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>, Context: GarnishLangRuntimeContext<Data>>(
     runtime: &mut Runtime,
+    context: &mut Context,
     test: &TestAnnotationDetails,
     top_expression: Data::Size,
 ) -> Result<TestResult<Data>, TestExtractionError> {
@@ -175,7 +178,7 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
                 .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
 
             // execute top expression
-            execute_until_end(runtime, top_expression)?;
+            execute_until_end(runtime, context, top_expression)?;
 
             // push current value and output value to registers
             // perform comparison
@@ -198,7 +201,8 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
                             .equal()
                             .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
 
-                        runtime.update_value()
+                        runtime
+                            .update_value()
                             .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
 
                         match runtime.get_data().get_current_value() {
@@ -211,7 +215,11 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
                                 {
                                     ExpressionDataType::True => (true, Some(value_addr), None),
                                     ExpressionDataType::False => (false, Some(value_addr), None),
-                                    t => (false, Some(value_addr), Some(format!("Value after equality is {:?}, expected True or False", t))),
+                                    t => (
+                                        false,
+                                        Some(value_addr),
+                                        Some(format!("Value after equality is {:?}, expected True or False", t)),
+                                    ),
                                 }
                             }
                         }
@@ -224,12 +232,72 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
     Ok(TestResult::<Data>::new(success, error, value, name_value, test.clone()))
 }
 
+struct TestExecutionContext<Data: GarnishLangRuntimeData> {
+    caller_context: Option<Box<dyn GarnishLangRuntimeContext<Data>>>,
+}
+
+impl<Data: GarnishLangRuntimeData> TestExecutionContext<Data> {
+    fn new(c: Option<Box<dyn GarnishLangRuntimeContext<Data>>>) -> Self {
+        TestExecutionContext { caller_context: c }
+    }
+}
+
+impl<Data: GarnishLangRuntimeData> GarnishLangRuntimeContext<Data> for TestExecutionContext<Data> {
+    fn resolve(&mut self, symbol: Data::Symbol, runtime: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
+        match &mut self.caller_context {
+            None => Ok(true),
+            Some(context) => {
+                context.resolve(symbol, runtime)
+            }
+        }
+    }
+
+    fn apply(&mut self, external_value: Data::Size, input_addr: Data::Size, runtime: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
+        match &mut self.caller_context {
+            None => Ok(true),
+            Some(context) => {
+                context.apply(external_value, input_addr, runtime)
+            }
+        }
+    }
+
+    fn defer_op(&mut self, runtime: &mut Data, operation: Instruction, left: (ExpressionDataType, Data::Size), right: (ExpressionDataType, Data::Size)) -> Result<bool, RuntimeError<Data::Error>> {
+        match &mut self.caller_context {
+            None => Ok(true),
+            Some(context) => {
+                context.defer_op(runtime, operation, left, right)
+            }
+        }
+    }
+}
+
 pub fn execute_tests<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>>(
     runtime: &mut Runtime,
     tests: &TestDetails,
     top_expression: Option<Data::Size>,
 ) -> Result<ExecutionResult<Data>, TestExtractionError> {
+    execute_tests_with_context(runtime, tests, top_expression, || None)
+}
+
+pub fn execute_tests_with_context<
+    Data: GarnishLangRuntimeData,
+    Runtime: GarnishRuntime<Data>,
+    MakeContextFn,
+>(
+    runtime: &mut Runtime,
+    tests: &TestDetails,
+    top_expression: Option<Data::Size>,
+    context_fn: MakeContextFn,
+) -> Result<ExecutionResult<Data>, TestExtractionError>
+where
+    MakeContextFn: FnOnce() -> Option<Box<dyn GarnishLangRuntimeContext<Data>>>,
+{
     let mut results = vec![];
+
+    let mut context = TestExecutionContext::new(match context_fn() {
+        Some(c) => Some(c),
+        None => None
+    });
 
     for test in tests.get_annotations() {
         let parse_result = parse(test.get_expression().clone()).or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
@@ -239,30 +307,15 @@ pub fn execute_tests<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>
         build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), runtime.get_data_mut())
             .or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
 
-        match runtime.get_data().get_jump_point(start) {
+        let point = match runtime.get_data().get_jump_point(start) {
             None => return Err(TestExtractionError::error("No starting jump point available")),
-            Some(point) => {
-                runtime
-                    .get_data_mut()
-                    .set_instruction_cursor(point)
-                    .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
-            }
-        }
+            Some(point) => point,
+        };
 
-        // Run test expression to get list that should contain 2 items
-        // a name string and an expression to execute
-        loop {
-            match runtime.execute_current_instruction(NO_CONTEXT) {
-                Err(e) => return Err(TestExtractionError::error(e.to_string().as_str())),
-                Ok(data) => match data.get_state() {
-                    GarnishLangRuntimeState::Running => (),
-                    GarnishLangRuntimeState::End => break,
-                },
-            }
-        }
+        execute_until_end(runtime, &mut context, point)?;
 
         let result = match test.get_annotation() {
-            TestAnnotation::Test => execute_test_annotation(runtime, test)?,
+            TestAnnotation::Test => execute_test_annotation(runtime, &mut context, test)?,
             TestAnnotation::Case => match top_expression {
                 None => TestResult::<Data>::new(
                     false,
@@ -271,7 +324,7 @@ pub fn execute_tests<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>
                     None,
                     test.clone(),
                 ),
-                Some(top) => execute_case_annotation(runtime, test, top)?,
+                Some(top) => execute_case_annotation(runtime, &mut context, test, top)?,
             },
         };
 
@@ -286,7 +339,7 @@ mod tests {
     use garnish_data::SimpleRuntimeData;
     use garnish_lang_compiler::{build_with_data, lex, parse};
     use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
-    use garnish_traits::GarnishLangRuntimeData;
+    use garnish_traits::{GarnishLangRuntimeData};
 
     use crate::test_annotation::{execute_tests, extract_tests};
 
@@ -383,6 +436,55 @@ mod tests {
         assert_eq!(first.error(), None);
         assert!(!first.is_success());
         assert_eq!(first.value(), Some(7));
+        assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
+    }
+}
+
+#[cfg(test)]
+mod context {
+    use garnish_data::data::SimpleNumber;
+    use garnish_data::{symbol_value, DataError, SimpleRuntimeData};
+    use garnish_lang_compiler::{build_with_data, lex, parse};
+    use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
+    use garnish_traits::{GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishRuntime, RuntimeError};
+
+    use crate::test_annotation::{execute_tests_with_context, extract_tests};
+
+    struct TestContext {}
+
+    impl GarnishLangRuntimeContext<SimpleRuntimeData> for TestContext {
+        fn resolve(&mut self, symbol: u64, runtime: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
+            if symbol == symbol_value("value1") {
+                runtime.add_number(SimpleNumber::Integer(100)).and_then(|r| runtime.push_register(r))?;
+                return Ok(true);
+            }
+
+            Ok(false)
+        }
+    }
+
+    #[test]
+    fn caller_context_is_used_in_top_expression() {
+        let mut data = SimpleRuntimeData::new();
+
+        let input = lex("$ + value1\n\n@Case \"5 + value1 is 105\" 5 105").unwrap();
+        let tests = extract_tests(&input).unwrap();
+
+        // caller needs space to set up data as well, let them build top expression
+        let parse_result = parse(tests.get_expression().clone()).unwrap();
+        let top_expression = data.get_jump_table_len();
+        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
+
+        let mut runtime = SimpleGarnishRuntime::new(data);
+        let results = execute_tests_with_context(&mut runtime, &tests, Some(top_expression), || Some(Box::new(TestContext {}))).unwrap();
+
+        assert_eq!(results.get_results().len(), 1);
+
+        let first = results.get_results().get(0).unwrap();
+        assert_eq!(first.error(), None);
+        assert!(first.is_success());
+        assert_eq!(first.value(), Some(6));
+        assert_eq!(runtime.get_data().get_number(6).unwrap(), SimpleNumber::Integer(105));
         assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
     }
 }
