@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use garnish_lang_compiler::{build_with_data, parse, TokenType};
+use garnish_lang_compiler::{build_with_data, parse, LexerToken, TokenType};
 use garnish_traits::{
     ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeState, GarnishNumber, GarnishRuntime, Instruction,
     RuntimeError, TypeConstants,
@@ -86,28 +86,45 @@ fn execute_test_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
         },
     };
 
-    let (success, value, error) = match expression_value {
-        None => (false, None, Some(format!("Could not retrieve expression"))),
-        Some(expression_addr) => match runtime.get_data().get_expression(expression_addr) {
-            Err(e) => (false, None, Some(format!("{:?}", e))),
-            Ok(point) => match runtime.get_data().get_jump_point(point) {
-                None => (false, None, Some("Jump point not registered".to_string())),
-                Some(start) => {
-                    execute_until_end(runtime, context, start)?;
+    let (_, expression_addr) = match (name_value, expression_value) {
+        (Some(name_addr), Some(expression_addr)) => (name_addr, expression_addr),
+        _ => {
+            return Ok(TestResult::new(
+                false,
+                Some("Missing test annotation parameters. Expected a name and nested expression.".to_string()),
+                None,
+                name_value,
+                test.clone(),
+            ));
+        }
+    };
 
-                    match runtime.get_data().get_current_value() {
-                        None => (false, None, Some("Failed to get data from test".to_string())),
-                        Some(value) => match runtime.get_data().get_data_type(value) {
-                            Err(e) => (false, None, Some(format!("{:?}", e))),
-                            Ok(t) => match t {
-                                ExpressionDataType::True => (true, Some(value), None),
-                                ExpressionDataType::False => (false, Some(value), None),
-                                _ => (false, None, Some("Value not of type True or False".to_string())),
-                            },
+    let (success, value, error) = match runtime.get_data().get_expression(expression_addr) {
+        Err(e) => (
+            false,
+            None,
+            Some(format!(
+                "Non-expression value found when trying to execute test annotation.\nError: {}",
+                e
+            )),
+        ),
+        Ok(point) => match runtime.get_data().get_jump_point(point) {
+            None => (false, None, Some("Jump point not registered".to_string())),
+            Some(start) => {
+                execute_until_end(runtime, context, start)?;
+
+                match runtime.get_data().get_current_value() {
+                    None => (false, None, Some("Failed to get data from test".to_string())),
+                    Some(value) => match runtime.get_data().get_data_type(value) {
+                        Err(e) => (false, None, Some(format!("{:?}", e))),
+                        Ok(t) => match t {
+                            ExpressionDataType::True => (true, Some(value), None),
+                            ExpressionDataType::False => (false, Some(value), None),
+                            _ => (false, None, Some("Value not of type True or False".to_string())),
                         },
-                    }
+                    },
                 }
-            },
+            }
         },
     };
 
@@ -289,6 +306,18 @@ impl<Data: GarnishLangRuntimeData> GarnishLangRuntimeContext<Data> for TestExecu
     }
 }
 
+fn is_expression_empty(tokens: &Vec<LexerToken>) -> bool {
+    for t in tokens {
+        match t.get_token_type() {
+            TokenType::Whitespace | TokenType::Subexpression | TokenType::Unknown => (),
+            // any other token means expression is not empty
+            _ => return false,
+        }
+    }
+
+    return true;
+}
+
 pub fn execute_tests<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>>(
     runtime: &mut Runtime,
     tests: &TestDetails,
@@ -334,13 +363,20 @@ where
                 None => {
                     // cannot mock
                     // skip test
-                    results.push(TestResult::new(false, Some("No identifier found in mock.".to_string()), None, None, test.clone()));
+                    results.push(TestResult::new(
+                        false,
+                        Some("No identifier found in mock.".to_string()),
+                        None,
+                        None,
+                        test.clone(),
+                    ));
                     continue;
                 }
             };
 
             // exclude identifier from parse
-            let parse_result = parse(Vec::from(&mock.get_expression()[identifier_loc + 1..])).or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
+            let parse_result =
+                parse(Vec::from(&mock.get_expression()[identifier_loc + 1..])).or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
 
             let start = runtime.get_data().get_jump_table_len();
 
@@ -362,6 +398,17 @@ where
                     context.register_mock(identifier, current_value);
                 }
             }
+        }
+
+        if is_expression_empty(test.get_expression()) {
+            results.push(TestResult::new(
+                false,
+                Some("Test expression empty".to_string()),
+                None,
+                None,
+                test.clone(),
+            ));
+            continue;
         }
 
         let parse_result = parse(test.get_expression().clone()).or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
@@ -452,6 +499,87 @@ mod tests {
         assert_eq!(first.error(), None);
         assert!(!first.is_success());
         assert_eq!(first.value(), Some(1));
+        assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
+    }
+
+    #[test]
+    fn test_without_expression_has_error_in_result() {
+        let mut data = SimpleRuntimeData::new();
+
+        let input = lex("@Test \"5 equals 5\" not_an_expression").unwrap();
+        let tests = extract_tests(&input).unwrap();
+
+        // caller needs space to set up data as well, let them build top expression
+        let parse_result = parse(tests.get_expression().clone()).unwrap();
+        // let top_expression = data.get_jump_table_len();
+        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
+
+        let mut runtime = SimpleGarnishRuntime::new(data);
+        let results = execute_tests(&mut runtime, &tests, None).unwrap();
+
+        assert_eq!(results.get_results().len(), 1);
+
+        let first = results.get_results().get(0).unwrap();
+        assert!(first
+            .error()
+            .unwrap()
+            .contains("Non-expression value found when trying to execute test annotation."));
+        assert!(!first.is_success());
+        assert_eq!(first.value(), None);
+        assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
+    }
+
+    #[test]
+    fn test_with_no_parameters_has_error_in_result() {
+        let mut data = SimpleRuntimeData::new();
+
+        let input = lex("@Test ").unwrap();
+        let tests = extract_tests(&input).unwrap();
+
+        // caller needs space to set up data as well, let them build top expression
+        let parse_result = parse(tests.get_expression().clone()).unwrap();
+        // let top_expression = data.get_jump_table_len();
+        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
+
+        let mut runtime = SimpleGarnishRuntime::new(data);
+        let results = execute_tests(&mut runtime, &tests, None).unwrap();
+
+        assert_eq!(results.get_results().len(), 1);
+
+        let first = results.get_results().get(0).unwrap();
+        assert!(first
+            .error()
+            .unwrap()
+            .contains("Test expression empty"));
+        assert!(!first.is_success());
+        assert_eq!(first.value(), None);
+        assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
+    }
+
+    #[test]
+    fn test_with_only_one_parameter_has_error_in_result() {
+        let mut data = SimpleRuntimeData::new();
+
+        let input = lex("@Test \"5 equals 5\"").unwrap();
+        let tests = extract_tests(&input).unwrap();
+
+        // caller needs space to set up data as well, let them build top expression
+        let parse_result = parse(tests.get_expression().clone()).unwrap();
+        // let top_expression = data.get_jump_table_len();
+        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
+
+        let mut runtime = SimpleGarnishRuntime::new(data);
+        let results = execute_tests(&mut runtime, &tests, None).unwrap();
+
+        assert_eq!(results.get_results().len(), 1);
+
+        let first = results.get_results().get(0).unwrap();
+        assert!(first
+            .error()
+            .unwrap()
+            .contains("Missing test annotation parameters. Expected a name and nested expression."));
+        assert!(!first.is_success());
+        assert_eq!(first.value(), None);
         assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
     }
 
