@@ -345,9 +345,20 @@ where
         None => None,
     });
 
-    for test in tests.get_annotations() {
+    'test_loop: for test in tests.get_annotations() {
         // process mocks first
         for mock in test.get_mocks() {
+            if is_expression_empty(mock.get_expression()) {
+                results.push(TestResult::new(
+                    false,
+                    Some("Mock expression empty".to_string()),
+                    None,
+                    None,
+                    test.clone(),
+                ));
+                continue 'test_loop;
+            }
+
             // remove first identifier from mock tokens
             // this is symbol to mock
             let mut identifier = None;
@@ -373,13 +384,24 @@ where
                         None,
                         test.clone(),
                     ));
-                    continue;
+                    continue 'test_loop;
                 }
             };
 
+            let mock_expression = Vec::from(&mock.get_expression()[identifier_loc + 1..]);
+            if is_expression_empty(&mock_expression) {
+                results.push(TestResult::new(
+                    false,
+                    Some("No expression after identifier in mock".to_string()),
+                    None,
+                    None,
+                    test.clone(),
+                ));
+                continue 'test_loop;
+            }
+
             // exclude identifier from parse
-            let parse_result =
-                parse(Vec::from(&mock.get_expression()[identifier_loc + 1..])).or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
+            let parse_result = parse(mock_expression).or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
 
             let start = runtime.get_data().get_jump_table_len();
 
@@ -550,10 +572,7 @@ mod tests {
         assert_eq!(results.get_results().len(), 1);
 
         let first = results.get_results().get(0).unwrap();
-        assert!(first
-            .error()
-            .unwrap()
-            .contains("Test expression empty"));
+        assert!(first.error().unwrap().contains("Test expression empty"));
         assert!(!first.is_success());
         assert_eq!(first.value(), None);
         assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
@@ -706,10 +725,7 @@ mod tests {
         assert_eq!(results.get_results().len(), 1);
 
         let first = results.get_results().get(0).unwrap();
-        assert!(first
-            .error()
-            .unwrap()
-            .contains("Test expression empty"));
+        assert!(first.error().unwrap().contains("Test expression empty"));
         assert!(!first.is_success());
         assert_eq!(first.value(), None);
         assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
@@ -786,6 +802,84 @@ mod context {
         assert!(first.is_success());
         assert_eq!(first.value(), Some(7));
         assert_eq!(runtime.get_data().get_number(7).unwrap(), SimpleNumber::Integer(205));
+        assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
+    }
+
+    #[test]
+    fn mock_with_non_identifier_for_first_parameter() {
+        let mut data = SimpleRuntimeData::new();
+
+        let input = lex("$ + value1\n\n@Mock 10 20\n@Case \"5 + value1 is 105\" 5 205").unwrap();
+        let tests = extract_tests(&input).unwrap();
+
+        // caller needs space to set up data as well, let them build top expression
+        let parse_result = parse(tests.get_expression().clone()).unwrap();
+        let top_expression = data.get_jump_table_len();
+        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
+
+        let mut runtime = SimpleGarnishRuntime::new(data);
+        let results = execute_tests_with_context(&mut runtime, &tests, Some(top_expression), || Some(Box::new(TestContext {}))).unwrap();
+
+        assert_eq!(results.get_results().len(), 1);
+
+        let first = results.get_results().get(0).unwrap();
+        assert!(first
+            .error()
+            .unwrap()
+            .contains("No identifier found in mock."));
+        assert!(!first.is_success());
+        assert_eq!(first.value(), None);
+        assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
+    }
+
+    #[test]
+    fn mock_with_only_one_parameter() {
+        let mut data = SimpleRuntimeData::new();
+
+        let input = lex("$ + value1\n\n@Mock value1\n@Case \"5 + value1 is 105\" 5 205").unwrap();
+        let tests = extract_tests(&input).unwrap();
+
+        // caller needs space to set up data as well, let them build top expression
+        let parse_result = parse(tests.get_expression().clone()).unwrap();
+        let top_expression = data.get_jump_table_len();
+        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
+
+        let mut runtime = SimpleGarnishRuntime::new(data);
+        let results = execute_tests_with_context(&mut runtime, &tests, Some(top_expression), || Some(Box::new(TestContext {}))).unwrap();
+
+        assert_eq!(results.get_results().len(), 1);
+
+        let first = results.get_results().get(0).unwrap();
+        assert!(first
+            .error()
+            .unwrap()
+            .contains("No expression after identifier in mock"));
+        assert!(!first.is_success());
+        assert_eq!(first.value(), None);
+        assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
+    }
+
+    #[test]
+    fn mock_with_no_parameter() {
+        let mut data = SimpleRuntimeData::new();
+
+        let input = lex("$ + value1\n\n@Mock\n@Case \"5 + value1 is 105\" 5 205").unwrap();
+        let tests = extract_tests(&input).unwrap();
+
+        // caller needs space to set up data as well, let them build top expression
+        let parse_result = parse(tests.get_expression().clone()).unwrap();
+        let top_expression = data.get_jump_table_len();
+        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
+
+        let mut runtime = SimpleGarnishRuntime::new(data);
+        let results = execute_tests_with_context(&mut runtime, &tests, Some(top_expression), || Some(Box::new(TestContext {}))).unwrap();
+
+        assert_eq!(results.get_results().len(), 1);
+
+        let first = results.get_results().get(0).unwrap();
+        assert!(first.error().unwrap().contains("Mock expression empty"));
+        assert!(!first.is_success());
+        assert_eq!(first.value(), None);
         assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
     }
 }
