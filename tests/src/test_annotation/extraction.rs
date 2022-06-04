@@ -202,7 +202,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                             current_mocks = Vec::new();
                         }
                         s => Err(TestExtractionError::error(
-                            format!("Found {:?} during finalization of annotation.", s).as_str(),
+                            format!("Incorrect state, {:?}, during finalization of annotation.", s).as_str(),
                         ))?,
                     }
 
