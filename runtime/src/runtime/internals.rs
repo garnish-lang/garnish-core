@@ -1,10 +1,9 @@
-use garnish_traits::Instruction;
 use crate::runtime::list::iterate_concatenation_internal;
 use crate::runtime::range::range_len;
 use crate::{
-    next_ref, push_number, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError,
-    TypeConstants,
+    next_ref, push_number, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError, TypeConstants,
 };
+use garnish_traits::Instruction;
 
 pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,

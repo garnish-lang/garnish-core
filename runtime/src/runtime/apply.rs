@@ -1,7 +1,7 @@
-use garnish_traits::Instruction;
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
 use crate::{state_error, ErrorType, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_traits::Instruction;
 
 use super::context::GarnishLangRuntimeContext;
 
@@ -229,4 +229,3 @@ pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
         ))?,
     }
 }
-

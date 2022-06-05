@@ -827,10 +827,7 @@ mod context {
         assert_eq!(results.get_results().len(), 1);
 
         let first = results.get_results().get(0).unwrap();
-        assert!(first
-            .error()
-            .unwrap()
-            .contains("No identifier found in mock."));
+        assert!(first.error().unwrap().contains("No identifier found in mock."));
         assert!(!first.is_success());
         assert_eq!(first.value(), None);
         assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());
@@ -854,10 +851,7 @@ mod context {
         assert_eq!(results.get_results().len(), 1);
 
         let first = results.get_results().get(0).unwrap();
-        assert!(first
-            .error()
-            .unwrap()
-            .contains("No expression after identifier in mock"));
+        assert!(first.error().unwrap().contains("No expression after identifier in mock"));
         assert!(!first.is_success());
         assert_eq!(first.value(), None);
         assert_eq!(first.test_details(), tests.get_annotations().get(0).unwrap());

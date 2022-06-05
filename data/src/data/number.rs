@@ -1,12 +1,11 @@
-
+use crate::data::DataCastResult;
+use crate::data::SimpleNumber::*;
+use crate::DataError;
+use garnish_traits::{GarnishNumber, TypeConstants};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::{Add, Div, Mul, Rem, Sub};
-use garnish_traits::{GarnishNumber, TypeConstants};
-use crate::data::DataCastResult;
-use crate::data::SimpleNumber::*;
-use crate::DataError;
 
 #[derive(Copy, Clone, Debug)]
 pub enum SimpleNumber {
@@ -312,10 +311,10 @@ impl GarnishNumber for SimpleNumber {
 
 #[cfg(test)]
 mod tests {
-    use std::usize;
-    use garnish_traits::GarnishNumber;
     use crate::data::SimpleNumber;
     use crate::data::SimpleNumber::*;
+    use garnish_traits::GarnishNumber;
+    use std::usize;
 
     #[test]
     fn from_i32() {

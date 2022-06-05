@@ -23,8 +23,8 @@ use crate::runtime::sideeffect::*;
 use crate::runtime::concat::concat;
 use crate::runtime::GarnishLangRuntimeInfo;
 use crate::runtime::GarnishRuntime;
-use log::trace;
 use garnish_traits::Instruction;
+use log::trace;
 
 pub struct SimpleGarnishRuntime<Data: GarnishLangRuntimeData> {
     data: Data,
@@ -40,7 +40,6 @@ impl<Data> GarnishRuntime<Data> for SimpleGarnishRuntime<Data>
 where
     Data: GarnishLangRuntimeData,
 {
-
     fn get_data(&self) -> &Data {
         &self.data
     }
@@ -451,4 +450,3 @@ where
         end_side_effect(self.get_data_mut())
     }
 }
-

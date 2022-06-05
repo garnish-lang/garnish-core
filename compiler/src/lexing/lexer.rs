@@ -1907,17 +1907,20 @@ mod tests {
 
         assert_eq!(
             result,
-            vec![LexerToken {
-                text: "\n   \t   \n".to_string(),
-                token_type: TokenType::Subexpression,
-                column: 0,
-                row: 0
-            },LexerToken {
-                text: "\n   \t   \n".to_string(),
-                token_type: TokenType::Subexpression,
-                column: 0,
-                row: 2
-            },]
+            vec![
+                LexerToken {
+                    text: "\n   \t   \n".to_string(),
+                    token_type: TokenType::Subexpression,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "\n   \t   \n".to_string(),
+                    token_type: TokenType::Subexpression,
+                    column: 0,
+                    row: 2
+                },
+            ]
         )
     }
 
@@ -1927,17 +1930,20 @@ mod tests {
 
         assert_eq!(
             result,
-            vec![LexerToken {
-                text: "\n   \t   \n".to_string(),
-                token_type: TokenType::Subexpression,
-                column: 0,
-                row: 0
-            },LexerToken {
-                text: "     \n   \t   \n".to_string(),
-                token_type: TokenType::Subexpression,
-                column: 0,
-                row: 2
-            },]
+            vec![
+                LexerToken {
+                    text: "\n   \t   \n".to_string(),
+                    token_type: TokenType::Subexpression,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "     \n   \t   \n".to_string(),
+                    token_type: TokenType::Subexpression,
+                    column: 0,
+                    row: 2
+                },
+            ]
         )
     }
 

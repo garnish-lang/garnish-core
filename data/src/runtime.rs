@@ -1,12 +1,12 @@
+use garnish_traits::GarnishLangRuntimeData;
 use std::collections::hash_map::DefaultHasher;
 use std::convert::TryInto;
 use std::fmt::Debug;
 use std::hash::Hash;
 use std::hash::Hasher;
-use garnish_traits::GarnishLangRuntimeData;
 
-use crate::{symbol_value, DataError, ExpressionDataType, Instruction, SimpleData, SimpleRuntimeData, InstructionData};
 use crate::data::{parse_byte_list, parse_char_list, parse_simple_number, SimpleNumber};
+use crate::{symbol_value, DataError, ExpressionDataType, Instruction, InstructionData, SimpleData, SimpleRuntimeData};
 
 impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
 where
@@ -623,8 +623,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use garnish_traits::GarnishLangRuntimeData;
     use crate::{ExpressionDataType, Instruction, SimpleRuntimeData};
+    use garnish_traits::GarnishLangRuntimeData;
 
     #[test]
     fn type_of() {

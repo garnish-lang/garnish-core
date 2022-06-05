@@ -185,8 +185,8 @@ mod simple {
 
 #[cfg(test)]
 mod primitive {
-    use garnish_data::SimpleDataRuntimeNC;
     use crate::simple::testing_utilities::{add_char_list, create_simple_runtime};
+    use garnish_data::SimpleDataRuntimeNC;
     use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
@@ -348,7 +348,7 @@ mod primitive {
 
 #[cfg(test)]
 mod lists {
-    use garnish_data::{SimpleDataRuntimeNC, symbol_value};
+    use garnish_data::{symbol_value, SimpleDataRuntimeNC};
 
     use crate::simple::testing_utilities::{
         add_byte_list, add_char_list, add_links_with_start, add_list_with_start, add_range, create_simple_runtime,

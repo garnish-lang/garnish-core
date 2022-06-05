@@ -4,10 +4,10 @@ mod parsing;
 pub use number::*;
 pub use parsing::*;
 
+use crate::{DataError, NoCustom};
+use garnish_traits::ExpressionDataType;
 use std::fmt::Debug;
 use std::hash::Hash;
-use garnish_traits::ExpressionDataType;
-use crate::{DataError, NoCustom};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct SimpleDataList<T = NoCustom>
@@ -251,8 +251,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionDataType, NoCustom};
     use crate::data::{SimpleDataNC, SimpleNumber};
+    use crate::{ExpressionDataType, NoCustom};
 
     #[test]
     fn get_data_type() {

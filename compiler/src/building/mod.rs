@@ -1,7 +1,7 @@
 use crate::error::{implementation_error, implementation_error_with_token, CompilerError};
 use garnish_lang_runtime::*;
-use log::trace;
 use garnish_traits::Instruction;
+use log::trace;
 
 use crate::parsing::parser::*;
 
@@ -334,7 +334,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
 ) -> Result<Vec<InstructionMetadata>, CompilerError<Data::Error>> {
     // emtpy yields empty
     if nodes.is_empty() {
-        return Ok(vec![])
+        return Ok(vec![]);
     }
 
     let mut metadata = vec![];
@@ -640,11 +640,11 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
 
 #[cfg(test)]
 mod test_utils {
-    use garnish_data::InstructionData;
-    use garnish_data::*;
-    use garnish_data::data::SimpleDataList;
     use crate::error::CompilerError;
     use crate::*;
+    use garnish_data::data::SimpleDataList;
+    use garnish_data::InstructionData;
+    use garnish_data::*;
     use garnish_traits::Instruction;
 
     pub fn assert_instruction_data(
@@ -715,8 +715,8 @@ mod values {
 
     use super::test_utils::*;
     use crate::*;
+    use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_data::*;
-    use garnish_data::data::{SimpleDataList, SimpleData};
     use garnish_traits::Instruction;
 
     #[test]
@@ -903,8 +903,8 @@ mod operations {
 
     use super::test_utils::*;
     use crate::*;
+    use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_data::*;
-    use garnish_data::data::{SimpleDataList, SimpleData};
     use garnish_traits::Instruction;
 
     #[test]
@@ -1971,8 +1971,8 @@ mod lists {
 
     use super::test_utils::*;
     use crate::*;
+    use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_data::*;
-    use garnish_data::data::{SimpleDataList, SimpleData};
     use garnish_traits::Instruction;
 
     #[test]
@@ -2174,9 +2174,8 @@ mod lists {
 mod groups {
     use super::test_utils::*;
     use crate::*;
-    
-    
-    use garnish_data::data::{SimpleDataList, SimpleData};
+
+    use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_traits::Instruction;
 
     #[test]
@@ -2206,9 +2205,8 @@ mod groups {
 mod side_effects {
     use super::test_utils::*;
     use crate::*;
-    
-    
-    use garnish_data::data::{SimpleDataList, SimpleData};
+
+    use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_traits::Instruction;
 
     #[test]
@@ -2355,9 +2353,8 @@ mod side_effects {
 mod nested_expressions {
     use super::test_utils::*;
     use crate::*;
-    
-    
-    use garnish_data::data::{SimpleDataList, SimpleData};
+
+    use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_traits::Instruction;
 
     #[test]
@@ -2460,9 +2457,8 @@ mod nested_expressions {
 mod conditionals {
     use super::test_utils::*;
     use crate::*;
-    
-    
-    use garnish_data::data::{SimpleDataList, SimpleData};
+
+    use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_traits::Instruction;
 
     #[test]

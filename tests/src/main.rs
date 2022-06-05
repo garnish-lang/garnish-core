@@ -1,14 +1,17 @@
-use std::{env, io};
-use std::process::exit;
 use std::fs::*;
 use std::path::{Path, PathBuf};
+use std::process::exit;
+use std::{env, io};
+
+use colored::Colorize;
+
 use garnish_data::data::SimpleData;
 use garnish_data::SimpleRuntimeData;
 use garnish_lang_compiler::{build_with_data, lex, parse};
 use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
 use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime};
+
 use crate::test_annotation::{execute_tests, extract_tests};
-use colored::Colorize;
 
 mod test_annotation;
 
@@ -22,7 +25,6 @@ fn main() {
         }
     };
 
-
     let dir = Path::new(&test_directory);
 
     let mut paths = vec![];
@@ -32,7 +34,7 @@ fn main() {
             println!("Failed to read all paths.\n{}", e);
             exit(1);
         }
-        Ok(_) => ()
+        Ok(_) => (),
     }
 
     let mut overall_status = 0;
@@ -56,7 +58,6 @@ fn main() {
         let mut runtime = SimpleGarnishRuntime::new(data);
         let results = execute_tests(&mut runtime, &tests, Some(top_expression)).unwrap();
 
-
         for result in results.get_results() {
             let name = match result.name() {
                 None => "[No name found for test]".to_string(),
@@ -64,9 +65,9 @@ fn main() {
                     None => "[No name found for test]".to_string(),
                     Some(name) => match name {
                         SimpleData::CharList(s) => s,
-                        _ => "[No name found for test]".to_string()
-                    }
-                }
+                        _ => "[No name found for test]".to_string(),
+                    },
+                },
             };
 
             let s = format!("{}: {}", name, result.is_success());

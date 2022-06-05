@@ -5,13 +5,13 @@ use std::{collections::HashMap, hash::Hasher};
 
 pub mod data;
 mod error;
-mod runtime;
 pub mod instruction;
+mod runtime;
 
-pub use error::DataError;
-use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, Instruction};
 use crate::data::{SimpleData, SimpleDataList};
 pub use crate::instruction::InstructionData;
+pub use error::DataError;
+use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, Instruction};
 
 pub fn symbol_value(value: &str) -> u64 {
     let mut h = DefaultHasher::new();
@@ -26,8 +26,8 @@ pub struct NoCustom {}
 
 #[derive(Debug)]
 pub struct SimpleRuntimeData<T = NoCustom>
-    where
-        T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+where
+    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     register: Vec<usize>,
     data: SimpleDataList<T>,
@@ -71,8 +71,8 @@ impl SimpleRuntimeData<NoCustom> {
 }
 
 impl<T> SimpleRuntimeData<T>
-    where
-        T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+where
+    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     pub fn new_custom() -> Self {
         SimpleRuntimeData {
@@ -533,8 +533,8 @@ mod to_char_list {
     use crate::{ExpressionDataType, GarnishLangRuntimeData, NoCustom, SimpleRuntimeData};
 
     fn assert_to_char_list<Func>(expected: &str, setup: Func)
-        where
-            Func: FnOnce(&mut SimpleRuntimeData) -> usize,
+    where
+        Func: FnOnce(&mut SimpleRuntimeData) -> usize,
     {
         let mut runtime = SimpleRuntimeData::new();
 

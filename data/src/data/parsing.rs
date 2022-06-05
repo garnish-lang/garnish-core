@@ -1,8 +1,7 @@
-
-use std::iter;
-use std::str::FromStr;
 use crate::data::SimpleNumber;
 use crate::DataError;
+use std::iter;
+use std::str::FromStr;
 
 pub fn parse_char_list(input: &str) -> Result<String, DataError> {
     let mut new = String::new();

@@ -1,5 +1,5 @@
-use log::trace;
 use garnish_traits::Instruction;
+use log::trace;
 
 use crate::{
     next_ref, next_two_raw_ref, push_number, push_unit, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber,

@@ -69,9 +69,9 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
+    use crate::simple::testing_utilities::create_simple_runtime;
     use garnish_data::data::SimpleNumber;
     use garnish_data::SimpleDataRuntimeNC;
-    use crate::simple::testing_utilities::create_simple_runtime;
     use garnish_lang_runtime::{EmptyContext, ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
 
     #[test]
