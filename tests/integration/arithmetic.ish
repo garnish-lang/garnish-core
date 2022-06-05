@@ -17,3 +17,7 @@
 @Test "Subtraction Overflow Is Unit" { 2147483647 - --1 #= () }
 
 @Test "Multiplication Overflow Is Unit" { 2147483647 * 2 #= () }
+
+@Test "Division Overflow Is Unit" { -2147483648 / --1 #= () }
+
+@Test "Division By Zero Is Unit" { 2147483647 / 0 #= () }
