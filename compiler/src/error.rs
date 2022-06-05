@@ -1,6 +1,6 @@
 use crate::{LexerToken, SecondaryDefinition};
 use std::error::Error;
-use std::fmt::{Debug, Display, Formatter};
+use std::fmt::{Debug, Display, format, Formatter};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct NoSource {}
@@ -82,6 +82,16 @@ impl<Source: 'static + std::error::Error> From<Source> for CompilerError<Source>
         let mut e = CompilerError::default();
         e.source = Some(source);
         e
+    }
+}
+
+
+impl<Source: 'static + std::error::Error> From<CompilerError<Source>> for String {
+    fn from(e: CompilerError<Source>) -> Self {
+        match e.source {
+            None => format!("{} at line {} col {}", e.message, e.line, e.column),
+            Some(s) => format!("{} at line {} col {}", s, e.line, e.column)
+        }
     }
 }
 

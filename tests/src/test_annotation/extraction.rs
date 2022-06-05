@@ -112,6 +112,12 @@ impl Display for TestExtractionError {
 
 impl Error for TestExtractionError {}
 
+impl From<TestExtractionError> for String {
+    fn from(e: TestExtractionError) -> Self {
+        format!("{}", e.reason)
+    }
+}
+
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 enum ExtractionState {
     Searching,

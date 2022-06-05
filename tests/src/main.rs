@@ -1,6 +1,6 @@
 use std::fs::*;
 use std::path::{Path, PathBuf};
-use std::process::exit;
+use std::process::{exit, ExitStatus};
 use std::{env, io};
 
 use colored::Colorize;
@@ -11,7 +11,7 @@ use garnish_lang_compiler::{build_with_data, lex, parse};
 use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
 use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime};
 
-use crate::test_annotation::{execute_tests, extract_tests};
+use crate::test_annotation::{execute_tests, ExecutionResult, extract_tests};
 
 mod test_annotation;
 
@@ -43,20 +43,23 @@ fn main() {
         println!("{}", path.to_string_lossy());
         let text = match read_to_string(path) {
             Err(e) => {
-                println!("Failed to read file {}", e);
+                println!("Failed to read file.\n{}", e);
+                overall_status = 1;
                 continue;
             }
             Ok(t) => t,
         };
 
         let mut data = SimpleRuntimeData::new();
-        let input = lex(text.as_str()).unwrap();
-        let tests = extract_tests(&input).unwrap();
-        let parse_result = parse(tests.get_expression().clone()).unwrap();
-        let top_expression = data.get_jump_table_len();
-        build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).unwrap();
         let mut runtime = SimpleGarnishRuntime::new(data);
-        let results = execute_tests(&mut runtime, &tests, Some(top_expression)).unwrap();
+        let results = match run_tests(&mut runtime, &text) {
+            Err(e) => {
+                println!("Failed to run tests.\n{}", e);
+                overall_status = 1;
+                continue;
+            }
+            Ok(r) => r
+        };
 
         for result in results.get_results() {
             let name = match result.name() {
@@ -81,6 +84,17 @@ fn main() {
     }
 
     exit(overall_status);
+}
+
+fn run_tests(runtime: &mut SimpleGarnishRuntime<SimpleRuntimeData>, text: &String) -> Result<ExecutionResult<SimpleRuntimeData>, String> {
+    let input = lex(text.as_str())?;
+    let tests = extract_tests(&input)?;
+    let parse_result = parse(tests.get_expression().clone())?;
+    let top_expression = runtime.get_data().get_jump_table_len();
+    build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), runtime.get_data_mut())?;
+    let results = execute_tests(runtime, &tests, Some(top_expression))?;
+
+    Ok(results)
 }
 
 fn get_all_paths(current_dir: &Path, paths: &mut Vec<PathBuf>) -> io::Result<()> {
