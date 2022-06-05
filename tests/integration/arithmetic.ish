@@ -1,6 +1,6 @@
 @Test "Addition" { 123 + 456 == 579 }
 
-@Test "Subtraction" { 456 - 123 == 333 }
+@Test "Subtraction" { 123 - 456 == --333 }
 
 @Test "Multiplication" { 123 * 456 == 56088 }
 
