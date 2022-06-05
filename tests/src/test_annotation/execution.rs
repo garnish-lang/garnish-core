@@ -79,7 +79,7 @@ fn execute_test_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
         Some(value) => match runtime
             .get_data()
             .get_data_type(value)
-            .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?
+            .or_else(|err| Err(TestExtractionError::with_tokens(format!("{:?}", err).as_str(), test.get_expression())))?
         {
             ExpressionDataType::List => {
                 let name_value = runtime.get_data().get_list_item(value, Data::Number::zero()).map_or(None, |v| Some(v));
@@ -169,7 +169,7 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
         Some(value) => match runtime
             .get_data()
             .get_data_type(value)
-            .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?
+            .or_else(|err| Err(TestExtractionError::with_tokens(format!("{:?}", err).as_str(), test.get_expression())))?
         {
             ExpressionDataType::List => {
                 let name_value = runtime.get_data().get_list_item(value, Data::Number::zero()).map_or(None, |v| Some(v));
@@ -179,8 +179,9 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
                     .get_list_item(
                         value,
                         Data::Number::one().increment().map_or(
-                            Err(TestExtractionError::error(
+                            Err(TestExtractionError::with_tokens(
                                 "Could not create the number 2 with Data's Size associated type.",
+                                test.get_expression(),
                             )),
                             |v| Ok(v),
                         )?,
@@ -209,7 +210,7 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
     runtime
         .get_data_mut()
         .push_value_stack(input_addr)
-        .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
+        .or_else(|err| Err(TestExtractionError::with_tokens(format!("{:?}", err).as_str(), test.get_expression())))?;
 
     // execute top expression
     execute_until_end(runtime, context, top_expression)?;
@@ -220,20 +221,20 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
             runtime
                 .get_data_mut()
                 .push_register(value_addr)
-                .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
+                .or_else(|err| Err(TestExtractionError::with_tokens(format!("{:?}", err).as_str(), test.get_expression())))?;
 
             runtime
                 .get_data_mut()
                 .push_register(output_addr)
-                .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
+                .or_else(|err| Err(TestExtractionError::with_tokens(format!("{:?}", err).as_str(), test.get_expression())))?;
 
             runtime
                 .equal()
-                .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
+                .or_else(|err| Err(TestExtractionError::with_tokens(format!("{:?}", err).as_str(), test.get_expression())))?;
 
             runtime
                 .update_value()
-                .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?;
+                .or_else(|err| Err(TestExtractionError::with_tokens(format!("{:?}", err).as_str(), test.get_expression())))?;
 
             match runtime.get_data().get_current_value() {
                 None => (false, None, Some("No value available after equality comparison".to_string())),
@@ -241,7 +242,7 @@ fn execute_case_annotation<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime
                     match runtime
                         .get_data()
                         .get_data_type(result_addr)
-                        .or_else(|err| Err(TestExtractionError::error(format!("{:?}", err).as_str())))?
+                        .or_else(|err| Err(TestExtractionError::with_tokens(format!("{:?}", err).as_str(), test.get_expression())))?
                     {
                         ExpressionDataType::True => (true, Some(value_addr), None),
                         ExpressionDataType::False => (false, Some(value_addr), None),
@@ -333,6 +334,21 @@ pub fn execute_tests<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>
     execute_tests_with_context(runtime, tests, top_expression, || None)
 }
 
+pub(crate) fn lex_token_string(tokens: &Vec<LexerToken>) -> String {
+    match tokens.get(0) {
+        None => String::new(),
+        Some(first) => {
+            let t = tokens.iter().map(|t| t.get_text().clone()).collect::<Vec<String>>().join("");
+            format!(
+                "{}; line {} col {}",
+                tokens.iter().map(|t| t.get_text().clone()).collect::<Vec<String>>().join(""),
+                first.get_line(),
+                first.get_column()
+            )
+        }
+    }
+}
+
 pub fn execute_tests_with_context<Data: GarnishLangRuntimeData, Runtime: GarnishRuntime<Data>, MakeContextFn>(
     runtime: &mut Runtime,
     tests: &TestDetails,
@@ -369,8 +385,10 @@ where
             let mut identifier_loc = 0;
             for (i, token) in mock.get_expression().iter().enumerate() {
                 if token.get_token_type() == TokenType::Identifier {
-                    identifier =
-                        Some(Data::parse_symbol(token.get_text().as_str()).or_else(|e| Err(TestExtractionError::error(format!("{}", e).as_str())))?);
+                    identifier = Some(
+                        Data::parse_symbol(token.get_text().as_str())
+                            .or_else(|e| Err(TestExtractionError::with_tokens(format!("{}", e).as_str(), mock.get_expression())))?,
+                    );
                     identifier_loc = i;
                     break;
                 }
@@ -405,15 +423,21 @@ where
             }
 
             // exclude identifier from parse
-            let parse_result = parse(mock_expression).or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
+            let parse_result =
+                parse(mock_expression).or_else(|err| Err(TestExtractionError::with_tokens(format!("{}", err).as_str(), mock.get_expression())))?;
 
             let start = runtime.get_data().get_jump_table_len();
 
             build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), runtime.get_data_mut())
-                .or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
+                .or_else(|err| Err(TestExtractionError::with_tokens(err.get_message(), mock.get_expression())))?;
 
             let point = match runtime.get_data().get_jump_point(start) {
-                None => return Err(TestExtractionError::error("No starting jump point available")),
+                None => {
+                    return Err(TestExtractionError::with_tokens(
+                        "No starting jump point available",
+                        mock.get_expression(),
+                    ))
+                }
                 Some(point) => point,
             };
 
@@ -422,7 +446,10 @@ where
             // current value after execution is mock's value
             // register pair in context
             match runtime.get_data().get_current_value() {
-                None => Err(TestExtractionError::error("No value in runtime after mock execution."))?,
+                None => Err(TestExtractionError::with_tokens(
+                    "No value in runtime after mock execution.",
+                    mock.get_expression(),
+                ))?,
                 Some(current_value) => {
                     context.register_mock(identifier, current_value);
                 }
@@ -440,15 +467,21 @@ where
             continue;
         }
 
-        let parse_result = parse(test.get_expression().clone()).or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
+        let parse_result =
+            parse(test.get_expression().clone()).or_else(|err| Err(TestExtractionError::with_tokens(err.get_message(), test.get_expression())))?;
 
         let start = runtime.get_data().get_jump_table_len();
 
         build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), runtime.get_data_mut())
-            .or_else(|err| Err(TestExtractionError::error(err.get_message())))?;
+            .or_else(|err| Err(TestExtractionError::with_tokens(err.get_message(), test.get_expression())))?;
 
         let point = match runtime.get_data().get_jump_point(start) {
-            None => return Err(TestExtractionError::error("No starting jump point available")),
+            None => {
+                return Err(TestExtractionError::with_tokens(
+                    "No starting jump point available",
+                    test.get_expression(),
+                ))
+            }
             Some(point) => point,
         };
 

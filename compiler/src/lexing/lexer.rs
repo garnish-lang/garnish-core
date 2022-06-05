@@ -1,6 +1,8 @@
-use crate::error::CompilerError;
-use log::trace;
 use std::{collections::HashMap, iter, vec};
+
+use log::trace;
+
+use crate::error::CompilerError;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum TokenType {
@@ -858,6 +860,13 @@ mod tests {
         assert_eq!(child_2.value, '*');
         assert_eq!(child_2.token_type, Some(TokenType::ExponentialSign));
         assert!(child_2.children.is_empty());
+    }
+
+    #[test]
+    fn empty_gives_empty() {
+        let result = lex(&"".to_string()).unwrap();
+
+        assert_eq!(result, vec![])
     }
 
     #[test]

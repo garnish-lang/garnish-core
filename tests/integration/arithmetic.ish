@@ -11,3 +11,9 @@
 @Test "Float Division" { 15.0 / 2.0 == 7.5 }
 
 @Test "Integer Division" { 15 // 2 == 7 }
+
+@Test "Addition Overflow Is Unit" { 2147483647 + 1 #= () }
+
+@Test "Subtraction Overflow Is Unit" { 2147483647 - --1 #= () }
+
+@Test "Multiplication Overflow Is Unit" { 2147483647 * 2 #= () }

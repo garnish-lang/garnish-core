@@ -11,7 +11,7 @@ use garnish_lang_compiler::{build_with_data, lex, parse};
 use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
 use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime};
 
-use crate::test_annotation::{execute_tests, ExecutionResult, extract_tests};
+use crate::test_annotation::{execute_tests, extract_tests, lex_token_string, ExecutionResult, TestExtractionError};
 
 mod test_annotation;
 
@@ -58,7 +58,7 @@ fn main() {
                 overall_status = 1;
                 continue;
             }
-            Ok(r) => r
+            Ok(r) => r,
         };
 
         for result in results.get_results() {
@@ -89,7 +89,8 @@ fn main() {
 fn run_tests(runtime: &mut SimpleGarnishRuntime<SimpleRuntimeData>, text: &String) -> Result<ExecutionResult<SimpleRuntimeData>, String> {
     let input = lex(text.as_str())?;
     let tests = extract_tests(&input)?;
-    let parse_result = parse(tests.get_expression().clone())?;
+    let parse_result =
+        parse(tests.get_expression().clone()).or_else(|err| Err(TestExtractionError::with_tokens(err.get_message(), tests.get_expression())))?;
     let top_expression = runtime.get_data().get_jump_table_len();
     build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), runtime.get_data_mut())?;
     let results = execute_tests(runtime, &tests, Some(top_expression))?;

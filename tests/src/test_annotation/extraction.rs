@@ -4,6 +4,8 @@ use std::iter;
 
 use garnish_lang_compiler::{LexerToken, TokenType};
 
+use crate::test_annotation::lex_token_string;
+
 /// Test Annotations
 ///
 /// @Test
@@ -102,6 +104,12 @@ impl TestExtractionError {
     pub fn error(s: &str) -> Self {
         TestExtractionError { reason: s.to_string() }
     }
+
+    pub fn with_tokens(s: &str, tokens: &Vec<LexerToken>) -> Self {
+        TestExtractionError {
+            reason: format!("{}\n\tat {}", s, lex_token_string(tokens)),
+        }
+    }
 }
 
 impl Display for TestExtractionError {
@@ -157,6 +165,7 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
 
     while let Some(next) = iter.next() {
         match (state, next.get_token_type()) {
+            (_, TokenType::Unknown) => (), // should be end
             (ExtractionState::Searching, t) => {
                 match t {
                     TokenType::Annotation => match next.get_text().as_str() {

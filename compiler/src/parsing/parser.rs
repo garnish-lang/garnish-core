@@ -1982,6 +1982,17 @@ mod tests {
     }
 
     #[test]
+    fn empty_expression() {
+        let tokens = vec![
+            LexerToken::new("".to_string(), TokenType::Whitespace, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(&result, 0, &[]);
+    }
+
+    #[test]
     fn all_whitespace_or_subexpressions_is_empty() {
         let tokens = vec![
             LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
