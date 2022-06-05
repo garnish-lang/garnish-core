@@ -1,4 +1,4 @@
-use std::{env, fs, io};
+use std::{env, io};
 use std::process::exit;
 use std::fs::*;
 use std::path::{Path, PathBuf};
@@ -8,6 +8,7 @@ use garnish_lang_compiler::{build_with_data, lex, parse};
 use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
 use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime};
 use crate::test_annotation::{execute_tests, extract_tests};
+use colored::Colorize;
 
 mod test_annotation;
 
@@ -68,11 +69,13 @@ fn main() {
                 }
             };
 
+            let s = format!("{}: {}", name, result.is_success());
             if !result.is_success() {
                 overall_status = 1;
+                println!("{}", s.bright_red());
+            } else {
+                println!("{}", s.bright_green());
             }
-
-            println!("{}: {}", name, result.is_success());
         }
     }
 
