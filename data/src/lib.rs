@@ -133,32 +133,9 @@ impl<T> SimpleRuntimeData<T>
         &self.data
     }
 
-    // pub fn execute_all_instructions(&mut self) -> Result<(), RuntimeError<DataError>> {
-    //     loop {
-    //         match self.execute_current_instruction::<EmptyContext>(None) {
-    //             Err(e) => return Err(e),
-    //             Ok(data) => match data.get_state() {
-    //                 GarnishLangRuntimeState::Running => (),
-    //                 GarnishLangRuntimeState::End => return Ok(()),
-    //             },
-    //         }
-    //     }
-    // }
-
-    // pub fn execute_all_instructions_with_context<Context: GarnishLangRuntimeContext<Self>>(
-    //     &mut self,
-    //     context: &mut Context,
-    // ) -> Result<(), RuntimeError<DataError>> {
-    //     loop {
-    //         match self.execute_current_instruction(Some(context)) {
-    //             Err(e) => return Err(e),
-    //             Ok(data) => match data.get_state() {
-    //                 GarnishLangRuntimeState::Running => (),
-    //                 GarnishLangRuntimeState::End => return Ok(()),
-    //             },
-    //         }
-    //     }
-    // }
+    pub fn get_raw_data(&self, index: usize) -> Option<SimpleData<T>> {
+        self.data.get(index).cloned()
+    }
 
     pub fn set_end_of_constant(&mut self, addr: usize) -> Result<(), DataError> {
         self.end_of_constant_data = addr;

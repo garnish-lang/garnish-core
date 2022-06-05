@@ -1,0 +1,13 @@
+@Test "Addition" { 123 + 456 == 579 }
+
+@Test "Subtraction" { 456 - 123 == 333 }
+
+@Test "Multiplication" { 123 * 456 == 56088 }
+
+@Test "Division" { 56088 / 123 == 456 }
+
+@Test "Power" { 15 ** 5 == 759375 }
+
+@Test "Float Division" { 15.0 / 2.0 == 7.5 }
+
+@Test "Integer Division" { 15 // 2 == 7 }

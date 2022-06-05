@@ -49,6 +49,10 @@ impl<Data: GarnishLangRuntimeData> TestResult<Data> {
     pub fn test_details(&self) -> &TestAnnotationDetails {
         &self.test_details
     }
+
+    pub fn name(&self) -> Option<Data::Size> {
+        self.name_value
+    }
 }
 
 pub struct ExecutionResult<Data: GarnishLangRuntimeData> {
@@ -60,7 +64,7 @@ impl<Data: GarnishLangRuntimeData> ExecutionResult<Data> {
         ExecutionResult { test_results }
     }
 
-    fn get_results(&self) -> &Vec<TestResult<Data>> {
+    pub fn get_results(&self) -> &Vec<TestResult<Data>> {
         &self.test_results
     }
 }
