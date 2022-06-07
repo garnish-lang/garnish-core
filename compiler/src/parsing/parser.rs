@@ -10,7 +10,6 @@ use crate::lexing::lexer::*;
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
 pub enum Definition {
     Number,
-    NegativeNumber,
     CharList,
     ByteList,
     Identifier,

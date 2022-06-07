@@ -49,7 +49,6 @@ type DefinitionResolveInfo = (bool, Option<usize>);
 fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
         Definition::Number
-        | Definition::NegativeNumber
         | Definition::CharList
         | Definition::ByteList
         | Definition::Identifier
@@ -139,7 +138,6 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
             let addr = data.parse_add_number(node.get_lex_token().get_text())?;
             data.push_instruction(Instruction::Put, Some(addr))?;
         }
-        Definition::NegativeNumber => unimplemented!(),
         Definition::CharList => {
             let addr = data.parse_add_char_list(node.get_lex_token().get_text())?;
             data.push_instruction(Instruction::Put, Some(addr))?;
