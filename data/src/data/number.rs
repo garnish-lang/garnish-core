@@ -29,6 +29,20 @@ impl SimpleNumber {
             _ => Err(DataError::from(format!("{:?} is not an Float.", self))),
         }
     }
+
+    pub fn to_integer(&self) -> Self {
+        match self {
+            SimpleNumber::Integer(v) => Integer(*v),
+            SimpleNumber::Float(v) => Float(*v as f64)
+        }
+    }
+
+    pub fn to_float(&self) -> Self {
+        match self {
+            SimpleNumber::Integer(v) => Integer(*v as i32),
+            SimpleNumber::Float(v) => Float(*v)
+        }
+    }
 }
 
 impl Display for SimpleNumber {
@@ -118,11 +132,18 @@ impl PartialOrd for SimpleNumber {
 
 fn do_op<IntOp, FloatOp>(left: &SimpleNumber, right: &SimpleNumber, int_op: IntOp, float_op: FloatOp) -> Option<SimpleNumber>
 where
-    IntOp: Fn(i32, i32) -> i32,
+    IntOp: Fn(i32, i32) -> (i32, bool),
     FloatOp: Fn(f64, f64) -> f64,
 {
     Some(match (left, right) {
-        (Integer(v1), Integer(v2)) => Integer(int_op(*v1, *v2)),
+        (Integer(v1), Integer(v2)) => {
+            let (v, o) = int_op(*v1, *v2);
+            if o {
+                return None;
+            }
+
+            Integer(v)
+        },
         (Float(v1), Float(v2)) => Float(float_op(*v1, *v2)),
         (Integer(v1), Float(v2)) => Float(float_op(f64::from(*v1), *v2)),
         (Float(v1), Integer(v2)) => Float(float_op(*v1, f64::from(*v2))),
@@ -177,19 +198,23 @@ impl Add<f64> for SimpleNumber {
 
 impl GarnishNumber for SimpleNumber {
     fn plus(self, rhs: Self) -> Option<Self> {
-        do_op(&self, &rhs, i32::add, f64::add)
+        do_op(&self, &rhs, i32::overflowing_add, f64::add)
     }
 
     fn subtract(self, rhs: Self) -> Option<Self> {
-        do_op(&self, &rhs, i32::sub, f64::sub)
+        do_op(&self, &rhs, i32::overflowing_sub, f64::sub)
     }
 
     fn multiply(self, rhs: Self) -> Option<Self> {
-        do_op(&self, &rhs, i32::mul, f64::mul)
+        do_op(&self, &rhs, i32::overflowing_mul, f64::mul)
     }
 
     fn divide(self, rhs: Self) -> Option<Self> {
-        do_op(&self, &rhs, i32::div, f64::div)
+        if rhs == Integer(0) || rhs == Float(0.0) {
+            return None;
+        }
+
+        do_op(&self, &rhs, i32::overflowing_div, f64::div)
     }
 
     fn power(self, rhs: Self) -> Option<Self> {
@@ -199,7 +224,12 @@ impl GarnishNumber for SimpleNumber {
                     return None;
                 }
 
-                Integer(v1.pow(v2 as u32))
+                let (v, o) = v1.overflowing_pow(v2 as u32);
+                if o {
+                    return None;
+                }
+
+                Integer(v)
             }
             (Float(v1), Float(v2)) => {
                 if v2 < 0.0 {
@@ -226,42 +256,106 @@ impl GarnishNumber for SimpleNumber {
     }
 
     fn integer_divide(self, rhs: Self) -> Option<Self> {
+        if rhs == Integer(0) || rhs == Float(0.0) {
+            return None;
+        }
+
         Some(match (self, rhs) {
-            (Integer(v1), Integer(v2)) => Integer(v1 / v2),
-            (Float(v1), Float(v2)) => Integer(v1 as i32 / v2 as i32),
-            (Integer(v1), Float(v2)) => Integer(v1 / v2 as i32),
-            (Float(v1), Integer(v2)) => Integer(v1 as i32 / v2),
+            (Integer(v1), Integer(v2)) => {
+                let (v, o) = v1.overflowing_div(v2);
+                if o {
+                    return None;
+                }
+
+                Integer(v)
+            },
+            (Float(v1), Float(v2)) => {
+                let (v, o) = (v1 as i32).overflowing_div(v2 as i32);
+                if o {
+                    return None;
+                }
+
+                Integer(v)
+            },
+            (Integer(v1), Float(v2)) => {
+                let (v, o) = v1.overflowing_div(v2 as i32);
+                if o {
+                    return None;
+                }
+
+                Integer(v)
+            }
+            (Float(v1), Integer(v2)) => {
+                let (v, o) = (v1 as i32).overflowing_div(v2);
+                if o {
+                    return None;
+                }
+
+                Integer(v)
+            }
         })
     }
 
     fn remainder(self, rhs: Self) -> Option<Self> {
-        do_op(&self, &rhs, i32::rem, f64::rem)
+        if rhs == Integer(0) || rhs == Float(0.0) {
+            return None;
+        }
+
+        do_op(&self, &rhs, i32::overflowing_rem, f64::rem)
     }
 
     fn absolute_value(self) -> Option<Self> {
         Some(match self {
-            Integer(v) => Integer(v.abs()),
+            Integer(v) => {
+                let (v, o) = v.overflowing_abs();
+                if o {
+                    return None;
+                }
+
+                Integer(v)
+            },
             Float(v) => Float(v.abs()),
         })
     }
 
     fn opposite(self) -> Option<Self> {
         Some(match self {
-            Integer(v) => Integer(-v),
+            Integer(v) => {
+                let (v, o) = v.overflowing_neg();
+                if o {
+                    return None;
+                }
+
+                Integer(v)
+            },
             Float(v) => Float(-v),
         })
     }
 
     fn increment(self) -> Option<Self> {
         Some(match self {
-            Integer(v) => Integer(v + 1),
+            Integer(v) => {
+                let (v, o) = v.overflowing_add(1);
+                if o {
+                    return None;
+                }
+
+                Integer(v)
+            },
             Float(v) => Float(v + 1.0),
         })
     }
 
     fn decrement(self) -> Option<Self> {
         Some(match self {
-            Integer(v) => Integer(v - 1),
+            Integer(v) => {
+                let (v, o) = v.overflowing_sub(1);
+                if o {
+                    return None;
+                }
+
+                Integer(v)
+            },
             Float(v) => Float(v - 1.0),
         })
     }
@@ -395,11 +489,21 @@ mod tests {
     }
 
     #[test]
+    fn add_overflow() {
+        assert_eq!(Integer(i32::MAX).plus(Integer(1)), None);
+    }
+
+    #[test]
     fn subtract() {
         assert_eq!(Integer(10).subtract(Integer(20)).unwrap(), Integer(-10));
         assert_eq!(Float(10.0).subtract(Float(20.0)).unwrap(), Float(-10.0));
         assert_eq!(Integer(10).subtract(Float(20.0)).unwrap(), Float(-10.0));
         assert_eq!(Float(10.0).subtract(Integer(20)).unwrap(), Float(-10.0));
+    }
+
+    #[test]
+    fn subtract_overflow() {
+        assert_eq!(Integer(i32::MIN).subtract(Integer(1)), None);
     }
 
     #[test]
@@ -411,6 +515,11 @@ mod tests {
     }
 
     #[test]
+    fn multiply_overflow() {
+        assert_eq!(Integer(i32::MAX).multiply(Integer(2)), None);
+    }
+
+    #[test]
     fn divide() {
         assert_eq!(Integer(10).divide(Integer(20)).unwrap(), Integer(0));
         assert_eq!(Float(10.0).divide(Float(20.0)).unwrap(), Float(0.5));
@@ -419,11 +528,26 @@ mod tests {
     }
 
     #[test]
+    fn division_overflow() {
+        assert_eq!(Integer(i32::MIN).divide(Integer(-1)), None);
+    }
+
+    #[test]
+    fn division_by_zero() {
+        assert_eq!(Integer(i32::MAX).divide(Integer(0)), None);
+    }
+
+    #[test]
     fn power() {
         assert_eq!(Integer(10).power(Integer(3)).unwrap(), Integer(1000));
         assert_eq!(Float(10.0).power(Float(3.0)).unwrap(), Float(1000.0));
         assert_eq!(Integer(10).power(Float(3.0)).unwrap(), Float(1000.0));
         assert_eq!(Float(10.0).power(Integer(3)).unwrap(), Float(1000.0));
+    }
+
+    #[test]
+    fn power_overflow() {
+        assert_eq!(Integer(i32::MAX).power(Integer(2)), None);
     }
 
     #[test]
@@ -443,11 +567,31 @@ mod tests {
     }
 
     #[test]
+    fn integer_division_overflow() {
+        assert_eq!(Integer(i32::MIN).integer_divide(Float(-1.0)), None);
+    }
+
+    #[test]
+    fn integer_division_by_zero() {
+        assert_eq!(Integer(i32::MIN).integer_divide(Integer(0)), None);
+    }
+
+    #[test]
     fn remainder() {
         assert_eq!(Integer(10).remainder(Integer(20)).unwrap(), Integer(10));
         assert_eq!(Float(10.0).remainder(Float(20.0)).unwrap(), Float(10.0));
         assert_eq!(Integer(10).remainder(Float(20.0)).unwrap(), Float(10.0));
         assert_eq!(Float(10.0).remainder(Integer(20)).unwrap(), Float(10.0));
+    }
+
+    #[test]
+    fn remainder_overflow() {
+        assert_eq!(Integer(i32::MIN).remainder(Integer(-1)), None);
+    }
+
+    #[test]
+    fn remainder_by_zero() {
+        assert_eq!(Integer(i32::MIN).remainder(Integer(0)), None);
     }
 
     #[test]
@@ -457,9 +601,19 @@ mod tests {
     }
 
     #[test]
+    fn absolute_value_overflow() {
+        assert_eq!(Integer(i32::MIN).absolute_value(), None);
+    }
+
+    #[test]
     fn opposite() {
         assert_eq!(Integer(10).opposite().unwrap(), Integer(-10));
         assert_eq!(Float(10.0).opposite().unwrap(), Float(-10.0));
+    }
+
+    #[test]
+    fn opposite_overflow() {
+        assert_eq!(Integer(i32::MIN).opposite(), None);
     }
 
     #[test]
@@ -469,9 +623,19 @@ mod tests {
     }
 
     #[test]
+    fn increment_overflow() {
+        assert_eq!(Integer(i32::MAX).increment(), None);
+    }
+
+    #[test]
     fn decrement() {
         assert_eq!(Integer(10).decrement().unwrap(), Integer(9));
         assert_eq!(Float(10.0).decrement().unwrap(), Float(9.0));
+    }
+
+    #[test]
+    fn decrement_overflow() {
+        assert_eq!(Integer(i32::MIN).decrement(), None);
     }
 
     #[test]

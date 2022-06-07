@@ -14,8 +14,10 @@ readme = "../README.md"
 
 [dependencies]
 log = "0.4"
+env_logger = "0.9.0"
+colored = "2.0.0"
+
 garnish_lang_runtime = { path = "../runtime"}
 garnish_lang_compiler = { path = "../compiler"}
 garnish_data = { path = "../data" }
 garnish_traits = { path = "../traits" }
-colored = "2.0.0"

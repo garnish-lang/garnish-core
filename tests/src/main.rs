@@ -16,6 +16,7 @@ use crate::test_annotation::{execute_tests, extract_tests, lex_token_string, Exe
 mod test_annotation;
 
 fn main() {
+    env_logger::init();
     let mut args = env::args().skip(1);
     let test_directory = match args.next() {
         Some(dir) => dir,
@@ -73,10 +74,20 @@ fn main() {
                 },
             };
 
-            let s = format!("{}: {}", name, result.is_success());
+            let s = format!("{}: {}", name, match result.is_success() {
+                true => "pass",
+                false => "failure"
+            });
+
             if !result.is_success() {
                 overall_status = 1;
                 println!("{}", s.bright_red());
+                match result.error() {
+                    Some(e) => {
+                        println!("\t{}", e);
+                    }
+                    None => ()
+                }
             } else {
                 println!("{}", s.bright_green());
             }
