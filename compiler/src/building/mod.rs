@@ -46,7 +46,7 @@ impl ResolveNodeInfo {
 
 type DefinitionResolveInfo = (bool, Option<usize>);
 
-fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
+fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
         Definition::Number
         | Definition::CharList
@@ -60,7 +60,22 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
         | Definition::True => {
             ((false, node.get_left()), (false, node.get_right()))
         }
-        Definition::AccessLeftInternal | Definition::AbsoluteValue | Definition::Opposite | Definition::BitwiseNot | Definition::Not | Definition::TypeOf => ((true, node.get_right()), (false, None)),
+        Definition::Opposite => {
+            // if right value is a number, don't resolve it
+            // will be handled during opposite's resolve
+            // missing node errors will be handled in core loop, just returning true here to make sure it gets checked
+            match node.get_right() {
+                None => ((true, node.get_right()), (false, None)),
+                Some(right) => match nodes.get(right) {
+                    None => ((true, node.get_right()), (false, None)),
+                    Some(n) => match n.get_definition() {
+                        Definition::Number => ((false, None), (false, None)),
+                        _ => ((true, node.get_right()), (false, None)),
+                    }
+                }
+            }
+        }
+        Definition::AccessLeftInternal | Definition::AbsoluteValue | Definition::BitwiseNot | Definition::Not | Definition::TypeOf => ((true, node.get_right()), (false, None)),
         Definition::EmptyApply | Definition::AccessLengthInternal | Definition::AccessRightInternal => ((true, node.get_left()), (false, None)),
         Definition::Addition
         | Definition::Subtraction
@@ -115,6 +130,7 @@ fn get_resolve_info(node: &ParseNode) -> (DefinitionResolveInfo, DefinitionResol
 // returns true/false on whether or not an instruction was added
 fn resolve_node<Data: GarnishLangRuntimeData>(
     node: &ParseNode,
+    nodes: &Vec<ParseNode>,
     data: &mut Data,
     list_count: Option<&Data::Size>,
     current_jump_index: Data::Size,
@@ -188,7 +204,24 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
             data.push_instruction(Instruction::Remainder, None)?;
         }
         Definition::Opposite => {
-            data.push_instruction(Instruction::Opposite, None)?;
+            // if number push number with negative sign prepended
+            let (num, num_str) = match node.get_right() {
+                None => (false, String::new()),
+                Some(right) => match nodes.get(right) {
+                    None => (false, String::new()),
+                    Some(n) => match n.get_definition() {
+                        Definition::Number => (true, format!("-{}", n.get_lex_token().get_text())),
+                        _ => (false, String::new()),
+                    }
+                }
+            };
+
+            if num {
+                let addr = data.parse_add_number(num_str.as_str())?;
+                data.push_instruction(Instruction::Put, Some(addr))?;
+            } else {
+                data.push_instruction(Instruction::Opposite, None)?;
+            }
         }
         Definition::AbsoluteValue => {
             data.push_instruction(Instruction::AbsoluteValue, None)?;
@@ -384,7 +417,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                             trace!("---------------------------------------------------------");
                             trace!("Visiting node with definition {:?} at {:?}", node.get_definition(), node_index);
 
-                            let ((first_expected, first_index), (second_expected, second_index)) = get_resolve_info(node);
+                            let ((first_expected, first_index), (second_expected, second_index)) = get_resolve_info(node, &nodes);
 
                             let we_are_conditional =
                                 node.get_definition() == Definition::JumpIfFalse || node.get_definition() == Definition::JumpIfTrue;
@@ -467,7 +500,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 if node.get_definition() == Definition::Subexpression || node.get_definition().is_value_like() {
                                     trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
 
-                                    let instruction_created = resolve_node(node, data, None, Data::Size::zero(), nearest_expression_point)?;
+                                    let instruction_created = resolve_node(node, &nodes, data, None, Data::Size::zero(), nearest_expression_point)?;
 
                                     // should always create, but check for posterity
                                     if instruction_created {
@@ -505,7 +538,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 if resolve {
                                     trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
 
-                                    let instruction_created = resolve_node(node, data, list_counts.last(), jump_count, nearest_expression_point)?;
+                                    let instruction_created = resolve_node(node, &nodes, data, list_counts.last(), jump_count, nearest_expression_point)?;
 
                                     if instruction_created {
                                         metadata.push(InstructionMetadata::new(resolve_node_info.node_index))
@@ -1219,6 +1252,22 @@ mod operations {
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append(SimpleData::Symbol(symbol_value("value"))),
+        );
+    }
+
+    #[test]
+    fn negate_constant_number() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::Opposite, None, None, Some(1), "--", TokenType::Opposite),
+                (Definition::Number, Some(0), None, None, "5", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append(SimpleData::Number((-5).into())),
         );
     }
 
