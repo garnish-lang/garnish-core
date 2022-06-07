@@ -181,6 +181,8 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
                         }
                         _ => (), // none test annotation
                     },
+                    // catch before it gets included in top expression
+                    TokenType::Unknown => continue,
                     _ => {
                         // push to top expression
                         top_expression.push(next.clone())
