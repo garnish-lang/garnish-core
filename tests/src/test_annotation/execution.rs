@@ -338,7 +338,6 @@ pub(crate) fn lex_token_string(tokens: &Vec<LexerToken>) -> String {
     match tokens.get(0) {
         None => String::new(),
         Some(first) => {
-            let t = tokens.iter().map(|t| t.get_text().clone()).collect::<Vec<String>>().join("");
             format!(
                 "{}; line {} col {}",
                 tokens.iter().map(|t| t.get_text().clone()).collect::<Vec<String>>().join(""),

@@ -1,6 +1,6 @@
 use std::fs::*;
 use std::path::{Path, PathBuf};
-use std::process::{exit, ExitStatus};
+use std::process::{exit};
 use std::{env, io};
 
 use colored::Colorize;
@@ -11,7 +11,7 @@ use garnish_lang_compiler::{build_with_data, lex, parse};
 use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
 use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime};
 
-use crate::test_annotation::{execute_tests, extract_tests, lex_token_string, ExecutionResult, TestExtractionError};
+use crate::test_annotation::{execute_tests, extract_tests, ExecutionResult, TestExtractionError};
 
 mod test_annotation;
 
@@ -51,7 +51,7 @@ fn main() {
             Ok(t) => t,
         };
 
-        let mut data = SimpleRuntimeData::new();
+        let data = SimpleRuntimeData::new();
         let mut runtime = SimpleGarnishRuntime::new(data);
         let results = match run_tests(&mut runtime, &text) {
             Err(e) => {

@@ -1,6 +1,6 @@
 use crate::{LexerToken, SecondaryDefinition};
 use std::error::Error;
-use std::fmt::{Debug, Display, format, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct NoSource {}

@@ -208,6 +208,24 @@ mod numbers {
     }
 
     #[test]
+    fn negative_integer() {
+        let input = "-123456";
+        assert_eq!(parse_simple_number(input).unwrap(), Integer(-123456));
+    }
+
+    #[test]
+    fn min_integer() {
+        let input = i32::MIN.to_string();
+        assert_eq!(parse_simple_number(input.as_str()).unwrap(), Integer(i32::MIN));
+    }
+
+    #[test]
+    fn max_integer() {
+        let input = i32::MAX.to_string();
+        assert_eq!(parse_simple_number(input.as_str()).unwrap(), Integer(i32::MAX));
+    }
+
+    #[test]
     fn just_numbers_integer_err() {
         let input = "123456?";
         assert!(parse_simple_number(input).is_err());
@@ -217,6 +235,12 @@ mod numbers {
     fn just_numbers_float() {
         let input = "123456.789";
         assert_eq!(parse_simple_number(input).unwrap(), Float(123456.789));
+    }
+
+    #[test]
+    fn negative_float() {
+        let input = "-123456.789";
+        assert_eq!(parse_simple_number(input).unwrap(), Float(-123456.789));
     }
 
     #[test]

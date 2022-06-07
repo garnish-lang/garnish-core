@@ -165,7 +165,6 @@ pub fn extract_tests(tokens: &Vec<LexerToken>) -> Result<TestDetails, TestExtrac
 
     while let Some(next) = iter.next() {
         match (state, next.get_token_type()) {
-            (_, TokenType::Unknown) => (), // should be end
             (ExtractionState::Searching, t) => {
                 match t {
                     TokenType::Annotation => match next.get_text().as_str() {
