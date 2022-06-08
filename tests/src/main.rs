@@ -5,15 +5,48 @@ use std::{env, io};
 
 use colored::Colorize;
 
-use garnish_data::data::SimpleData;
-use garnish_data::SimpleRuntimeData;
+use garnish_data::data::{SimpleData, SimpleNumber};
+use garnish_data::{DataError, SimpleRuntimeData, symbol_value};
 use garnish_lang_compiler::{build_with_data, lex, parse};
 use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
-use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime};
+use garnish_traits::{ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishRuntime, Instruction, RuntimeError};
 
-use crate::test_annotation::{execute_tests, extract_tests, ExecutionResult, TestExtractionError};
+use crate::test_annotation::{execute_tests, extract_tests, ExecutionResult, TestExtractionError, execute_tests_with_context};
 
 mod test_annotation;
+
+struct IntegrationTestContext {
+    float_max_sym: u64,
+    float_min_sym: u64,
+    float_min_positive_sym: u64,
+}
+
+impl IntegrationTestContext {
+    fn new() -> Self {
+        IntegrationTestContext {
+            float_max_sym: symbol_value("FloatMax"),
+            float_min_sym: symbol_value("FloatMin"),
+            float_min_positive_sym: symbol_value("FloatMinPositive")
+        }
+    }
+}
+
+impl GarnishLangRuntimeContext<SimpleRuntimeData> for IntegrationTestContext {
+    fn resolve(&mut self, symbol: u64, runtime: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
+        if symbol == self.float_max_sym {
+            runtime.add_number(SimpleNumber::Float(f64::MAX)).and_then(|r| runtime.push_register(r))?;
+            Ok(true)
+        } else if symbol == self.float_min_sym {
+            runtime.add_number(SimpleNumber::Float(f64::MIN)).and_then(|r| runtime.push_register(r))?;
+            Ok(true)
+        } else if symbol == self.float_min_positive_sym {
+            runtime.add_number(SimpleNumber::Float(f64::MIN_POSITIVE)).and_then(|r| runtime.push_register(r))?;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+}
 
 fn main() {
     env_logger::init();
@@ -88,7 +121,7 @@ fn main() {
                 println!("{}", s.bright_red());
                 match result.error() {
                     Some(e) => {
-                        println!("\t{}", e);
+                        println!("\t{}", e.bright_red());
                     }
                     None => (),
                 }
@@ -102,13 +135,14 @@ fn main() {
 }
 
 fn run_tests(runtime: &mut SimpleGarnishRuntime<SimpleRuntimeData>, text: &String) -> Result<ExecutionResult<SimpleRuntimeData>, String> {
+    let mut context = IntegrationTestContext::new();
     let input = lex(text.as_str())?;
     let tests = extract_tests(&input)?;
     let parse_result =
         parse(tests.get_expression().clone()).or_else(|err| Err(TestExtractionError::with_tokens(err.get_message(), tests.get_expression())))?;
     let top_expression = runtime.get_data().get_jump_table_len();
     build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), runtime.get_data_mut())?;
-    let results = execute_tests(runtime, &tests, Some(top_expression))?;
+    let results = execute_tests_with_context(runtime, &tests, Some(top_expression), || { Some(Box::new(IntegrationTestContext::new())) })?;
 
     Ok(results)
 }
