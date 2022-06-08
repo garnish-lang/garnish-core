@@ -1133,6 +1133,12 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
         unclosed_grouping_error(&last_token)?;
     }
 
+    // being empty allowed
+    // could be a file of just line annotations
+    if nodes.is_empty() {
+        return Ok(ParseResult { root: 0, nodes });
+    }
+
     // walk up tree to find root
     trace!("Finding root node");
     let mut root = 0;
@@ -4744,5 +4750,27 @@ mod annotations {
         let result = parse(tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
+    }
+
+    #[test]
+    fn annotations_followed_by_only_white_space() {
+        let tokens = vec![
+            LexerToken::new("@@ Title\n".to_string(), TokenType::LineAnnotation, 0, 0),
+            LexerToken::new("@@ Some message\n".to_string(), TokenType::LineAnnotation, 0, 0),
+            LexerToken::new("@@ \n".to_string(), TokenType::LineAnnotation, 0, 0),
+            LexerToken::new("\n".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+            ],
+        );
     }
 }
