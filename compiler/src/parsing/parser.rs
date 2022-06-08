@@ -1983,9 +1983,7 @@ mod tests {
 
     #[test]
     fn empty_expression() {
-        let tokens = vec![
-            LexerToken::new("".to_string(), TokenType::Whitespace, 0, 0),
-        ];
+        let tokens = vec![LexerToken::new("".to_string(), TokenType::Whitespace, 0, 0)];
 
         let result = parse(tokens).unwrap();
 
@@ -2491,10 +2489,7 @@ mod tests {
         assert_result(
             &result,
             0,
-            &[
-                (0, Definition::TypeOf, None, None, Some(1)),
-                (1, Definition::Number, Some(0), None, None),
-            ],
+            &[(0, Definition::TypeOf, None, None, Some(1)), (1, Definition::Number, Some(0), None, None)],
         );
     }
 

@@ -1,6 +1,6 @@
 use std::fs::*;
 use std::path::{Path, PathBuf};
-use std::process::{exit};
+use std::process::exit;
 use std::{env, io};
 
 use colored::Colorize;
@@ -74,10 +74,14 @@ fn main() {
                 },
             };
 
-            let s = format!("{}: {}", name, match result.is_success() {
-                true => "pass",
-                false => "failure"
-            });
+            let s = format!(
+                "{}: {}",
+                name,
+                match result.is_success() {
+                    true => "pass",
+                    false => "failure",
+                }
+            );
 
             if !result.is_success() {
                 overall_status = 1;
@@ -86,7 +90,7 @@ fn main() {
                     Some(e) => {
                         println!("\t{}", e);
                     }
-                    None => ()
+                    None => (),
                 }
             } else {
                 println!("{}", s.bright_green());

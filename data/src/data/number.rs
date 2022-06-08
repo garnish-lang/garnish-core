@@ -33,14 +33,14 @@ impl SimpleNumber {
     pub fn to_integer(&self) -> Self {
         match self {
             SimpleNumber::Integer(v) => Integer(*v),
-            SimpleNumber::Float(v) => Float(*v as f64)
+            SimpleNumber::Float(v) => Float(*v as f64),
         }
     }
 
     pub fn to_float(&self) -> Self {
         match self {
             SimpleNumber::Integer(v) => Integer(*v as i32),
-            SimpleNumber::Float(v) => Float(*v)
+            SimpleNumber::Float(v) => Float(*v),
         }
     }
 }
@@ -143,7 +143,7 @@ where
             }
 
             Integer(v)
-        },
+        }
         (Float(v1), Float(v2)) => Float(float_op(*v1, *v2)),
         (Integer(v1), Float(v2)) => Float(float_op(f64::from(*v1), *v2)),
         (Float(v1), Integer(v2)) => Float(float_op(*v1, f64::from(*v2))),
@@ -268,7 +268,7 @@ impl GarnishNumber for SimpleNumber {
                 }
 
                 Integer(v)
-            },
+            }
             (Float(v1), Float(v2)) => {
                 let (v, o) = (v1 as i32).overflowing_div(v2 as i32);
                 if o {
@@ -276,7 +276,7 @@ impl GarnishNumber for SimpleNumber {
                 }
 
                 Integer(v)
-            },
+            }
             (Integer(v1), Float(v2)) => {
                 let (v, o) = v1.overflowing_div(v2 as i32);
                 if o {
@@ -313,7 +313,7 @@ impl GarnishNumber for SimpleNumber {
                 }
 
                 Integer(v)
-            },
+            }
             Float(v) => Float(v.abs()),
         })
     }
@@ -327,7 +327,7 @@ impl GarnishNumber for SimpleNumber {
                 }
 
                 Integer(v)
-            },
+            }
             Float(v) => Float(-v),
         })
     }
@@ -341,7 +341,7 @@ impl GarnishNumber for SimpleNumber {
                 }
 
                 Integer(v)
-            },
+            }
             Float(v) => Float(v + 1.0),
         })
     }
@@ -355,7 +355,7 @@ impl GarnishNumber for SimpleNumber {
                 }
 
                 Integer(v)
-            },
+            }
             Float(v) => Float(v - 1.0),
         })
     }

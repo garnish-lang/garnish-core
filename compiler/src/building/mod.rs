@@ -212,8 +212,8 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
                     Some(n) => match n.get_definition() {
                         Definition::Number => (true, format!("-{}", n.get_lex_token().get_text())),
                         _ => (false, String::new()),
-                    }
-                }
+                    },
+                },
             };
 
             if num {
@@ -538,7 +538,8 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 if resolve {
                                     trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
 
-                                    let instruction_created = resolve_node(node, &nodes, data, list_counts.last(), jump_count, nearest_expression_point)?;
+                                    let instruction_created =
+                                        resolve_node(node, &nodes, data, list_counts.last(), jump_count, nearest_expression_point)?;
 
                                     if instruction_created {
                                         metadata.push(InstructionMetadata::new(resolve_node_info.node_index))
@@ -1263,10 +1264,7 @@ mod operations {
                 (Definition::Opposite, None, None, Some(1), "--", TokenType::Opposite),
                 (Definition::Number, Some(0), None, None, "5", TokenType::Number),
             ],
-            vec![
-                (Instruction::Put, Some(3)),
-                (Instruction::EndExpression, None),
-            ],
+            vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
             SimpleDataList::default().append(SimpleData::Number((-5).into())),
         );
     }

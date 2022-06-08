@@ -85,12 +85,11 @@ impl<Source: 'static + std::error::Error> From<Source> for CompilerError<Source>
     }
 }
 
-
 impl<Source: 'static + std::error::Error> From<CompilerError<Source>> for String {
     fn from(e: CompilerError<Source>) -> Self {
         match e.source {
             None => format!("{} at line {} col {}", e.message, e.line, e.column),
-            Some(s) => format!("{} at line {} col {}", s, e.line, e.column)
+            Some(s) => format!("{} at line {} col {}", s, e.line, e.column),
         }
     }
 }
