@@ -135,7 +135,6 @@ fn main() {
 }
 
 fn run_tests(runtime: &mut SimpleGarnishRuntime<SimpleRuntimeData>, text: &String) -> Result<ExecutionResult<SimpleRuntimeData>, String> {
-    let mut context = IntegrationTestContext::new();
     let input = lex(text.as_str())?;
     let tests = extract_tests(&input)?;
     let parse_result =
