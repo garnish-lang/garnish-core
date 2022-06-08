@@ -293,7 +293,9 @@ where
                 }
             }
             ExpressionDataType::Concatenation => {
-                todo!()
+                let (left, right) = self.get_concatenation(from)?;
+                self.add_to_current_char_list(left, depth + 1)?;
+                self.add_to_current_char_list(right, depth + 1)?;
             }
             ExpressionDataType::List => {
                 let len = self.get_list_len(from)?;
@@ -781,6 +783,15 @@ mod to_char_list {
             let range = runtime.add_range(d1, d2).unwrap();
 
             runtime.add_slice(list, range).unwrap()
+        })
+    }
+
+    #[test]
+    fn concatenation() {
+        assert_to_char_list("Hello World!", |runtime| {
+            let d1 = runtime.parse_add_char_list("Hello ").unwrap();
+            let d2 = runtime.parse_add_char_list("World!").unwrap();
+            runtime.add_concatenation(d1, d2).unwrap()
         })
     }
 }
