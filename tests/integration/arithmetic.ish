@@ -42,7 +42,7 @@
 
 @Test "Float Infinite From Multiplication Is Unit" { FloatMax * FloatMax #= () }
 
-@Test "Float Infinite From Division Is Unit" { FloatMin / --FloatMax #= () }
+@Test "Float Infinite From Division Is Unit" { FloatMin / --FloatMinPositive #= () }
 
 @Test "Float Infinite From Power Is Unit" { FloatMax ** FloatMax #= () }
 

@@ -709,16 +709,19 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
             LexingState::LineAnnotation => {
                 // line annotations continue until end of line
                 // for simplicity we include entire line as the token
-                current_characters.push(c);
 
-                if c == '\n' || c == '\0' {
+                if c == '\n' {
+                    current_characters.push(c);
                     should_create = false;
 
                     // wrap coordinates to new line
                     text_column = 0;
                     text_row += 1;
                     true
+                } else if c == '\0' {
+                    true
                 } else {
+                    current_characters.push(c);
                     false
                 }
             }

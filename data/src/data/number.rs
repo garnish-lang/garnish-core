@@ -144,9 +144,30 @@ where
 
             Integer(v)
         }
-        (Float(v1), Float(v2)) => Float(float_op(*v1, *v2)),
-        (Integer(v1), Float(v2)) => Float(float_op(f64::from(*v1), *v2)),
-        (Float(v1), Integer(v2)) => Float(float_op(*v1, f64::from(*v2))),
+        (Float(v1), Float(v2)) => {
+            let f = float_op(*v1, *v2);
+            if f.is_infinite() {
+                return None;
+            } else {
+                Float(f)
+            }
+        },
+        (Integer(v1), Float(v2)) => {
+            let f = float_op(f64::from(*v1), *v2);
+            if f.is_infinite() {
+                return None;
+            } else {
+                Float(f)
+            }
+        },
+        (Float(v1), Integer(v2)) => {
+            let f = float_op(*v1, f64::from(*v2));
+            if f.is_infinite() {
+                return None;
+            } else {
+                Float(f)
+            }
+        },
     })
 }
 
@@ -236,21 +257,36 @@ impl GarnishNumber for SimpleNumber {
                     return None;
                 }
 
-                Float(v1.powf(v2))
+                let f = v1.powf(v2);
+                if f.is_infinite() {
+                    return None;
+                } else {
+                    Float(f)
+                }
             }
             (Integer(v1), Float(v2)) => {
                 if v2 < 0.0 {
                     return None;
                 }
 
-                Float(f64::from(v1).powf(v2))
+                let f = f64::from(v1).powf(v2);
+                if f.is_infinite() {
+                    return None;
+                } else {
+                    Float(f)
+                }
             }
             (Float(v1), Integer(v2)) => {
                 if v2 < 0 {
                     return None;
                 }
 
-                Float(v1.powf(f64::from(v2)))
+                let f = v1.powf(f64::from(v2));
+                if f.is_infinite() {
+                    return None;
+                } else {
+                    Float(f)
+                }
             }
         })
     }
@@ -491,6 +527,10 @@ mod tests {
     #[test]
     fn add_overflow() {
         assert_eq!(Integer(i32::MAX).plus(Integer(1)), None);
+        assert_eq!(Float(f64::MAX).plus(Float(f64::MAX)), None);
+        // following can't be infinite
+        // assert_eq!(Float(f64::MAX).plus(Integer(i32::MAX)), None);
+        // assert_eq!(Integer(i32::MAX).plus(Float(f64::MAX)), None);
     }
 
     #[test]
@@ -504,6 +544,10 @@ mod tests {
     #[test]
     fn subtract_overflow() {
         assert_eq!(Integer(i32::MIN).subtract(Integer(1)), None);
+        assert_eq!(Float(f64::MIN).subtract(Float(f64::MAX)), None);
+        // following can't be infinite
+        // assert_eq!(Float(f64::MIN).subtract(Integer(i32::MAX)), None);
+        // assert_eq!(Integer(i32::MIN).subtract(Float(f64::MAX)), None);
     }
 
     #[test]
@@ -517,6 +561,9 @@ mod tests {
     #[test]
     fn multiply_overflow() {
         assert_eq!(Integer(i32::MAX).multiply(Integer(2)), None);
+        assert_eq!(Float(f64::MAX).multiply(Float(f64::MAX)), None);
+        assert_eq!(Integer(i32::MAX).multiply(Float(f64::MAX)), None);
+        assert_eq!(Float(f64::MAX).multiply(Integer(i32::MAX)), None);
     }
 
     #[test]
@@ -530,11 +577,18 @@ mod tests {
     #[test]
     fn division_overflow() {
         assert_eq!(Integer(i32::MIN).divide(Integer(-1)), None);
+        assert_eq!(Float(f64::MIN).divide(Float(-f64::MIN_POSITIVE)), None);
+        assert_eq!(Integer(i32::MIN).divide(Float(-f64::MIN_POSITIVE)), None);
+        // following can't be infinite
+        // assert_eq!(Float(-f64::MIN_POSITIVE).divide(Integer(i32::MIN)).unwrap(), Float(0.5));
     }
 
     #[test]
     fn division_by_zero() {
         assert_eq!(Integer(i32::MAX).divide(Integer(0)), None);
+        assert_eq!(Float(10.0).divide(Float(0.0)), None);
+        assert_eq!(Integer(10).divide(Float(0.0)), None);
+        assert_eq!(Float(10.0).divide(Integer(0)), None);
     }
 
     #[test]
@@ -548,6 +602,9 @@ mod tests {
     #[test]
     fn power_overflow() {
         assert_eq!(Integer(i32::MAX).power(Integer(2)), None);
+        assert_eq!(Float(f64::MAX).power(Float(f64::MAX)), None);
+        assert_eq!(Integer(i32::MAX).power(Float(f64::MAX)), None);
+        assert_eq!(Float(f64::MAX).power(Integer(i32::MAX)), None);
     }
 
     #[test]
@@ -568,12 +625,18 @@ mod tests {
 
     #[test]
     fn integer_division_overflow() {
+        assert_eq!(Integer(i32::MIN).integer_divide(Integer(-1)), None);
+        assert_eq!(Float(f64::MIN).integer_divide(Float(-1.0)), None);
         assert_eq!(Integer(i32::MIN).integer_divide(Float(-1.0)), None);
+        assert_eq!(Float(f64::MIN).integer_divide(Integer(-1)), None);
     }
 
     #[test]
     fn integer_division_by_zero() {
         assert_eq!(Integer(i32::MIN).integer_divide(Integer(0)), None);
+        assert_eq!(Float(10.0).integer_divide(Float(0.0)), None);
+        assert_eq!(Integer(10).integer_divide(Float(0.0)), None);
+        assert_eq!(Float(10.0).integer_divide(Integer(0)), None);
     }
 
     #[test]
