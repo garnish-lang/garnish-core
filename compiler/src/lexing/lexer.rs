@@ -709,10 +709,16 @@ pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError>
             LexingState::LineAnnotation => {
                 // line annotations continue until end of line
                 // for simplicity we include entire line as the token
+                current_characters.push(c);
+
                 if c == '\n' || c == '\0' {
+                    should_create = false;
+
+                    // wrap coordinates to new line
+                    text_column = 0;
+                    text_row += 1;
                     true
                 } else {
-                    current_characters.push(c);
                     false
                 }
             }
@@ -2411,15 +2417,9 @@ mod tests {
             result,
             vec![
                 LexerToken {
-                    text: "@@This is a comment".to_string(),
+                    text: "@@This is a comment\n".to_string(),
                     token_type: TokenType::LineAnnotation,
                     column: 0,
-                    row: 0
-                },
-                LexerToken {
-                    text: "\n".to_string(),
-                    token_type: TokenType::Whitespace,
-                    column: 19,
                     row: 0
                 },
                 LexerToken {
