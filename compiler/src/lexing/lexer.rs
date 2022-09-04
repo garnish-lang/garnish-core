@@ -1,4 +1,6 @@
-use std::{collections::HashMap, iter, vec};
+
+use std::str::Chars;
+use std::{collections::HashMap};
 
 use log::trace;
 
@@ -141,6 +143,697 @@ impl LexerToken {
     }
 }
 
+pub struct Lexer<'a> {
+    input: &'a str,
+    input_iter: Chars<'a>,
+    operator_tree: LexerOperatorNode,
+    current_characters: String,
+    current_token_type: Option<TokenType>,
+    text_row: usize,
+    text_column: usize,
+    token_start_column: usize,
+    token_start_row: usize,
+    should_create: bool,
+    state: LexingState,
+    can_float: bool,
+    start_quote_count: usize,
+    end_quote_count: usize,
+    could_be_sub_expression: bool,
+    result: Result<(), CompilerError>,
+    characters_lexed: usize,
+    at_end: bool,
+}
+
+impl<'a> Lexer<'a> {
+    pub fn new(input: &'a str) -> Self {
+        let operator_tree = create_operator_tree(vec![
+            ("+", TokenType::PlusSign),
+            ("++", TokenType::AbsoluteValue),
+            ("-", TokenType::Subtraction),
+            ("--", TokenType::Opposite),
+            ("*", TokenType::MultiplicationSign),
+            ("**", TokenType::ExponentialSign),
+            ("/", TokenType::Division),
+            ("//", TokenType::IntegerDivision),
+            ("%", TokenType::Remainder),
+            ("!", TokenType::BitwiseNot),
+            ("&", TokenType::BitwiseAnd),
+            ("|", TokenType::BitwiseOr),
+            ("^", TokenType::BitwiseXor),
+            ("<<", TokenType::BitwiseLeftShift),
+            (">>", TokenType::BitwiseRightShift),
+            ("&&", TokenType::And),
+            ("||", TokenType::Or),
+            ("^^", TokenType::Xor),
+            ("!!", TokenType::Not),
+            ("()", TokenType::UnitLiteral),
+            ("{", TokenType::StartExpression),
+            ("}", TokenType::EndExpression),
+            ("(", TokenType::StartGroup),
+            (")", TokenType::EndGroup),
+            ("[", TokenType::StartSideEffect),
+            ("]", TokenType::EndSideEffect),
+            ("$", TokenType::Value),
+            ("$?", TokenType::True),
+            ("$!", TokenType::False),
+            (",", TokenType::Comma),
+            ("~", TokenType::Apply),
+            ("!>", TokenType::JumpIfFalse),
+            ("?>", TokenType::JumpIfTrue),
+            ("|>", TokenType::ElseJump),
+            ("~>", TokenType::ApplyTo),
+            ("^~", TokenType::Reapply),
+            ("~~", TokenType::EmptyApply),
+            ("#", TokenType::TypeOf),
+            ("~#", TokenType::TypeCast),
+            ("#=", TokenType::TypeEqual),
+            ("==", TokenType::Equality),
+            ("!=", TokenType::Inequality),
+            ("<", TokenType::LessThan),
+            ("<=", TokenType::LessThanOrEqual),
+            (">", TokenType::GreaterThan),
+            (">=", TokenType::GreaterThanOrEqual),
+            ("=", TokenType::Pair),
+            (".", TokenType::Period),
+            ("._", TokenType::RightInternal),
+            ("_.", TokenType::LeftInternal),
+            (".|", TokenType::LengthInternal),
+            ("<>", TokenType::Concatenation),
+            ("->", TokenType::AppendLink),
+            ("<-", TokenType::PrependLink),
+            ("..", TokenType::Range),
+            (">..", TokenType::StartExclusiveRange),
+            ("..<", TokenType::EndExclusiveRange),
+            (">..<", TokenType::ExclusiveRange),
+        ]);
+
+        let current_characters = String::new();
+        let current_token_type = None;
+
+        let text_row = 0;
+        let text_column = 0;
+        let token_start_column = 0;
+        let token_start_row = 0;
+
+        let should_create = true;
+        let state = LexingState::NoToken;
+        let can_float = true; // whether the next period can be a float
+        let start_quote_count = 0;
+        let end_quote_count = 0;
+        let could_be_sub_expression = false;
+
+        Self {
+            input,
+            input_iter: input.chars(),
+            operator_tree,
+            current_characters,
+            current_token_type,
+            text_row,
+            text_column,
+            token_start_column,
+            token_start_row,
+            should_create,
+            state,
+            can_float,
+            start_quote_count,
+            end_quote_count,
+            could_be_sub_expression,
+            result: Ok(()),
+            characters_lexed: 0,
+            at_end: false,
+        }
+    }
+
+    pub fn get_input(&self) -> &'a str {
+        self.input
+    }
+
+    fn current_operator(&self) -> Option<&LexerOperatorNode> {
+        let mut node = &self.operator_tree;
+
+        for c in self.current_characters.chars() {
+            match node.get_child(&c) {
+                None => return None,
+                Some(n) => node = n,
+            }
+        }
+
+        Some(node)
+    }
+
+    fn start_token(
+        &mut self,
+        c: char,
+        // current_operator: &mut &'a LexerOperatorNode,
+        // operator_tree: &'a LexerOperatorNode,
+        // state: &mut LexingState,
+        // current_characters: &mut String,
+        // current_token_type: &mut Option<TokenType>,
+        // token_start_column: &mut usize,
+        // token_start_row: &mut usize,
+        // text_column: &mut usize,
+        // text_row: &mut usize,
+    ) {
+        trace!("Beginning new token");
+        self.current_characters = String::new();
+        self.current_token_type = None;
+
+        self.token_start_row = self.text_row;
+        self.token_start_column = self.text_column;
+
+        self.current_characters.push(c);
+
+        // start new token
+        if self.current_operator().is_some() {
+            self.state = LexingState::Operator;
+            self.current_token_type = match self.current_operator() {
+                None => unreachable!(),
+                Some(node) => node.token_type,
+            };
+        } else if c == ' ' || c == '\t' {
+            self.state = LexingState::Spaces;
+            self.current_token_type = Some(TokenType::Whitespace);
+        } else if c.is_ascii_whitespace() {
+            // any other white space, all some form of new line
+            self.state = LexingState::Subexpression;
+            self.current_token_type = Some(TokenType::Subexpression);
+
+            self.text_column = 0;
+            self.text_row += 1;
+        } else if c.is_numeric() {
+            self.state = LexingState::Number;
+            self.current_token_type = Some(TokenType::Number);
+        } else if is_identifier_char(c) {
+            self.state = LexingState::Indentifier;
+            self.current_token_type = Some(TokenType::Identifier);
+        } else if c == '@' {
+            self.state = LexingState::Annotation;
+            self.current_token_type = Some(TokenType::Annotation);
+        } else if c == ';' {
+            self.state = LexingState::Symbol;
+            self.current_token_type = Some(TokenType::Symbol);
+        } else if c == '"' {
+            self.state = LexingState::StartCharList;
+            self.current_token_type = Some(TokenType::CharList);
+        } else if c == '\'' {
+            self.state = LexingState::StartByteList;
+            self.current_token_type = Some(TokenType::ByteList);
+        } else if c == '\0' && self.at_end {
+            // allowing for now as final loop character
+            self.state = LexingState::NoToken;
+            self.current_token_type = None;
+        } else {
+            self.result = Err(CompilerError::new(
+                format!("Invalid start to token: {:?}", c),
+                self.text_row,
+                self.text_column,
+            ))
+        }
+
+        trace!(
+            "Starting token with character {:?} token type '{:?}' state '{:?}'",
+            &c,
+            self.current_token_type,
+            self.state
+        );
+    }
+
+    fn can_create_valid_token(&self) -> Result<(), CompilerError> {
+        match self.current_token_type {
+            Some(t) => match t {
+                TokenType::Identifier => {
+                    if self.current_characters == "_" || self.current_characters == ":" {
+                        Err(CompilerError::new(
+                            "Identifiers must contain more than 1 character when starting with '_' or ':'",
+                            self.token_start_row,
+                            self.token_start_column,
+                        ))
+                    } else {
+                        Ok(())
+                    }
+                }
+                _ => Ok(()),
+            },
+            None => Ok(()),
+        }
+    }
+
+    fn process_char(&mut self, c: char) -> Option<LexerToken> {
+        trace!("Character {:?} at ({:?}, {:?})", c, self.text_column, self.text_row);
+        trace!("Current state: {:?}", self.state);
+
+        let mut next_token = None;
+
+        self.characters_lexed += 1;
+
+        let start_new = match self.state {
+            LexingState::NoToken => {
+                self.start_token(c);
+                false
+            }
+            LexingState::Operator => {
+                trace!("Continuing operator");
+
+                self.current_characters.push(c);
+                match self.current_operator() {
+                    Some(node) => {
+                        // update token type and continue
+                        self.current_token_type = node.token_type;
+                        trace!("Switched to operator token '{:?}'", self.current_token_type);
+
+                        false
+                    }
+                    None => {
+                        // One token (LeftInternal) starts with an underscore
+                        // which can also be start of an identifier
+                        // if on this token and current character can be identifier
+                        // switch to lexing identifier
+                        if self.current_characters.starts_with('_') && is_identifier_char(c) {
+                            trace!("Switching to lexing identifier after starting with an underscore.");
+                            self.current_token_type = Some(TokenType::Identifier);
+                            self.state = LexingState::Indentifier;
+
+                            false
+                        } else if self.current_characters.starts_with('.') && c.is_numeric() && self.can_float {
+                            // Range tokens start with a period
+                            // but Float numbers can also start with period
+                            trace!("Found number after period. Switching to float.");
+                            self.current_token_type = Some(TokenType::Number);
+                            self.state = LexingState::Float;
+                            false
+                        } else {
+                            // remove added character then end
+                            self.current_characters.pop();
+                            trace!("Ending operator");
+                            true
+                        }
+                    }
+                }
+            }
+            LexingState::Symbol => {
+                trace!("Continuing symbol");
+                if self.current_characters.len() == 1 {
+                    // just the colon character
+                    // need to make sure the first character is only alpha or underscore
+                    if is_identifier_char(c) {
+                        self.current_characters.push(c);
+                        false
+                    } else {
+                        // end token
+                        true
+                    }
+                } else {
+                    if is_identifier_char(c) {
+                        self.current_characters.push(c);
+                        false
+                    } else {
+                        // end token
+                        true
+                    }
+                }
+            }
+            LexingState::Number => {
+                // after initial number, underscores are allowed as visual separator
+                if c.is_numeric() || c == '_' || c.is_alphanumeric() {
+                    self.current_characters.push(c);
+                    false
+                } else if c == '.' && self.can_float {
+                    trace!("Period found, switching to float");
+                    self.current_characters.push(c);
+                    self.current_token_type = Some(TokenType::Number);
+                    self.state = LexingState::Float;
+                    false
+                } else {
+                    trace!("Ending number");
+                    true
+                }
+            }
+            LexingState::Float => {
+                if c.is_numeric() || c == '_' || c.is_alphanumeric() {
+                    self.current_characters.push(c);
+                    false
+                } else if c == '.' && self.current_characters.ends_with(".") {
+                    // split current token into just an integer
+                    // and new Range token
+                    let s = self.current_characters.trim_matches('.');
+                    let token = LexerToken::new(
+                        s.to_string(),
+                        TokenType::Number,
+                        self.token_start_row,
+                        // actual token is determined after current, minus 1 to make accurate
+                        self.token_start_column,
+                    );
+
+                    next_token = Some(token);
+
+                    self.token_start_row = self.text_row;
+
+                    let correct_start_column = self.text_column - 1;
+
+                    self.start_token('.');
+
+                    // set to two back for exisitng period
+                    self.token_start_column = correct_start_column;
+                    self.current_characters.push(c);
+
+                    match self.current_operator() {
+                        Some(node) => {
+                            // set 'current' values
+                            self.current_token_type = node.token_type;
+                            trace!("Switched to operator token '{:?}'", self.current_token_type);
+
+                            false
+                        }
+                        None => {
+                            self.result = Err(CompilerError::new(
+                                "Could not setup range token.",
+                                self.token_start_row,
+                                self.token_start_column,
+                            ));
+                            return None;
+                        }
+                    }
+                } else {
+                    trace!("Ending float");
+                    true
+                }
+            }
+            LexingState::Indentifier => {
+                if is_identifier_char(c) {
+                    self.current_characters.push(c);
+                    false
+                } else {
+                    trace!("Ending identifier");
+
+                    // check for invalid identifiers
+                    // currently only need to check for single colon character ':'
+                    if self.current_characters == ":" {
+                        self.current_token_type = None;
+                    }
+                    true
+                }
+            }
+            LexingState::StartCharList => {
+                if c != '"' {
+                    self.start_quote_count = self.current_characters.len();
+                    self.state = LexingState::CharList;
+                }
+
+                self.current_characters.push(c);
+
+                false
+            }
+            LexingState::CharList => {
+                if c == '"' {
+                    self.end_quote_count += 1;
+                    self.current_characters.push(c);
+
+                    if self.start_quote_count == self.end_quote_count {
+                        trace!("Ending CharList");
+                        self.should_create = false;
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    // reset end quote count every non-quote character
+                    self.end_quote_count = 0;
+                    self.current_characters.push(c);
+                    false
+                }
+            }
+            LexingState::StartByteList => {
+                if c != '\'' {
+                    self.start_quote_count = self.current_characters.len();
+                    self.state = LexingState::ByteList;
+                }
+
+                self.current_characters.push(c);
+
+                false
+            }
+            LexingState::ByteList => {
+                if c == '\'' {
+                    self.end_quote_count += 1;
+                    self.current_characters.push(c);
+
+                    if self.start_quote_count == self.end_quote_count {
+                        trace!("Ending CharList");
+                        self.should_create = false;
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    self.end_quote_count = 0;
+                    self.current_characters.push(c);
+                    false
+                }
+            }
+            LexingState::Spaces => {
+                if c == '\n' {
+                    // wrap coordinates to new line
+                    self.text_column = 0;
+                    self.text_row += 1;
+
+                    match self.could_be_sub_expression {
+                        true => {
+                            trace!("Found second newline in whitespace sequence. Creating subexpression.");
+                            // second newline character in whitespace sequence
+                            // end token as subexpression
+                            self.current_token_type = Some(TokenType::Subexpression);
+                            self.current_characters.push(c);
+                            // current character is a part of this token
+                            // skip creation of new token with it
+                            self.should_create = false;
+
+                            true
+                        }
+                        false => {
+                            // first newline character in whitespace sequence
+                            // switch to subexpression
+                            trace!("Found newline character, switching state");
+                            self.current_characters.push(c);
+
+                            self.state = LexingState::Subexpression;
+
+                            false
+                        }
+                    }
+                } else if c != ' ' && c != '\t' {
+                    trace!("Ending horizontal space");
+                    true
+                } else {
+                    self.current_characters.push(c);
+                    false
+                }
+            }
+            LexingState::Subexpression => {
+                if c.is_ascii_whitespace() && !(c == '\t' || c == ' ') {
+                    trace!("Found second new line character. Creating subexpression token");
+                    // first time through will be the second new line type character
+
+                    // add character and create token
+                    self.current_characters.push(c);
+
+                    // could've arrived here by passing through whitespace state
+                    // check len of characters so see if 2 tokens need to be created
+                    if self.current_characters.len() > 2 {
+                        trace!("Creating whitespace token from extra characters");
+                        // have extra characters, split them into a whitespace token
+                        let spaces_characters = &self.current_characters[..self.current_characters.len() - 2];
+                        next_token = Some(LexerToken::new(
+                            spaces_characters.to_string(),
+                            TokenType::Whitespace,
+                            self.token_start_row,
+                            // actual token is determined after current, minus 1 to make accurate
+                            self.token_start_column,
+                        ));
+
+                        self.current_characters = self.current_characters[(self.current_characters.len() - 2)..].to_string();
+                    }
+
+                    // wrap coordinates to new line
+                    self.text_column = 0;
+                    self.text_row += 1;
+
+                    // skip start new token for this character since it is a part of this token
+                    self.should_create = false;
+
+                    true
+                } else {
+                    trace!("Non-newline character found");
+
+                    // change to white space token and start new
+                    self.current_token_type = Some(TokenType::Whitespace);
+                    // but could be a subexpression still if another newline is found
+                    self.could_be_sub_expression = true;
+
+                    // if other white space, switch state and continue
+                    if c == '\t' || c == ' ' {
+                        trace!("Is whitespace character, switching state");
+                        self.current_characters.push(c);
+                        self.state = LexingState::Spaces;
+                        false
+                    } else {
+                        trace!("Is non-whitespace character, ending token");
+                        // else end this token and start new
+                        true
+                    }
+                }
+            }
+            LexingState::Annotation => {
+                // change to LineAnnotation if second character is also an '@'
+                if c == '@' && self.current_characters.len() == 1 {
+                    trace!("Another '@' character found, changing to LineAnnotation.");
+                    self.current_characters.push(c);
+                    self.state = LexingState::LineAnnotation;
+                    self.current_token_type = Some(TokenType::LineAnnotation);
+                    false
+                } else if c.is_alphanumeric() || c == '_' {
+                    // continue token
+                    self.current_characters.push(c);
+                    false
+                } else {
+                    // end token
+
+                    true
+                }
+            }
+            LexingState::LineAnnotation => {
+                // line annotations continue until end of line
+                // for simplicity we include entire line as the token
+
+                if c == '\n' {
+                    self.current_characters.push(c);
+                    self.should_create = false;
+
+                    // wrap coordinates to new line
+                    self.text_column = 0;
+                    self.text_row += 1;
+                    true
+                } else if c == '\0' {
+                    true
+                } else {
+                    self.current_characters.push(c);
+                    false
+                }
+            }
+        };
+
+        trace!("Will start new: {:?}", start_new);
+
+        if start_new {
+            // determine if the next token can be a float
+            // cannot immediately follow identifiers, a period, other floats
+            self.can_float = ![
+                // value.1
+                // the 1 will be an integer for access operation
+                Some(TokenType::Identifier),
+                // value.1.1
+                // since the period and 1 after value is for access, the next period is considered the same
+                Some(TokenType::Period),
+                // works alongside the above, the 1 is forced to be a number since it can't be a float
+                // forceing the next period to not be a float, etc
+                Some(TokenType::Number),
+                // 3.14.1
+                // floats can only have one decimal, this can also cause the above cascade
+                Some(TokenType::Number),
+            ]
+            .contains(&self.current_token_type);
+
+            if self.state != LexingState::NoToken {
+                trace!("Pushing new token: {:?}", self.current_token_type);
+
+                self.result = self.can_create_valid_token();
+                if self.result.is_ok() {
+                    let token = LexerToken::new(
+                        self.current_characters.clone(),
+                        match self.current_token_type {
+                            Some(t) => t,
+                            None => {
+                                self.result = Err(CompilerError::new("No token", self.token_start_row, self.token_start_column));
+                                return None;
+                            }
+                        },
+                        self.token_start_row,
+                        // actual token is determined after current, minus 1 to make accurate
+                        self.token_start_column,
+                    );
+
+                    next_token = Some(token);
+                }
+            }
+
+            // set default for new if next token isn't a symbol
+            self.state = LexingState::NoToken;
+            self.current_characters = String::new();
+            self.current_token_type = None;
+            self.start_quote_count = 0;
+            self.end_quote_count = 0;
+            self.could_be_sub_expression = false;
+
+            if self.should_create {
+                trace!("Starting new token");
+                self.start_token(c);
+            } else {
+                // Used only for single skips, flip back for next iteration
+                trace!("Did not start new token");
+                self.should_create = true;
+            }
+        }
+
+        // need to relook at column count when deep diving into line feed, form feed, carriage return parsing
+        if c != '\n' {
+            self.text_column += 1;
+        }
+
+        next_token
+    }
+}
+
+impl<'a> Iterator for Lexer<'a> {
+    type Item = LexerToken;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.result.is_err() {
+            // Invalid lexing state
+            // do not continue consuming characters
+            return None;
+        }
+
+        let mut next_token = None;
+
+        loop {
+            match self.input_iter.next() {
+                Some(c) => match self.process_char(c) {
+                    Some(t) => {
+                        next_token = Some(t);
+                        break;
+                    }
+                    None => (),
+                },
+                None => {
+                    self.at_end = true;
+                    // run all checks again to finalize last token
+                    // by pushing through null character
+                    match self.process_char('\0') {
+                        Some(t) => {
+                            next_token = Some(t);
+                            break;
+                        }
+                        None => (),
+                    }
+
+                    break;
+                }
+            }
+        }
+
+        next_token
+    }
+}
+
 pub fn create_operator_tree(symbol_list: Vec<(&str, TokenType)>) -> LexerOperatorNode {
     let mut root = LexerOperatorNode {
         value: '\0',
@@ -215,599 +908,21 @@ enum LexingState {
     StartByteList,
 }
 
-fn start_token<'a>(
-    c: char,
-    current_operator: &mut &'a LexerOperatorNode,
-    operator_tree: &'a LexerOperatorNode,
-    state: &mut LexingState,
-    current_characters: &mut String,
-    current_token_type: &mut Option<TokenType>,
-    token_start_column: &mut usize,
-    token_start_row: &mut usize,
-    text_column: &mut usize,
-    text_row: &mut usize,
-) {
-    trace!("Beginning new token");
-    *current_characters = String::new();
-    *current_operator = operator_tree;
-    *current_token_type = None;
-
-    *token_start_row = *text_row;
-    *token_start_column = *text_column;
-
-    // start new token
-    if current_operator.get_child(&c).is_some() {
-        *state = LexingState::Operator;
-        match current_operator.get_child(&c) {
-            None => unreachable!(),
-            Some(node) => {
-                current_characters.push(c);
-                *current_token_type = node.token_type;
-                *current_operator = node;
-            }
-        }
-    } else if c == ' ' || c == '\t' {
-        current_characters.push(c);
-        *state = LexingState::Spaces;
-        *current_token_type = Some(TokenType::Whitespace);
-    } else if c.is_ascii_whitespace() {
-        // any other white space, all some form of new line
-        current_characters.push(c);
-        *state = LexingState::Subexpression;
-        *current_token_type = Some(TokenType::Subexpression);
-
-        *text_column = 0;
-        *text_row += 1;
-    } else if c.is_numeric() {
-        current_characters.push(c);
-        *state = LexingState::Number;
-        *current_token_type = Some(TokenType::Number);
-    } else if c == '\0' {
-        *state = LexingState::NoToken;
-        *current_token_type = None;
-        trace!("Null character found, skipping.");
-        return;
-    } else if is_identifier_char(c) {
-        // catch all to create identifiers
-        // any disallowed characters will have a blacklist made for them
-
-        current_characters.push(c);
-        *state = LexingState::Indentifier;
-        *current_token_type = Some(TokenType::Identifier);
-    } else if c == '@' {
-        current_characters.push(c);
-        *state = LexingState::Annotation;
-        *current_token_type = Some(TokenType::Annotation);
-    } else if c == ';' {
-        current_characters.push(c);
-        *state = LexingState::Symbol;
-        *current_token_type = Some(TokenType::Symbol);
-    } else if c == '"' {
-        current_characters.push(c);
-        *state = LexingState::StartCharList;
-        *current_token_type = Some(TokenType::CharList);
-    } else if c == '\'' {
-        current_characters.push(c);
-        *state = LexingState::StartByteList;
-        *current_token_type = Some(TokenType::ByteList);
-    }
-
-    trace!(
-        "Starting token with character {:?} token type '{:?}' state '{:?}'",
-        &c,
-        current_token_type,
-        state
-    );
-}
-
 pub fn lex(input: &str) -> Result<Vec<LexerToken>, CompilerError> {
-    lex_with_processor(input)
-}
-
-pub fn lex_with_processor(input: &str) -> Result<Vec<LexerToken>, CompilerError> {
-    trace!("Beginning lexing");
-
     let mut tokens = vec![];
-    let mut current_characters = String::new();
 
-    let operator_tree = create_operator_tree(vec![
-        ("+", TokenType::PlusSign),
-        ("++", TokenType::AbsoluteValue),
-        ("-", TokenType::Subtraction),
-        ("--", TokenType::Opposite),
-        ("*", TokenType::MultiplicationSign),
-        ("**", TokenType::ExponentialSign),
-        ("/", TokenType::Division),
-        ("//", TokenType::IntegerDivision),
-        ("%", TokenType::Remainder),
-        ("!", TokenType::BitwiseNot),
-        ("&", TokenType::BitwiseAnd),
-        ("|", TokenType::BitwiseOr),
-        ("^", TokenType::BitwiseXor),
-        ("<<", TokenType::BitwiseLeftShift),
-        (">>", TokenType::BitwiseRightShift),
-        ("&&", TokenType::And),
-        ("||", TokenType::Or),
-        ("^^", TokenType::Xor),
-        ("!!", TokenType::Not),
-        ("()", TokenType::UnitLiteral),
-        ("{", TokenType::StartExpression),
-        ("}", TokenType::EndExpression),
-        ("(", TokenType::StartGroup),
-        (")", TokenType::EndGroup),
-        ("[", TokenType::StartSideEffect),
-        ("]", TokenType::EndSideEffect),
-        ("$", TokenType::Value),
-        ("$?", TokenType::True),
-        ("$!", TokenType::False),
-        (",", TokenType::Comma),
-        ("~", TokenType::Apply),
-        ("!>", TokenType::JumpIfFalse),
-        ("?>", TokenType::JumpIfTrue),
-        ("|>", TokenType::ElseJump),
-        ("~>", TokenType::ApplyTo),
-        ("^~", TokenType::Reapply),
-        ("~~", TokenType::EmptyApply),
-        ("#", TokenType::TypeOf),
-        ("~#", TokenType::TypeCast),
-        ("#=", TokenType::TypeEqual),
-        ("==", TokenType::Equality),
-        ("!=", TokenType::Inequality),
-        ("<", TokenType::LessThan),
-        ("<=", TokenType::LessThanOrEqual),
-        (">", TokenType::GreaterThan),
-        (">=", TokenType::GreaterThanOrEqual),
-        ("=", TokenType::Pair),
-        (".", TokenType::Period),
-        ("._", TokenType::RightInternal),
-        ("_.", TokenType::LeftInternal),
-        (".|", TokenType::LengthInternal),
-        ("<>", TokenType::Concatenation),
-        ("->", TokenType::AppendLink),
-        ("<-", TokenType::PrependLink),
-        ("..", TokenType::Range),
-        (">..", TokenType::StartExclusiveRange),
-        ("..<", TokenType::EndExclusiveRange),
-        (">..<", TokenType::ExclusiveRange),
-    ]);
-    let mut current_operator = &operator_tree;
-    let mut current_token_type = None;
+    let mut lexer = Lexer::new(input);
 
-    let mut text_row = 0;
-    let mut text_column = 0;
-    let mut token_start_column = 0;
-    let mut token_start_row = 0;
-
-    let mut should_create = true;
-    let mut state = LexingState::NoToken;
-    let mut can_float = true; // whether the next period can be a float
-    let mut start_quote_count = 0;
-    let mut end_quote_count = 0;
-    let mut could_be_sub_expression = false;
-
-    for c in input.chars().chain(iter::once('\0')) {
-        trace!("Character {:?} at ({:?}, {:?})", c, text_column, text_row);
-        trace!("Current state: {:?}", state);
-
-        let start_new = match state {
-            LexingState::NoToken => true,
-            LexingState::Operator => {
-                trace!("Continuing operator");
-                match current_operator.get_child(&c) {
-                    Some(node) => {
-                        // set 'current' values
-                        current_characters.push(c);
-                        current_token_type = node.token_type;
-                        current_operator = node;
-
-                        trace!("Switched to operator token '{:?}'", current_token_type);
-
-                        false
-                    }
-                    None => {
-                        // One token (LeftInternal) starts with an underscore
-                        // which can also be start of an identifier
-                        // if on this token and current character can be identifier
-                        // switch to lexing identifier
-                        if current_characters == "_" && is_identifier_char(c) {
-                            trace!("Switching to lexing identifier after starting with an underscore.");
-                            current_characters.push(c);
-                            current_token_type = Some(TokenType::Identifier);
-                            state = LexingState::Indentifier;
-
-                            false
-                        } else if current_characters == "." && c.is_numeric() && can_float {
-                            // Another token (Float) can start with a period
-                            trace!("Found number after period. Switching to flaot.");
-                            current_characters.push(c);
-                            current_token_type = Some(TokenType::Number);
-                            state = LexingState::Float;
-                            false
-                        } else {
-                            trace!("Ending operator");
-                            true
-                        }
-                    }
-                }
-            }
-            LexingState::Symbol => {
-                trace!("Continuing symbol");
-                if current_characters.len() == 1 {
-                    // just the colon character
-                    // need to make sure the first character is only alpha or underscore
-                    if is_identifier_char(c) {
-                        current_characters.push(c);
-                        false
-                    } else {
-                        // end token
-                        true
-                    }
-                } else {
-                    if is_identifier_char(c) {
-                        current_characters.push(c);
-                        false
-                    } else {
-                        // end token
-                        true
-                    }
-                }
-            }
-            LexingState::Number => {
-                // after initial number, underscores are allowed as visual separator
-                if c.is_numeric() || c == '_' || c.is_alphanumeric() {
-                    current_characters.push(c);
-                    false
-                } else if c == '.' && can_float {
-                    trace!("Period found, switching to float");
-                    current_characters.push(c);
-                    current_token_type = Some(TokenType::Number);
-                    state = LexingState::Float;
-                    false
-                } else {
-                    trace!("Ending number");
-                    true
-                }
-            }
-            LexingState::Float => {
-                if c.is_numeric() || c == '_' || c.is_alphanumeric() {
-                    current_characters.push(c);
-                    false
-                } else if c == '.' && current_characters.ends_with(".") {
-                    // split current token into just an integer
-                    // and new Range token
-                    let s = current_characters.trim_matches('.');
-                    let token = LexerToken::new(
-                        s.to_string(),
-                        TokenType::Number,
-                        token_start_row,
-                        // actual token is determined after current, minus 1 to make accurate
-                        token_start_column,
-                    );
-
-                    tokens.push(token);
-
-                    token_start_row = text_row;
-
-                    let correct_start_column = text_column - 1;
-
-                    start_token(
-                        '.',
-                        &mut current_operator,
-                        &operator_tree,
-                        &mut state,
-                        &mut current_characters,
-                        &mut current_token_type,
-                        &mut token_start_column,
-                        &mut &mut token_start_row,
-                        &mut text_column,
-                        &mut text_row,
-                    );
-
-                    // set to two back for exisitng period
-                    token_start_column = correct_start_column;
-
-                    match current_operator.get_child(&c) {
-                        Some(node) => {
-                            // set 'current' values
-                            current_characters.push(c);
-                            current_token_type = node.token_type;
-                            current_operator = node;
-
-                            trace!("Switched to operator token '{:?}'", current_token_type);
-
-                            false
-                        }
-                        None => Err(CompilerError::new("Could not setup range token.", token_start_row, token_start_column))?,
-                    }
-                } else {
-                    trace!("Ending float");
-                    true
-                }
-            }
-            LexingState::Indentifier => {
-                if is_identifier_char(c) {
-                    current_characters.push(c);
-                    false
-                } else {
-                    trace!("Ending identifier");
-
-                    // check for invalid identifiers
-                    // currently only need to check for single colon character ':'
-                    if current_characters == ":" {
-                        current_token_type = None;
-                    }
-                    true
-                }
-            }
-            LexingState::StartCharList => {
-                if c != '"' {
-                    start_quote_count = current_characters.len();
-                    state = LexingState::CharList;
-                }
-
-                current_characters.push(c);
-
-                false
-            }
-            LexingState::CharList => {
-                if c == '"' {
-                    end_quote_count += 1;
-                    current_characters.push(c);
-
-                    if start_quote_count == end_quote_count {
-                        trace!("Ending CharList");
-                        should_create = false;
-                        true
-                    } else {
-                        false
-                    }
-                } else {
-                    // reset end quote count every non-quote character
-                    end_quote_count = 0;
-                    current_characters.push(c);
-                    false
-                }
-            }
-            LexingState::StartByteList => {
-                if c != '\'' {
-                    start_quote_count = current_characters.len();
-                    state = LexingState::ByteList;
-                }
-
-                current_characters.push(c);
-
-                false
-            }
-            LexingState::ByteList => {
-                if c == '\'' {
-                    end_quote_count += 1;
-                    current_characters.push(c);
-
-                    if start_quote_count == end_quote_count {
-                        trace!("Ending CharList");
-                        should_create = false;
-                        true
-                    } else {
-                        false
-                    }
-                } else {
-                    end_quote_count = 0;
-                    current_characters.push(c);
-                    false
-                }
-            }
-            LexingState::Spaces => {
-                if c == '\n' {
-                    // wrap coordinates to new line
-                    text_column = 0;
-                    text_row += 1;
-
-                    match could_be_sub_expression {
-                        true => {
-                            trace!("Found second newline in whitespace sequence. Creating subexpression.");
-                            // second newline character in whitespace sequence
-                            // end token as subexpression
-                            current_token_type = Some(TokenType::Subexpression);
-                            current_characters.push(c);
-                            // current character is a part of this token
-                            // skip creation of new token with it
-                            should_create = false;
-
-                            true
-                        }
-                        false => {
-                            // first newline character in whitespace sequence
-                            // switch to subexpression
-                            trace!("Found newline character, switching state");
-                            current_characters.push(c);
-
-                            state = LexingState::Subexpression;
-
-                            false
-                        }
-                    }
-                } else if c != ' ' && c != '\t' {
-                    trace!("Ending horizontal space");
-                    true
-                } else {
-                    current_characters.push(c);
-                    false
-                }
-            }
-            LexingState::Subexpression => {
-                if c.is_ascii_whitespace() && !(c == '\t' || c == ' ') {
-                    trace!("Found second new line character. Creating subexpression token");
-                    // first time through will be the second new line type character
-
-                    // add character and create token
-                    current_characters.push(c);
-
-                    // could've arrived here by passing through whitespace state
-                    // check len of characters so see if 2 tokens need to be created
-                    if current_characters.len() > 2 {
-                        trace!("Creating whitespace token from extra characters");
-                        // have extra characters, split them into a whitespace token
-                        let spaces_characters = &current_characters[..current_characters.len() - 2];
-                        tokens.push(LexerToken::new(
-                            spaces_characters.to_string(),
-                            TokenType::Whitespace,
-                            token_start_row,
-                            // actual token is determined after current, minus 1 to make accurate
-                            token_start_column,
-                        ));
-
-                        current_characters = current_characters[(current_characters.len() - 2)..].to_string();
-                    }
-
-                    // wrap coordinates to new line
-                    text_column = 0;
-                    text_row += 1;
-
-                    // skip start new token for this character since it is a part of this token
-                    should_create = false;
-
-                    true
-                } else {
-                    trace!("Non-newline character found");
-
-                    // change to white space token and start new
-                    current_token_type = Some(TokenType::Whitespace);
-                    // but could be a subexpression still if another newline is found
-                    could_be_sub_expression = true;
-
-                    // if other white space, switch state and continue
-                    if c == '\t' || c == ' ' {
-                        trace!("Is whitespace character, switching state");
-                        current_characters.push(c);
-                        state = LexingState::Spaces;
-                        false
-                    } else {
-                        trace!("Is non-whitespace character, ending token");
-                        // else end this token and start new
-                        true
-                    }
-                }
-            }
-            LexingState::Annotation => {
-                // change to LineAnnotation if second character is also an '@'
-                if c == '@' && current_characters.len() == 1 {
-                    trace!("Another '@' character found, changing to LineAnnotation.");
-                    current_characters.push(c);
-                    state = LexingState::LineAnnotation;
-                    current_token_type = Some(TokenType::LineAnnotation);
-                    false
-                } else if c.is_alphanumeric() || c == '_' {
-                    // continue token
-                    current_characters.push(c);
-                    false
-                } else {
-                    // end token
-
-                    true
-                }
-            }
-            LexingState::LineAnnotation => {
-                // line annotations continue until end of line
-                // for simplicity we include entire line as the token
-
-                if c == '\n' {
-                    current_characters.push(c);
-                    should_create = false;
-
-                    // wrap coordinates to new line
-                    text_column = 0;
-                    text_row += 1;
-                    true
-                } else if c == '\0' {
-                    true
-                } else {
-                    current_characters.push(c);
-                    false
-                }
-            }
-        };
-
-        trace!("Will start new: {:?}", start_new);
-
-        if start_new {
-            // determine if the next token can be a float
-            // cannot immediately follow identifiers, a period, other floats
-            can_float = ![
-                // value.1
-                // the 1 will be an integer for access operation
-                Some(TokenType::Identifier),
-                // value.1.1
-                // since the period and 1 after value is for access, the next period is considered the same
-                Some(TokenType::Period),
-                // works alongside the above, the 1 is forced to be a number since it can't be a float
-                // forceing the next period to not be a float, etc
-                Some(TokenType::Number),
-                // 3.14.1
-                // floats can only have one decimal, this can also cause the above cascade
-                Some(TokenType::Number),
-            ]
-            .contains(&current_token_type);
-
-            if state != LexingState::NoToken {
-                trace!("Pushing new token: {:?}", current_token_type);
-
-                let token = LexerToken::new(
-                    current_characters,
-                    match current_token_type {
-                        Some(t) => t,
-                        None => Err(CompilerError::new("No token", token_start_row, token_start_column))?,
-                    },
-                    token_start_row,
-                    // actual token is determined after current, minus 1 to make accurate
-                    token_start_column,
-                );
-
-                tokens.push(token);
-            }
-
-            // set default for new if next token isn't a symbol
-            state = LexingState::NoToken;
-            current_characters = String::new();
-            current_operator = &operator_tree;
-            current_token_type = None;
-            start_quote_count = 0;
-            end_quote_count = 0;
-            could_be_sub_expression = false;
-
-            if should_create {
-                trace!("Starting new token");
-                start_token(
-                    c,
-                    &mut current_operator,
-                    &operator_tree,
-                    &mut state,
-                    &mut current_characters,
-                    &mut current_token_type,
-                    &mut token_start_column,
-                    &mut &mut token_start_row,
-                    &mut text_column,
-                    &mut text_row,
-                );
-            } else {
-                // Used only for single skips, flip back for next iteration
-                trace!("Did not start new token");
-                should_create = true;
-            }
-        }
-
-        // need to relook at column count when deep diving into line feed, form feed, carriage return parsing
-        if c != '\0' && c != '\n' {
-            text_column += 1;
+    while let Some(token) = lexer.next() {
+        match lexer.result {
+            Ok(_) => tokens.push(token),
+            Err(e) => return Err(e),
         }
     }
 
-    if state != LexingState::NoToken {
-        Err(CompilerError::new_message(format!(
-            "Unfinished token of type {:?}: {:?}",
-            current_token_type, current_characters
-        )))
-    } else {
-        Ok(tokens)
+    match lexer.result {
+        Ok(_) => Ok(tokens),
+        Err(e) => Err(e),
     }
 }
 
@@ -821,6 +936,27 @@ mod errors {
         let result = lex(&"?".to_string());
 
         assert_eq!(result.err().unwrap(), CompilerError::new("No token", 0, 0));
+    }
+}
+
+mod iterator {
+    use crate::{Lexer, LexerToken, TokenType};
+
+    #[test]
+    fn plus_sign() {
+        let mut iter = Lexer::new("+");
+
+        let result = iter.next().unwrap();
+
+        assert_eq!(
+            result,
+            LexerToken {
+                text: "+".to_string(),
+                token_type: TokenType::PlusSign,
+                column: 0,
+                row: 0
+            }
+        )
     }
 }
 
@@ -1823,32 +1959,10 @@ mod tests {
     }
 
     #[test]
-    fn skip_null_characters() {
-        let result = lex(&"+\0+\0+".to_string()).unwrap();
+    fn null_characters_cause_error() {
+        let result = lex(&"+\0+\0+".to_string());
 
-        assert_eq!(
-            result,
-            vec![
-                LexerToken {
-                    text: "+".to_string(),
-                    token_type: TokenType::PlusSign,
-                    column: 0,
-                    row: 0
-                },
-                LexerToken {
-                    text: "+".to_string(),
-                    token_type: TokenType::PlusSign,
-                    column: 1,
-                    row: 0
-                },
-                LexerToken {
-                    text: "+".to_string(),
-                    token_type: TokenType::PlusSign,
-                    column: 2,
-                    row: 0
-                }
-            ]
-        );
+        assert!(result.is_err())
     }
 
     #[test]

@@ -22,7 +22,7 @@ pub struct CompilerError<Source: 'static + std::error::Error = NoSource> {
 }
 
 impl<Source: 'static + std::error::Error> CompilerError<Source> {
-    pub fn new(message: &str, line: usize, column: usize) -> Self {
+    pub fn new<T: ToString>(message: T, line: usize, column: usize) -> Self {
         CompilerError {
             message: message.to_string(),
             line,
