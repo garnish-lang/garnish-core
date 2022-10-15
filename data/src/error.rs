@@ -18,3 +18,9 @@ impl From<String> for DataError {
         DataError { message: s }
     }
 }
+
+impl From<DataError> for String {
+    fn from(err: DataError) -> Self {
+        format!("{}", err)
+    }
+}
