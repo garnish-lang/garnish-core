@@ -109,4 +109,18 @@ mod tests {
         assert_eq!(testing_info.tests().len(), 0);
         assert_eq!(testing_info.main(), &Vec::from(&tokens[..]));
     }
+
+    #[test]
+    fn main_stored_between_tests() {
+        let input = "$ + 5\n\n@Test \"Five equals Five\" { 5 == 5 }\n\n$ + 10";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone()).unwrap();
+
+        let main_tokens: Vec<LexerToken> = tokens.iter().take(6).chain(tokens.iter().skip(20)).map(|t| t.clone()).collect();
+
+        assert_eq!(testing_info.tests().len(), 0);
+        assert_eq!(testing_info.main(), &main_tokens);
+    }
 }
