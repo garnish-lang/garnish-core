@@ -4,6 +4,7 @@ pub struct TestInfo {
     annotation: TestAnnotation,
     tokens: Vec<LexerToken>,
     mocks: Vec<MockInfo>,
+    tag_annotation: Vec<LexerToken>,
 }
 
 impl TestInfo {
@@ -17,6 +18,10 @@ impl TestInfo {
 
     pub fn mocks(&self) -> &Vec<MockInfo> {
         &self.mocks
+    }
+
+    pub fn tag_annotation(&self) -> &Vec<LexerToken> {
+        &self.tag_annotation
     }
 }
 
@@ -50,6 +55,7 @@ pub enum TestAnnotation {
     Test,
     Case,
     Mock,
+    Tag,
 }
 
 pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
@@ -57,6 +63,7 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
 
     let mut current_mocks = vec![];
     let mut current_tokens = vec![];
+    let mut tag_annotation = vec![];
     let mut ingesting_annotation = None;
 
     for token in tokens {
@@ -70,6 +77,7 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
                         ingesting_annotation = Some(TestAnnotation::Case);
                     }
                     "@Mock" => ingesting_annotation = Some(TestAnnotation::Mock),
+                    "@Tag" => ingesting_annotation = Some(TestAnnotation::Tag),
                     _ => (),
                 },
                 _ => {
@@ -82,14 +90,22 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
                         annotation: a,
                         tokens: current_tokens,
                         mocks: current_mocks,
+                        tag_annotation
                     });
 
+                    tag_annotation = vec![];
                     current_mocks = vec![];
                     current_tokens = vec![];
                     ingesting_annotation = None;
                 }
                 (TestAnnotation::Mock, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
                     current_mocks.push(MockInfo { tokens: current_tokens });
+
+                    current_tokens = vec![];
+                    ingesting_annotation = None;
+                }
+                (TestAnnotation::Tag, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
+                    tag_annotation = current_tokens;
 
                     current_tokens = vec![];
                     ingesting_annotation = None;
@@ -108,6 +124,7 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
                 annotation: a,
                 tokens: current_tokens,
                 mocks: current_mocks,
+                tag_annotation,
             });
         }
         None => (),
@@ -235,6 +252,20 @@ mod tests {
         assert_eq!(
             testing_info.tests().get(0).unwrap().mocks().get(0).unwrap().tokens(),
             &Vec::from(&tokens[8..12])
-        )
+        );
+    }
+
+    #[test]
+    fn test_with_tags() {
+        let input = "@Tag optional database\n@Test \"Five equals Five\" { 5 == 5 }";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone()).unwrap();
+
+        assert_eq!(testing_info.tests().len(), 1);
+        assert_eq!(testing_info.tests().get(0).unwrap().tokens(), &Vec::from(&tokens[7..]));
+        assert_eq!(testing_info.tests().get(0).unwrap().annotation(), TestAnnotation::Test);
+        assert_eq!(testing_info.tests().get(0).unwrap().tag_annotation(), &Vec::from(&tokens[1..5]));
     }
 }
