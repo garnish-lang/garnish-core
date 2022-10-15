@@ -342,6 +342,7 @@ impl<'a> Lexer<'a> {
             // allowing for now as final loop character
             self.state = LexingState::NoToken;
             self.current_token_type = None;
+            self.current_characters = String::new();
         } else {
             self.result = Err(CompilerError::new(
                 format!("Invalid start to token: {:?}", c),
@@ -823,6 +824,15 @@ impl<'a> Iterator for Lexer<'a> {
                             break;
                         }
                         None => (),
+                    }
+
+                    // if we have a lingering token an don't already have an err
+                    if self.current_characters.len() > 0 && self.result.is_ok() {
+                        self.result = Err(CompilerError::new(
+                            format!("Unterminated token. Might be {:?}.", self.current_token_type),
+                            self.token_start_row,
+                            self.token_start_column
+                        ));
                     }
 
                     break;
@@ -2726,14 +2736,14 @@ mod chars_and_bytes {
     use crate::{lex, LexerToken, TokenType};
 
     #[test]
-    fn character_list_uncloased() {
+    fn character_list_unclosed() {
         let result = lex(&"\"Hello World!".to_string());
 
         assert!(result.is_err())
     }
 
     #[test]
-    fn byte_list_uncloased() {
+    fn byte_list_unclosed() {
         let result = lex(&"'Hello World!".to_string());
 
         assert!(result.is_err())
