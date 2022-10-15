@@ -3,6 +3,7 @@ use garnish_lang_compiler::{LexerToken, TokenType};
 pub struct TestInfo {
     annotation: TestAnnotation,
     tokens: Vec<LexerToken>,
+    mocks: Vec<MockInfo>,
 }
 
 impl TestInfo {
@@ -10,6 +11,20 @@ impl TestInfo {
         self.annotation
     }
 
+    pub fn tokens(&self) -> &Vec<LexerToken> {
+        &self.tokens
+    }
+
+    pub fn mocks(&self) -> &Vec<MockInfo> {
+        &self.mocks
+    }
+}
+
+pub struct MockInfo {
+    tokens: Vec<LexerToken>,
+}
+
+impl MockInfo {
     pub fn tokens(&self) -> &Vec<LexerToken> {
         &self.tokens
     }
@@ -34,11 +49,13 @@ impl TestingInfo {
 pub enum TestAnnotation {
     Test,
     Case,
+    Mock,
 }
 
 pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
     let mut info = TestingInfo { tests: vec![], main: vec![] };
 
+    let mut current_mocks = vec![];
     let mut current_tokens = vec![];
     let mut ingesting_annotation = None;
 
@@ -52,18 +69,28 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
                     "@Case" => {
                         ingesting_annotation = Some(TestAnnotation::Case);
                     }
+                    "@Mock" => ingesting_annotation = Some(TestAnnotation::Mock),
                     _ => (),
                 },
                 _ => {
                     info.main.push(token);
                 }
             },
-            Some(a) => match token.get_token_type() {
-                TokenType::Subexpression => {
+            Some(a) => match (a, token.get_token_type()) {
+                (TestAnnotation::Test | TestAnnotation::Case, TokenType::Subexpression) => {
                     info.tests.push(TestInfo {
                         annotation: a,
                         tokens: current_tokens,
+                        mocks: current_mocks,
                     });
+
+                    current_mocks = vec![];
+                    current_tokens = vec![];
+                    ingesting_annotation = None;
+                }
+                (TestAnnotation::Mock, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
+                    current_mocks.push(MockInfo { tokens: current_tokens });
+
                     current_tokens = vec![];
                     ingesting_annotation = None;
                 }
@@ -80,6 +107,7 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
             info.tests.push(TestInfo {
                 annotation: a,
                 tokens: current_tokens,
+                mocks: current_mocks,
             });
         }
         None => (),
@@ -177,7 +205,8 @@ mod tests {
 
     #[test]
     fn multiple_cases() {
-        let input = "$ + 5\n\n@Case \"Five plus Five equals 10\" 5 10\n\n@Case \"Five plus 10 equals 15\" 10 15\n\n@Case \"Five plus 20 equals 10\" 20 25";
+        let input =
+            "$ + 5\n\n@Case \"Five plus Five equals 10\" 5 10\n\n@Case \"Five plus 10 equals 15\" 10 15\n\n@Case \"Five plus 20 equals 10\" 20 25";
 
         let tokens = lex(input).unwrap();
 
@@ -190,5 +219,22 @@ mod tests {
         assert_eq!(testing_info.tests().get(1).unwrap().annotation(), TestAnnotation::Case);
         assert_eq!(testing_info.tests().get(2).unwrap().tokens(), &Vec::from(&tokens[23..]));
         assert_eq!(testing_info.tests().get(2).unwrap().annotation(), TestAnnotation::Case);
+    }
+
+    #[test]
+    fn case_with_mock() {
+        let input = "get_points~~ + $\n\n@Mock get_points 10\n@Case \"Add 5 to point value\" 5 15";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone()).unwrap();
+
+        assert_eq!(testing_info.tests().len(), 1);
+        assert_eq!(testing_info.tests().get(0).unwrap().tokens(), &Vec::from(&tokens[14..]));
+        assert_eq!(testing_info.tests().get(0).unwrap().annotation(), TestAnnotation::Case);
+        assert_eq!(
+            testing_info.tests().get(0).unwrap().mocks().get(0).unwrap().tokens(),
+            &Vec::from(&tokens[8..12])
+        )
     }
 }
