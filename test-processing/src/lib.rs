@@ -11,6 +11,7 @@ impl TestInfo {
 }
 
 pub struct TestingInfo {
+    main: Vec<LexerToken>,
     tests: Vec<TestInfo>,
 }
 
@@ -18,10 +19,14 @@ impl TestingInfo {
     pub fn tests(&self) -> &Vec<TestInfo> {
         &self.tests
     }
+
+    pub fn main(&self) -> &Vec<LexerToken> {
+        &self.main
+    }
 }
 
 pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
-    let mut info = TestingInfo { tests: vec![] };
+    let mut info = TestingInfo { tests: vec![], main: vec![] };
 
     let mut current_tokens = vec![];
     let mut ingesting = false;
@@ -29,21 +34,21 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
     for token in tokens {
         if !ingesting {
             match token.get_token_type() {
-                TokenType::Annotation => {
-                    match token.get_text().as_ref() {
-                        "@Test" => {
-                            ingesting = true;
-                        }
-                        _ => ()
+                TokenType::Annotation => match token.get_text().as_ref() {
+                    "@Test" => {
+                        ingesting = true;
                     }
+                    _ => (),
+                },
+                _ => {
+                    info.main.push(token);
                 }
-                _ => ()
             }
         } else {
             match token.get_token_type() {
                 TokenType::Subexpression => {
                     ingesting = false;
-                    info.tests.push(TestInfo {tokens: current_tokens});
+                    info.tests.push(TestInfo { tokens: current_tokens });
                     current_tokens = vec![];
                 }
                 _ => {
@@ -55,7 +60,7 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
 
     // add any hanging tests
     if ingesting {
-        info.tests.push(TestInfo {tokens: current_tokens});
+        info.tests.push(TestInfo { tokens: current_tokens });
     }
 
     Ok(info)
@@ -91,5 +96,17 @@ mod tests {
         assert_eq!(testing_info.tests().get(0).unwrap().tokens(), &Vec::from(&tokens[1..13]));
         assert_eq!(testing_info.tests().get(1).unwrap().tokens(), &Vec::from(&tokens[15..27]));
         assert_eq!(testing_info.tests().get(2).unwrap().tokens(), &Vec::from(&tokens[29..]));
+    }
+
+    #[test]
+    fn non_test_stored_as_main() {
+        let input = "$ + 5";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone()).unwrap();
+
+        assert_eq!(testing_info.tests().len(), 0);
+        assert_eq!(testing_info.main(), &Vec::from(&tokens[..]));
     }
 }
