@@ -950,7 +950,6 @@ mod errors {
 }
 
 mod iterator {
-    use crate::{Lexer, LexerToken, TokenType};
 
     #[test]
     fn plus_sign() {
