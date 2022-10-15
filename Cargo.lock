@@ -165,6 +165,9 @@ dependencies = [
 [[package]]
 name = "test-processing"
 version = "0.1.0"
+dependencies = [
+ "garnish_lang_compiler",
+]
 
 [[package]]
 name = "winapi"
