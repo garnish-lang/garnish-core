@@ -135,72 +135,52 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
                     info.main.push(token);
                 }
             },
-            Some(a) => match (a, token.get_token_type()) {
-                (TestAnnotation::Test | TestAnnotation::Case, TokenType::Subexpression) => {
-                    info.tests.push(TestInfo {
-                        annotation: a,
-                        tokens: current_tokens,
-                        mocks: current_mocks,
-                        tag_annotation
-                    });
+            Some(a) => match token.get_token_type() {
+                TokenType::Whitespace | TokenType::Subexpression if token.get_text().contains("\n") => {
+                    // end ingestion
+                    match a {
+                        TestAnnotation::Test | TestAnnotation::Case => {
+                            info.tests.push(TestInfo {
+                                annotation: a,
+                                tokens: current_tokens,
+                                mocks: current_mocks,
+                                tag_annotation
+                            });
 
-                    tag_annotation = vec![];
-                    current_mocks = vec![];
-                    current_tokens = vec![];
-                    ingesting_annotation = None;
-                }
-                (TestAnnotation::Mock, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
-                    current_mocks.push(MockInfo { tokens: current_tokens });
-
-                    current_tokens = vec![];
-                    ingesting_annotation = None;
-                }
-                (TestAnnotation::Tag, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
-                    tag_annotation = current_tokens;
-
-                    current_tokens = vec![];
-                    ingesting_annotation = None;
-                }
-                (TestAnnotation::MockAll, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
-                    info.mocks.push(MockInfo { tokens: current_tokens });
-
-                    current_tokens = vec![];
-                    ingesting_annotation = None;
-                }
-                (TestAnnotation::TagAll, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
-                    info.tags = current_tokens;
-
-                    current_tokens = vec![];
-                    ingesting_annotation = None;
-                }
-                (TestAnnotation::BeforeAll, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
-                    info.before_all = current_tokens;
-
-                    current_tokens = vec![];
-                    ingesting_annotation = None;
-                }
-                (TestAnnotation::AfterAll, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
-                    info.after_all = current_tokens;
+                            tag_annotation = vec![];
+                            current_mocks = vec![];
+                        }
+                        TestAnnotation::Mock => {
+                            current_mocks.push(MockInfo { tokens: current_tokens });
+                        }
+                        TestAnnotation::Tag => {
+                            tag_annotation = current_tokens;
+                        }
+                        TestAnnotation::MockAll => {
+                            info.mocks.push(MockInfo { tokens: current_tokens });
+                        }
+                        TestAnnotation::TagAll => {
+                            info.tags = current_tokens;
+                        }
+                        TestAnnotation::BeforeAll => {
+                            info.before_all = current_tokens;
+                        }
+                        TestAnnotation::AfterAll => {
+                            info.after_all = current_tokens;
+                        }
+                        TestAnnotation::BeforeEach => {
+                            info.before_each = current_tokens;
+                        }
+                        TestAnnotation::AfterEach => {
+                            info.after_each = current_tokens;
+                        }
+                    }
 
                     current_tokens = vec![];
                     ingesting_annotation = None;
                 }
-                (TestAnnotation::BeforeEach, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
-                    info.before_each = current_tokens;
-
-                    current_tokens = vec![];
-                    ingesting_annotation = None;
-                }
-                (TestAnnotation::AfterEach, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
-                    info.after_each = current_tokens;
-
-                    current_tokens = vec![];
-                    ingesting_annotation = None;
-                }
-                _ => {
-                    current_tokens.push(token);
-                }
-            },
+                _ => current_tokens.push(token)
+            }
         }
     }
 
