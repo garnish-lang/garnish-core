@@ -220,8 +220,22 @@ mod tests {
     }
 
     #[test]
-    fn multiple_tests() {
+    fn multiple_tests_separated_by_sub_expression() {
         let input = "@Test \"Five equals Five\" { 5 == 5 }\n\n@Test \"Ten equals Ten\" { 10 == 10 }\n\n@Test \"Twenty equals Twenty\" { 20 == 20 }";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone()).unwrap();
+
+        assert_eq!(testing_info.tests().len(), 3);
+        assert_eq!(testing_info.tests().get(0).unwrap().tokens(), &Vec::from(&tokens[1..13]));
+        assert_eq!(testing_info.tests().get(1).unwrap().tokens(), &Vec::from(&tokens[15..27]));
+        assert_eq!(testing_info.tests().get(2).unwrap().tokens(), &Vec::from(&tokens[29..]));
+    }
+
+    #[test]
+    fn multiple_tests_separated_by_whitespace() {
+        let input = "@Test \"Five equals Five\" { 5 == 5 }\n@Test \"Ten equals Ten\" { 10 == 10 }\n@Test \"Twenty equals Twenty\" { 20 == 20 }";
 
         let tokens = lex(input).unwrap();
 
