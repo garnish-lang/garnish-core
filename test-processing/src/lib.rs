@@ -209,7 +209,11 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
         None => (),
     }
 
-    Ok(info)
+    if nested_depth > 0 {
+        Err(format!("Unterminated grouping"))
+    } else {
+        Ok(info)
+    }
 }
 
 #[cfg(test)]
@@ -242,6 +246,17 @@ mod tests {
         assert_eq!(testing_info.tests().len(), 1);
         assert_eq!(testing_info.tests().get(0).unwrap().tokens(), &Vec::from(&tokens[1..]));
         assert_eq!(testing_info.tests().get(0).unwrap().annotation(), TestAnnotation::Test);
+    }
+
+    #[test]
+    fn unterminated_grouping_is_error() {
+        let input = "@Test \"Five equals Five\" { \n(5 == 5\n&& 4 == 4)\n\n[log ~ \"Debug message\"\n\n$ && 3 == 3\n }";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone());
+
+        assert!(testing_info.is_err());
     }
 
     #[test]
