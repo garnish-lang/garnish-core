@@ -111,6 +111,10 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
     let mut tag_annotation = vec![];
     let mut ingesting_annotation = None;
 
+    // keep track of how many groupings we enter when ingesting
+    // no need to match types, that will be done by parser
+    let mut nested_depth = 0;
+
     for token in tokens {
         match ingesting_annotation {
             None => match token.get_token_type() {
@@ -136,7 +140,7 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
                 }
             },
             Some(a) => match token.get_token_type() {
-                TokenType::Whitespace | TokenType::Subexpression if token.get_text().contains("\n") => {
+                TokenType::Whitespace | TokenType::Subexpression if token.get_text().contains("\n") && nested_depth == 0 => {
                     // end ingestion
                     match a {
                         TestAnnotation::Test | TestAnnotation::Case => {
@@ -179,6 +183,14 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
                     current_tokens = vec![];
                     ingesting_annotation = None;
                 }
+                TokenType::StartExpression | TokenType::StartGroup | TokenType::StartSideEffect => {
+                    nested_depth += 1;
+                    current_tokens.push(token);
+                }
+                TokenType::EndExpression | TokenType::EndGroup | TokenType::EndSideEffect => {
+                    nested_depth -= 1;
+                    current_tokens.push(token);
+                }
                 _ => current_tokens.push(token)
             }
         }
@@ -209,6 +221,19 @@ mod tests {
     #[test]
     fn single_test() {
         let input = "@Test \"Five equals Five\" { 5 == 5 }";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone()).unwrap();
+
+        assert_eq!(testing_info.tests().len(), 1);
+        assert_eq!(testing_info.tests().get(0).unwrap().tokens(), &Vec::from(&tokens[1..]));
+        assert_eq!(testing_info.tests().get(0).unwrap().annotation(), TestAnnotation::Test);
+    }
+
+    #[test]
+    fn single_test_across_multiple_lines() {
+        let input = "@Test \"Five equals Five\" { \n(5 == 5\n&& 4 == 4)\n\n[log ~ \"Debug message\"]\n\n$ && 3 == 3\n }";
 
         let tokens = lex(input).unwrap();
 
