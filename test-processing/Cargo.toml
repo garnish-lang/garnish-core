@@ -1,5 +1,5 @@
 [package]
-name = "test-processing"
+name = "test_processing"
 version = "0.1.0"
 edition = "2021"
 
