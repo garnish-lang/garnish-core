@@ -38,6 +38,12 @@ impl MockInfo {
 pub struct TestingInfo {
     main: Vec<LexerToken>,
     tests: Vec<TestInfo>,
+    mocks: Vec<MockInfo>,
+    tags: Vec<LexerToken>,
+    before_all: Vec<LexerToken>,
+    after_all: Vec<LexerToken>,
+    before_each: Vec<LexerToken>,
+    after_each: Vec<LexerToken>,
 }
 
 impl TestingInfo {
@@ -48,6 +54,30 @@ impl TestingInfo {
     pub fn main(&self) -> &Vec<LexerToken> {
         &self.main
     }
+
+    pub fn mocks(&self) -> &Vec<MockInfo> {
+        &self.mocks
+    }
+
+    pub fn tags(&self) -> &Vec<LexerToken> {
+        &self.tags
+    }
+
+    pub fn before_all(&self) -> &Vec<LexerToken> {
+        &self.before_all
+    }
+
+    pub fn after_all(&self) -> &Vec<LexerToken> {
+        &self.after_all
+    }
+
+    pub fn before_each(&self) -> &Vec<LexerToken> {
+        &self.before_each
+    }
+
+    pub fn after_each(&self) -> &Vec<LexerToken> {
+        &self.after_each
+    }
 }
 
 #[derive(Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
@@ -56,10 +86,25 @@ pub enum TestAnnotation {
     Case,
     Mock,
     Tag,
+    MockAll,
+    TagAll,
+    BeforeAll,
+    AfterAll,
+    BeforeEach,
+    AfterEach,
 }
 
 pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
-    let mut info = TestingInfo { tests: vec![], main: vec![] };
+    let mut info = TestingInfo {
+        tests: vec![],
+        mocks: vec![],
+        tags: vec![],
+        before_all: vec![],
+        after_all: vec![],
+        before_each: vec![],
+        main: vec![],
+        after_each: vec![]
+    };
 
     let mut current_mocks = vec![];
     let mut current_tokens = vec![];
@@ -78,6 +123,12 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
                     }
                     "@Mock" => ingesting_annotation = Some(TestAnnotation::Mock),
                     "@Tag" => ingesting_annotation = Some(TestAnnotation::Tag),
+                    "@MockAll" => ingesting_annotation = Some(TestAnnotation::MockAll),
+                    "@TagAll" => ingesting_annotation = Some(TestAnnotation::TagAll),
+                    "@BeforeAll" => ingesting_annotation = Some(TestAnnotation::BeforeAll),
+                    "@AfterAll" => ingesting_annotation = Some(TestAnnotation::AfterAll),
+                    "@BeforeEach" => ingesting_annotation = Some(TestAnnotation::BeforeEach),
+                    "@AfterEach" => ingesting_annotation = Some(TestAnnotation::AfterEach),
                     _ => (),
                 },
                 _ => {
@@ -106,6 +157,42 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
                 }
                 (TestAnnotation::Tag, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
                     tag_annotation = current_tokens;
+
+                    current_tokens = vec![];
+                    ingesting_annotation = None;
+                }
+                (TestAnnotation::MockAll, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
+                    info.mocks.push(MockInfo { tokens: current_tokens });
+
+                    current_tokens = vec![];
+                    ingesting_annotation = None;
+                }
+                (TestAnnotation::TagAll, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
+                    info.tags = current_tokens;
+
+                    current_tokens = vec![];
+                    ingesting_annotation = None;
+                }
+                (TestAnnotation::BeforeAll, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
+                    info.before_all = current_tokens;
+
+                    current_tokens = vec![];
+                    ingesting_annotation = None;
+                }
+                (TestAnnotation::AfterAll, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
+                    info.after_all = current_tokens;
+
+                    current_tokens = vec![];
+                    ingesting_annotation = None;
+                }
+                (TestAnnotation::BeforeEach, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
+                    info.before_each = current_tokens;
+
+                    current_tokens = vec![];
+                    ingesting_annotation = None;
+                }
+                (TestAnnotation::AfterEach, TokenType::Whitespace | TokenType::Subexpression) if token.get_text().contains("\n") => {
+                    info.after_each = current_tokens;
 
                     current_tokens = vec![];
                     ingesting_annotation = None;
@@ -267,5 +354,71 @@ mod tests {
         assert_eq!(testing_info.tests().get(0).unwrap().tokens(), &Vec::from(&tokens[7..]));
         assert_eq!(testing_info.tests().get(0).unwrap().annotation(), TestAnnotation::Test);
         assert_eq!(testing_info.tests().get(0).unwrap().tag_annotation(), &Vec::from(&tokens[1..5]));
+    }
+
+    #[test]
+    fn mock_all() {
+        let input = "@MockAll get_points 10\n\n@Test \"Five equals Five\" { 5 == 5 }";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone()).unwrap();
+
+        assert_eq!(testing_info.mocks().get(0).unwrap().tokens(), &Vec::from(&tokens[1..5]));
+    }
+
+    #[test]
+    fn tag_all() {
+        let input = "@TagAll optional database\n\n@Test \"Five equals Five\" { 5 == 5 }";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone()).unwrap();
+
+        assert_eq!(testing_info.tags(), &Vec::from(&tokens[1..5]));
+    }
+
+    #[test]
+    fn before_all() {
+        let input = "@BeforeAll { setup~~ }\n\n@Test \"Five equals Five\" { 5 == 5 }";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone()).unwrap();
+
+        assert_eq!(testing_info.before_all(), &Vec::from(&tokens[1..8]));
+    }
+
+    #[test]
+    fn after_all() {
+        let input = "@AfterAll { tear_down~~ }\n\n@Test \"Five equals Five\" { 5 == 5 }";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone()).unwrap();
+
+        assert_eq!(testing_info.after_all(), &Vec::from(&tokens[1..8]));
+    }
+
+    #[test]
+    fn before_each() {
+        let input = "@BeforeEach { add_data~~ }\n\n@Test \"Five equals Five\" { 5 == 5 }";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone()).unwrap();
+
+        assert_eq!(testing_info.before_each(), &Vec::from(&tokens[1..8]));
+    }
+
+    #[test]
+    fn after_each() {
+        let input = "@AfterEach { clear_data~~ }\n\n@Test \"Five equals Five\" { 5 == 5 }";
+
+        let tokens = lex(input).unwrap();
+
+        let testing_info = parse_tests(tokens.clone()).unwrap();
+
+        assert_eq!(testing_info.after_each(), &Vec::from(&tokens[1..8]));
     }
 }
