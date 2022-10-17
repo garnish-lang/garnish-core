@@ -6,12 +6,12 @@ use std::{env, io};
 use colored::Colorize;
 
 use garnish_data::data::{SimpleData, SimpleNumber};
-use garnish_data::{DataError, SimpleRuntimeData, symbol_value};
+use garnish_data::{symbol_value, DataError, SimpleRuntimeData};
 use garnish_lang_compiler::{build_with_data, lex, parse};
 use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
 use garnish_traits::{ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishRuntime, Instruction, RuntimeError};
 
-use crate::test_annotation::{execute_tests, extract_tests, ExecutionResult, TestExtractionError, execute_tests_with_context};
+use crate::test_annotation::{execute_tests, execute_tests_with_context, extract_tests, ExecutionResult, TestExtractionError};
 
 mod test_annotation;
 
@@ -26,7 +26,7 @@ impl IntegrationTestContext {
         IntegrationTestContext {
             float_max_sym: symbol_value("FloatMax"),
             float_min_sym: symbol_value("FloatMin"),
-            float_min_positive_sym: symbol_value("FloatMinPositive")
+            float_min_positive_sym: symbol_value("FloatMinPositive"),
         }
     }
 }
@@ -40,7 +40,9 @@ impl GarnishLangRuntimeContext<SimpleRuntimeData> for IntegrationTestContext {
             runtime.add_number(SimpleNumber::Float(f64::MIN)).and_then(|r| runtime.push_register(r))?;
             Ok(true)
         } else if symbol == self.float_min_positive_sym {
-            runtime.add_number(SimpleNumber::Float(f64::MIN_POSITIVE)).and_then(|r| runtime.push_register(r))?;
+            runtime
+                .add_number(SimpleNumber::Float(f64::MIN_POSITIVE))
+                .and_then(|r| runtime.push_register(r))?;
             Ok(true)
         } else {
             Ok(false)
@@ -141,7 +143,7 @@ fn run_tests(runtime: &mut SimpleGarnishRuntime<SimpleRuntimeData>, text: &Strin
         parse(tests.get_expression().clone()).or_else(|err| Err(TestExtractionError::with_tokens(err.get_message(), tests.get_expression())))?;
     let top_expression = runtime.get_data().get_jump_table_len();
     build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), runtime.get_data_mut())?;
-    let results = execute_tests_with_context(runtime, &tests, Some(top_expression), || { Some(Box::new(IntegrationTestContext::new())) })?;
+    let results = execute_tests_with_context(runtime, &tests, Some(top_expression), || Some(Box::new(IntegrationTestContext::new())))?;
 
     Ok(results)
 }

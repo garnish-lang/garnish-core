@@ -103,7 +103,7 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
         after_all: vec![],
         before_each: vec![],
         main: vec![],
-        after_each: vec![]
+        after_each: vec![],
     };
 
     let mut current_mocks = vec![];
@@ -148,7 +148,7 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
                                 annotation: a,
                                 tokens: current_tokens,
                                 mocks: current_mocks,
-                                tag_annotation
+                                tag_annotation,
                             });
 
                             tag_annotation = vec![];
@@ -191,8 +191,8 @@ pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
                     nested_depth -= 1;
                     current_tokens.push(token);
                 }
-                _ => current_tokens.push(token)
-            }
+                _ => current_tokens.push(token),
+            },
         }
     }
 

@@ -151,7 +151,7 @@ where
             } else {
                 Float(f)
             }
-        },
+        }
         (Integer(v1), Float(v2)) => {
             let f = float_op(f64::from(*v1), *v2);
             if f.is_infinite() {
@@ -159,7 +159,7 @@ where
             } else {
                 Float(f)
             }
-        },
+        }
         (Float(v1), Integer(v2)) => {
             let f = float_op(*v1, f64::from(*v2));
             if f.is_infinite() {
@@ -167,7 +167,7 @@ where
             } else {
                 Float(f)
             }
-        },
+        }
     })
 }
 

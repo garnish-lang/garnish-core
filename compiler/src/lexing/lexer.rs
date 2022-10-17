@@ -1,6 +1,5 @@
-
+use std::collections::HashMap;
 use std::str::Chars;
-use std::{collections::HashMap};
 
 use log::trace;
 
@@ -831,7 +830,7 @@ impl<'a> Iterator for Lexer<'a> {
                         self.result = Err(CompilerError::new(
                             format!("Unterminated token. Might be {:?}.", self.current_token_type),
                             self.token_start_row,
-                            self.token_start_column
+                            self.token_start_column,
                         ));
                     }
 

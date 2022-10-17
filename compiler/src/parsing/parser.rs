@@ -4766,11 +4766,6 @@ mod annotations {
 
         let result = parse(tokens).unwrap();
 
-        assert_result(
-            &result,
-            0,
-            &[
-            ],
-        );
+        assert_result(&result, 0, &[]);
     }
 }
