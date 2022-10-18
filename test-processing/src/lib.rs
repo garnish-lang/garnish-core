@@ -35,7 +35,7 @@ impl MockInfo {
     }
 }
 
-pub struct TestingInfo {
+pub struct TestGroup {
     main: Vec<LexerToken>,
     tests: Vec<TestInfo>,
     mocks: Vec<MockInfo>,
@@ -46,7 +46,7 @@ pub struct TestingInfo {
     after_each: Vec<LexerToken>,
 }
 
-impl TestingInfo {
+impl TestGroup {
     pub fn tests(&self) -> &Vec<TestInfo> {
         &self.tests
     }
@@ -94,8 +94,8 @@ pub enum TestAnnotation {
     AfterEach,
 }
 
-pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestingInfo, String> {
-    let mut info = TestingInfo {
+pub fn parse_tests(tokens: Vec<LexerToken>) -> Result<TestGroup, String> {
+    let mut info = TestGroup {
         tests: vec![],
         mocks: vec![],
         tags: vec![],
