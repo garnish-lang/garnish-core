@@ -46,7 +46,7 @@ where
         self.list.push(item);
     }
 
-    pub(crate) fn get(&self, index: usize) -> Option<&SimpleData<T>> {
+    pub fn get(&self, index: usize) -> Option<&SimpleData<T>> {
         self.list.get(index)
     }
 
