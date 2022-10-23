@@ -217,6 +217,12 @@ impl<Source: 'static + std::error::Error> From<Source> for RuntimeError<Source> 
     }
 }
 
+impl<Source: 'static + std::error::Error> From<RuntimeError<Source>> for String {
+    fn from(err: RuntimeError<Source>) -> Self {
+        format!("{}", err)
+    }
+}
+
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn get_data(&self) -> &Data;
     fn get_data_mut(&mut self) -> &mut Data;
