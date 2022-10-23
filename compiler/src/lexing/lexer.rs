@@ -948,6 +948,7 @@ mod errors {
     }
 }
 
+#[cfg(test)]
 mod iterator {
     use crate::{Lexer, LexerToken, TokenType};
 
