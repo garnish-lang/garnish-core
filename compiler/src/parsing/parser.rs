@@ -482,11 +482,11 @@ fn parse_token(
         None => (),
         Some(index) => match nodes.get_mut(index) {
             None => implementation_error(format!("Index assigned to node has no value in node list. {:?}", index))?,
-            Some(node) => {
+            Some(parent_node) => {
                 trace!("Updating parent's ({:?}) right to {:?}", index, id);
-                let right = node.right;
+                let right = parent_node.right;
 
-                node.right = Some(id);
+                parent_node.right = Some(id);
 
                 // in case of side effect
                 // parent's right might not have been reassigned by becoming true left
@@ -837,10 +837,45 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 )?
             }
             SecondaryDefinition::UnaryPrefix => {
-                let parent = next_parent;
-                next_parent = Some(id);
+                let mut parent = next_parent;
+                let mut our_id = id;
+                let mut right = assumed_right;
 
-                (definition, parent, None, assumed_right)
+                if check_for_list {
+                    trace!("List flag is set, creating list node before current node.");
+                    our_id = id + 1;
+                    // make our parent, the new list node
+                    parent = Some(id);
+                    // update right to be 1 after our new id
+                    right = Some(our_id + 1);
+
+                    // use current id for list token
+                    let list_info = parse_token(
+                        id,
+                        Definition::List,
+                        last_left,
+                        Some(our_id),
+                        &mut nodes,
+                        &priority_map,
+                        &mut check_for_list,
+                        under_group,
+                    )?;
+                    nodes.push(ParseNode::new(
+                        list_info.0,
+                        SecondaryDefinition::StartGrouping,
+                        list_info.1,
+                        list_info.2,
+                        list_info.3,
+                        last_token.clone(),
+                    ));
+
+                    // last left is the node we are about to create
+                    next_last_left = Some(nodes.len());
+                }
+
+                next_parent = Some(our_id);
+
+                (definition, parent, None, right)
             }
             SecondaryDefinition::UnarySuffix => {
                 next_parent = Some(id);
@@ -3772,6 +3807,41 @@ mod lists {
                 (4, Definition::Number, Some(5), None, None),
                 (5, Definition::Addition, Some(3), Some(4), Some(6)),
                 (6, Definition::Number, Some(5), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn multiple_unary_operators_in_list() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("--".to_string(), TokenType::Opposite, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            7,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::List, Some(4), Some(0), Some(2)),
+                (2, Definition::AbsoluteValue, Some(1), None, Some(3)),
+                (3, Definition::Number, Some(2), None, None),
+                (4, Definition::List, Some(7), Some(1), Some(5)),
+                (5, Definition::Opposite, Some(4), None, Some(6)),
+                (6, Definition::Number, Some(5), None, None),
+                (7, Definition::List, None, Some(4), Some(8)),
+                (8, Definition::AbsoluteValue, Some(7), None, Some(9)),
+                (9, Definition::Number, Some(8), None, None),
             ],
         );
     }
