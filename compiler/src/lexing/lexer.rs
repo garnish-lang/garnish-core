@@ -790,12 +790,8 @@ impl<'a> Lexer<'a> {
 
         next_token
     }
-}
 
-impl<'a> Iterator for Lexer<'a> {
-    type Item = LexerToken;
-
-    fn next(&mut self) -> Option<Self::Item> {
+    fn internal_next(&mut self) -> Option<LexerToken> {
         if self.result.is_err() {
             // Invalid lexing state
             // do not continue consuming characters
@@ -840,6 +836,14 @@ impl<'a> Iterator for Lexer<'a> {
         }
 
         next_token
+    }
+}
+
+impl<'a> Iterator for Lexer<'a> {
+    type Item = LexerToken;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.internal_next()
     }
 }
 
