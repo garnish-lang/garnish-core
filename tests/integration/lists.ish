@@ -1,5 +1,0 @@
-@Test "Access first item" {
-    10 20 30 40 50
-
-    $.0 == 10
-}
