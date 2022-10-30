@@ -1,9 +1,7 @@
 use garnish_traits::GarnishLangRuntimeData;
-use std::collections::hash_map::DefaultHasher;
 use std::convert::TryInto;
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::hash::Hasher;
 
 use crate::data::{parse_byte_list, parse_char_list, parse_simple_number, SimpleNumber};
 use crate::{symbol_value, DataError, ExpressionDataType, Instruction, InstructionData, SimpleData, SimpleRuntimeData};
@@ -524,16 +522,16 @@ where
 
     fn add_symbol_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         let addr = self.add_char_list_from(from)?;
-        let len = self.get_char_list_len(addr)?;
-        let mut h = DefaultHasher::new();
-
-        for i in 0..len {
-            let c = self.get_char_list_item(addr, i.into())?;
-            c.hash(&mut h);
+        match self.data.get(addr) {
+            None => Err(DataError::from("No data after creating char list".to_string())),
+            Some(data) => match data {
+                SimpleData::CharList(s) => {
+                    let v = symbol_value(s);
+                    self.cache_add(SimpleData::Symbol(v))
+                }
+                t => Err(DataError::from(format!("Found {:?} instead of CharList after creating a CharList.", t)))
+            }
         }
-        let hv = h.finish();
-
-        self.cache_add(SimpleData::Symbol(hv))
     }
 
     fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {

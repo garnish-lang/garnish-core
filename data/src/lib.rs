@@ -491,11 +491,7 @@ mod data_storage {
 
 #[cfg(test)]
 mod to_symbol {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::Hash;
-    use std::hash::Hasher;
-
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{GarnishLangRuntimeData, SimpleRuntimeData, symbol_value};
 
     #[test]
     fn unit() {
@@ -504,12 +500,7 @@ mod to_symbol {
         let d1 = runtime.add_unit().unwrap();
         let addr = runtime.add_symbol_from(d1).unwrap();
 
-        let mut h = DefaultHasher::new();
-        for c in "()".chars() {
-            c.hash(&mut h);
-        }
-
-        let val = h.finish();
+        let val = symbol_value("()");
         assert_eq!(runtime.get_symbol(addr).unwrap(), val);
     }
 }
