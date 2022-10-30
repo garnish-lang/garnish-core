@@ -63,6 +63,12 @@ impl Hash for SimpleNumber {
     }
 }
 
+impl From<i8> for SimpleNumber {
+    fn from(x: i8) -> Self {
+        SimpleNumber::Integer(x as i32)
+    }
+}
+
 impl From<i32> for SimpleNumber {
     fn from(x: i32) -> Self {
         SimpleNumber::Integer(x)
