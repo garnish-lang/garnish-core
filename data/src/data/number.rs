@@ -63,56 +63,48 @@ impl Hash for SimpleNumber {
     }
 }
 
-impl From<i8> for SimpleNumber {
-    fn from(x: i8) -> Self {
-        SimpleNumber::Integer(x as i32)
+macro_rules! simple_number_from {
+    ( $( $x:ty ),* ) => {
+        $(
+            impl From<SimpleNumber> for $x {
+                fn from(x: SimpleNumber) -> Self {
+                    match x {
+                        Integer(v) => v as $x,
+                        Float(v) => v as $x,
+                    }
+                }
+            }
+        )*
     }
 }
 
-impl From<i32> for SimpleNumber {
-    fn from(x: i32) -> Self {
-        SimpleNumber::Integer(x)
+macro_rules! integer_to_simple {
+    ( $( $x:ty ),* ) => {
+        $(
+            impl From<$x> for SimpleNumber {
+                fn from(x: $x) -> Self {
+                    SimpleNumber::Integer(x as i32)
+                }
+            }
+        )*
     }
 }
 
-impl From<SimpleNumber> for i32 {
-    fn from(x: SimpleNumber) -> Self {
-        match x {
-            Integer(v) => v,
-            Float(v) => v as i32,
-        }
+macro_rules! float_to_simple {
+    ( $( $x:ty ),* ) => {
+        $(
+            impl From<$x> for SimpleNumber {
+                fn from(x: $x) -> Self {
+                    SimpleNumber::Float(x as f64)
+                }
+            }
+        )*
     }
 }
 
-impl From<usize> for SimpleNumber {
-    fn from(x: usize) -> Self {
-        SimpleNumber::Integer(x as i32)
-    }
-}
-
-impl From<SimpleNumber> for usize {
-    fn from(x: SimpleNumber) -> Self {
-        match x {
-            Integer(v) => v as usize,
-            Float(v) => v as i32 as usize,
-        }
-    }
-}
-
-impl From<f64> for SimpleNumber {
-    fn from(x: f64) -> Self {
-        SimpleNumber::Float(x)
-    }
-}
-
-impl From<SimpleNumber> for f64 {
-    fn from(x: SimpleNumber) -> Self {
-        match x {
-            Integer(v) => f64::from(v),
-            Float(v) => v,
-        }
-    }
-}
+simple_number_from!(i8, i16, i32, i64, u8, u16, u32, u64, isize, usize, f32, f64);
+integer_to_simple!(i8, i16, i32, i64, u8, u16, u32, u64, isize, usize);
+float_to_simple!(f32, f64);
 
 impl PartialEq for SimpleNumber {
     fn eq(&self, other: &Self) -> bool {
@@ -450,7 +442,37 @@ mod tests {
     use crate::data::SimpleNumber;
     use crate::data::SimpleNumber::*;
     use garnish_traits::GarnishNumber;
-    use std::usize;
+
+    #[test]
+    fn from_all() {
+        assert_eq!(SimpleNumber::from(10i8), Integer(10));
+        assert_eq!(i8::from(Integer(10)), 10);
+        assert_eq!(SimpleNumber::from(10i16), Integer(10));
+        assert_eq!(i16::from(Integer(10)), 10);
+        assert_eq!(SimpleNumber::from(10i32), Integer(10));
+        assert_eq!(i32::from(Integer(10)), 10);
+        assert_eq!(SimpleNumber::from(10i64), Integer(10));
+        assert_eq!(i64::from(Integer(10)), 10);
+
+        assert_eq!(SimpleNumber::from(10u8), Integer(10));
+        assert_eq!(u8::from(Integer(10)), 10);
+        assert_eq!(SimpleNumber::from(10u16), Integer(10));
+        assert_eq!(u16::from(Integer(10)), 10);
+        assert_eq!(SimpleNumber::from(10u32), Integer(10));
+        assert_eq!(u32::from(Integer(10)), 10);
+        assert_eq!(SimpleNumber::from(10u64), Integer(10));
+        assert_eq!(u64::from(Integer(10)), 10);
+
+        assert_eq!(SimpleNumber::from(10.0f32), Float(10.0));
+        assert_eq!(f32::from(Float(10.0)), 10.0);
+        assert_eq!(SimpleNumber::from(10.0f64), Float(10.0));
+        assert_eq!(f64::from(Float(10.0)), 10.0);
+
+        assert_eq!(SimpleNumber::from(10isize), Integer(10));
+        assert_eq!(isize::from(Integer(10)), 10);
+        assert_eq!(SimpleNumber::from(10usize), Integer(10));
+        assert_eq!(usize::from(Integer(10)), 10);
+    }
 
     #[test]
     fn from_i32() {
