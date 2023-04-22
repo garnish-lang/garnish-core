@@ -100,6 +100,9 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
             let len = this.get_byte_list_len(left)?;
             list_from_byte_list(this, left, Data::Number::zero(), Data::size_to_number(len))?;
         }
+        // TODO
+        // (ExpressionDataType::Slice, ExpressionDataType::CharList) => {}
+        // (ExpressionDataType::Slice, ExpressionDataType::ByteList) => {}
         (ExpressionDataType::Slice, ExpressionDataType::List) => {
             let (value, range) = this.get_slice(left)?;
             let (start, end, len) = get_range(this, range)?;
@@ -205,6 +208,9 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
                 _ => push_unit(this)?,
             }
         }
+        // TODO
+        // (ExpressionDataType::Concatenation, ExpressionDataType::CharList) => {}
+        // (ExpressionDataType::Concatenation, ExpressionDataType::ByteList) => {}
         (ExpressionDataType::Concatenation, ExpressionDataType::List) => {
             let len = concatenation_len(this, left)?;
             this.start_list(len)?;
