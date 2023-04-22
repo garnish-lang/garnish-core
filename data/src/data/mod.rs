@@ -81,7 +81,6 @@ where
     Pair(usize, usize),
     Range(usize, usize),
     Slice(usize, usize),
-    Link(usize, usize, bool),
     List(Vec<usize>, Vec<usize>),
     Concatentaion(usize, usize),
     Custom(T),
@@ -109,7 +108,6 @@ where
             SimpleData::Concatentaion(_, _) => ExpressionDataType::Concatenation,
             SimpleData::Range(_, _) => ExpressionDataType::Range,
             SimpleData::Slice(_, _) => ExpressionDataType::Slice,
-            SimpleData::Link(_, _, _) => ExpressionDataType::Link,
             SimpleData::List(_, _) => ExpressionDataType::List,
             SimpleData::Custom(_) => ExpressionDataType::Custom,
         }
@@ -227,13 +225,6 @@ where
         }
     }
 
-    pub fn as_link(&self) -> DataCastResult<(usize, usize, bool)> {
-        match self {
-            SimpleData::Link(v, l, a) => Ok((*v, *l, *a)),
-            _ => Err(DataError::from(format!("{:?} is not a Link", self))),
-        }
-    }
-
     pub fn as_slice(&self) -> DataCastResult<(usize, usize)> {
         match self {
             SimpleData::Slice(v, r) => Ok((*v, *r)),
@@ -271,7 +262,6 @@ mod tests {
         assert_eq!(SimpleDataNC::Concatentaion(0, 0).get_data_type(), ExpressionDataType::Concatenation);
         assert_eq!(SimpleDataNC::Range(0, 0).get_data_type(), ExpressionDataType::Range);
         assert_eq!(SimpleDataNC::Slice(0, 0).get_data_type(), ExpressionDataType::Slice);
-        assert_eq!(SimpleDataNC::Link(0, 0, true).get_data_type(), ExpressionDataType::Link);
         assert_eq!(SimpleDataNC::List(vec![], vec![]).get_data_type(), ExpressionDataType::List);
         assert_eq!(SimpleDataNC::Custom(NoCustom {}).get_data_type(), ExpressionDataType::Custom);
     }
@@ -437,16 +427,6 @@ mod tests {
     #[test]
     fn as_range_not_range() {
         assert!(SimpleDataNC::Unit.as_range().is_err());
-    }
-
-    #[test]
-    fn as_link() {
-        assert_eq!(SimpleDataNC::Link(10, 20, true).as_link().unwrap(), (10, 20, true));
-    }
-
-    #[test]
-    fn as_link_not_link() {
-        assert!(SimpleDataNC::Unit.as_link().is_err());
     }
 
     #[test]

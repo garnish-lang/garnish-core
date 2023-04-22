@@ -318,33 +318,6 @@ where
                     self.add_to_char_list(')')?;
                 }
             }
-            ExpressionDataType::Link => {
-                let (value, linked, is_append) = self.get_link(from)?;
-
-                match self.get_data_type(linked)? {
-                    ExpressionDataType::Unit => {
-                        self.add_to_current_char_list(value, depth + 1)?;
-                    }
-                    ExpressionDataType::Link => {
-                        if is_append {
-                            self.add_to_current_char_list(linked, depth + 1)?;
-                            self.add_to_char_list(' ')?;
-                            self.add_to_char_list('-')?;
-                            self.add_to_char_list('>')?;
-                            self.add_to_char_list(' ')?;
-                            self.add_to_current_char_list(value, depth + 1)?;
-                        } else {
-                            self.add_to_current_char_list(value, depth + 1)?;
-                            self.add_to_char_list(' ')?;
-                            self.add_to_char_list('<')?;
-                            self.add_to_char_list('-')?;
-                            self.add_to_char_list(' ')?;
-                            self.add_to_current_char_list(linked, depth + 1)?;
-                        }
-                    }
-                    t => Err(DataError::from(format!("Invalid linked type {:?}", t)))?,
-                }
-            }
             ExpressionDataType::Slice => {
                 let (value, range) = self.get_slice(from)?;
                 self.add_to_current_char_list(value, depth + 1)?;
@@ -704,56 +677,6 @@ mod to_char_list {
             runtime.add_to_list(list, false).unwrap();
             runtime.add_to_list(d4, false).unwrap();
             runtime.end_list().unwrap()
-        })
-    }
-
-    #[test]
-    fn link_append() {
-        assert_to_char_list("10 -> 20", |runtime| {
-            let unit = runtime.add_unit().unwrap();
-            let d1 = runtime.add_number(10.into()).unwrap();
-            let d2 = runtime.add_number(20.into()).unwrap();
-            let link1 = runtime.add_link(d1, unit, true).unwrap();
-            runtime.add_link(d2, link1, true).unwrap()
-        })
-    }
-
-    #[test]
-    fn link_prepend() {
-        assert_to_char_list("10 <- 20", |runtime| {
-            let unit = runtime.add_unit().unwrap();
-            let d1 = runtime.add_number(10.into()).unwrap();
-            let d2 = runtime.add_number(20.into()).unwrap();
-            let link1 = runtime.add_link(d2, unit, false).unwrap();
-            runtime.add_link(d1, link1, false).unwrap()
-        })
-    }
-
-    #[test]
-    fn link_append_multiple() {
-        assert_to_char_list("10 -> 20 -> 30", |runtime| {
-            let unit = runtime.add_unit().unwrap();
-            let d1 = runtime.add_number(10.into()).unwrap();
-            let d2 = runtime.add_number(20.into()).unwrap();
-            let d3 = runtime.add_number(30.into()).unwrap();
-
-            let link1 = runtime.add_link(d1, unit, true).unwrap();
-            let link2 = runtime.add_link(d2, link1, true).unwrap();
-            runtime.add_link(d3, link2, true).unwrap()
-        })
-    }
-
-    #[test]
-    fn link_prepend_multiple() {
-        assert_to_char_list("10 <- 20 <- 30", |runtime| {
-            let unit = runtime.add_unit().unwrap();
-            let d1 = runtime.add_number(10.into()).unwrap();
-            let d2 = runtime.add_number(20.into()).unwrap();
-            let d3 = runtime.add_number(30.into()).unwrap();
-
-            let link1 = runtime.add_link(d3, unit, false).unwrap();
-            let link2 = runtime.add_link(d2, link1, false).unwrap();
-            runtime.add_link(d1, link2, false).unwrap()
         })
     }
 

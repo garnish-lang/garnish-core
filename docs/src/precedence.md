@@ -18,19 +18,18 @@
 |     16     | .. >.. ..< >..< |   Create Range    |  left-right   |
 |     17     |        =        |    Create Pair    |  left-right   |
 |     18     |      10 20      |    Space List     |  left-right   |
-|     19     |      <> ->      |    Append Link    |  left-right   |
-|     20     |       <-        |   Prepend Link    |  right-left   |
-|     21     |    < <= > >=    |    Relational     |  left-right   |
-|     22     |    == != #=     |     Equality      |  left-right   |
-|     23     |       !!        |    Logical Not    |  right-left   |
-|     24     |       &&        |    Logical And    |  left-right   |
-|     25     |       ^^        |    Logical Xor    |  left-right   |
-|     26     |  &#124;&#124;   |    Logical Or     |  left-right   |
-|     27     |     expr\`      |   Prefix Apply    |  right-left   |
-|     28     |    \`expr\`     |    Infix Apply    |  left-right   |
-|     29     |     \`expr      |   Suffix Apply    |  left-right   |
-|     30     |      ~ ~>       |    Functional     |  left-right   |
-|     31     |    ^~ !> ?>     |    Conditional    |  left-right   |
-|     32     |     &#124;>     | Conditional Chain |  left-right   |
-|     33     |     10, 20      |    Comma List     |  left-right   |
-|     34     |      \n\n       |  Sub-Expression   |  left-right   |
+|     19     |       <>        |   Concatenation   |  left-right   |
+|     20     |    < <= > >=    |    Relational     |  left-right   |
+|     21     |    == != #=     |     Equality      |  left-right   |
+|     22     |       !!        |    Logical Not    |  right-left   |
+|     23     |       &&        |    Logical And    |  left-right   |
+|     24     |       ^^        |    Logical Xor    |  left-right   |
+|     25     |  &#124;&#124;   |    Logical Or     |  left-right   |
+|     26     |     expr\`      |   Prefix Apply    |  right-left   |
+|     27     |    \`expr\`     |    Infix Apply    |  left-right   |
+|     28     |     \`expr      |   Suffix Apply    |  left-right   |
+|     29     |      ~ ~>       |    Functional     |  left-right   |
+|     30     |    ^~ !> ?>     |    Conditional    |  left-right   |
+|     31     |     &#124;>     | Conditional Chain |  left-right   |
+|     32     |     10, 20      |    Comma List     |  left-right   |
+|     33     |      \n\n       |  Sub-Expression   |  left-right   |

@@ -56,8 +56,6 @@ pub enum Instruction {
     MakeStartExclusiveRange,
     MakeEndExclusiveRange,
     MakeExclusiveRange,
-    AppendLink,
-    PrependLink,
     Concat,
 }
 
@@ -75,7 +73,6 @@ pub enum ExpressionDataType {
     Range,
     Concatenation,
     Slice,
-    Link,
     List,
     Expression,
     External,
@@ -284,9 +281,6 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn make_end_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>>;
     fn make_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
-    fn append_link(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-    fn prepend_link(&mut self) -> Result<(), RuntimeError<Data::Error>>;
-
     fn make_pair(&mut self) -> Result<(), RuntimeError<Data::Error>>;
 
     fn concat(&mut self) -> Result<(), RuntimeError<Data::Error>>;
@@ -359,7 +353,6 @@ pub trait GarnishLangRuntimeData {
     fn get_concatenation(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
     fn get_range(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
     fn get_slice(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
-    fn get_link(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size, bool), Self::Error>;
 
     fn get_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error>;
@@ -388,7 +381,6 @@ pub trait GarnishLangRuntimeData {
     fn add_concatenation(&mut self, left: Self::Size, right: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_range(&mut self, start: Self::Size, end: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn add_link(&mut self, value: Self::Size, linked: Self::Size, is_append: bool) -> Result<Self::Size, Self::Error>;
 
     fn start_list(&mut self, len: Self::Size) -> Result<(), Self::Error>;
     fn add_to_list(&mut self, addr: Self::Size, is_associative: bool) -> Result<(), Self::Error>;

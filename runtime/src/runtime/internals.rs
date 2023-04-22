@@ -28,10 +28,6 @@ pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData, Context: Garnis
             let (value, _) = this.get_slice(r)?;
             this.push_register(value)?;
         }
-        ExpressionDataType::Link => {
-            let (value, ..) = this.get_link(r)?;
-            this.push_register(value)?;
-        }
         ExpressionDataType::Concatenation => {
             let (left, _) = this.get_concatenation(r)?;
             this.push_register(left)?;
@@ -76,10 +72,6 @@ pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData, Context: Garni
         ExpressionDataType::Slice => {
             let (_, range) = this.get_slice(r)?;
             this.push_register(range)?;
-        }
-        ExpressionDataType::Link => {
-            let (_, linked, _) = this.get_link(r)?;
-            this.push_register(linked)?;
         }
         ExpressionDataType::Concatenation => {
             let (_, right) = this.get_concatenation(r)?;
@@ -148,11 +140,6 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData, Context: Garn
                 (s, e) => state_error(format!("Non integer values used for range {:?} {:?}", s, e))?,
             }
         }
-        ExpressionDataType::Link => {
-            let count = link_len(this, r)?;
-            let addr = this.add_number(count)?;
-            this.push_register(addr)?;
-        }
         ExpressionDataType::Concatenation => {
             let count = concatenation_len(this, r)?;
             let addr = this.add_number(Data::size_to_number(count))?;
@@ -178,34 +165,4 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData, Context: Garn
 
 pub(crate) fn concatenation_len<Data: GarnishLangRuntimeData>(this: &mut Data, addr: Data::Size) -> Result<Data::Size, RuntimeError<Data::Error>> {
     Ok(iterate_concatenation_internal(this, addr, |_, _, _| Ok(None), |_, _, _| Ok(None))?.1)
-}
-
-pub fn link_len<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Number, RuntimeError<Data::Error>> {
-    Ok(Data::size_to_number(link_len_size(this, addr)?))
-}
-
-pub fn link_len_size<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<Data::Size, RuntimeError<Data::Error>> {
-    let (value, mut linked, _) = this.get_link(addr)?;
-    let mut count = match this.get_data_type(value)? {
-        ExpressionDataType::Link => state_error(format!("Linked found as value of link at addr {:?}", value))?,
-        _ => Data::Size::one(),
-    };
-
-    // order doesn't matter, just loop through and count
-    loop {
-        match this.get_data_type(linked)? {
-            ExpressionDataType::Link => {
-                let (next_val, next, _) = this.get_link(linked)?;
-                linked = next;
-                count += match this.get_data_type(next_val)? {
-                    ExpressionDataType::Link => state_error(format!("Linked found as value of link at addr {:?}", next_val))?,
-                    _ => Data::Size::one(),
-                };
-            }
-            ExpressionDataType::Unit => break,
-            l => state_error(format!("Invalid linked type {:?}", l))?,
-        }
-    }
-
-    Ok(count)
 }

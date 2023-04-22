@@ -67,8 +67,6 @@ pub enum TokenType {
     LengthInternal,
     Pair,
     Concatenation,
-    AppendLink,
-    PrependLink,
     Range,
     StartExclusiveRange,
     EndExclusiveRange,
@@ -218,8 +216,6 @@ impl<'a> Lexer<'a> {
             ("_.", TokenType::LeftInternal),
             (".|", TokenType::LengthInternal),
             ("<>", TokenType::Concatenation),
-            ("->", TokenType::AppendLink),
-            ("<-", TokenType::PrependLink),
             ("..", TokenType::Range),
             (">..", TokenType::StartExclusiveRange),
             ("..<", TokenType::EndExclusiveRange),
@@ -1682,36 +1678,6 @@ mod tests {
             vec![LexerToken {
                 text: "<>".to_string(),
                 token_type: TokenType::Concatenation,
-                column: 0,
-                row: 0
-            }]
-        )
-    }
-
-    #[test]
-    fn append_link() {
-        let result = lex(&"->".to_string()).unwrap();
-
-        assert_eq!(
-            result,
-            vec![LexerToken {
-                text: "->".to_string(),
-                token_type: TokenType::AppendLink,
-                column: 0,
-                row: 0
-            }]
-        )
-    }
-
-    #[test]
-    fn prepend_link() {
-        let result = lex(&"<-".to_string()).unwrap();
-
-        assert_eq!(
-            result,
-            vec![LexerToken {
-                text: "<-".to_string(),
-                token_type: TokenType::PrependLink,
                 column: 0,
                 row: 0
             }]

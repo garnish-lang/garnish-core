@@ -10,7 +10,6 @@ use crate::runtime::equality::{not_equal, type_equal};
 use crate::runtime::error::*;
 use crate::runtime::internals::{access_left_internal, access_length_internal, access_right_internal};
 use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
-use crate::runtime::link::{append_link, prepend_link};
 use crate::runtime::list::*;
 use crate::runtime::logical::{and, not, or, xor};
 use crate::runtime::pair::make_pair;
@@ -109,8 +108,6 @@ where
             Instruction::MakeStartExclusiveRange => self.make_start_exclusive_range()?,
             Instruction::MakeEndExclusiveRange => self.make_end_exclusive_range()?,
             Instruction::MakeExclusiveRange => self.make_exclusive_range()?,
-            Instruction::AppendLink => self.append_link()?,
-            Instruction::PrependLink => self.prepend_link()?,
             Instruction::Concat => self.concat()?,
             Instruction::Put => match data {
                 None => instruction_error(instruction, self.get_data().get_instruction_cursor())?,
@@ -380,18 +377,6 @@ where
 
     fn make_exclusive_range(&mut self) -> Result<(), RuntimeError<Data::Error>> {
         make_exclusive_range(self.get_data_mut())
-    }
-
-    //
-    // Link
-    //
-
-    fn append_link(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        append_link(self.get_data_mut())
-    }
-
-    fn prepend_link(&mut self) -> Result<(), RuntimeError<Data::Error>> {
-        prepend_link(self.get_data_mut())
     }
 
     //

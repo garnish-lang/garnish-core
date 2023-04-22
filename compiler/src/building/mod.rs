@@ -109,8 +109,6 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         | Definition::EndExclusiveRange
         | Definition::StartExclusiveRange
         | Definition::ExclusiveRange
-        | Definition::AppendLink
-        | Definition::PrependLink
         | Definition::Concatenation => {
             ((true, node.get_left()), (true, node.get_right()))
         }
@@ -300,12 +298,6 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         }
         Definition::Concatenation => {
             data.push_instruction(Instruction::Concat, None)?;
-        }
-        Definition::AppendLink => {
-            data.push_instruction(Instruction::AppendLink, None)?;
-        }
-        Definition::PrependLink => {
-            data.push_instruction(Instruction::PrependLink, None)?;
         }
         Definition::Access => {
             data.push_instruction(Instruction::Access, None)?;
@@ -1807,48 +1799,6 @@ mod operations {
                 (Instruction::Put, Some(3)),
                 (Instruction::Put, Some(4)),
                 (Instruction::Concat, None),
-                (Instruction::EndExpression, None),
-            ],
-            SimpleDataList::default()
-                .append(SimpleData::Number(5.into()))
-                .append(SimpleData::Number(10.into())),
-        );
-    }
-
-    #[test]
-    fn prepend_link() {
-        assert_instruction_data(
-            1,
-            vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
-                (Definition::PrependLink, None, Some(0), Some(2), "<-", TokenType::PrependLink),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
-            ],
-            vec![
-                (Instruction::Put, Some(3)),
-                (Instruction::Put, Some(4)),
-                (Instruction::PrependLink, None),
-                (Instruction::EndExpression, None),
-            ],
-            SimpleDataList::default()
-                .append(SimpleData::Number(5.into()))
-                .append(SimpleData::Number(10.into())),
-        );
-    }
-
-    #[test]
-    fn append_link() {
-        assert_instruction_data(
-            1,
-            vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
-                (Definition::AppendLink, None, Some(0), Some(2), "->", TokenType::AppendLink),
-                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
-            ],
-            vec![
-                (Instruction::Put, Some(3)),
-                (Instruction::Put, Some(4)),
-                (Instruction::AppendLink, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default()

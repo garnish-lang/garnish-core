@@ -97,7 +97,6 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
             let adjusted_index = start.plus(index).or_num_err()?;
 
             match this.get_data_type(value)? {
-                ExpressionDataType::Link => index_link(this, value, adjusted_index),
                 ExpressionDataType::List => index_list(this, value, adjusted_index),
                 ExpressionDataType::CharList => index_char_list(this, value, adjusted_index),
                 ExpressionDataType::ByteList => index_byte_list(this, value, adjusted_index),
@@ -133,7 +132,6 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
             }
         }
         ExpressionDataType::Concatenation => index_concatenation_for(this, value, index),
-        ExpressionDataType::Link => index_link(this, value, index),
         _ => Err(RuntimeError::unsupported_types()),
     }
 }
@@ -283,144 +281,6 @@ fn index_byte_list<Data: GarnishLangRuntimeData>(
     }
 }
 
-pub(crate) fn iterate_link_internal<Data: GarnishLangRuntimeData, Callback>(
-    this: &mut Data,
-    link: Data::Size,
-    mut func: Callback,
-) -> Result<(), RuntimeError<Data::Error>>
-where
-    Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
-{
-    let mut current_index = Data::Number::zero();
-    // keep track of starting point to any pushed values later
-    let start_register = this.get_register_len();
-
-    this.push_register(link)?;
-
-    while this.get_register_len() > start_register {
-        match this.pop_register() {
-            None => state_error(format!("Popping more registers than placed during linking indexing."))?,
-            Some(r) => match this.get_data_type(r)? {
-                // flatten all links, pushing their vals to the register
-                // val of link should never be another link
-                ExpressionDataType::Link => {
-                    let (val, linked, is_append) = this.get_link(r)?;
-
-                    match this.get_data_type(linked)? {
-                        ExpressionDataType::Unit => {
-                            // linked of type unit means, only push value
-                            this.push_register(val)?;
-                        }
-                        ExpressionDataType::Link => {
-                            if is_append {
-                                // linked value is previous, gets checked first, pushed last
-                                this.push_register(val)?;
-                                this.push_register(linked)?;
-                            } else {
-                                // linked value is next, gets resolved last, pushed first
-                                this.push_register(linked)?;
-                                this.push_register(val)?;
-                            }
-                        }
-                        t => state_error(format!("Invalid linked type {:?}", t))?,
-                    }
-                }
-                _ => {
-                    if func(this, r, current_index)? {
-                        break;
-                    } else {
-                        current_index = current_index.increment().or_num_err()?;
-                    }
-                }
-            },
-        }
-    }
-
-    while this.get_register_len() > start_register {
-        this.pop_register();
-    }
-
-    Ok(())
-}
-
-pub(crate) fn iterate_link_internal_rev<Data: GarnishLangRuntimeData, Callback>(
-    this: &mut Data,
-    link: Data::Size,
-    mut func: Callback,
-) -> Result<(), RuntimeError<Data::Error>>
-where
-    Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
-{
-    let mut current_index = Data::Number::zero();
-    // keep track of starting point to any pushed values later
-    let start_register = this.get_register_len();
-
-    this.push_register(link)?;
-
-    while this.get_register_len() > start_register {
-        match this.pop_register() {
-            None => state_error(format!("Popping more registers than placed during linking indexing."))?,
-            Some(r) => match this.get_data_type(r)? {
-                // flatten all links, pushing their vals to the register
-                // val of link should never be another link
-                ExpressionDataType::Link => {
-                    let (val, linked, is_append) = this.get_link(r)?;
-
-                    match this.get_data_type(linked)? {
-                        ExpressionDataType::Unit => {
-                            // linked of type unit means, only push value
-                            this.push_register(val)?;
-                        }
-                        ExpressionDataType::Link => {
-                            if is_append {
-                                // linked value is previous, gets checked first, pushed last
-                                this.push_register(linked)?;
-                                this.push_register(val)?;
-                            } else {
-                                // linked value is next, gets resolved last, pushed first
-                                this.push_register(val)?;
-                                this.push_register(linked)?;
-                            }
-                        }
-                        t => state_error(format!("Invalid linked type {:?}", t))?,
-                    }
-                }
-                _ => {
-                    if func(this, r, current_index)? {
-                        break;
-                    } else {
-                        current_index = current_index.increment().or_num_err()?;
-                    }
-                }
-            },
-        }
-    }
-
-    while this.get_register_len() > start_register {
-        this.pop_register();
-    }
-
-    Ok(())
-}
-
-pub(crate) fn index_link<Data: GarnishLangRuntimeData>(
-    this: &mut Data,
-    link: Data::Size,
-    index: Data::Number,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let mut item: Option<Data::Size> = None;
-    iterate_link_internal(this, link, |_data, item_addr, current_index| {
-        if current_index == index {
-            item = Some(item_addr);
-            Ok(true)
-        } else {
-            Ok(false)
-        }
-    })?;
-
-    Ok(item)
-}
-
 fn access_with_symbol<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     sym: Data::Symbol,
@@ -433,7 +293,6 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
             let (start, end, _) = get_range(this, range)?;
 
             match this.get_data_type(value)? {
-                ExpressionDataType::Link => sym_access_links_slices(this, start, value, sym, end),
                 ExpressionDataType::List => {
                     // in order to limit to slice range need to check items manually
                     // can't push, in case any of the items are a Link or Slice
@@ -525,7 +384,6 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
-        ExpressionDataType::Link => sym_access_links_slices(this, Data::Number::zero(), value, sym, Data::Number::max_value()),
         ExpressionDataType::Concatenation => Ok(iterate_concatenation_internal(
             this,
             value,
@@ -571,96 +429,4 @@ pub(crate) fn is_value_association<Data: GarnishLangRuntimeData>(this: &Data, ad
         }
         _ => false,
     })
-}
-
-fn sym_access_links_slices<Data: GarnishLangRuntimeData>(
-    this: &mut Data,
-    start_count: Data::Number,
-    start_value: Data::Size,
-    sym: Data::Symbol,
-    limit: Data::Number,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let mut item: Option<Data::Size> = None;
-    let mut skip = start_count;
-    let mut count = Data::Number::zero();
-    // keep track of starting point to any pushed values later
-    let start_register = this.get_register_len();
-
-    this.push_register(start_value)?;
-
-    while this.get_register_len() > start_register {
-        if count > limit {
-            break;
-        }
-
-        match this.pop_register() {
-            None => state_error(format!("Popping more registers than placed during linking indexing."))?,
-            Some(r) => match this.get_data_type(r)? {
-                ExpressionDataType::Link => {
-                    let (val, linked, is_append) = this.get_link(r)?;
-
-                    match this.get_data_type(linked)? {
-                        ExpressionDataType::Unit => {
-                            // linked of type unit means, only push value
-                            this.push_register(val)?;
-                        }
-                        ExpressionDataType::Link => {
-                            if is_append {
-                                // linked value is previous, gets checked first, pushed last
-                                this.push_register(val)?;
-                                this.push_register(linked)?;
-                            } else {
-                                // linked value is next, gets resolved last, pushed first
-                                this.push_register(linked)?;
-                                this.push_register(val)?;
-                            }
-                        }
-                        t => state_error(format!("Invalid linked type {:?}", t))?,
-                    }
-                }
-                ExpressionDataType::Pair => {
-                    // skip values
-                    if skip > Data::Number::zero() {
-                        skip = skip.decrement().or_num_err()?;
-                        continue;
-                    }
-
-                    let (left, right) = this.get_pair(r)?;
-                    match this.get_data_type(left)? {
-                        ExpressionDataType::Symbol => {
-                            // if this sym equals search sym, return 'right' value
-                            // else, continue checking
-                            if this.get_symbol(left)? == sym {
-                                item = Some(right);
-                                break;
-                            } else {
-                                count = count.increment().or_num_err()?;
-                            }
-                        }
-                        // not an associations, continue on
-                        _ => {
-                            count = count.increment().or_num_err()?;
-                        }
-                    }
-                }
-                // nothing to do for any other values
-                _ => {
-                    // skip values
-                    if skip > Data::Number::zero() {
-                        skip = skip.decrement().or_num_err()?;
-                        continue;
-                    }
-
-                    count = count.increment().or_num_err()?;
-                }
-            },
-        }
-    }
-
-    // remove remaining registers added during operation
-    while this.get_register_len() > start_register {
-        this.pop_register();
-    }
-
-    Ok(item)
 }

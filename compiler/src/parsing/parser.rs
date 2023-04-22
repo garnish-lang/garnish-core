@@ -49,8 +49,6 @@ pub enum Definition {
     EndExclusiveRange,
     ExclusiveRange,
     Concatenation,
-    AppendLink,
-    PrependLink,
     Access,
     AccessLeftInternal,
     AccessRightInternal,
@@ -160,8 +158,6 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::StartExclusiveRange => (Definition::StartExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
         TokenType::EndExclusiveRange => (Definition::EndExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
         TokenType::ExclusiveRange => (Definition::ExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
-        TokenType::AppendLink => (Definition::AppendLink, SecondaryDefinition::BinaryLeftToRight),
-        TokenType::PrependLink => (Definition::PrependLink, SecondaryDefinition::BinaryRightToLeft),
         TokenType::MultiplicationSign => (Definition::MultiplicationSign, SecondaryDefinition::BinaryLeftToRight),
         TokenType::ExponentialSign => (Definition::ExponentialSign, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Subtraction => (Definition::Subtraction, SecondaryDefinition::BinaryLeftToRight),
@@ -357,8 +353,6 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     // since these two are opposite associations
     // this would be the implicit priority if they were the same priority
     // choosing to make it explicit
-    map.insert(Definition::AppendLink, 239);
-    map.insert(Definition::PrependLink, 240);
     map.insert(Definition::Concatenation, 240);
 
     map.insert(Definition::Apply, 250);
@@ -427,11 +421,7 @@ fn parse_token(
                         Some(group_index) => group_index == left_index,
                     };
 
-                let stop = if n.definition == Definition::PrependLink {
-                    my_priority <= their_priority
-                } else {
-                    my_priority < their_priority
-                };
+                let stop = my_priority < their_priority;
 
                 // need to find node with higher priority and stop before it
                 if stop || is_our_group {
@@ -3406,92 +3396,6 @@ mod tests {
                 (3, Definition::Access, Some(5), Some(2), Some(4)),
                 (4, Definition::Property, Some(3), None, None),
                 (5, Definition::EmptyApply, Some(1), Some(3), None),
-            ],
-        );
-    }
-}
-
-#[cfg(test)]
-mod links {
-    use super::tests::*;
-    use crate::lexing::lexer::*;
-    use crate::*;
-
-    #[test]
-    fn append_link() {
-        let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("->".to_string(), TokenType::AppendLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-        ];
-
-        let result = parse(tokens).unwrap();
-
-        assert_result(
-            &result,
-            1,
-            &[
-                (0, Definition::Number, Some(1), None, None),
-                (1, Definition::AppendLink, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
-            ],
-        );
-    }
-
-    #[test]
-    fn prepend_link() {
-        let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-        ];
-
-        let result = parse(tokens).unwrap();
-
-        assert_result(
-            &result,
-            1,
-            &[
-                (0, Definition::Number, Some(1), None, None),
-                (1, Definition::PrependLink, None, Some(0), Some(2)),
-                (2, Definition::Number, Some(1), None, None),
-            ],
-        );
-    }
-
-    #[test]
-    fn prepend_and_append_links() {
-        let tokens = vec![
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("->".to_string(), TokenType::AppendLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("->".to_string(), TokenType::AppendLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("<-".to_string(), TokenType::PrependLink, 0, 0),
-            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-        ];
-
-        let result = parse(tokens).unwrap();
-
-        assert_result(
-            &result,
-            1,
-            &[
-                (0, Definition::Number, Some(1), None, None),
-                (1, Definition::PrependLink, None, Some(0), Some(5)),
-                (2, Definition::Number, Some(3), None, None),
-                (3, Definition::AppendLink, Some(5), Some(2), Some(4)),
-                (4, Definition::Number, Some(3), None, None),
-                (5, Definition::PrependLink, Some(1), Some(3), Some(9)),
-                (6, Definition::Number, Some(7), None, None),
-                (7, Definition::AppendLink, Some(9), Some(6), Some(8)),
-                (8, Definition::Number, Some(7), None, None),
-                (9, Definition::PrependLink, Some(5), Some(7), Some(10)),
-                (10, Definition::Number, Some(9), None, None),
             ],
         );
     }

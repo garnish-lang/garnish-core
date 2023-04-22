@@ -1,7 +1,8 @@
-use garnish_traits::GarnishLangRuntimeData;
 use std::convert::TryInto;
 use std::fmt::Debug;
 use std::hash::Hash;
+
+use garnish_traits::GarnishLangRuntimeData;
 
 use crate::data::{parse_byte_list, parse_char_list, parse_simple_number, SimpleNumber};
 use crate::{symbol_value, DataError, ExpressionDataType, Instruction, InstructionData, SimpleData, SimpleRuntimeData};
@@ -65,10 +66,6 @@ where
 
     fn get_slice(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
         self.get(addr)?.as_slice()
-    }
-
-    fn get_link(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size, bool), Self::Error> {
-        self.get(addr)?.as_link()
     }
 
     fn get_list_len(&self, index: usize) -> Result<usize, Self::Error> {
@@ -184,11 +181,6 @@ where
 
     fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
         self.data.push(SimpleData::Slice(list, range));
-        Ok(self.data.len() - 1)
-    }
-
-    fn add_link(&mut self, value: Self::Size, linked: Self::Size, is_append: bool) -> Result<Self::Size, Self::Error> {
-        self.data.push(SimpleData::Link(value, linked, is_append));
         Ok(self.data.len() - 1)
     }
 
@@ -529,8 +521,8 @@ where
                     let v = symbol_value(s);
                     self.cache_add(SimpleData::Symbol(v))
                 }
-                t => Err(DataError::from(format!("Found {:?} instead of CharList after creating a CharList.", t)))
-            }
+                t => Err(DataError::from(format!("Found {:?} instead of CharList after creating a CharList.", t))),
+            },
         }
     }
 
@@ -621,8 +613,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{ExpressionDataType, Instruction, SimpleRuntimeData};
     use garnish_traits::GarnishLangRuntimeData;
+
+    use crate::{ExpressionDataType, Instruction, SimpleRuntimeData};
 
     #[test]
     fn type_of() {

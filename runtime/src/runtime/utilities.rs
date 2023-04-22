@@ -1,8 +1,7 @@
 // use log::trace;
 
-use crate::runtime::list::iterate_link_internal;
 use crate::runtime::range::range_len;
-use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants};
+use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
 
 pub(crate) fn next_ref<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Data::Size, RuntimeError<Data::Error>> {
     match this.pop_register() {
@@ -56,29 +55,4 @@ pub(crate) fn push_boolean<Data: GarnishLangRuntimeData>(this: &mut Data, value:
 pub(crate) fn push_pair<Data: GarnishLangRuntimeData>(this: &mut Data, left: Data::Size, right: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
     this.add_pair((left, right)).and_then(|v| this.push_register(v))?;
     Ok(())
-}
-
-// public utilities
-
-// modify so 'this' doesn't have to be mutable
-pub fn iterate_link<Data: GarnishLangRuntimeData, Callback>(
-    this: &mut Data,
-    link: Data::Size,
-    func: Callback,
-) -> Result<(), RuntimeError<Data::Error>>
-where
-    Callback: FnMut(&mut Data, Data::Size, Data::Number) -> Result<bool, RuntimeError<Data::Error>>,
-{
-    iterate_link_internal(this, link, func)
-}
-
-pub fn link_count<Data: GarnishLangRuntimeData>(this: &mut Data, link: Data::Size) -> Result<Data::Number, RuntimeError<Data::Error>> {
-    let mut count = Data::Number::zero();
-
-    iterate_link_internal(this, link, |_, _, _| {
-        count = count.increment().or_num_err()?;
-        Ok(false)
-    })?;
-
-    Ok(count)
 }
