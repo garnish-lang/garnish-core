@@ -6,5 +6,6 @@ members = [
     "compiler",
     "traits",
     "data",
+    "tests",
     "test-processing"
 ]
