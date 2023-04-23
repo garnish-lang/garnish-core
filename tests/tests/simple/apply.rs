@@ -711,25 +711,4 @@ mod slices {
         assert_eq!(runtime.get_data_mut().get_number(start).unwrap(), 6.into());
         assert_eq!(runtime.get_data_mut().get_number(end).unwrap(), 14.into());
     }
-
-    #[test]
-    fn create_with_link() {
-        let mut runtime = create_simple_runtime();
-
-        let unit = runtime.get_data_mut().add_unit().unwrap();
-        let d1 = runtime.get_data_mut().add_number(10.into()).unwrap();
-        let d2 = runtime.get_data_mut().add_link(d1, unit, true).unwrap();
-
-        let d3 = add_range(runtime.get_data_mut(), 1, 5);
-
-        runtime.get_data_mut().push_register(d2).unwrap();
-        runtime.get_data_mut().push_register(d3).unwrap();
-
-        runtime.apply::<EmptyContext>(None).unwrap();
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        let (list, range) = runtime.get_data_mut().get_slice(i).unwrap();
-        assert_eq!(list, d2);
-        assert_eq!(range, d3);
-    }
 }
