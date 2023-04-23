@@ -101,6 +101,39 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
             list_from_byte_list(this, left, Data::Number::zero(), Data::size_to_number(len))?;
         }
         // TODO
+        // (ExpressionDataType::Concatenation, ExpressionDataType::CharList) => {}
+        // (ExpressionDataType::Concatenation, ExpressionDataType::ByteList) => {}
+        (ExpressionDataType::Concatenation, ExpressionDataType::List) => {
+            let len = concatenation_len(this, left)?;
+            this.start_list(len)?;
+            iterate_concatenation_internal(
+                this,
+                left,
+                |this, _, addr| {
+                    let len = Data::size_to_number(this.get_list_len(addr)?);
+                    let mut index = Data::Number::zero();
+
+                    while index < len {
+                        let item_addr = this.get_list_item(addr, index)?;
+                        let is_associative = is_value_association(this, item_addr)?;
+                        this.add_to_list(item_addr, is_associative)?;
+
+                        index = index.increment().or_num_err()?;
+                    }
+
+                    Ok(None)
+                },
+                |this, _, addr| {
+                    let is_associative = is_value_association(this, addr)?;
+                    this.add_to_list(addr, is_associative)?;
+                    Ok(None)
+                },
+            )?;
+
+            let addr = this.end_list()?;
+            this.push_register(addr)?;
+        }
+        // TODO
         // (ExpressionDataType::Slice, ExpressionDataType::CharList) => {}
         // (ExpressionDataType::Slice, ExpressionDataType::ByteList) => {}
         (ExpressionDataType::Slice, ExpressionDataType::List) => {
@@ -207,39 +240,6 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
                 }
                 _ => push_unit(this)?,
             }
-        }
-        // TODO
-        // (ExpressionDataType::Concatenation, ExpressionDataType::CharList) => {}
-        // (ExpressionDataType::Concatenation, ExpressionDataType::ByteList) => {}
-        (ExpressionDataType::Concatenation, ExpressionDataType::List) => {
-            let len = concatenation_len(this, left)?;
-            this.start_list(len)?;
-            iterate_concatenation_internal(
-                this,
-                left,
-                |this, _, addr| {
-                    let len = Data::size_to_number(this.get_list_len(addr)?);
-                    let mut index = Data::Number::zero();
-
-                    while index < len {
-                        let item_addr = this.get_list_item(addr, index)?;
-                        let is_associative = is_value_association(this, item_addr)?;
-                        this.add_to_list(item_addr, is_associative)?;
-
-                        index = index.increment().or_num_err()?;
-                    }
-
-                    Ok(None)
-                },
-                |this, _, addr| {
-                    let is_associative = is_value_association(this, addr)?;
-                    this.add_to_list(addr, is_associative)?;
-                    Ok(None)
-                },
-            )?;
-
-            let addr = this.end_list()?;
-            this.push_register(addr)?;
         }
         // Unit and Boolean
         (ExpressionDataType::Unit, ExpressionDataType::True) | (ExpressionDataType::False, ExpressionDataType::True) => {
