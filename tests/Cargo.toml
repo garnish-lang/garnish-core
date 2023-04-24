@@ -2,7 +2,7 @@
 name = "garnish_lang_tests"
 version = "0.0.1-alpha"
 authors = ["Chad Collins <chad.collins@capitalone.com>"]
-edition = "2018"
+edition = "2021"
 description = "Integrations test suite for garnish lang core libraries."
 homepage = "https://github.com/garnish-lang/garnish-core"
 documentation = "https://github.com/garnish-lang/garnish-core"
