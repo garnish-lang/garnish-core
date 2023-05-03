@@ -102,23 +102,9 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 ExpressionDataType::CharList => index_char_list(this, value, adjusted_index),
                 ExpressionDataType::ByteList => index_byte_list(this, value, adjusted_index),
                 ExpressionDataType::Concatenation => {
-                    Ok(iterate_concatenation_internal(
+                    Ok(iterate_concatenation(
                         this,
                         value,
-                        |this, index, addr| {
-                            let list_len = this.get_list_len(addr)?;
-
-                            // already know that index is greater than count
-                            if adjusted_index < index.plus(Data::size_to_number(list_len)).or_num_err()? {
-                                // item is in this list
-                                let list_index = adjusted_index.subtract(index).or_num_err()?;
-                                let list_r = this.get_list_item(addr, list_index)?;
-
-                                return Ok(Some(list_r));
-                            }
-
-                            Ok(None)
-                        },
                         |_this, index, addr| {
                             if index == adjusted_index {
                                 return Ok(Some(addr));
