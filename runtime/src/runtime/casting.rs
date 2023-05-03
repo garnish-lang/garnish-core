@@ -1,7 +1,8 @@
+use garnish_traits::helpers::iterate_concatenation;
 use garnish_traits::Instruction;
 
 use crate::runtime::internals::concatenation_len;
-use crate::runtime::list::{is_value_association, iterate_concatenation_internal};
+use crate::runtime::list::{is_value_association};
 use crate::{
     get_range, next_ref, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber,
     OrNumberError, RuntimeError, TypeConstants,
@@ -103,23 +104,9 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
         (ExpressionDataType::Concatenation, ExpressionDataType::List) => {
             let len = concatenation_len(this, left)?;
             this.start_list(len)?;
-            iterate_concatenation_internal(
+            iterate_concatenation(
                 this,
                 left,
-                |this, _, addr| {
-                    let len = Data::size_to_number(this.get_list_len(addr)?);
-                    let mut index = Data::Number::zero();
-
-                    while index < len {
-                        let item_addr = this.get_list_item(addr, index)?;
-                        let is_associative = is_value_association(this, item_addr)?;
-                        this.add_to_list(item_addr, is_associative)?;
-
-                        index = index.increment().or_num_err()?;
-                    }
-
-                    Ok(None)
-                },
                 |this, _, addr| {
                     let is_associative = is_value_association(this, addr)?;
                     this.add_to_list(addr, is_associative)?;
@@ -169,49 +156,9 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
                 ExpressionDataType::Concatenation => {
                     this.start_list(Data::number_to_size(len).or_num_err()?)?;
 
-                    iterate_concatenation_internal(
+                    iterate_concatenation(
                         this,
                         value,
-                        |this, current_index, addr| {
-                            let list_len = Data::size_to_number(this.get_list_len(addr)?);
-                            let list_end = current_index.plus(list_len).or_num_err()?;
-
-                            if start > list_end {
-                                return Ok(None);
-                            }
-
-                            if end <= current_index {
-                                // providing value will end iteration
-                                // even tho we don't need the return value
-                                return Ok(Some(addr));
-                            }
-
-                            let adjusted_start = if current_index > start {
-                                Data::Number::zero()
-                            } else {
-                                start.subtract(current_index).or_num_err()?
-                            };
-
-                            let adjusted_end = if end > list_end {
-                                list_len.decrement().or_num_err()?
-                            } else {
-                                end.subtract(current_index).or_num_err()?
-                            };
-
-                            if adjusted_start < list_end && adjusted_end >= adjusted_start {
-                                let mut index = adjusted_start;
-
-                                while index <= adjusted_end {
-                                    let item_addr = this.get_list_item(addr, index)?;
-                                    let is_associative = is_value_association(this, item_addr)?;
-                                    this.add_to_list(item_addr, is_associative)?;
-
-                                    index = index.increment().or_num_err()?;
-                                }
-                            }
-
-                            Ok(None)
-                        },
                         |this, current_index, addr| {
                             if current_index < start {
                                 return Ok(None);
