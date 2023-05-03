@@ -410,9 +410,14 @@ impl<'a> Lexer<'a> {
                             self.state = LexingState::Indentifier;
 
                             false
-                        } else if self.current_characters.starts_with('.') && c.is_numeric() && self.can_float {
+                        } else if self.current_characters.starts_with(".")
+                            && self.current_characters.len() == 2 // To be here should only have the decimal and the current number
+                            && c.is_numeric()
+                            && self.can_float {
                             // Range tokens start with a period
                             // but Float numbers can also start with period
+                            // If a range token ends up here it should already have length of at least 2
+                            //      so it should be skipped by length check in previous condition
                             trace!("Found number after period. Switching to float.");
                             self.current_token_type = Some(TokenType::Number);
                             self.state = LexingState::Float;
@@ -731,9 +736,6 @@ impl<'a> Lexer<'a> {
                 Some(TokenType::Period),
                 // works alongside the above, the 1 is forced to be a number since it can't be a float
                 // forceing the next period to not be a float, etc
-                Some(TokenType::Number),
-                // 3.14.1
-                // floats can only have one decimal, this can also cause the above cascade
                 Some(TokenType::Number),
             ]
             .contains(&self.current_token_type);
@@ -2146,7 +2148,7 @@ mod tests {
 
     #[test]
     fn integer_range() {
-        let result = lex("3..").unwrap();
+        let result = lex("3..6").unwrap();
 
         assert_eq!(
             result,
@@ -2162,7 +2164,13 @@ mod tests {
                     token_type: TokenType::Range,
                     column: 1,
                     row: 0
-                }
+                },
+                LexerToken {
+                    text: "6".to_string(),
+                    token_type: TokenType::Number,
+                    column: 3,
+                    row: 0
+                },
             ]
         )
     }
