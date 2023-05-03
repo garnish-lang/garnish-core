@@ -172,7 +172,7 @@ pub(crate) fn index_concatenation_for<Data: GarnishLangRuntimeData>(
 pub(crate) fn iterate_concatenation_internal<Data: GarnishLangRuntimeData, ListCheckFn, CheckFn>(
     this: &mut Data,
     addr: Data::Size,
-    mut list_check_fn: ListCheckFn,
+    mut _list_check_fn: ListCheckFn,
     mut check_fn: CheckFn,
 ) -> Result<(Option<Data::Size>, Data::Size), RuntimeError<Data::Error>>
 where
@@ -200,9 +200,22 @@ where
                         this.push_register(current)?;
                     }
                     ExpressionDataType::List => {
-                        temp_result = list_check_fn(this, Data::size_to_number(index), r)?;
-                        let list_len = this.get_list_len(r)?;
-                        index = index + list_len;
+                        // temp_result = list_check_fn(this, Data::size_to_number(index), r)?;
+                        // let list_len = this.get_list_len(r)?;
+                        // index = index + list_len;
+                        let len = this.get_list_len(r)?;
+                        let mut i = Data::Size::zero();
+
+                        while i < len {
+                            let sub_index = Data::size_to_number(i);
+                            let item = this.get_list_item(r, sub_index)?;
+                            temp_result = check_fn(this, (Data::size_to_number(index)).plus(sub_index).or_num_err()?, item)?;
+                            match temp_result {
+                                Some(_) => break,
+                                None => i = i + Data::Size::one()
+                            }
+                        }
+                        index = index + len;
                     }
                     _ => {
                         temp_result = check_fn(this, Data::size_to_number(index), r)?;

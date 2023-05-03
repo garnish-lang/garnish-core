@@ -217,7 +217,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
                                 return Ok(None);
                             }
 
-                            if current_index >= end {
+                            if current_index > end {
                                 // providing value will end iteration
                                 // even tho we don't need the return value
                                 return Ok(Some(addr));

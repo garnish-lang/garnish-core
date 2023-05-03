@@ -582,7 +582,7 @@ mod concatenation {
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
         let len = runtime.get_data_mut().get_list_len(addr).unwrap();
-        assert_eq!(len, 6);
+        assert_eq!(len, 7);
 
         for i in 0..6 {
             let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap();

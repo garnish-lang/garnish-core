@@ -10,7 +10,7 @@ mod equality;
 mod error;
 mod internals;
 mod jumps;
-mod list;
+pub(crate) mod list;
 mod logical;
 mod pair;
 mod put;

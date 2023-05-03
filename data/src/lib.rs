@@ -1,17 +1,19 @@
+use std::{collections::HashMap, hash::Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::Debug;
 use std::hash::Hash;
-use std::{collections::HashMap, hash::Hasher};
+
+pub use error::DataError;
+use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, Instruction};
+use garnish_traits::helpers::iterate_concatenation;
+
+use crate::data::{SimpleData, SimpleDataList};
+pub use crate::instruction::InstructionData;
 
 pub mod data;
 mod error;
 pub mod instruction;
 mod runtime;
-
-use crate::data::{SimpleData, SimpleDataList};
-pub use crate::instruction::InstructionData;
-pub use error::DataError;
-use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, Instruction};
 
 pub fn symbol_value(value: &str) -> u64 {
     let mut h = DefaultHasher::new();
@@ -320,11 +322,56 @@ where
             }
             ExpressionDataType::Slice => {
                 let (value, range) = self.get_slice(from)?;
-                self.add_to_current_char_list(value, depth + 1)?;
-                self.add_to_char_list(' ')?;
-                self.add_to_char_list('~')?;
-                self.add_to_char_list(' ')?;
-                self.add_to_current_char_list(range, depth + 1)?;
+                let (start, end) = self.get_range(range)?;
+                let (start, end) = (
+                    self.get_number(start)?.to_integer().as_integer()?,
+                    self.get_number(end)?.to_integer().as_integer()?
+                );
+
+                match self.get_data_type(value)? {
+                    ExpressionDataType::CharList => {
+                        for i in start..=end {
+                            let c = self.get_char_list_item(value, i.into())?;
+                            self.add_to_char_list(c)?;
+                        }
+                    }
+                    ExpressionDataType::List => {
+                        if depth > 0 {
+                            self.add_to_char_list('(')?;
+                        }
+
+                        for i in start..=end {
+                            let item = self.get_list_item(value, i.into())?;
+                            self.add_to_current_char_list(item, depth + 1)?;
+
+                            if i != end {
+                                self.add_to_char_list(',')?;
+                                self.add_to_char_list(' ')?;
+                            }
+                        }
+
+                        if depth > 0 {
+                            self.add_to_char_list(')')?;
+                        }
+                    }
+                    ExpressionDataType::Concatenation => {
+                        iterate_concatenation(self, value, |this, index, addr| {
+                            let i = index.to_integer().as_integer()?;
+                            if i >= start && i <= end {
+                                this.add_to_current_char_list(addr, depth + 1)?;
+                            }
+
+                            Ok(None)
+                        }).or_else(|err| Err(DataError::from(format!("{:?}", err))))?;
+                    }
+                    _ => {
+                        self.add_to_current_char_list(value, depth + 1)?;
+                        self.add_to_char_list(' ')?;
+                        self.add_to_char_list('~')?;
+                        self.add_to_char_list(' ')?;
+                        self.add_to_current_char_list(range, depth + 1)?;
+                    }
+                }
             }
         }
 
@@ -681,20 +728,64 @@ mod to_char_list {
     }
 
     #[test]
-    fn slice() {
-        assert_to_char_list("(10, 20, 30) ~ 5..10", |runtime| {
-            let d1 = runtime.add_number(5.into()).unwrap();
-            let d2 = runtime.add_number(10.into()).unwrap();
-            let d3 = runtime.add_number(20.into()).unwrap();
-            let d4 = runtime.add_number(30.into()).unwrap();
+    fn slice_of_char_list() {
+        assert_to_char_list("cde", |runtime| {
+            let s = runtime.parse_add_char_list("abcdef").unwrap();
+
+            let start = runtime.add_number(2.into()).unwrap();
+            let end = runtime.add_number(4.into()).unwrap();
+            let range = runtime.add_range(start, end).unwrap();
+
+            runtime.add_slice(s, range).unwrap()
+        })
+    }
+
+    #[test]
+    fn slice_of_concatenation() {
+        assert_to_char_list("304050", |runtime| {
+            let d1 = runtime.add_number(10.into()).unwrap();
+            let d2 = runtime.add_number(20.into()).unwrap();
+            let d3 = runtime.add_number(30.into()).unwrap();
+            let d4 = runtime.add_number(40.into()).unwrap();
+            let d5 = runtime.add_number(50.into()).unwrap();
+            let d6 = runtime.add_number(60.into()).unwrap();
+
+            let cat1 = runtime.add_concatenation(d1, d2).unwrap();
+            let cat2 = runtime.add_concatenation(cat1, d3).unwrap();
+            let cat3 = runtime.add_concatenation(cat2, d4).unwrap();
+            let cat4 = runtime.add_concatenation(cat3, d5).unwrap();
+            let cat5 = runtime.add_concatenation(cat4, d6).unwrap();
+
+            let start = runtime.add_number(2.into()).unwrap();
+            let end = runtime.add_number(4.into()).unwrap();
+            let range = runtime.add_range(start, end).unwrap();
+
+            runtime.add_slice(cat5, range).unwrap()
+        })
+    }
+
+    #[test]
+    fn slice_of_list() {
+        assert_to_char_list("30, 40, 50", |runtime| {
+            let d1 = runtime.add_number(10.into()).unwrap();
+            let d2 = runtime.add_number(20.into()).unwrap();
+            let d3 = runtime.add_number(30.into()).unwrap();
+            let d4 = runtime.add_number(40.into()).unwrap();
+            let d5 = runtime.add_number(50.into()).unwrap();
+            let d6 = runtime.add_number(60.into()).unwrap();
 
             runtime.start_list(3).unwrap();
+            runtime.add_to_list(d1, false).unwrap();
             runtime.add_to_list(d2, false).unwrap();
             runtime.add_to_list(d3, false).unwrap();
             runtime.add_to_list(d4, false).unwrap();
+            runtime.add_to_list(d5, false).unwrap();
+            runtime.add_to_list(d6, false).unwrap();
             let list = runtime.end_list().unwrap();
 
-            let range = runtime.add_range(d1, d2).unwrap();
+            let start = runtime.add_number(2.into()).unwrap();
+            let end = runtime.add_number(4.into()).unwrap();
+            let range = runtime.add_range(start, end).unwrap();
 
             runtime.add_slice(list, range).unwrap()
         })
