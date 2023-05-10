@@ -696,15 +696,15 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
         return Ok(ParseResult { root: 0, nodes });
     }
 
-    for token in trimmed.iter() {
+    for (i, token) in trimmed.iter().enumerate() {
         trace!(
             "------ Start Token {:?} -------------------------------------------------------------------------",
             token.get_token_type()
         );
         trace!("");
 
-        let id = nodes.len();
-        trace!("Id: {}", id);
+        let current_id = nodes.len();
+        trace!("Id: {}", current_id);
 
         let under_group = match current_group {
             None => None,
@@ -740,10 +740,11 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
         }
 
         // most operations will have their right be the next element
-        // corrects are made after the fact
-        let assumed_right = match id + 1 >= lex_tokens.len() {
+        // corrects are made after
+        let assumed_right = match i + 1 >= trimmed.len() {
+            // no next node due to end of tokens
             true => None,
-            false => Some(id + 1),
+            false => Some(current_id + 1),
         };
 
         let (definition, secondary_definition) = get_definition(token.get_token_type());
@@ -770,7 +771,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
             }
             SecondaryDefinition::Value => append_token_details(
                 parse_value_like(
-                    id,
+                    current_id,
                     definition,
                     &mut check_for_list,
                     &mut next_last_left,
@@ -802,7 +803,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 };
 
                 parse_value_like(
-                    id,
+                    current_id,
                     definition,
                     &mut check_for_list,
                     &mut next_last_left,
@@ -814,9 +815,9 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 )?
             }
             SecondaryDefinition::BinaryLeftToRight | SecondaryDefinition::OptionalBinaryLeftToRight | SecondaryDefinition::BinaryRightToLeft => {
-                next_parent = Some(id);
+                next_parent = Some(current_id);
                 parse_token(
-                    id,
+                    current_id,
                     definition,
                     last_left,
                     assumed_right,
@@ -828,20 +829,20 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
             }
             SecondaryDefinition::UnaryPrefix => {
                 let mut parent = next_parent;
-                let mut our_id = id;
+                let mut our_id = current_id;
                 let mut right = assumed_right;
 
                 if check_for_list {
                     trace!("List flag is set, creating list node before current node.");
-                    our_id = id + 1;
+                    our_id = current_id + 1;
                     // make our parent, the new list node
-                    parent = Some(id);
+                    parent = Some(current_id);
                     // update right to be 1 after our new id
                     right = Some(our_id + 1);
 
                     // use current id for list token
                     let list_info = parse_token(
-                        id,
+                        current_id,
                         Definition::List,
                         last_left,
                         Some(our_id),
@@ -868,9 +869,9 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 (definition, parent, None, right)
             }
             SecondaryDefinition::UnarySuffix => {
-                next_parent = Some(id);
+                next_parent = Some(current_id);
                 parse_token(
-                    id,
+                    current_id,
                     definition,
                     last_left,
                     None, // preventing sharing with BinaryLeftToRight
@@ -884,7 +885,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 let mut parent = next_parent;
                 let mut right = assumed_right;
 
-                let mut our_id = id;
+                let mut our_id = current_id;
 
                 current_group = Some(group_stack.len());
 
@@ -899,7 +900,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 
                     // use current id for list token
                     let list_info = parse_token(
-                        id,
+                        current_id,
                         Definition::List,
                         last_left,
                         Some(our_id),
@@ -918,7 +919,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                     ));
 
                     // update parent to point to list node just created
-                    parent = Some(id);
+                    parent = Some(current_id);
 
                     // update right since we just added to node list
                     right = Some(our_id + 1);
@@ -933,14 +934,14 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                 (definition, parent, None, right)
             }
             SecondaryDefinition::StartSideEffect => {
-                next_parent = Some(id);
+                next_parent = Some(current_id);
 
                 // gets set to false in parse token
                 // but group stack should be pushed to after, store data now
-                let group_info = (id, check_for_list);
+                let group_info = (current_id, check_for_list);
 
                 let info = parse_token(
-                    id,
+                    current_id,
                     definition,
                     last_left,
                     assumed_right,
@@ -1013,7 +1014,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
 
                             // if its a subexpression with no right
                             // it was at the end of the expression and should be dropped
-                            if left_node.definition == Definition::Subexpression && left_node.get_right() == Some(id) {
+                            if left_node.definition == Definition::Subexpression && left_node.get_right() == Some(current_id) {
                                 // set the subexpression's left's parent to its parent
                                 let new_parent = left_node.get_parent();
                                 let l = left_node.get_left();
@@ -1099,9 +1100,9 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
                         next_last_left = last_left;
                         (Definition::Drop, None, None, None)
                     } else {
-                        next_parent = Some(id);
+                        next_parent = Some(current_id);
                         parse_token(
-                            id,
+                            current_id,
                             Definition::Subexpression,
                             last_left,
                             assumed_right,
@@ -1134,7 +1135,7 @@ pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> 
             }
             None => match nodes.len() == 0 {
                 true => None,
-                false => Some(id),
+                false => Some(current_id),
             },
         };
 
@@ -3406,6 +3407,48 @@ mod lists {
     use super::tests::*;
     use crate::lexing::lexer::*;
     use crate::*;
+
+    #[test]
+    fn leading_space_with_hanging_comma() {
+        let tokens = vec![
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::CommaList, None, Some(0), None),
+            ],
+        );
+    }
+
+    #[test]
+    fn item_in_group() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            2,
+            &[
+                (0, Definition::Group, Some(2), None, Some(1)),
+                (1, Definition::Number, Some(0), None, None),
+                (2, Definition::CommaList, None, Some(0), None),
+            ],
+        );
+    }
 
     #[test]
     fn two_item_comma_list() {
