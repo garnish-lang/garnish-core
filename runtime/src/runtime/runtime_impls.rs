@@ -25,6 +25,7 @@ use crate::runtime::GarnishRuntime;
 use garnish_traits::Instruction;
 use log::trace;
 
+#[derive(Debug, Clone)]
 pub struct SimpleGarnishRuntime<Data: GarnishLangRuntimeData> {
     data: Data,
 }

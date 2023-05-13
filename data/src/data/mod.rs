@@ -9,7 +9,7 @@ use garnish_traits::ExpressionDataType;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SimpleDataList<T = NoCustom>
 where
     T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,

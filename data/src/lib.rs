@@ -26,7 +26,7 @@ pub fn symbol_value(value: &str) -> u64 {
 #[derive(Copy, Clone, PartialOrd, PartialEq, Eq, Debug, Hash)]
 pub struct NoCustom {}
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SimpleRuntimeData<T = NoCustom>
 where
     T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
