@@ -170,7 +170,7 @@ where
     }
 
     fn add_concatenation(&mut self, left: Self::Size, right: Self::Size) -> Result<Self::Size, Self::Error> {
-        self.data.push(SimpleData::Concatentaion(left, right));
+        self.data.push(SimpleData::Concatenation(left, right));
         Ok(self.data.len() - 1)
     }
 

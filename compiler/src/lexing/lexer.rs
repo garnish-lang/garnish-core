@@ -728,6 +728,9 @@ impl<'a> Lexer<'a> {
             // determine if the next token can be a float
             // cannot immediately follow identifiers, a period, other floats
             self.can_float = ![
+                // $.1
+                // value token is treated same as identifiers for most purposes
+                Some(TokenType::Value),
                 // value.1
                 // the 1 will be an integer for access operation
                 Some(TokenType::Identifier),
@@ -1276,6 +1279,31 @@ mod tests {
                 text: ".".to_string(),
                 token_type: TokenType::Period,
                 column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn value_period_number() {
+        let result = lex(&"$.0".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "$".to_string(),
+                token_type: TokenType::Value,
+                column: 0,
+                row: 0
+            },LexerToken {
+                text: ".".to_string(),
+                token_type: TokenType::Period,
+                column: 1,
+                row: 0
+            },LexerToken {
+                text: "0".to_string(),
+                token_type: TokenType::Number,
+                column: 2,
                 row: 0
             }]
         )

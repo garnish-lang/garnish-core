@@ -1,5 +1,6 @@
 mod number;
 mod parsing;
+mod display;
 
 pub use number::*;
 pub use parsing::*;
@@ -82,7 +83,7 @@ where
     Range(usize, usize),
     Slice(usize, usize),
     List(Vec<usize>, Vec<usize>),
-    Concatentaion(usize, usize),
+    Concatenation(usize, usize),
     Custom(T),
 }
 
@@ -105,7 +106,7 @@ where
             SimpleData::CharList(_) => ExpressionDataType::CharList,
             SimpleData::ByteList(_) => ExpressionDataType::ByteList,
             SimpleData::Pair(_, _) => ExpressionDataType::Pair,
-            SimpleData::Concatentaion(_, _) => ExpressionDataType::Concatenation,
+            SimpleData::Concatenation(_, _) => ExpressionDataType::Concatenation,
             SimpleData::Range(_, _) => ExpressionDataType::Range,
             SimpleData::Slice(_, _) => ExpressionDataType::Slice,
             SimpleData::List(_, _) => ExpressionDataType::List,
@@ -213,7 +214,7 @@ where
 
     pub fn as_concatenation(&self) -> DataCastResult<(usize, usize)> {
         match self {
-            SimpleData::Concatentaion(l, r) => Ok((*l, *r)),
+            SimpleData::Concatenation(l, r) => Ok((*l, *r)),
             _ => Err(DataError::from(format!("{:?} is not a Concatenation", self))),
         }
     }
@@ -259,7 +260,7 @@ mod tests {
         assert_eq!(SimpleDataNC::CharList(String::new()).get_data_type(), ExpressionDataType::CharList);
         assert_eq!(SimpleDataNC::ByteList(vec![]).get_data_type(), ExpressionDataType::ByteList);
         assert_eq!(SimpleDataNC::Pair(0, 0).get_data_type(), ExpressionDataType::Pair);
-        assert_eq!(SimpleDataNC::Concatentaion(0, 0).get_data_type(), ExpressionDataType::Concatenation);
+        assert_eq!(SimpleDataNC::Concatenation(0, 0).get_data_type(), ExpressionDataType::Concatenation);
         assert_eq!(SimpleDataNC::Range(0, 0).get_data_type(), ExpressionDataType::Range);
         assert_eq!(SimpleDataNC::Slice(0, 0).get_data_type(), ExpressionDataType::Slice);
         assert_eq!(SimpleDataNC::List(vec![], vec![]).get_data_type(), ExpressionDataType::List);
@@ -411,7 +412,7 @@ mod tests {
 
     #[test]
     fn as_concatenation() {
-        assert_eq!(SimpleDataNC::Concatentaion(10, 20).as_concatenation().unwrap(), (10, 20));
+        assert_eq!(SimpleDataNC::Concatenation(10, 20).as_concatenation().unwrap(), (10, 20));
     }
 
     #[test]

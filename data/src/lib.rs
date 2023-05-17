@@ -1,6 +1,6 @@
 use std::{collections::HashMap, hash::Hasher};
 use std::collections::hash_map::DefaultHasher;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 pub use error::DataError;
@@ -25,6 +25,12 @@ pub fn symbol_value(value: &str) -> u64 {
 
 #[derive(Copy, Clone, PartialOrd, PartialEq, Eq, Debug, Hash)]
 pub struct NoCustom {}
+
+impl Display for NoCustom {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str("NoCustom")
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct SimpleRuntimeData<T = NoCustom>
