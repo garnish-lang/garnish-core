@@ -15,15 +15,15 @@ where
             SimpleData::Unit => "()".into(),
             SimpleData::True => "True".into(),
             SimpleData::False => "False".into(),
-            SimpleData::Type(t) => format!("{:?}", t),
+            SimpleData::Type(t) => format!("Type({:?})", t),
             SimpleData::Number(n) => format!("{}", n),
-            SimpleData::Char(c) => c.to_string(),
+            SimpleData::Char(c) => format!("\"{}\"", c),
             SimpleData::Byte(b) => b.to_string(),
             SimpleData::Symbol(s) => format!("Symbol({})", s),
             SimpleData::Expression(e) => format!("Expression({})", e),
             SimpleData::External(e) => format!("External({})", e),
-            SimpleData::CharList(s) => s.clone(),
-            SimpleData::ByteList(l) => format!("{}", l.iter().map(|b| b.to_string()).collect::<Vec<String>>().join(" ")),
+            SimpleData::CharList(s) => format!("\"{}\"", s),
+            SimpleData::ByteList(l) => format!("'{}'", l.iter().map(|b| b.to_string()).collect::<Vec<String>>().join(" ")),
             SimpleData::Pair(l, r) => format!("Pair({}, {})", l, r),
             SimpleData::Range(s, e) => format!("Range({}, {})", s, e),
             SimpleData::Slice(l, r) => format!("Slice({}, {})", l, r),
@@ -42,31 +42,183 @@ impl<T> SimpleDataList<T>
 where
     T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
-    pub fn display_for_item(&self, index: usize) -> Option<String>
+    pub fn display_for_item(&self, index: usize) -> String
     where
         T: Display,
     {
         self.display_for_item_internal(index, 0)
     }
 
-    fn display_for_item_internal(&self, index: usize, level: usize) -> Option<String>
+    fn display_for_item_internal(&self, index: usize, level: usize) -> String
     where
         T: Display,
     {
         match self.get(index) {
-            None => None,
-            Some(item) => Some(match item {
+            None => String::from("<NoData>"),
+            Some(item) => match item {
+                SimpleData::Symbol(s) => match self.symbol_to_name.get(s) {
+                    None => item.display_simple(),
+                    Some(s) => format!(";{}", s),
+                },
+                SimpleData::Expression(i) => match self.expression_to_symbol.get(i).and_then(|s| self.symbol_to_name.get(s)) {
+                    None => item.display_simple(),
+                    Some(s) => format!("Expression({})", s),
+                },
+                SimpleData::External(i) => match self.external_to_symbol.get(i).and_then(|s| self.symbol_to_name.get(s)) {
+                    None => item.display_simple(),
+                    Some(s) => format!("External({})", s),
+                },
                 SimpleData::ByteList(bytes) => match level > 0 {
                     true => format!("({})", bytes.iter().map(|b| b.to_string()).collect::<Vec<String>>().join(" ")),
                     false => format!("{}", bytes.iter().map(|b| b.to_string()).collect::<Vec<String>>().join(" ")),
                 },
-                SimpleData::List(items, _) => items
-                    .iter()
-                    .map(|item| self.display_for_item_internal(*item, level + 1).or(Some("<NoData>".to_string())).unwrap())
-                    .collect::<Vec<String>>()
-                    .join(", "),
+                SimpleData::Pair(left, right) => {
+                    format!(
+                        "{} = {}",
+                        self.display_for_item_internal(*left, level + 1),
+                        self.display_for_item_internal(*right, level + 1)
+                    )
+                }
+                SimpleData::Range(start, end) => format!(
+                    "{}..{}",
+                    self.display_for_item_internal(*start, level + 1),
+                    self.display_for_item_internal(*end, level + 1)
+                ),
+                SimpleData::Concatenation(left, right) => {
+                    let mut stack = vec![right, left];
+                    let mut parts = vec![];
+
+                    while let Some(item_index) = stack.pop() {
+                        match self.get(*item_index) {
+                            None => parts.push("<NoData>".to_string()),
+                            Some(item) => match item {
+                                SimpleData::Concatenation(left, right) => {
+                                    stack.push(right);
+                                    stack.push(left);
+                                }
+                                // concatenations of lists should appear to be a single list
+                                // so we keep level the same for children
+                                _ => parts.push(self.display_for_item_internal(*item_index, level)),
+                            },
+                        }
+                    }
+
+                    let base = parts.join(", ");
+
+                    match level > 0 {
+                        true => format!("({})", base),
+                        false => base,
+                    }
+                }
+                SimpleData::List(items, _) => {
+                    let base = items
+                        .iter()
+                        .map(|item| self.display_for_item_internal(*item, level + 1))
+                        .collect::<Vec<String>>()
+                        .join(", ");
+
+                    match level > 0 {
+                        true => format!("({})", base),
+                        false => base,
+                    }
+                }
+                SimpleData::Slice(list, range) => {
+                    let (start, end) = match self.get(*range) {
+                        None => return format!("Slice({}, <NoData>)", list),
+                        Some(item) => match item {
+                            SimpleData::Range(start, end) => match (self.get(*start), self.get(*end)) {
+                                (Some(SimpleData::Number(s)), Some(SimpleData::Number(e))) => {
+                                    (s.to_integer().as_integer().unwrap(), e.to_integer().as_integer().unwrap())
+                                }
+                                (Some(SimpleData::Number(_s)), Some(_e)) => {
+                                    return format!("Slice({}, {}..{}", list, start, self.display_for_item_internal(*end, level + 1))
+                                }
+                                (Some(_s), Some(SimpleData::Number(_e))) => {
+                                    return format!("Slice({}, {}..{}", list, self.display_for_item_internal(*start, level + 1), end)
+                                }
+                                (Some(_s), Some(_e)) => {
+                                    return format!(
+                                        "Slice({}, ({})..({})",
+                                        list,
+                                        self.display_for_item_internal(*start, level + 1),
+                                        self.display_for_item_internal(*end, level + 1)
+                                    )
+                                }
+                                (Some(_s), None) => {
+                                    return format!("Slice({}, ({})..<NoData>", list, self.display_for_item_internal(*start, level + 1))
+                                }
+                                (None, Some(_e)) => {
+                                    return format!("Slice({}, <NoData>..({})", list, self.display_for_item_internal(*end, level + 1))
+                                }
+                                (None, None) => return format!("Slice({}, <NoData>..<NoData>", list),
+                            },
+                            _ => return format!("Slice({}, <NotARange>)", list),
+                        },
+                    };
+
+                    // no support for negative numbers or reverse ranges yet
+                    if start < 0 || end < 0 || start > end {
+                        return String::from(format!("Slice({}, {}..{})", list, start, end));
+                    }
+
+                    let (start, end) = (start as usize, end as usize);
+                    let count = end - start + 1;
+
+                    match self.get(*list) {
+                        None => format!("Slice(<NoData>, {}..{})", start, end),
+                        Some(item) => match item {
+                            SimpleData::List(items, _) => {
+                                let base = items
+                                    .iter()
+                                    .skip(start)
+                                    .take(count)
+                                    .map(|item| self.display_for_item_internal(*item, level + 1))
+                                    .collect::<Vec<String>>()
+                                    .join(", ");
+
+                                match level > 0 {
+                                    true => format!("({})", base),
+                                    false => base,
+                                }
+                            }
+                            SimpleData::Concatenation(left, right) => {
+                                let mut stack = vec![right, left];
+                                let mut parts = vec![];
+
+                                while let Some(item_index) = stack.pop() {
+                                    match self.get(*item_index) {
+                                        None => parts.push("<NoData>".to_string()),
+                                        Some(item) => match item {
+                                            SimpleData::Concatenation(left, right) => {
+                                                stack.push(right);
+                                                stack.push(left);
+                                            }
+                                            // flatten lists that are direct children of concatenation so it can be sliced
+                                            SimpleData::List(items, _) => {
+                                                for i in items {
+                                                    parts.push(self.display_for_item_internal(*i, level + 1));
+                                                }
+                                            }
+                                            // nested items should appear as though they are in list
+                                            // so we keep level the same for children
+                                            _ => parts.push(self.display_for_item_internal(*item_index, level)),
+                                        },
+                                    }
+                                }
+
+                                let base = parts.into_iter().skip(start).take(count).collect::<Vec<String>>().join(", ");
+
+                                match level > 0 {
+                                    true => format!("({})", base),
+                                    false => base,
+                                }
+                            }
+                            _ => format!("Slice({}, {}..{})", self.display_for_item_internal(*list, level + 1), start, end),
+                        },
+                    }
+                }
                 _ => item.display_simple(),
-            }),
+            },
         }
     }
 }
@@ -114,7 +266,7 @@ mod simple {
     #[test]
     fn simple_type() {
         let data: SimpleData<NoCustom> = SimpleData::Type(ExpressionDataType::Byte);
-        assert_eq!(data.display_simple(), "Byte".to_string());
+        assert_eq!(data.display_simple(), "Type(Byte)".to_string());
     }
 
     #[test]
@@ -126,7 +278,7 @@ mod simple {
     #[test]
     fn simple_char() {
         let data: SimpleData<NoCustom> = SimpleData::Char('c');
-        assert_eq!(data.display_simple(), "c".to_string());
+        assert_eq!(data.display_simple(), "\"c\"".to_string());
     }
 
     #[test]
@@ -150,13 +302,13 @@ mod simple {
     #[test]
     fn simple_character_list() {
         let data: SimpleData<NoCustom> = SimpleData::CharList("test".to_string());
-        assert_eq!(data.display_simple(), "test".to_string());
+        assert_eq!(data.display_simple(), "\"test\"".to_string());
     }
 
     #[test]
     fn simple_byte_list() {
         let data: SimpleData<NoCustom> = SimpleData::ByteList(vec![10, 20]);
-        assert_eq!(data.display_simple(), "10 20".to_string());
+        assert_eq!(data.display_simple(), "'10 20'".to_string());
     }
 
     #[test]
@@ -207,7 +359,7 @@ mod simple_list {
     fn non_existent_item_is_none() {
         let list: SimpleDataList<StructWith> = SimpleDataList::new();
 
-        assert!(list.display_for_item(10).is_none())
+        assert_eq!(list.display_for_item(10), "<NoData>".to_string())
     }
 
     #[test]
@@ -230,8 +382,192 @@ mod simple_list {
         list.push(SimpleData::List(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15], vec![]));
 
         assert_eq!(
-            list.display_for_item(13).unwrap(),
-            "(), True, False, Byte, 100, c, 10, Symbol(100), Expression(100), External(100), test, (10 20), StructWith, <NoData>"
+            list.display_for_item(13),
+            "(), True, False, Type(Byte), 100, \"c\", 10, Symbol(100), Expression(100), External(100), \"test\", (10 20), StructWith, <NoData>"
         );
+    }
+
+    #[test]
+    fn symbol_name() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        list.insert_symbol(100, "my_symbol");
+        list.push(SimpleData::Symbol(100));
+
+        assert_eq!(list.display_for_item(0), ";my_symbol");
+    }
+
+    #[test]
+    fn symbol_no_name() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+
+        list.push(SimpleData::Symbol(100));
+
+        assert_eq!(list.display_for_item(0), "Symbol(100)");
+    }
+
+    #[test]
+    fn expression_name() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        list.insert_symbol(100, "my_expression");
+        list.insert_expression(1, 100);
+
+        list.push(SimpleData::Expression(1));
+
+        assert_eq!(list.display_for_item(0), "Expression(my_expression)");
+    }
+
+    #[test]
+    fn expression_no_name() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        list.insert_symbol(100, "my_expression");
+
+        list.push(SimpleData::Expression(1));
+
+        assert_eq!(list.display_for_item(0), "Expression(1)");
+    }
+
+    #[test]
+    fn external_name() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        list.insert_symbol(100, "my_external");
+        list.insert_external(1, 100);
+
+        list.push(SimpleData::External(1));
+
+        assert_eq!(list.display_for_item(0), "External(my_external)");
+    }
+
+    #[test]
+    fn external_no_name() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        list.insert_symbol(100, "my_external");
+
+        list.push(SimpleData::External(1));
+
+        assert_eq!(list.display_for_item(0), "External(1)");
+    }
+
+    #[test]
+    fn pair() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        list.push(SimpleData::Number(SimpleNumber::Integer(100)));
+        list.push(SimpleData::CharList("test".to_string()));
+
+        list.push(SimpleData::Pair(0, 1));
+
+        assert_eq!(list.display_for_item(2), "100 = \"test\"");
+    }
+
+    #[test]
+    fn pair_nested() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        list.push(SimpleData::Number(SimpleNumber::Integer(100)));
+        list.push(SimpleData::CharList("test".to_string()));
+        list.push(SimpleData::Pair(0, 1));
+
+        list.push(SimpleData::Number(SimpleNumber::Integer(200)));
+        list.push(SimpleData::Pair(3, 2));
+
+        assert_eq!(list.display_for_item(4), "200 = 100 = \"test\"");
+    }
+
+    #[test]
+    fn range() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        list.push(SimpleData::Number(SimpleNumber::Integer(100)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(200)));
+
+        list.push(SimpleData::Range(0, 1));
+
+        assert_eq!(list.display_for_item(2), "100..200");
+    }
+
+    #[test]
+    fn concatenation() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        list.push(SimpleData::Number(SimpleNumber::Integer(100)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(200)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(300)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(400)));
+
+        list.push(SimpleData::Concatenation(0, 1));
+        list.push(SimpleData::Concatenation(4, 2));
+        list.push(SimpleData::Concatenation(3, 5));
+
+        assert_eq!(list.display_for_item(6), "400, 100, 200, 300");
+    }
+
+    #[test]
+    fn concatenation_of_list_with_concatenation_and_list() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        list.push(SimpleData::Number(SimpleNumber::Integer(100))); // 0
+        list.push(SimpleData::Number(SimpleNumber::Integer(200))); // 1
+
+        list.push(SimpleData::Concatenation(0, 1)); // 2
+        list.push(SimpleData::Number(SimpleNumber::Integer(300))); // 3
+
+        list.push(SimpleData::Number(SimpleNumber::Integer(400))); // 4
+
+        list.push(SimpleData::Number(SimpleNumber::Integer(500))); // 5
+        list.push(SimpleData::Number(SimpleNumber::Integer(600))); // 6
+        list.push(SimpleData::Number(SimpleNumber::Integer(700))); // 7
+
+        list.push(SimpleData::List(vec![5, 6, 7], vec![])); // 8
+
+        list.push(SimpleData::List(vec![2, 3], vec![])); // 9
+        list.push(SimpleData::List(vec![4, 8], vec![])); // 10
+
+        list.push(SimpleData::Concatenation(9, 10));
+
+        assert_eq!(list.display_for_item(11), "(100, 200), 300, 400, (500, 600, 700)");
+    }
+
+    #[test]
+    fn slice_of_list() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        list.push(SimpleData::Number(SimpleNumber::Integer(100)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(200)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(300)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(400)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(500)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(600)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(700)));
+
+        list.push(SimpleData::Number(SimpleNumber::Integer(2)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(5)));
+
+        list.push(SimpleData::List(vec![0, 1, 2, 3, 4, 5, 6], vec![]));
+
+        list.push(SimpleData::Range(7, 8));
+
+        list.push(SimpleData::Slice(9, 10));
+
+        assert_eq!(list.display_for_item(11), "300, 400, 500, 600");
+    }
+
+    #[test]
+    fn slice_of_concatenation() {
+        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        list.push(SimpleData::Number(SimpleNumber::Integer(100)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(200)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(300)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(400)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(500)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(600)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(700)));
+
+        list.push(SimpleData::Number(SimpleNumber::Integer(2)));
+        list.push(SimpleData::Number(SimpleNumber::Integer(5)));
+
+        list.push(SimpleData::List(vec![0, 1, 2, 3], vec![]));
+        list.push(SimpleData::List(vec![4, 5, 6], vec![]));
+
+        list.push(SimpleData::Concatenation(9, 10));
+
+        list.push(SimpleData::Range(7, 8));
+
+        list.push(SimpleData::Slice(11, 12));
+
+        assert_eq!(list.display_for_item(13), "300, 400, 500, 600");
     }
 }

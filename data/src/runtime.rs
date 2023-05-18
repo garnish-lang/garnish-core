@@ -606,7 +606,7 @@ where
 
     fn parse_add_symbol(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
         let sym = Self::parse_symbol(from)?;
-        self.symbols.insert(sym, from.to_string());
+        self.data.insert_symbol(sym, from.to_string());
         self.add_symbol(sym)
     }
 }

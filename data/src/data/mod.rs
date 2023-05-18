@@ -1,14 +1,16 @@
-mod number;
-mod parsing;
-mod display;
+use std::collections::HashMap;
+use std::fmt::Debug;
+use std::hash::Hash;
 
+use garnish_traits::ExpressionDataType;
 pub use number::*;
 pub use parsing::*;
 
 use crate::{DataError, NoCustom};
-use garnish_traits::ExpressionDataType;
-use std::fmt::Debug;
-use std::hash::Hash;
+
+mod display;
+mod number;
+mod parsing;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SimpleDataList<T = NoCustom>
@@ -16,6 +18,9 @@ where
     T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     list: Vec<SimpleData<T>>,
+    symbol_to_name: HashMap<u64, String>,
+    expression_to_symbol: HashMap<usize, u64>,
+    external_to_symbol: HashMap<usize, u64>,
 }
 
 impl<T> Default for SimpleDataList<T>
@@ -35,7 +40,12 @@ where
     T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     pub fn new() -> Self {
-        SimpleDataList { list: vec![] }
+        SimpleDataList {
+            list: vec![],
+            symbol_to_name: HashMap::new(),
+            expression_to_symbol: HashMap::new(),
+            external_to_symbol: HashMap::new(),
+        }
     }
 
     pub fn append(mut self, item: SimpleData<T>) -> Self {
@@ -53,6 +63,26 @@ where
 
     pub fn len(&self) -> usize {
         self.list.len()
+    }
+
+    pub fn symbol_to_name(&self) -> &HashMap<u64, String> {
+        &self.symbol_to_name
+    }
+
+    pub fn insert_symbol<S: Into<String>>(&mut self, sym: u64, name: S) {
+        self.symbol_to_name.insert(sym, name.into());
+    }
+
+    pub fn get_symbol(&self, sym: u64) -> Option<&String> {
+        self.symbol_to_name.get(&sym)
+    }
+
+    pub fn insert_expression(&mut self, expression: usize, sym: u64) {
+        self.expression_to_symbol.insert(expression, sym);
+    }
+
+    pub fn insert_external(&mut self, external: usize, sym: u64) {
+        self.external_to_symbol.insert(external, sym);
     }
 }
 

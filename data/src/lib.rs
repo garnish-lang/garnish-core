@@ -48,7 +48,6 @@ where
     current_list: Option<(Vec<usize>, Vec<usize>)>,
     current_char_list: Option<String>,
     current_byte_list: Option<Vec<u8>>,
-    symbols: HashMap<u64, String>,
     cache: HashMap<u64, usize>,
     max_char_list_depth: usize,
 }
@@ -71,7 +70,6 @@ impl SimpleRuntimeData<NoCustom> {
             current_list: None,
             current_char_list: None,
             current_byte_list: None,
-            symbols: HashMap::new(),
             cache: HashMap::new(),
             max_char_list_depth: 1000,
         }
@@ -95,7 +93,6 @@ where
             current_list: None,
             current_char_list: None,
             current_byte_list: None,
-            symbols: HashMap::new(),
             cache: HashMap::new(),
             max_char_list_depth: 1000,
         }
@@ -118,7 +115,7 @@ where
     }
 
     pub fn get_symbols(&self) -> &HashMap<u64, String> {
-        &self.symbols
+        self.data.symbol_to_name()
     }
 
     pub fn get_registers(&self) -> &Vec<usize> {
@@ -139,6 +136,10 @@ where
 
     pub fn get_data(&self) -> &SimpleDataList<T> {
         &self.data
+    }
+
+    pub fn get_data_mut(&mut self) -> &mut SimpleDataList<T> {
+        &mut self.data
     }
 
     pub fn get_raw_data(&self, index: usize) -> Option<SimpleData<T>> {
@@ -165,6 +166,10 @@ where
     pub fn advance_instruction_cursor(&mut self) -> Result<(), String> {
         self.instruction_cursor += 1;
         Ok(())
+    }
+
+    pub fn display_current_value(&self) -> String where T:Display {
+        self.values.last().and_then(|l| Some(self.data.display_for_item(*l))).unwrap_or("<NoData>".to_string())
     }
 
     fn cache_add(&mut self, value: SimpleData<T>) -> Result<usize, DataError> {
@@ -250,7 +255,7 @@ where
             }
             ExpressionDataType::Symbol => {
                 let sym = self.get_symbol(from)?;
-                let s = match self.symbols.get(&sym) {
+                let s = match self.data.get_symbol(sym) {
                     None => sym.to_string(),
                     Some(s) => s.clone(),
                 };
