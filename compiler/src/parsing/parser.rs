@@ -6,7 +6,6 @@ use log::trace;
 use std::{collections::HashMap, hash::Hash, vec};
 
 use crate::lexing::lexer::*;
-use crate::SecondaryDefinition::BinaryLeftToRight;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
 pub enum Definition {
@@ -197,7 +196,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
 
         TokenType::PrefixIdentifier => (Definition::PrefixApply, SecondaryDefinition::UnaryPrefix),
         TokenType::SuffixIdentifier => (Definition::SuffixApply, SecondaryDefinition::UnarySuffix),
-        TokenType::InfixIdentifier => (Definition::InfixApply, BinaryLeftToRight),
+        TokenType::InfixIdentifier => (Definition::InfixApply, SecondaryDefinition::OptionalBinaryLeftToRight),
 
         TokenType::Reapply => (Definition::Reapply, SecondaryDefinition::BinaryLeftToRight),
 
@@ -2844,6 +2843,44 @@ mod tests {
                 (0, Definition::Number, Some(1), None, None),
                 (1, Definition::InfixApply, None, Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn infix_apply_no_left() {
+        let tokens = vec![
+            LexerToken::new("`expression`".to_string(), TokenType::InfixIdentifier, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::InfixApply, None, None, Some(1)),
+                (1, Definition::Number, Some(0), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn infix_apply_no_right() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("`expression`".to_string(), TokenType::InfixIdentifier, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::InfixApply, None, Some(0), None),
             ],
         );
     }

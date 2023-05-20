@@ -1,8 +1,9 @@
-use crate::error::{implementation_error, implementation_error_with_token, CompilerError};
-use garnish_lang_runtime::*;
-use garnish_traits::Instruction;
 use log::trace;
 
+use garnish_lang_runtime::*;
+use garnish_traits::Instruction;
+
+use crate::error::{implementation_error, implementation_error_with_token, CompilerError};
 use crate::parsing::parser::*;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone)]
@@ -75,8 +76,8 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
                 }
             }
         }
-        Definition::AccessLeftInternal | Definition::AbsoluteValue | Definition::BitwiseNot | Definition::Not | Definition::TypeOf => ((true, node.get_right()), (false, None)),
-        Definition::EmptyApply | Definition::AccessLengthInternal | Definition::AccessRightInternal => ((true, node.get_left()), (false, None)),
+        Definition::AccessLeftInternal | Definition::AbsoluteValue | Definition::BitwiseNot | Definition::Not | Definition::TypeOf | Definition::PrefixApply => ((true, node.get_right()), (false, None)),
+        Definition::EmptyApply | Definition::AccessLengthInternal | Definition::AccessRightInternal | Definition::SuffixApply => ((true, node.get_left()), (false, None)),
         Definition::Addition
         | Definition::Subtraction
         | Definition::MultiplicationSign
@@ -114,7 +115,7 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         }
         Definition::ApplyTo => ((true, node.get_right()), (true, node.get_left())),
         Definition::List => ((true, node.get_left()), (true, node.get_right())),
-        Definition::CommaList => ((false, node.get_left()), (false, node.get_right())),
+        Definition::CommaList | Definition::InfixApply => ((false, node.get_left()), (false, node.get_right())),
         Definition::SideEffect => ((true, node.get_right()), (false, None)),
         Definition::Group => ((true, node.get_right()), (false, None)),
         Definition::NestedExpression => ((false, None), (false, None)),
@@ -122,7 +123,6 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         Definition::JumpIfFalse => ((true, node.get_left()), (false, None)),
         Definition::ElseJump => ((true, node.get_left()), (true, node.get_right())),
         Definition::Drop => ((false, None), (false, None)),
-        Definition::PrefixApply | Definition::SuffixApply | Definition::InfixApply => unimplemented!(),
     }
 }
 
@@ -136,7 +136,6 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
     nearest_expression_point: Data::Size,
 ) -> Result<bool, CompilerError<Data::Error>> {
     match node.get_definition() {
-        Definition::PrefixApply | Definition:: SuffixApply | Definition::InfixApply => unimplemented!(),
         Definition::Unit => {
             // all unit literals will use unit used in the zero element slot of data
             let addr = data.add_unit()?;
@@ -327,6 +326,21 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
 
             data.add_expression(current_jump_index)?;
         }
+        Definition::PrefixApply => {
+            data.push_instruction(Instruction::Apply, None)?;
+        }
+        Definition::SuffixApply => {
+            data.push_instruction(Instruction::Apply, None)?;
+        }
+        Definition::InfixApply => {
+            match list_count {
+                None => implementation_error_with_token(format!("No list count passed to infix apply node resolve."), &node.get_lex_token())?,
+                Some(count) => {
+                    data.push_instruction(Instruction::MakeList, Some(*count))?;
+                }
+            }
+            data.push_instruction(Instruction::Apply, None)?;
+        }
         Definition::Apply => {
             data.push_instruction(Instruction::Apply, None)?;
         }
@@ -423,10 +437,12 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
 
                             let we_are_list = node.get_definition() == Definition::List;
                             let we_are_comma_list = node.get_definition() == Definition::CommaList;
-                            let we_are_list_type = we_are_list || we_are_comma_list;
+                            let we_are_infix_list = node.get_definition() == Definition::InfixApply; // makes list from children to pass into apply
+                            let we_are_list_type = we_are_list || we_are_comma_list || we_are_infix_list;
 
                             let parent_is_list_type = resolve_node_info.parent_definition == Definition::List
-                                || resolve_node_info.parent_definition == Definition::CommaList;
+                                || resolve_node_info.parent_definition == Definition::CommaList
+                                || resolve_node_info.parent_definition == Definition::InfixApply;
 
                             let we_are_sub_list =
                                 we_are_list_type && parent_is_list_type && node.get_definition() == resolve_node_info.parent_definition;
@@ -459,6 +475,13 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
 
                                     // use same node for now
                                     metadata.push(InstructionMetadata::new(resolve_node_info.node_index));
+                                }
+
+                                // all *fix apply operations resolve their identifier
+                                // before resolving children and self last
+                                if [Definition::PrefixApply, Definition::SuffixApply, Definition::InfixApply].contains(&node.get_definition()) {
+                                    let addr = data.parse_add_symbol(&node.get_lex_token().get_text().trim_matches('`'))?;
+                                    data.push_instruction(Instruction::Resolve, Some(addr))?;
                                 }
 
                                 resolve_node_info.initialized = true;
@@ -668,12 +691,13 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
 
 #[cfg(test)]
 mod test_utils {
-    use crate::error::CompilerError;
-    use crate::*;
     use garnish_data::data::SimpleDataList;
     use garnish_data::InstructionData;
     use garnish_data::*;
     use garnish_traits::Instruction;
+
+    use crate::error::CompilerError;
+    use crate::*;
 
     pub fn assert_instruction_data(
         root: usize,
@@ -719,8 +743,9 @@ mod test_utils {
 
 #[cfg(test)]
 mod general {
-    use super::test_utils::*;
     use crate::*;
+
+    use super::test_utils::*;
 
     #[test]
     fn drop_definition_is_err() {
@@ -741,10 +766,12 @@ mod general {
 mod values {
     use std::vec;
 
-    use super::test_utils::*;
-    use crate::*;
     use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_traits::Instruction;
+
+    use crate::*;
+
+    use super::test_utils::*;
 
     #[test]
     fn put_integer() {
@@ -849,8 +876,9 @@ mod values {
 
 #[cfg(test)]
 mod metadata {
-    use super::test_utils::*;
     use crate::*;
+
+    use super::test_utils::*;
 
     #[test]
     fn created() {
@@ -928,11 +956,12 @@ mod metadata {
 mod operations {
     use std::vec;
 
-    use super::test_utils::*;
-    use crate::*;
     use garnish_data::data::{SimpleData, SimpleDataList};
-    use garnish_data::*;
     use garnish_traits::Instruction;
+
+    use crate::*;
+
+    use super::test_utils::*;
 
     #[test]
     fn empty_apply_no_left_is_error() {
@@ -1897,6 +1926,101 @@ mod operations {
     }
 
     #[test]
+    fn prefix() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::PrefixApply, None, None, Some(1), "action`", TokenType::PrefixIdentifier),
+                (Definition::Number, Some(0), None, None, "5", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Apply, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append_symbol("action").append(SimpleData::Number(5.into())),
+        );
+    }
+
+    #[test]
+    fn suffix() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::SuffixApply, None, Some(0), None, "action`", TokenType::SuffixIdentifier),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Apply, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append_symbol("action").append(SimpleData::Number(5.into())),
+        );
+    }
+
+    #[test]
+    fn infix() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::InfixApply, None, Some(0), Some(2), "`action`", TokenType::InfixIdentifier),
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Put, Some(4)),
+                (Instruction::MakeList, Some(2)),
+                (Instruction::Apply, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append_symbol("action").append(SimpleData::Number(5.into())),
+        );
+    }
+
+    #[test]
+    fn infix_no_left() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::InfixApply, None, None, Some(1), "`action`", TokenType::InfixIdentifier),
+                (Definition::Number, Some(0), None, None, "5", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::MakeList, Some(1)),
+                (Instruction::Apply, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append_symbol("action").append(SimpleData::Number(5.into())),
+        );
+    }
+
+    #[test]
+    fn infix_no_right() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::InfixApply, None, Some(0), None, "`action`", TokenType::InfixIdentifier),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::Put, Some(4)),
+                (Instruction::MakeList, Some(1)),
+                (Instruction::Apply, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append_symbol("action").append(SimpleData::Number(5.into())),
+        );
+    }
+
+    #[test]
     fn apply() {
         assert_instruction_data(
             1,
@@ -1964,10 +2088,12 @@ mod operations {
 mod lists {
     use std::vec;
 
-    use super::test_utils::*;
-    use crate::*;
     use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_traits::Instruction;
+
+    use crate::*;
+
+    use super::test_utils::*;
 
     #[test]
     fn access() {
@@ -1984,9 +2110,7 @@ mod lists {
                 (Instruction::Access, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default()
-                .append_symbol("list")
-                .append_symbol("property"),
+            SimpleDataList::default().append_symbol("list").append_symbol("property"),
         );
     }
 
@@ -2166,11 +2290,12 @@ mod lists {
 
 #[cfg(test)]
 mod groups {
-    use super::test_utils::*;
-    use crate::*;
-
     use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_traits::Instruction;
+
+    use crate::*;
+
+    use super::test_utils::*;
 
     #[test]
     fn single_operation() {
@@ -2197,11 +2322,12 @@ mod groups {
 
 #[cfg(test)]
 mod side_effects {
-    use super::test_utils::*;
-    use crate::*;
-
     use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_traits::Instruction;
+
+    use crate::*;
+
+    use super::test_utils::*;
 
     #[test]
     fn single_operation() {
@@ -2345,11 +2471,12 @@ mod side_effects {
 
 #[cfg(test)]
 mod nested_expressions {
-    use super::test_utils::*;
-    use crate::*;
-
     use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_traits::Instruction;
+
+    use crate::*;
+
+    use super::test_utils::*;
 
     #[test]
     fn single_nested() {
@@ -2449,11 +2576,12 @@ mod nested_expressions {
 
 #[cfg(test)]
 mod conditionals {
-    use super::test_utils::*;
-    use crate::*;
-
     use garnish_data::data::{SimpleData, SimpleDataList};
     use garnish_traits::Instruction;
+
+    use crate::*;
+
+    use super::test_utils::*;
 
     #[test]
     fn apply_if_true() {
