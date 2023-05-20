@@ -73,6 +73,9 @@ pub enum TokenType {
     ExclusiveRange,
     False,
     True,
+    PrefixIdentifier,
+    SuffixIdentifier,
+    InfixIdentifier,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -321,6 +324,9 @@ impl<'a> Lexer<'a> {
         } else if is_identifier_char(c) {
             self.state = LexingState::Indentifier;
             self.current_token_type = Some(TokenType::Identifier);
+        } else if c == '`' {
+            self.state = LexingState::Indentifier;
+            self.current_token_type = Some(TokenType::SuffixIdentifier);
         } else if c == '@' {
             self.state = LexingState::Annotation;
             self.current_token_type = Some(TokenType::Annotation);
@@ -523,6 +529,18 @@ impl<'a> Lexer<'a> {
                 if is_identifier_char(c) {
                     self.current_characters.push(c);
                     false
+                } else if c == '`' {
+                    self.current_characters.push(c);
+                    self.should_create = false;
+                    self.current_token_type = Some(if self.current_token_type == Some(TokenType::SuffixIdentifier) {
+                        trace!("Switching to infix identifier");
+                        TokenType::InfixIdentifier
+                    } else {
+                        trace!("Switching to prefix identifier");
+                        TokenType::PrefixIdentifier
+                    });
+
+                    true
                 } else {
                     trace!("Ending identifier");
 
@@ -2465,6 +2483,51 @@ mod tests {
                     row: 0
                 },
             ]
+        );
+    }
+
+    #[test]
+    fn prefix_identifier() {
+        let result = lex(&"expression`".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "expression`".to_string(),
+                token_type: TokenType::PrefixIdentifier,
+                column: 0,
+                row: 0
+            },]
+        );
+    }
+
+    #[test]
+    fn suffix_identifier() {
+        let result = lex(&"`expression".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "`expression".to_string(),
+                token_type: TokenType::SuffixIdentifier,
+                column: 0,
+                row: 0
+            },]
+        );
+    }
+
+    #[test]
+    fn infix_identifier() {
+        let result = lex(&"`expression`".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "`expression`".to_string(),
+                token_type: TokenType::InfixIdentifier,
+                column: 0,
+                row: 0
+            },]
         );
     }
 

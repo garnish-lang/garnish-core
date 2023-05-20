@@ -6,6 +6,7 @@ use log::trace;
 use std::{collections::HashMap, hash::Hash, vec};
 
 use crate::lexing::lexer::*;
+use crate::SecondaryDefinition::BinaryLeftToRight;
 
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
 pub enum Definition {
@@ -71,6 +72,9 @@ pub enum Definition {
     ElseJump,
     True,
     False,
+    PrefixApply,
+    SuffixApply,
+    InfixApply,
 }
 
 impl Definition {
@@ -190,6 +194,10 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::RightInternal => (Definition::AccessRightInternal, SecondaryDefinition::UnarySuffix),
         TokenType::LengthInternal => (Definition::AccessLengthInternal, SecondaryDefinition::UnarySuffix),
         TokenType::Comma => (Definition::CommaList, SecondaryDefinition::OptionalBinaryLeftToRight),
+
+        TokenType::PrefixIdentifier => (Definition::PrefixApply, SecondaryDefinition::UnaryPrefix),
+        TokenType::SuffixIdentifier => (Definition::SuffixApply, SecondaryDefinition::UnarySuffix),
+        TokenType::InfixIdentifier => (Definition::InfixApply, BinaryLeftToRight),
 
         TokenType::Reapply => (Definition::Reapply, SecondaryDefinition::BinaryLeftToRight),
 
@@ -339,6 +347,10 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::And, 141);
     map.insert(Definition::Xor, 142);
     map.insert(Definition::Or, 143);
+
+    map.insert(Definition::PrefixApply, 160);
+    map.insert(Definition::SuffixApply, 170);
+    map.insert(Definition::InfixApply, 180);
 
     map.insert(Definition::Range, 200);
     map.insert(Definition::StartExclusiveRange, 200);
@@ -2772,6 +2784,65 @@ mod tests {
             &[
                 (0, Definition::Number, Some(1), None, None),
                 (1, Definition::ExclusiveRange, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn prefix_apply() {
+        let tokens = vec![
+            LexerToken::new("expression`".to_string(), TokenType::PrefixIdentifier, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::PrefixApply, None, None, Some(1)),
+                (1, Definition::Number, Some(0), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn suffix_apply() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("`expression".to_string(), TokenType::SuffixIdentifier, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::SuffixApply, None, Some(0), None),
+            ],
+        );
+    }
+
+    #[test]
+    fn infix_apply() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("`expression`".to_string(), TokenType::InfixIdentifier, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::InfixApply, None, Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
             ],
         );

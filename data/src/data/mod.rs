@@ -6,7 +6,7 @@ use garnish_traits::ExpressionDataType;
 pub use number::*;
 pub use parsing::*;
 
-use crate::{DataError, NoCustom};
+use crate::{DataError, NoCustom, symbol_value};
 
 mod display;
 mod number;
@@ -50,6 +50,14 @@ where
 
     pub fn append(mut self, item: SimpleData<T>) -> Self {
         self.list.push(item);
+        self
+    }
+
+    pub fn append_symbol<S: Into<String>>(mut self, s: S) -> Self {
+        let s: String = s.into();
+        let sym = symbol_value(&s);
+        self.list.push(SimpleData::Symbol(sym));
+        self.symbol_to_name.insert(sym, s);
         self
     }
 

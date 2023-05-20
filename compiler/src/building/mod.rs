@@ -122,6 +122,7 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         Definition::JumpIfFalse => ((true, node.get_left()), (false, None)),
         Definition::ElseJump => ((true, node.get_left()), (true, node.get_right())),
         Definition::Drop => ((false, None), (false, None)),
+        Definition::PrefixApply | Definition::SuffixApply | Definition::InfixApply => unimplemented!(),
     }
 }
 
@@ -135,6 +136,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
     nearest_expression_point: Data::Size,
 ) -> Result<bool, CompilerError<Data::Error>> {
     match node.get_definition() {
+        Definition::PrefixApply | Definition:: SuffixApply | Definition::InfixApply => unimplemented!(),
         Definition::Unit => {
             // all unit literals will use unit used in the zero element slot of data
             let addr = data.add_unit()?;
@@ -742,7 +744,6 @@ mod values {
     use super::test_utils::*;
     use crate::*;
     use garnish_data::data::{SimpleData, SimpleDataList};
-    use garnish_data::*;
     use garnish_traits::Instruction;
 
     #[test]
@@ -781,7 +782,7 @@ mod values {
             0,
             vec![(Definition::Identifier, None, None, None, "value", TokenType::Identifier)],
             vec![(Instruction::Resolve, Some(3)), (Instruction::EndExpression, None)],
-            SimpleDataList::default().append(SimpleData::Symbol(symbol_value("value"))),
+            SimpleDataList::default().append_symbol("value"),
         );
     }
 
@@ -801,7 +802,7 @@ mod values {
             0,
             vec![(Definition::Symbol, None, None, None, ":symbol", TokenType::Symbol)],
             vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
-            SimpleDataList::default().append(SimpleData::Symbol(symbol_value("symbol"))),
+            SimpleDataList::default().append_symbol("symbol"),
         );
     }
 
@@ -831,7 +832,7 @@ mod values {
             0,
             vec![(Definition::Symbol, None, None, None, ":", TokenType::Symbol)],
             vec![(Instruction::Put, Some(3)), (Instruction::EndExpression, None)],
-            SimpleDataList::default().append(SimpleData::Symbol(symbol_value(""))),
+            SimpleDataList::default().append_symbol(""),
         );
     }
 
@@ -974,7 +975,6 @@ mod operations {
 
     #[test]
     fn same_symbol_twice() {
-        let sym_val = symbol_value("sym");
         assert_instruction_data(
             1,
             vec![
@@ -988,13 +988,12 @@ mod operations {
                 (Instruction::MakePair, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Symbol(sym_val)),
+            SimpleDataList::default().append_symbol("sym"),
         );
     }
 
     #[test]
     fn same_identifier_twice() {
-        let sym_val = symbol_value("sym");
         assert_instruction_data(
             1,
             vec![
@@ -1008,13 +1007,12 @@ mod operations {
                 (Instruction::MakePair, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Symbol(sym_val)),
+            SimpleDataList::default().append_symbol("sym"),
         );
     }
 
     #[test]
     fn same_property_twice() {
-        let sym_val = symbol_value("sym");
         assert_instruction_data(
             3,
             vec![
@@ -1032,7 +1030,7 @@ mod operations {
                 (Instruction::Access, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Symbol(sym_val)),
+            SimpleDataList::default().append_symbol("sym"),
         );
     }
 
@@ -1080,7 +1078,7 @@ mod operations {
                 (Instruction::EmptyApply, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Symbol(symbol_value("value"))),
+            SimpleDataList::default().append_symbol("value"),
         );
     }
 
@@ -1244,7 +1242,7 @@ mod operations {
                 (Instruction::AbsoluteValue, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Symbol(symbol_value("value"))),
+            SimpleDataList::default().append_symbol("value"),
         );
     }
 
@@ -1274,7 +1272,7 @@ mod operations {
                 (Instruction::Opposite, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Symbol(symbol_value("value"))),
+            SimpleDataList::default().append_symbol("value"),
         );
     }
 
@@ -1291,7 +1289,7 @@ mod operations {
                 (Instruction::BitwiseNot, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Symbol(symbol_value("value"))),
+            SimpleDataList::default().append_symbol("value"),
         );
     }
 
@@ -1413,7 +1411,7 @@ mod operations {
                 (Instruction::TypeOf, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Symbol(symbol_value("value"))),
+            SimpleDataList::default().append_symbol("value"),
         );
     }
 
@@ -1605,7 +1603,7 @@ mod operations {
                 (Instruction::Not, None),
                 (Instruction::EndExpression, None),
             ],
-            SimpleDataList::default().append(SimpleData::Symbol(symbol_value("value"))),
+            SimpleDataList::default().append_symbol("value"),
         );
     }
 
@@ -1969,7 +1967,6 @@ mod lists {
     use super::test_utils::*;
     use crate::*;
     use garnish_data::data::{SimpleData, SimpleDataList};
-    use garnish_data::*;
     use garnish_traits::Instruction;
 
     #[test]
@@ -1988,8 +1985,8 @@ mod lists {
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default()
-                .append(SimpleData::Symbol(symbol_value("list")))
-                .append(SimpleData::Symbol(symbol_value("property"))),
+                .append_symbol("list")
+                .append_symbol("property"),
         );
     }
 
