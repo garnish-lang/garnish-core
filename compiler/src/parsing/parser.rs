@@ -333,24 +333,6 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::BitwiseXor, 112);
     map.insert(Definition::BitwiseOr, 113);
 
-    map.insert(Definition::LessThan, 130);
-    map.insert(Definition::LessThanOrEqual, 130);
-    map.insert(Definition::GreaterThan, 130);
-    map.insert(Definition::GreaterThanOrEqual, 130);
-
-    map.insert(Definition::TypeEqual, 140);
-    map.insert(Definition::Inequality, 140);
-    map.insert(Definition::Equality, 140);
-
-    map.insert(Definition::Not, 140);
-    map.insert(Definition::And, 141);
-    map.insert(Definition::Xor, 142);
-    map.insert(Definition::Or, 143);
-
-    map.insert(Definition::PrefixApply, 160);
-    map.insert(Definition::SuffixApply, 170);
-    map.insert(Definition::InfixApply, 180);
-
     map.insert(Definition::Range, 200);
     map.insert(Definition::StartExclusiveRange, 200);
     map.insert(Definition::EndExclusiveRange, 200);
@@ -359,22 +341,38 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::Pair, 210);
 
     map.insert(Definition::List, 229);
-    map.insert(Definition::CommaList, 230);
 
-    // since these two are opposite associations
-    // this would be the implicit priority if they were the same priority
-    // choosing to make it explicit
     map.insert(Definition::Concatenation, 240);
 
-    map.insert(Definition::Apply, 250);
-    map.insert(Definition::ApplyTo, 250);
+    map.insert(Definition::LessThan, 300);
+    map.insert(Definition::LessThanOrEqual, 300);
+    map.insert(Definition::GreaterThan, 300);
+    map.insert(Definition::GreaterThanOrEqual, 300);
 
-    map.insert(Definition::Reapply, 260);
+    map.insert(Definition::TypeEqual, 400);
+    map.insert(Definition::Inequality, 400);
+    map.insert(Definition::Equality, 400);
 
-    map.insert(Definition::JumpIfTrue, 270);
-    map.insert(Definition::JumpIfFalse, 270);
+    map.insert(Definition::Not, 400);
+    map.insert(Definition::And, 410);
+    map.insert(Definition::Xor, 420);
+    map.insert(Definition::Or, 430);
 
-    map.insert(Definition::ElseJump, 280);
+    map.insert(Definition::PrefixApply, 500);
+    map.insert(Definition::SuffixApply, 510);
+    map.insert(Definition::InfixApply, 520);
+
+    map.insert(Definition::Apply, 550);
+    map.insert(Definition::ApplyTo, 550);
+
+    map.insert(Definition::Reapply, 600);
+
+    map.insert(Definition::JumpIfTrue, 700);
+    map.insert(Definition::JumpIfFalse, 700);
+
+    map.insert(Definition::ElseJump, 800);
+
+    map.insert(Definition::CommaList, 900);
 
     map.insert(Definition::Subexpression, 1000);
 
