@@ -553,14 +553,31 @@ impl<'a> Lexer<'a> {
                 }
             }
             LexingState::StartCharList => {
-                if c != '"' {
-                    self.start_quote_count = self.current_characters.len();
-                    self.state = LexingState::CharList;
+                let end = if c != '"' {
+                    // Only supporting char list surrounded by 1 pair of double quotes
+                    // and surrounded by 3+ pairs of double quotes
+                    // reserved 2 double quotes for empty char lists
+                    if self.current_characters.len() == 2 {
+                        // meaning, we have 2 double quotes already
+                        self.should_create = false;
+                        true
+                    } else {
+                        self.start_quote_count = self.current_characters.len();
+                        self.state = LexingState::CharList;
+
+                        false
+                    }
+                } else {
+                    false
+                };
+
+                // so far the only token type that can have a null character reach push
+                // because it adds all chars, mostly indiscriminately
+                if c != '\0' {
+                    self.current_characters.push(c);
                 }
 
-                self.current_characters.push(c);
-
-                false
+                end
             }
             LexingState::CharList => {
                 if c == '"' {
@@ -582,14 +599,28 @@ impl<'a> Lexer<'a> {
                 }
             }
             LexingState::StartByteList => {
-                if c != '\'' {
-                    self.start_quote_count = self.current_characters.len();
-                    self.state = LexingState::ByteList;
+                let end = if c != '\'' {
+                    if self.current_characters.len() == 2 {
+                        // meaning, we have 2 double quotes already
+                        self.should_create = false;
+                        true
+                    } else {
+                        self.start_quote_count = self.current_characters.len();
+                        self.state = LexingState::ByteList;
+
+                        false
+                    }
+                } else {
+                    false
+                };
+
+                // so far the only token type that can have a null character reach push
+                // because it adds all chars, mostly indiscriminately
+                if c != '\0' {
+                    self.current_characters.push(c);
                 }
 
-                self.current_characters.push(c);
-
-                false
+                end
             }
             LexingState::ByteList => {
                 if c == '\'' {
@@ -2849,6 +2880,21 @@ mod chars_and_bytes {
     }
 
     #[test]
+    fn empty_character_list() {
+        let result = lex(&"\"\"".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "\"\"".to_string(),
+                token_type: TokenType::CharList,
+                column: 0,
+                row: 0
+            }]
+        );
+    }
+
+    #[test]
     fn character_list() {
         let result = lex(&"\"Hello World!\"".to_string()).unwrap();
 
@@ -2901,6 +2947,21 @@ mod chars_and_bytes {
                     row: 0
                 }
             ]
+        );
+    }
+
+    #[test]
+    fn empty_byte_list() {
+        let result = lex(&"''".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "''".to_string(),
+                token_type: TokenType::ByteList,
+                column: 0,
+                row: 0
+            }]
         );
     }
 
