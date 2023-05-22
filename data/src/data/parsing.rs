@@ -6,6 +6,10 @@ use std::str::FromStr;
 pub fn parse_char_list(input: &str) -> Result<String, DataError> {
     let mut new = String::new();
 
+    if input.len() == 0 {
+        return Ok(new);
+    }
+
     let mut start_quote_count = 0;
     for c in input.chars() {
         if c == '"' {
@@ -13,6 +17,10 @@ pub fn parse_char_list(input: &str) -> Result<String, DataError> {
         } else {
             break;
         }
+    }
+
+    if start_quote_count == input.len() {
+        return Ok(new);
     }
 
     let real_len = input.len() - start_quote_count * 2;
@@ -289,6 +297,18 @@ mod numbers {
 #[cfg(test)]
 mod char_list {
     use crate::data::parse_char_list;
+
+    #[test]
+    fn true_empty() {
+        let input = "";
+        assert_eq!(parse_char_list(input).unwrap(), "".to_string())
+    }
+
+    #[test]
+    fn empty() {
+        let input = "\"\"";
+        assert_eq!(parse_char_list(input).unwrap(), "".to_string())
+    }
 
     #[test]
     fn skip_starting_and_ending_quotes() {
