@@ -559,7 +559,6 @@ impl<'a> Lexer<'a> {
                     // reserved 2 double quotes for empty char lists
                     if self.current_characters.len() == 2 {
                         // meaning, we have 2 double quotes already
-                        self.should_create = false;
                         true
                     } else {
                         self.start_quote_count = self.current_characters.len();
@@ -573,7 +572,7 @@ impl<'a> Lexer<'a> {
 
                 // so far the only token type that can have a null character reach push
                 // because it adds all chars, mostly indiscriminately
-                if c != '\0' {
+                if !end && c != '\0' {
                     self.current_characters.push(c);
                 }
 
@@ -2889,6 +2888,41 @@ mod chars_and_bytes {
                 text: "\"\"".to_string(),
                 token_type: TokenType::CharList,
                 column: 0,
+                row: 0
+            }]
+        );
+    }
+
+    #[test]
+    fn empty_character_list_with_surrounding_text() {
+        let result = lex(&"5 \"\" 5".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "5".to_string(),
+                token_type: TokenType::Number,
+                column: 0,
+                row: 0
+            },LexerToken {
+                text: " ".to_string(),
+                token_type: TokenType::Whitespace,
+                column: 1,
+                row: 0
+            },LexerToken {
+                text: "\"\"".to_string(),
+                token_type: TokenType::CharList,
+                column: 2,
+                row: 0
+            },LexerToken {
+                text: " ".to_string(),
+                token_type: TokenType::Whitespace,
+                column: 4,
+                row: 0
+            },LexerToken {
+                text: "5".to_string(),
+                token_type: TokenType::Number,
+                column: 5,
                 row: 0
             }]
         );
