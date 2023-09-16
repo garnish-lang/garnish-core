@@ -19,12 +19,10 @@ pub fn parse_char_list(input: &str) -> Result<String, DataError> {
         }
     }
 
-    let l = input.len();
     if start_quote_count == input.len() {
         return Ok(new);
     }
 
-    let v = input.chars().collect::<Vec<char>>();
     let real_len = input.len() - start_quote_count * 2;
 
     let mut check_escape = false;

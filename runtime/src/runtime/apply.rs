@@ -1,3 +1,4 @@
+use log::trace;
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
 use crate::{state_error, ErrorType, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
@@ -17,18 +18,33 @@ pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data
 
     // only execute if left side is a true like value
     match this.get_data_type(left_addr)? {
-        ExpressionDataType::Unit | ExpressionDataType::False => Ok(()),
+        ExpressionDataType::Unit | ExpressionDataType::False => {
+            trace!("Left is false, not reapplying");
+            this.set_instruction_cursor(this.get_instruction_cursor() + Data::Size::one())?;
+            trace!("Next instruction will be {:?}", this.get_instruction_cursor());
+            match this.get_current_value() {
+                None => push_unit(this)?,
+                Some(i) => this.push_register(i)?,
+            }
+            Ok(())
+        },
         _ => {
             let point = match this.get_jump_point(index) {
                 None => state_error(format!("No jump point at index {:?}", index))?,
                 Some(i) => i,
             };
 
+            trace!("Reapplying jumping to instruction at point {:?}", point);
+
             this.set_instruction_cursor(point)?;
             match this.pop_value_stack() {
                 None => state_error(format!("Failed to pop input during reapply operation."))?,
-                Some(_) => (),
+                Some(v) => {
+                    trace!("Popped from value stack value {:?}", v)
+                },
             }
+
+            trace!("Pushing to value stack value {:?}", right_addr);
             Ok(this.push_value_stack(right_addr)?)
         }
     }
@@ -59,12 +75,20 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             let expression_index = this.get_expression(left_addr)?;
 
             // Expression stores index of expression table, look up actual instruction index
-            next_instruction = match this.get_jump_point(expression_index) {
+            let n = match this.get_jump_point(expression_index) {
                 None => state_error(format!("No jump point at index {:?}", expression_index))?,
                 Some(i) => i,
             };
 
+            trace!("Next instruction will be {:?}", n);
+
+            next_instruction = n;
+
             this.push_jump_path(this.get_instruction_cursor() + Data::Size::one())?;
+
+            trace!("Pushing point to jump path {:?} + 1", this.get_instruction_cursor());
+
+            trace!("Pushing to value stack {:?}", right_addr);
             this.push_value_stack(right_addr)?;
         }
         (ExpressionDataType::External, _) => {

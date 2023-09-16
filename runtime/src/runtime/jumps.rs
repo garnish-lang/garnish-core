@@ -6,6 +6,7 @@ pub(crate) fn jump<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::S
     match this.get_jump_point(index) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => {
+            trace!("Jumping to point {:?}", point);
             this.set_instruction_cursor(point)?;
         }
     }
@@ -27,7 +28,7 @@ pub(crate) fn jump_if_true<Data: GarnishLangRuntimeData>(this: &mut Data, index:
         }
         // all other values are considered true
         t => {
-            trace!("Jumping from value of type {:?} with addr {:?}", t, d);
+            trace!("Jumping from value of type {:?} with addr {:?} to point {:?}", t, d, point);
             this.set_instruction_cursor(point)?
         }
     };
@@ -45,7 +46,7 @@ pub(crate) fn jump_if_false<Data: GarnishLangRuntimeData>(this: &mut Data, index
 
     match this.get_data_type(d)? {
         ExpressionDataType::False | ExpressionDataType::Unit => {
-            trace!("Jumping from value of type {:?} with addr {:?}", this.get_data_type(d)?, d);
+            trace!("Jumping from value of type {:?} with addr {:?} to point {:?}", this.get_data_type(d)?, d, point);
             this.set_instruction_cursor(point)?
         }
         t => {
@@ -72,6 +73,7 @@ pub(crate) fn end_expression<Data: GarnishLangRuntimeData>(this: &mut Data) -> R
         Some(jump_point) => {
             trace!("Setting cursor to {:?}", jump_point);
             this.set_instruction_cursor(jump_point)?;
+            this.pop_value_stack();
         }
     }
 

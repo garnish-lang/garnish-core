@@ -1,4 +1,4 @@
-use garnish_traits::helpers::iterate_concatenation;
+use garnish_traits::helpers::iterate_concatenation_mut;
 use crate::runtime::range::range_len;
 use crate::{get_range, state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants};
 
@@ -102,7 +102,7 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 ExpressionDataType::CharList => index_char_list(this, value, adjusted_index),
                 ExpressionDataType::ByteList => index_byte_list(this, value, adjusted_index),
                 ExpressionDataType::Concatenation => {
-                    Ok(iterate_concatenation(
+                    Ok(iterate_concatenation_mut(
                         this,
                         value,
                         |_this, index, addr| {
@@ -128,7 +128,7 @@ pub(crate) fn index_concatenation_for<Data: GarnishLangRuntimeData>(
     addr: Data::Size,
     index: Data::Number,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    Ok(iterate_concatenation(
+    Ok(iterate_concatenation_mut(
         this,
         addr,
         |_this, current_index, addr| {
@@ -236,7 +236,7 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                     Ok(item)
                 }
                 ExpressionDataType::Concatenation => {
-                    Ok(iterate_concatenation(
+                    Ok(iterate_concatenation_mut(
                         this,
                         value,
                         |this, index, addr| {
@@ -253,7 +253,7 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
-        ExpressionDataType::Concatenation => Ok(iterate_concatenation(
+        ExpressionDataType::Concatenation => Ok(iterate_concatenation_mut(
             this,
             value,
             |this, _index, addr| get_value_if_association(this, addr, sym),

@@ -45,6 +45,12 @@ impl SimpleNumber {
     }
 }
 
+impl Default for SimpleNumber {
+    fn default() -> Self {
+        SimpleNumber::Integer(0)
+    }
+}
+
 impl Display for SimpleNumber {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {

@@ -6,6 +6,7 @@ use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Instruction {
+    Invalid = 0,
     Put = 1,
     PutValue,
     PushValue,
@@ -63,6 +64,7 @@ pub enum Instruction {
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ExpressionDataType {
+    Invalid = 0,
     Unit = 1,
     Number,
     Type,
@@ -326,13 +328,23 @@ pub trait GarnishNumber: Sized {
 
 pub trait GarnishLangRuntimeData {
     type Error: std::error::Error + 'static;
-    type Symbol: Display + Debug + PartialOrd + TypeConstants + Copy;
-    type Byte: Display + Debug + PartialOrd + Copy;
-    type Char: Display + Debug + PartialOrd + Copy;
-    type Number: Display + Debug + PartialOrd + TypeConstants + Copy + GarnishNumber;
-    type Size: Display + Debug + Add<Output = Self::Size> + AddAssign + SubAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
+    type Symbol: Default + Display + Debug + PartialOrd + TypeConstants + Copy;
+    type Byte: Default + Display + Debug + PartialOrd + Copy;
+    type Char: Default + Display + Debug + PartialOrd + Copy;
+    type Number: Default + Display + Debug + PartialOrd + TypeConstants + Copy + GarnishNumber;
+    type Size: Default + Display + Debug + Add<Output = Self::Size> + AddAssign + SubAssign + Sub<Output = Self::Size> + PartialOrd + TypeConstants + Copy;
+    type SizeIterator: DoubleEndedIterator<Item=Self::Size>;
+    type NumberIterator: DoubleEndedIterator<Item=Self::Number>;
+    type InstructionIterator: DoubleEndedIterator<Item=Self::Size>;
+    type DataIndexIterator: Iterator<Item=Self::Size>;
+    type ValueIndexInterator: DoubleEndedIterator<Item=Self::Size>;
+    type RegisterIndexInterator: DoubleEndedIterator<Item=Self::Size>;
+    type JumpTableIndexInterator: DoubleEndedIterator<Item=Self::Size>;
+    type JumpPathIndexInterator: DoubleEndedIterator<Item=Self::Size>;
+    type ListIndexInterator: DoubleEndedIterator<Item=Self::Number>;
 
     fn get_data_len(&self) -> Self::Size;
+    fn get_data_iter(&self) -> Self::DataIndexIterator;
 
     fn get_value_stack_len(&self) -> Self::Size;
     fn push_value_stack(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
@@ -341,6 +353,7 @@ pub trait GarnishLangRuntimeData {
     fn get_value_mut(&mut self, addr: Self::Size) -> Option<&mut Self::Size>;
     fn get_current_value(&self) -> Option<Self::Size>;
     fn get_current_value_mut(&mut self) -> Option<&mut Self::Size>;
+    fn get_value_iter(&self) -> Self::ValueIndexInterator;
 
     fn get_data_type(&self, addr: Self::Size) -> Result<ExpressionDataType, Self::Error>;
 
@@ -361,12 +374,16 @@ pub trait GarnishLangRuntimeData {
     fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error>;
     fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error>;
+    fn get_list_items_iter(&self, list_addr: Self::Size) -> Self::ListIndexInterator;
+    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Self::ListIndexInterator;
 
     fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error>;
+    fn get_char_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexInterator;
 
     fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error>;
+    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexInterator;
 
     fn add_unit(&mut self) -> Result<Self::Size, Self::Error>;
     fn add_true(&mut self) -> Result<Self::Size, Self::Error>;
@@ -400,10 +417,12 @@ pub trait GarnishLangRuntimeData {
     fn push_register(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
     fn get_register(&self, addr: Self::Size) -> Option<Self::Size>;
     fn pop_register(&mut self) -> Option<Self::Size>;
+    fn get_register_iter(&self) -> Self::RegisterIndexInterator;
 
     fn get_instruction_len(&self) -> Self::Size;
     fn push_instruction(&mut self, instruction: Instruction, data: Option<Self::Size>) -> Result<Self::Size, Self::Error>;
     fn get_instruction(&self, addr: Self::Size) -> Option<(Instruction, Option<Self::Size>)>;
+    fn get_instruction_iter(&self) -> Self::InstructionIterator;
 
     fn get_instruction_cursor(&self) -> Self::Size;
     fn set_instruction_cursor(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
@@ -412,9 +431,11 @@ pub trait GarnishLangRuntimeData {
     fn push_jump_point(&mut self, index: Self::Size) -> Result<(), Self::Error>;
     fn get_jump_point(&self, index: Self::Size) -> Option<Self::Size>;
     fn get_jump_point_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size>;
+    fn get_jump_table_iter(&self) -> Self::JumpTableIndexInterator;
 
     fn push_jump_path(&mut self, index: Self::Size) -> Result<(), Self::Error>;
     fn pop_jump_path(&mut self) -> Option<Self::Size>;
+    fn get_jump_path_iter(&self) -> Self::JumpPathIndexInterator;
 
     // deferred conversions
     fn size_to_number(from: Self::Size) -> Self::Number;
@@ -474,6 +495,10 @@ pub trait GarnishLangRuntimeData {
         }
         self.end_byte_list()
     }
+
+    // iterator factories
+    fn make_size_iterator_range(min: Self::Size, max: Self::Size) -> Self::SizeIterator;
+    fn make_number_iterator_range(min: Self::Number, max: Self::Number) -> Self::NumberIterator;
 }
 
 impl GarnishNumber for i32 {

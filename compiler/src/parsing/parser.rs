@@ -684,7 +684,7 @@ fn trim_tokens(tokens: &Vec<LexerToken>) -> &[LexerToken] {
     &tokens[start..end]
 }
 
-pub fn parse(lex_tokens: Vec<LexerToken>) -> Result<ParseResult, CompilerError> {
+pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError> {
     trace!("Starting parse");
     let priority_map = make_priority_map();
 
@@ -1219,7 +1219,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1231,7 +1231,7 @@ mod composition_errors {
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1243,7 +1243,7 @@ mod composition_errors {
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1256,7 +1256,7 @@ mod composition_errors {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1269,7 +1269,7 @@ mod composition_errors {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1282,7 +1282,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1295,7 +1295,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Identifier, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1307,7 +1307,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1319,7 +1319,7 @@ mod composition_errors {
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1333,7 +1333,7 @@ mod composition_errors {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1347,7 +1347,7 @@ mod composition_errors {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1360,7 +1360,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1373,7 +1373,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1387,7 +1387,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1400,7 +1400,7 @@ mod composition_errors {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1413,7 +1413,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1426,7 +1426,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1439,7 +1439,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Identifier, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1453,7 +1453,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Identifier, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1467,7 +1467,7 @@ mod composition_errors {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1480,7 +1480,7 @@ mod composition_errors {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1492,7 +1492,7 @@ mod composition_errors {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1505,7 +1505,7 @@ mod composition_errors {
             LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1517,7 +1517,7 @@ mod composition_errors {
             LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1530,7 +1530,7 @@ mod composition_errors {
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1542,7 +1542,7 @@ mod composition_errors {
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1555,7 +1555,7 @@ mod composition_errors {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1569,7 +1569,7 @@ mod composition_errors {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1581,7 +1581,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1593,7 +1593,7 @@ mod composition_errors {
             LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1606,7 +1606,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1619,7 +1619,7 @@ mod composition_errors {
             LexerToken::new("++".to_string(), TokenType::AbsoluteValue, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1628,7 +1628,7 @@ mod composition_errors {
     fn start_with_end_group() {
         let tokens = vec![LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0)];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1637,7 +1637,7 @@ mod composition_errors {
     fn start_with_end_side_effect() {
         let tokens = vec![LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0)];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1646,7 +1646,7 @@ mod composition_errors {
     fn start_with_end_expression() {
         let tokens = vec![LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0)];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1659,7 +1659,7 @@ mod composition_errors {
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1672,7 +1672,7 @@ mod composition_errors {
             LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1685,7 +1685,7 @@ mod composition_errors {
             LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1699,7 +1699,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1713,7 +1713,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1728,7 +1728,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1743,7 +1743,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1757,7 +1757,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1771,7 +1771,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1785,7 +1785,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1799,7 +1799,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1813,7 +1813,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1827,7 +1827,7 @@ mod composition_errors {
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1840,7 +1840,7 @@ mod composition_errors {
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1854,7 +1854,7 @@ mod composition_errors {
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1867,7 +1867,7 @@ mod composition_errors {
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1882,7 +1882,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -1899,7 +1899,7 @@ mod composition_errors {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens);
+        let result = parse(&tokens);
 
         assert!(result.is_err());
     }
@@ -2017,7 +2017,7 @@ mod tests {
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
     }
@@ -2026,7 +2026,7 @@ mod tests {
     fn empty_expression() {
         let tokens = vec![LexerToken::new("".to_string(), TokenType::Whitespace, 0, 0)];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[]);
     }
@@ -2044,7 +2044,7 @@ mod tests {
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[]);
     }
@@ -2053,7 +2053,7 @@ mod tests {
     fn single_number() {
         let tokens = vec![LexerToken::new("5".to_string(), TokenType::Number, 0, 0)];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
     }
@@ -2062,7 +2062,7 @@ mod tests {
     fn single_char_list() {
         let tokens = vec![LexerToken::new("value".to_string(), TokenType::CharList, 0, 0)];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::CharList, None, None, None)]);
     }
@@ -2071,7 +2071,7 @@ mod tests {
     fn single_byte_list() {
         let tokens = vec![LexerToken::new("value".to_string(), TokenType::ByteList, 0, 0)];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::ByteList, None, None, None)]);
     }
@@ -2080,7 +2080,7 @@ mod tests {
     fn single_identifier() {
         let tokens = vec![LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0)];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::Identifier, None, None, None)]);
     }
@@ -2089,7 +2089,7 @@ mod tests {
     fn single_symbol() {
         let tokens = vec![LexerToken::new(":symbol".to_string(), TokenType::Symbol, 0, 0)];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::Symbol, None, None, None)]);
     }
@@ -2098,7 +2098,7 @@ mod tests {
     fn single_input() {
         let tokens = vec![LexerToken::new("$".to_string(), TokenType::Value, 0, 0)];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::Value, None, None, None)]);
     }
@@ -2107,7 +2107,7 @@ mod tests {
     fn single_true() {
         let tokens = vec![LexerToken::new("$?".to_string(), TokenType::True, 0, 0)];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::True, None, None, None)]);
     }
@@ -2116,7 +2116,7 @@ mod tests {
     fn single_false() {
         let tokens = vec![LexerToken::new("$!".to_string(), TokenType::False, 0, 0)];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::False, None, None, None)]);
     }
@@ -2125,7 +2125,7 @@ mod tests {
     fn single_unit() {
         let tokens = vec![LexerToken::new("()".to_string(), TokenType::UnitLiteral, 0, 0)];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::Unit, None, None, None)]);
     }
@@ -2138,7 +2138,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2159,7 +2159,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2180,7 +2180,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2201,7 +2201,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2222,7 +2222,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2243,7 +2243,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2264,7 +2264,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2284,7 +2284,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2303,7 +2303,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2322,7 +2322,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2342,7 +2342,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2363,7 +2363,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2384,7 +2384,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2405,7 +2405,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2426,7 +2426,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2447,7 +2447,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2468,7 +2468,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2489,7 +2489,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2509,7 +2509,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2525,7 +2525,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2542,7 +2542,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2563,7 +2563,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2584,7 +2584,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2605,7 +2605,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2626,7 +2626,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2647,7 +2647,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2668,7 +2668,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2689,7 +2689,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2710,7 +2710,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2731,7 +2731,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2752,7 +2752,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2773,7 +2773,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2793,7 +2793,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2812,7 +2812,7 @@ mod tests {
             LexerToken::new("`expression".to_string(), TokenType::SuffixIdentifier, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2832,7 +2832,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2852,7 +2852,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2871,7 +2871,7 @@ mod tests {
             LexerToken::new("`expression`".to_string(), TokenType::InfixIdentifier, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2891,7 +2891,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2912,7 +2912,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2933,7 +2933,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2954,7 +2954,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2975,7 +2975,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -2996,7 +2996,7 @@ mod tests {
             LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3016,7 +3016,7 @@ mod tests {
             LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3035,7 +3035,7 @@ mod tests {
             LexerToken::new("._".to_string(), TokenType::RightInternal, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3054,7 +3054,7 @@ mod tests {
             LexerToken::new(".|".to_string(), TokenType::LengthInternal, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3074,7 +3074,7 @@ mod tests {
             LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3097,7 +3097,7 @@ mod tests {
             LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3117,7 +3117,7 @@ mod tests {
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3138,7 +3138,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3161,7 +3161,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3184,7 +3184,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3210,7 +3210,7 @@ mod tests {
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3239,7 +3239,7 @@ mod tests {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3272,7 +3272,7 @@ mod tests {
         //     5      +
         //          5   5
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3316,7 +3316,7 @@ mod tests {
         //     5      +     5   5
         //          5   5
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3386,7 +3386,7 @@ mod tests {
         //     5      +     5   5
         //          5   5
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3420,7 +3420,7 @@ mod tests {
             LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3443,7 +3443,7 @@ mod tests {
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3466,7 +3466,7 @@ mod tests {
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3491,7 +3491,7 @@ mod tests {
             LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3522,7 +3522,7 @@ mod lists {
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3543,7 +3543,7 @@ mod lists {
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3564,7 +3564,7 @@ mod lists {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3581,7 +3581,7 @@ mod lists {
     fn empty_list() {
         let tokens = vec![LexerToken::new(",".to_string(), TokenType::Comma, 0, 0)];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::CommaList, None, None, None)]);
     }
@@ -3594,7 +3594,7 @@ mod lists {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3613,7 +3613,7 @@ mod lists {
             LexerToken::new(",".to_string(), TokenType::Comma, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3634,7 +3634,7 @@ mod lists {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3657,7 +3657,7 @@ mod lists {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3677,7 +3677,7 @@ mod lists {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3698,7 +3698,7 @@ mod lists {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3721,7 +3721,7 @@ mod lists {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3750,7 +3750,7 @@ mod lists {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3781,7 +3781,7 @@ mod lists {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3810,7 +3810,7 @@ mod lists {
             LexerToken::new("$?".to_string(), TokenType::True, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3847,7 +3847,7 @@ mod lists {
             LexerToken::new("20".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3879,7 +3879,7 @@ mod lists {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3914,7 +3914,7 @@ mod side_effects {
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3935,7 +3935,7 @@ mod side_effects {
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3957,7 +3957,7 @@ mod side_effects {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -3981,7 +3981,7 @@ mod side_effects {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4007,7 +4007,7 @@ mod side_effects {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4032,7 +4032,7 @@ mod side_effects {
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4056,7 +4056,7 @@ mod side_effects {
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4082,7 +4082,7 @@ mod side_effects {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4107,7 +4107,7 @@ mod side_effects {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4134,7 +4134,7 @@ mod groups {
         assertions: &[(usize, Definition, Option<usize>, Option<usize>, Option<usize>)],
     ) {
         // test groups
-        assert_result(&parse(tokens.clone()).unwrap(), root, assertions);
+        assert_result(&parse(&tokens).unwrap(), root, assertions);
 
         let exp_tokens: Vec<LexerToken> = tokens
             .iter()
@@ -4153,7 +4153,7 @@ mod groups {
             })
             .collect();
 
-        assert_result(&parse(exp_tokens.clone()).unwrap(), root, &exp_assertions);
+        assert_result(&parse(&exp_tokens).unwrap(), root, &exp_assertions);
     }
 
     #[test]
@@ -4452,7 +4452,7 @@ mod groups {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4480,7 +4480,7 @@ mod groups {
             LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4506,7 +4506,7 @@ mod groups {
             LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4534,7 +4534,7 @@ mod groups {
             LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4563,7 +4563,7 @@ mod groups {
             LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4590,7 +4590,7 @@ mod groups {
             LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4619,7 +4619,7 @@ mod conditionals {
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4640,7 +4640,7 @@ mod conditionals {
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4665,7 +4665,7 @@ mod conditionals {
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4698,7 +4698,7 @@ mod conditionals {
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4737,7 +4737,7 @@ mod conditionals {
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4770,7 +4770,7 @@ mod conditionals {
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4795,7 +4795,7 @@ mod conditionals {
             LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4824,7 +4824,7 @@ mod conditionals {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
@@ -4857,7 +4857,7 @@ mod annotations {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
     }
@@ -4870,7 +4870,7 @@ mod annotations {
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[(0, Definition::Number, None, None, None)]);
     }
@@ -4887,7 +4887,7 @@ mod annotations {
             LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
         ];
 
-        let result = parse(tokens).unwrap();
+        let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[]);
     }

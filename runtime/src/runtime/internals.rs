@@ -1,4 +1,4 @@
-use garnish_traits::helpers::iterate_concatenation;
+use garnish_traits::helpers::iterate_concatenation_mut;
 use crate::runtime::range::range_len;
 use crate::{
     next_ref, push_number, push_unit, state_error, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError, TypeConstants,
@@ -164,5 +164,5 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData, Context: Garn
 }
 
 pub(crate) fn concatenation_len<Data: GarnishLangRuntimeData>(this: &mut Data, addr: Data::Size) -> Result<Data::Size, RuntimeError<Data::Error>> {
-    Ok(iterate_concatenation(this, addr, |_, _, _| Ok(None))?.1)
+    Ok(iterate_concatenation_mut(this, addr, |_, _, _| Ok(None))?.1)
 }

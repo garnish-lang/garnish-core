@@ -2,7 +2,7 @@ use crate::{LexerToken, SecondaryDefinition};
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct NoSource {}
 
 impl Display for NoSource {
@@ -13,7 +13,7 @@ impl Display for NoSource {
 
 impl std::error::Error for NoSource {}
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct CompilerError<Source: 'static + std::error::Error = NoSource> {
     message: String,
     line: usize,

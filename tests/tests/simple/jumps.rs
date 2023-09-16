@@ -32,6 +32,8 @@ mod tests {
         let mut runtime = create_simple_runtime();
 
         runtime.get_data_mut().add_number(10.into()).unwrap();
+        runtime.get_data_mut().add_number(20.into()).unwrap();
+
         runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::EndExpression, Some(0)).unwrap();
@@ -42,9 +44,15 @@ mod tests {
         runtime.get_data_mut().push_jump_path(4).unwrap();
         runtime.get_data_mut().set_instruction_cursor(2).unwrap();
 
+        runtime.get_data_mut().push_value_stack(1).unwrap();
+        runtime.get_data_mut().push_value_stack(2).unwrap();
+
         runtime.end_expression().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_instruction_cursor(), 4);
+        assert_eq!(runtime.get_data().get_register_len(), 1);
+        assert_eq!(runtime.get_data().get_value_stack_len(), 1);
+        assert_eq!(runtime.get_data().get_value(0).unwrap(), 1);
     }
 
     #[test]

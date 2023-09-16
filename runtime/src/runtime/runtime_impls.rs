@@ -67,6 +67,7 @@ where
         let mut next_instruction = self.get_data().get_instruction_cursor() + Data::Size::one();
 
         match instruction {
+            Instruction::Invalid => (),
             Instruction::Add => self.add(context)?,
             Instruction::Subtract => self.subtract(context)?,
             Instruction::Multiply => self.multiply(context)?,

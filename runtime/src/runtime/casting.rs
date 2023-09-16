@@ -1,4 +1,4 @@
-use garnish_traits::helpers::iterate_concatenation;
+use garnish_traits::helpers::iterate_concatenation_mut;
 use garnish_traits::Instruction;
 
 use crate::runtime::internals::concatenation_len;
@@ -104,7 +104,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
         (ExpressionDataType::Concatenation, ExpressionDataType::List) => {
             let len = concatenation_len(this, left)?;
             this.start_list(len)?;
-            iterate_concatenation(
+            iterate_concatenation_mut(
                 this,
                 left,
                 |this, _, addr| {
@@ -156,7 +156,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
                 ExpressionDataType::Concatenation => {
                     this.start_list(Data::number_to_size(len).or_num_err()?)?;
 
-                    iterate_concatenation(
+                    iterate_concatenation_mut(
                         this,
                         value,
                         |this, current_index, addr| {

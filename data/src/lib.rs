@@ -5,7 +5,7 @@ use std::hash::Hash;
 
 pub use error::DataError;
 use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, Instruction};
-use garnish_traits::helpers::iterate_concatenation;
+use garnish_traits::helpers::iterate_concatenation_mut;
 
 use crate::data::{SimpleData, SimpleDataList};
 pub use crate::instruction::InstructionData;
@@ -195,6 +195,7 @@ where
         }
 
         match self.get_data_type(from)? {
+            ExpressionDataType::Invalid => todo!(),
             ExpressionDataType::Custom => todo!(),
             ExpressionDataType::Unit => {
                 self.add_to_char_list('(')?;
@@ -366,7 +367,7 @@ where
                         }
                     }
                     ExpressionDataType::Concatenation => {
-                        iterate_concatenation(self, value, |this, index, addr| {
+                        iterate_concatenation_mut(self, value, |this, index, addr| {
                             let i = index.to_integer().as_integer()?;
                             if i >= start && i <= end {
                                 this.add_to_current_char_list(addr, depth + 1)?;

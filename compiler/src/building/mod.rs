@@ -482,6 +482,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 if [Definition::PrefixApply, Definition::SuffixApply, Definition::InfixApply].contains(&node.get_definition()) {
                                     let addr = data.parse_add_symbol(&node.get_lex_token().get_text().trim_matches('`'))?;
                                     data.push_instruction(Instruction::Resolve, Some(addr))?;
+                                    metadata.push(InstructionMetadata::new(resolve_node_info.node_index));
                                 }
 
                                 resolve_node_info.initialized = true;

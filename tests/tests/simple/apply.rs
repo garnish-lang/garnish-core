@@ -531,7 +531,9 @@ mod tests {
 
         assert_eq!(runtime.get_data_mut().get_value_stack_len(), 1);
         assert_eq!(runtime.get_data_mut().get_value(0).unwrap(), 2);
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), 8);
+        assert_eq!(runtime.get_data().get_register_len(), 1);
+        assert_eq!(runtime.get_data().get_register(0).unwrap(), 2);
+        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), 9);
         assert_eq!(runtime.get_data_mut().get_jump_path(0).unwrap(), 9);
     }
 

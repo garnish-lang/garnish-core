@@ -1,6 +1,6 @@
 use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
 
-pub fn iterate_concatenation<Data: GarnishLangRuntimeData, CheckFn>(
+pub fn iterate_concatenation_mut<Data: GarnishLangRuntimeData, CheckFn>(
     this: &mut Data,
     addr: Data::Size,
     mut check_fn: CheckFn,

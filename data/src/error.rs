@@ -1,6 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DataError {
     message: String,
 }
