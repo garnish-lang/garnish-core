@@ -7,7 +7,11 @@ use std::{collections::HashMap, hash::Hash, vec};
 
 use crate::lexing::lexer::*;
 
-#[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash,)]
 pub enum Definition {
     Number,
     CharList,
@@ -103,6 +107,7 @@ impl Definition {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
 pub enum SecondaryDefinition {
     None,
@@ -207,6 +212,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone)]
 pub struct ParseNode {
     definition: Definition,
@@ -261,6 +267,7 @@ impl ParseNode {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone)]
 pub struct ParseResult {
     root: usize,

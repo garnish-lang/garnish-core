@@ -10,3 +10,7 @@ log = "0.4"
 garnish_lang_runtime = { path = "../runtime"}
 garnish_traits = { path = "../traits" }
 garnish_data = { path = "../data" }
+serde = { version = "1.0.196", features = ["derive"], optional = true }
+
+[features]
+serde = ["dep:serde"]

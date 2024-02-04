@@ -4,7 +4,10 @@ use std::str::Chars;
 use log::trace;
 
 use crate::error::CompilerError;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub enum TokenType {
     Unknown,
@@ -78,6 +81,7 @@ pub enum TokenType {
     InfixIdentifier,
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct LexerOperatorNode {
     value: char,
@@ -99,6 +103,7 @@ impl LexerOperatorNode {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone)]
 pub struct LexerToken {
     text: String,
