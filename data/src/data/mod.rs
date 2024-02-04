@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use garnish_traits::ExpressionDataType;
 pub use number::*;
@@ -14,6 +16,7 @@ mod number;
 mod parsing;
 mod iterators;
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SimpleDataList<T = NoCustom>
 where
@@ -102,6 +105,7 @@ pub type DataCastResult<T> = Result<T, DataError>;
 // utility type for tests, mainly
 pub type SimpleDataNC = SimpleData<NoCustom>;
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
 pub enum SimpleData<T = NoCustom>
 where

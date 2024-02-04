@@ -4,6 +4,10 @@ use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Instruction {
     Invalid = 0,
@@ -62,6 +66,7 @@ pub enum Instruction {
     Concat,
 }
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ExpressionDataType {
     Invalid = 0,

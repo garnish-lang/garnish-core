@@ -10,6 +10,9 @@ use garnish_traits::helpers::iterate_concatenation_mut;
 use crate::data::{SimpleData, SimpleDataList};
 pub use crate::instruction::InstructionData;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 pub mod data;
 mod error;
 pub mod instruction;
@@ -23,6 +26,7 @@ pub fn symbol_value(value: &str) -> u64 {
     hv
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialOrd, PartialEq, Eq, Debug, Hash)]
 pub struct NoCustom {}
 
@@ -32,6 +36,7 @@ impl Display for NoCustom {
     }
 }
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 pub struct SimpleRuntimeData<T = NoCustom>
 where

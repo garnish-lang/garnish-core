@@ -1,5 +1,8 @@
 pub use garnish_traits::Instruction;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub struct InstructionData {
     pub instruction: Instruction,

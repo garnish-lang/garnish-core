@@ -6,7 +6,10 @@ use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::{Add, Div, Mul, Rem, Sub};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Copy, Clone, Debug)]
 pub enum SimpleNumber {
     Integer(i32),
