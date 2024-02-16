@@ -68,7 +68,11 @@ pub(crate) fn end_expression<Data: GarnishLangRuntimeData>(this: &mut Data) -> R
                 this.get_instruction_len()
             );
             this.set_instruction_cursor(this.get_instruction_len())?;
-            this.push_value_stack(r)?;
+
+            match this.get_current_value_mut() {
+                None => state_error(format!("No inputs available to update during end expression operation."))?,
+                Some(v) => *v = r,
+            }
         }
         Some(jump_point) => {
             trace!("Setting cursor to {:?}", jump_point);

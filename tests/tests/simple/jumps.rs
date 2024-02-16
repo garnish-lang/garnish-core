@@ -3,8 +3,9 @@ mod tests {
 
     use crate::simple::testing_utilities::create_simple_runtime;
     use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime, Instruction};
+
     #[test]
-    fn end_expression() {
+    fn end_expression_no_existing_value_no_path() {
         let mut runtime = create_simple_runtime();
 
         let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
@@ -17,14 +18,39 @@ mod tests {
         runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
         runtime.get_data_mut().push_register(int1).unwrap();
 
+        let err = runtime.end_expression().err().unwrap();
+
+        assert_eq!(err.get_message(), &"No inputs available to update during end expression operation.".to_string())
+    }
+
+    #[test]
+    fn end_expression_with_existing_value_and_no_path() {
+        let mut runtime = create_simple_runtime();
+
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let int2 = runtime.get_data_mut().add_number(20.into()).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
+        let i1 = runtime.get_data_mut().push_instruction(Instruction::EndExpression, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
+
+        runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
+
+        runtime.get_data_mut().push_value_stack(int1).unwrap();
+
         runtime.end_expression().unwrap();
+
+        assert_eq!(runtime.get_data().get_registers().len(), 0);
+        assert_eq!(runtime.get_data().get_value_stack_len(), 1);
 
         let i = runtime.get_data_mut().get_current_value().unwrap();
         assert_eq!(
             runtime.get_data_mut().get_instruction_cursor(),
             runtime.get_data_mut().get_instruction_len()
         );
-        assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 10.into());
+        assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 20.into());
     }
 
     #[test]

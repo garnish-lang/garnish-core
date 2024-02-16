@@ -185,6 +185,8 @@ impl<Source: 'static + std::error::Error> RuntimeError<Source> {
         }
     }
 
+    pub fn get_message(&self) -> &String { &self.message }
+
     pub fn get_type(&self) -> ErrorType {
         self.code
     }

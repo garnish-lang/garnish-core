@@ -33,7 +33,7 @@ pub(crate) fn push_input<Data: GarnishLangRuntimeData>(this: &mut Data) -> Resul
 pub(crate) fn push_result<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
     match this.get_current_value_mut() {
-        None => state_error(format!("No inputs availble to update for update value operation."))?,
+        None => state_error(format!("No inputs available to update for update value operation."))?,
         Some(v) => *v = r,
     }
 
