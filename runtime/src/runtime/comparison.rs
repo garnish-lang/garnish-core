@@ -4,32 +4,40 @@ use crate::{
 };
 use std::cmp::Ordering;
 
-pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_comparison(this, Ordering::Greater).and_then(|result| match result {
         Some(result) => push_boolean(this, result.is_lt()),
         None => push_unit(this),
-    })
+    })?;
+
+    Ok(None)
 }
 
-pub fn less_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub fn less_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_comparison(this, Ordering::Greater).and_then(|result| match result {
         Some(result) => push_boolean(this, result.is_le()),
         None => push_unit(this),
-    })
+    })?;
+
+    Ok(None)
 }
 
-pub fn greater_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub fn greater_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_comparison(this, Ordering::Less).and_then(|result| match result {
         Some(result) => push_boolean(this, result.is_gt()),
         None => push_unit(this),
-    })
+    })?;
+
+    Ok(None)
 }
 
-pub fn greater_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub fn greater_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_comparison(this, Ordering::Less).and_then(|result| match result {
         Some(result) => push_boolean(this, result.is_ge()),
         None => push_unit(this),
-    })
+    })?;
+
+    Ok(None)
 }
 
 fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data, false_ord: Ordering) -> Result<Option<Ordering>, RuntimeError<Data::Error>> {

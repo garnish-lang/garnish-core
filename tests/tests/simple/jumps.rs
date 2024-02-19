@@ -40,14 +40,14 @@ mod tests {
 
         runtime.get_data_mut().push_value_stack(int1).unwrap();
 
-        runtime.end_expression().unwrap();
+        let next = runtime.end_expression().unwrap();
 
         assert_eq!(runtime.get_data().get_registers().len(), 0);
         assert_eq!(runtime.get_data().get_value_stack_len(), 1);
 
         let i = runtime.get_data_mut().get_current_value().unwrap();
         assert_eq!(
-            runtime.get_data_mut().get_instruction_cursor(),
+            next.unwrap(),
             runtime.get_data_mut().get_instruction_len()
         );
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 20.into());
@@ -73,9 +73,9 @@ mod tests {
         runtime.get_data_mut().push_value_stack(1).unwrap();
         runtime.get_data_mut().push_value_stack(2).unwrap();
 
-        runtime.end_expression().unwrap();
+        let next = runtime.end_expression().unwrap();
 
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), 4);
+        assert_eq!(next.unwrap(), 4);
         assert_eq!(runtime.get_data().get_register_len(), 1);
         assert_eq!(runtime.get_data().get_value_stack_len(), 1);
         assert_eq!(runtime.get_data().get_value(0).unwrap(), 1);
@@ -92,10 +92,10 @@ mod tests {
 
         runtime.get_data_mut().push_jump_point(i1).unwrap();
 
-        runtime.jump(0).unwrap();
+        let next = runtime.jump(0).unwrap();
 
         assert!(runtime.get_data_mut().get_jump_path_vec().is_empty());
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i1);
+        assert_eq!(next.unwrap(), i1);
     }
 
     #[test]
@@ -127,7 +127,7 @@ mod tests {
 
         runtime.get_data_mut().push_jump_point(3).unwrap();
 
-        let result = runtime.jump_if_false(0);
+        let result = runtime.jump_if_true(0);
 
         assert!(result.is_err());
     }
@@ -148,11 +148,11 @@ mod tests {
 
         runtime.get_data_mut().push_register(ta).unwrap();
 
-        runtime.jump_if_true(0).unwrap();
+        let next = runtime.jump_if_true(0).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register_len(), 0);
         assert_eq!(runtime.get_data_mut().get_data_len(), 3);
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i2);
+        assert_eq!(next.unwrap(), i2);
     }
 
     #[test]
@@ -169,11 +169,11 @@ mod tests {
         runtime.get_data_mut().set_instruction_cursor(1).unwrap();
         runtime.get_data_mut().push_register(ua).unwrap();
 
-        runtime.jump_if_true(0).unwrap();
+        let next = runtime.jump_if_true(0).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register_len(), 0);
         assert_eq!(runtime.get_data_mut().get_data_len(), 3);
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), 1);
+        assert_eq!(next, None);
     }
 
     #[test]
@@ -190,11 +190,11 @@ mod tests {
         runtime.get_data_mut().set_instruction_cursor(1).unwrap();
         runtime.get_data_mut().push_register(fa).unwrap();
 
-        runtime.jump_if_true(0).unwrap();
+        let next = runtime.jump_if_true(0).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register_len(), 0);
         assert_eq!(runtime.get_data_mut().get_data_len(), 3);
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), 1);
+        assert_eq!(next, None);
     }
 
     #[test]
@@ -211,11 +211,11 @@ mod tests {
         runtime.get_data_mut().set_instruction_cursor(1).unwrap();
         runtime.get_data_mut().push_register(ta).unwrap();
 
-        runtime.jump_if_false(0).unwrap();
+        let next = runtime.jump_if_false(0).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register_len(), 0);
         assert_eq!(runtime.get_data_mut().get_data_len(), 3);
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), 1);
+        assert_eq!(next, None);
     }
 
     #[test]
@@ -232,11 +232,11 @@ mod tests {
         runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
         runtime.get_data_mut().push_register(ua).unwrap();
 
-        runtime.jump_if_false(0).unwrap();
+        let next = runtime.jump_if_false(0).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register_len(), 0);
         assert_eq!(runtime.get_data_mut().get_data_len(), 3);
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i2);
+        assert_eq!(next.unwrap(), i2);
     }
 
     #[test]
@@ -253,10 +253,10 @@ mod tests {
         runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
         runtime.get_data_mut().push_register(fa).unwrap();
 
-        runtime.jump_if_false(0).unwrap();
+        let next = runtime.jump_if_false(0).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register_len(), 0);
         assert_eq!(runtime.get_data_mut().get_data_len(), 3);
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i2);
+        assert_eq!(next.unwrap(), i2);
     }
 }

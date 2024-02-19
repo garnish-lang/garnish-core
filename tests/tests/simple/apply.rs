@@ -90,10 +90,10 @@ mod tests {
 
         runtime.get_data_mut().set_instruction_cursor(i2).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        let next = runtime.apply::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_value(0).unwrap(), int2);
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i1);
+        assert_eq!(next.unwrap(), i1);
         assert_eq!(runtime.get_data_mut().get_jump_path(0).unwrap(), i3);
     }
 
@@ -121,11 +121,11 @@ mod tests {
         runtime.get_data_mut().push_register(d4).unwrap();
         runtime.get_data_mut().push_register(d5).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        let next = runtime.apply::<EmptyContext>(None).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 30.into());
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i2);
+        assert_eq!(next.unwrap(), i2);
     }
 
     #[test]
@@ -150,11 +150,11 @@ mod tests {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        let next = runtime.apply::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), start);
         assert_eq!(runtime.get_data_mut().get_char(start).unwrap(), 'c');
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i2);
+        assert_eq!(next.unwrap(), i2);
     }
 
     #[test]
@@ -179,11 +179,11 @@ mod tests {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        let next = runtime.apply::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), start);
         assert_eq!(runtime.get_data_mut().get_byte(start).unwrap(), 30.into());
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i2);
+        assert_eq!(next.unwrap(), i2);
     }
 
     #[test]
@@ -200,7 +200,7 @@ mod tests {
         runtime.get_data_mut().push_register(i3).unwrap();
         runtime.get_data_mut().push_register(i4).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        let next = runtime.apply::<EmptyContext>(None).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 15.into());
@@ -245,7 +245,7 @@ mod tests {
         runtime.get_data_mut().push_register(i10).unwrap();
         runtime.get_data_mut().push_register(i11).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        let next = runtime.apply::<EmptyContext>(None).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 20.into());
@@ -310,7 +310,7 @@ mod tests {
         runtime.get_data_mut().push_register(i10).unwrap();
         runtime.get_data_mut().push_register(i18).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        let next = runtime.apply::<EmptyContext>(None).unwrap();
 
         let addr = runtime.get_data_mut().pop_register().unwrap();
         let len = runtime.get_data_mut().get_list_len(addr).unwrap();
@@ -364,7 +364,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        let next = runtime.apply::<EmptyContext>(None).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), 0usize);
     }
@@ -421,11 +421,11 @@ mod tests {
 
         runtime.get_data_mut().set_instruction_cursor(i2).unwrap();
 
-        runtime.empty_apply::<EmptyContext>(None).unwrap();
+        let next = runtime.empty_apply::<EmptyContext>(None).unwrap();
 
         let i = runtime.get_data_mut().get_value(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i1);
+        assert_eq!(next.unwrap(), i1);
         assert_eq!(runtime.get_data_mut().get_jump_path(0).unwrap(), i3);
     }
 
@@ -487,11 +487,11 @@ mod tests {
 
         runtime.get_data_mut().set_instruction_cursor(i2).unwrap();
 
-        runtime.reapply(0).unwrap();
+        let next = runtime.reapply(0).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_value_stack_len(), 1);
         assert_eq!(runtime.get_data_mut().get_value(0).unwrap(), int3);
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i1);
+        assert_eq!(next.unwrap(), i1);
     }
 
     #[test]
@@ -527,13 +527,13 @@ mod tests {
 
         runtime.get_data_mut().set_instruction_cursor(8).unwrap();
 
-        runtime.reapply(0).unwrap();
+        let next = runtime.reapply(0).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_value_stack_len(), 1);
         assert_eq!(runtime.get_data_mut().get_value(0).unwrap(), 2);
         assert_eq!(runtime.get_data().get_register_len(), 1);
         assert_eq!(runtime.get_data().get_register(0).unwrap(), 2);
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), 9);
+        assert_eq!(next.unwrap(), 9);
         assert_eq!(runtime.get_data_mut().get_jump_path(0).unwrap(), 9);
     }
 
@@ -580,11 +580,11 @@ mod tests {
 
         let mut context = MyContext { new_addr: 0 };
 
-        runtime.apply(Some(&mut context)).unwrap();
+        let next = runtime.apply(Some(&mut context)).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_number(context.new_addr).unwrap(), 200.into());
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), context.new_addr);
-        assert_eq!(runtime.get_data_mut().get_instruction_cursor(), i2);
+        assert_eq!(next.unwrap(), i2);
     }
 }
 

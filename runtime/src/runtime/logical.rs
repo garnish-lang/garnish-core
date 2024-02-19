@@ -1,6 +1,6 @@
 use crate::{next_ref, next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
 
-pub(crate) fn and<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn and<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (left, right) = next_two_raw_ref(this)?;
 
     let result = match (is_true_value(this, left)?, is_true_value(this, right)?) {
@@ -8,10 +8,12 @@ pub(crate) fn and<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), R
         _ => false,
     };
 
-    push_boolean(this, result)
+    push_boolean(this, result)?;
+
+    Ok(None)
 }
 
-pub fn or<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub fn or<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (left, right) = next_two_raw_ref(this)?;
 
     let result = match (is_true_value(this, left)?, is_true_value(this, right)?) {
@@ -19,10 +21,12 @@ pub fn or<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeEr
         _ => true,
     };
 
-    push_boolean(this, result)
+    push_boolean(this, result)?;
+
+    Ok(None)
 }
 
-pub fn xor<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub fn xor<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (left, right) = next_two_raw_ref(this)?;
 
     let result = match (is_true_value(this, left)?, is_true_value(this, right)?) {
@@ -30,13 +34,17 @@ pub fn xor<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeE
         _ => true,
     };
 
-    push_boolean(this, result)
+    push_boolean(this, result)?;
+
+    Ok(None)
 }
 
-pub(crate) fn not<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn not<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let addr = next_ref(this)?;
     let result = is_true_value(this, addr)?;
-    push_boolean(this, !result)
+    push_boolean(this, !result)?;
+
+    Ok(None)
 }
 
 fn is_true_value<Data: GarnishLangRuntimeData>(this: &mut Data, addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {

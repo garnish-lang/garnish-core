@@ -41,7 +41,7 @@ mod less_than {
 
     fn perform_compare<Setup, Op>(expected: bool, op_name: &str, op: Op, setup: Setup)
     where
-        Op: Fn(&mut SimpleGarnishRuntime<SimpleRuntimeData>) -> Result<(), RuntimeError<DataError>>,
+        Op: Fn(&mut SimpleGarnishRuntime<SimpleRuntimeData>) -> Result<Option<usize>, RuntimeError<DataError>>,
         Setup: Copy + Fn(&mut SimpleRuntimeData) -> (usize, usize),
     {
         let mut runtime = create_simple_runtime();

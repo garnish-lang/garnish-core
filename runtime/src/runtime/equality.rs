@@ -9,17 +9,21 @@ use crate::{
     TypeConstants,
 };
 
-pub(crate) fn equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let equal = perform_equality_check(this)?;
-    push_boolean(this, equal)
+    push_boolean(this, equal)?;
+
+    Ok(None)
 }
 
-pub fn not_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub fn not_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let equal = perform_equality_check(this)?;
-    push_boolean(this, !equal)
+    push_boolean(this, !equal)?;
+
+    Ok(None)
 }
 
-pub fn type_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub fn type_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
     let left_type = this.get_data_type(left)?;
     let right_type = this.get_data_type(right)?;
@@ -33,7 +37,9 @@ pub fn type_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), R
     };
 
     let equal = left_type == right_type;
-    push_boolean(this, equal)
+    push_boolean(this, equal)?;
+
+    Ok(None)
 }
 
 fn perform_equality_check<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {

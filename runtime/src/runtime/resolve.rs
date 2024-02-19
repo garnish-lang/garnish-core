@@ -6,7 +6,7 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
     this: &mut Data,
     data: Data::Size,
     context: Option<&mut T>,
-) -> Result<(), RuntimeError<Data::Error>> {
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     // check input
     match this.get_current_value() {
         None => (),
@@ -21,7 +21,7 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
                 None => (),
                 Some(i) => {
                     this.push_register(i)?;
-                    return Ok(());
+                    return Ok(None);
                 }
             },
         },
@@ -33,7 +33,7 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
         Some(c) => match this.get_data_type(data)? {
             ExpressionDataType::Symbol => {
                 match c.resolve(this.get_symbol(data)?, this)? {
-                    true => return Ok(()), // context resovled end look up
+                    true => return Ok(None), // context resovled end look up
                     false => (),           // not resolved fall through
                 }
             }
@@ -42,5 +42,7 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
     }
 
     // default to unit
-    push_unit(this)
+    push_unit(this)?;
+
+    Ok(None)
 }

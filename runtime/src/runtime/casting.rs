@@ -8,18 +8,18 @@ use crate::{
     OrNumberError, RuntimeError, TypeConstants,
 };
 
-pub(crate) fn type_of<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn type_of<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let a = next_ref(this)?;
     let t = this.get_data_type(a)?;
     this.add_type(t).and_then(|r| this.push_register(r))?;
 
-    Ok(())
+    Ok(None)
 }
 
 pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
-) -> Result<(), RuntimeError<Data::Error>> {
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
 
     let (left_type, mut right_type) = (this.get_data_type(left)?, this.get_data_type(right)?);
@@ -202,7 +202,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
         },
     }
 
-    Ok(())
+    Ok(None)
 }
 
 pub(crate) fn list_from_char_list<Data: GarnishLangRuntimeData>(
@@ -210,7 +210,7 @@ pub(crate) fn list_from_char_list<Data: GarnishLangRuntimeData>(
     byte_list_addr: Data::Size,
     start: Data::Number,
     end: Data::Number,
-) -> Result<(), RuntimeError<Data::Error>> {
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let len = this.get_char_list_len(byte_list_addr)?;
     let mut count = start;
 
@@ -225,7 +225,7 @@ pub(crate) fn list_from_char_list<Data: GarnishLangRuntimeData>(
 
     this.end_list().and_then(|r| this.push_register(r))?;
 
-    Ok(())
+    Ok(None)
 }
 
 pub(crate) fn list_from_byte_list<Data: GarnishLangRuntimeData>(
@@ -233,7 +233,7 @@ pub(crate) fn list_from_byte_list<Data: GarnishLangRuntimeData>(
     byte_list_addr: Data::Size,
     start: Data::Number,
     end: Data::Number,
-) -> Result<(), RuntimeError<Data::Error>> {
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let len = this.get_byte_list_len(byte_list_addr)?;
     let mut count = start;
 
@@ -248,7 +248,7 @@ pub(crate) fn list_from_byte_list<Data: GarnishLangRuntimeData>(
 
     this.end_list().and_then(|r| this.push_register(r))?;
 
-    Ok(())
+    Ok(None)
 }
 
 pub(crate) fn primitive_cast<Data: GarnishLangRuntimeData, From, To, GetFunc, CastFunc, AddFunc>(
@@ -257,7 +257,7 @@ pub(crate) fn primitive_cast<Data: GarnishLangRuntimeData, From, To, GetFunc, Ca
     get: GetFunc,
     cast: CastFunc,
     add: AddFunc,
-) -> Result<(), RuntimeError<Data::Error>>
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>
 where
     GetFunc: Fn(&Data, Data::Size) -> Result<From, Data::Error>,
     CastFunc: Fn(From) -> Option<To>,
@@ -272,5 +272,5 @@ where
         None => push_unit(this)?,
     }
 
-    Ok(())
+    Ok(None)
 }

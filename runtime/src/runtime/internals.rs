@@ -8,7 +8,7 @@ use garnish_traits::Instruction;
 pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
-) -> Result<(), RuntimeError<Data::Error>> {
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
     match this.get_data_type(r)? {
         ExpressionDataType::Pair => {
@@ -47,13 +47,13 @@ pub(crate) fn access_left_internal<Data: GarnishLangRuntimeData, Context: Garnis
         },
     }
 
-    Ok(())
+    Ok(None)
 }
 
 pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
-) -> Result<(), RuntimeError<Data::Error>> {
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
     match this.get_data_type(r)? {
         ExpressionDataType::Pair => {
@@ -92,13 +92,13 @@ pub(crate) fn access_right_internal<Data: GarnishLangRuntimeData, Context: Garni
         },
     }
 
-    Ok(())
+    Ok(None)
 }
 
 pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
-) -> Result<(), RuntimeError<Data::Error>> {
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
     match this.get_data_type(r)? {
         ExpressionDataType::List => {
@@ -160,7 +160,7 @@ pub(crate) fn access_length_internal<Data: GarnishLangRuntimeData, Context: Garn
         },
     }
 
-    Ok(())
+    Ok(None)
 }
 
 pub(crate) fn concatenation_len<Data: GarnishLangRuntimeData>(this: &mut Data, addr: Data::Size) -> Result<Data::Size, RuntimeError<Data::Error>> {

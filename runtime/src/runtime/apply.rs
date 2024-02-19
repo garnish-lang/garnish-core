@@ -9,24 +9,23 @@ use super::context::GarnishLangRuntimeContext;
 pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
     context: Option<&mut T>,
-) -> Result<(), RuntimeError<Data::Error>> {
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     apply_internal(this, Instruction::Apply, context)
 }
 
-pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
+    let mut next_instruction = this.get_instruction_cursor() + Data::Size::one();
     // only execute if left side is a true like value
     match this.get_data_type(left_addr)? {
         ExpressionDataType::Unit | ExpressionDataType::False => {
             trace!("Left is false, not reapplying");
-            this.set_instruction_cursor(this.get_instruction_cursor() + Data::Size::one())?;
             trace!("Next instruction will be {:?}", this.get_instruction_cursor());
             match this.get_current_value() {
                 None => push_unit(this)?,
                 Some(i) => this.push_register(i)?,
             }
-            Ok(())
         },
         _ => {
             let point = match this.get_jump_point(index) {
@@ -36,7 +35,7 @@ pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data
 
             trace!("Reapplying jumping to instruction at point {:?}", point);
 
-            this.set_instruction_cursor(point)?;
+            next_instruction = point;
             match this.pop_value_stack() {
                 None => state_error(format!("Failed to pop input during reapply operation."))?,
                 Some(v) => {
@@ -45,15 +44,17 @@ pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data
             }
 
             trace!("Pushing to value stack value {:?}", right_addr);
-            Ok(this.push_value_stack(right_addr)?)
+            this.push_value_stack(right_addr)?;
         }
     }
+
+    Ok(Some(next_instruction))
 }
 
 pub(crate) fn empty_apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,
     context: Option<&mut T>,
-) -> Result<(), RuntimeError<Data::Error>> {
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     push_unit(this)?;
     apply_internal(this, Instruction::EmptyApply, context)
 }
@@ -62,7 +63,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
     this: &mut Data,
     instruction: Instruction,
     context: Option<&mut T>,
-) -> Result<(), RuntimeError<Data::Error>> {
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let right_addr = next_ref(this)?;
     let left_addr = next_ref(this)?;
 
@@ -209,9 +210,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
         },
     }
 
-    this.set_instruction_cursor(next_instruction)?;
-
-    Ok(())
+    Ok(Some(next_instruction))
 }
 
 pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(

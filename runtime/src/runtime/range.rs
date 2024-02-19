@@ -1,18 +1,18 @@
 use crate::{next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError};
 
-pub(crate) fn make_range<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn make_range<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     make_range_internal(this, false, false)
 }
 
-pub(crate) fn make_start_exclusive_range<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn make_start_exclusive_range<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     make_range_internal(this, true, false)
 }
 
-pub(crate) fn make_end_exclusive_range<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn make_end_exclusive_range<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     make_range_internal(this, false, true)
 }
 
-pub(crate) fn make_exclusive_range<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<(), RuntimeError<Data::Error>> {
+pub(crate) fn make_exclusive_range<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     make_range_internal(this, true, true)
 }
 
@@ -24,7 +24,7 @@ fn make_range_internal<Data: GarnishLangRuntimeData>(
     this: &mut Data,
     start_exclusive: bool,
     end_exclusive: bool,
-) -> Result<(), RuntimeError<Data::Error>> {
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
     let types = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
 
@@ -50,5 +50,5 @@ fn make_range_internal<Data: GarnishLangRuntimeData>(
         }
     }
 
-    Ok(())
+    Ok(None)
 }
