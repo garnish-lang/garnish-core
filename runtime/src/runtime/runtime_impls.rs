@@ -147,7 +147,7 @@ where
 
         let next_instruction = match next_instruction {
             Some(i) => i,
-            None => self.get_data().get_instruction_len() + Data::Size::one(),
+            None => self.get_data().get_instruction_cursor() + Data::Size::one(),
         };
 
         match next_instruction >= self.get_data().get_instruction_len() {
