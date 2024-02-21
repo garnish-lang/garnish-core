@@ -101,8 +101,6 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         | Definition::BitwiseXor
         | Definition::BitwiseLeftShift
         | Definition::BitwiseRightShift
-        | Definition::And
-        | Definition::Or
         | Definition::Xor
         | Definition::TypeCast
         | Definition::TypeEqual
@@ -128,8 +126,10 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         Definition::SideEffect => ((true, node.get_right()), (false, None)),
         Definition::Group => ((true, node.get_right()), (false, None)),
         Definition::NestedExpression => ((false, None), (false, None)),
-        Definition::JumpIfTrue => ((true, node.get_left()), (false, None)),
-        Definition::JumpIfFalse => ((true, node.get_left()), (false, None)),
+        Definition::JumpIfTrue
+        | Definition::And
+        | Definition::Or
+        | Definition::JumpIfFalse => ((true, node.get_left()), (false, None)),
         Definition::ElseJump => ((true, node.get_left()), (true, node.get_right())),
         Definition::Drop => ((false, None), (false, None)),
     }
@@ -252,12 +252,6 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         Definition::BitwiseRightShift => {
             data.push_instruction(Instruction::BitwiseShiftRight, None)?;
         }
-        Definition::And => {
-            data.push_instruction(Instruction::And, None)?;
-        }
-        Definition::Or => {
-            data.push_instruction(Instruction::Or, None)?;
-        }
         Definition::Xor => {
             data.push_instruction(Instruction::Xor, None)?;
         }
@@ -362,10 +356,10 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         Definition::Reapply => {
             data.push_instruction(Instruction::Reapply, Some(nearest_expression_point))?;
         }
-        Definition::JumpIfTrue => {
+        Definition::JumpIfTrue | Definition::Or => {
             data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index))?;
         }
-        Definition::JumpIfFalse => {
+        Definition::JumpIfFalse | Definition::And => {
             data.push_instruction(Instruction::JumpIfFalse, Some(current_jump_index))?;
         }
         Definition::SideEffect => {
@@ -397,13 +391,13 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
     let mut jump_count = data.get_jump_table_len() + Data::Size::one();
 
     // tuple of (root node, last instruction of this node, nearest expression jump point)
-    let mut root_stack = vec![(root, Instruction::EndExpression, None, data.get_jump_table_len())];
+    let mut root_stack = vec![(root, vec![(Instruction::EndExpression, None)], data.get_jump_table_len())];
 
     // arbitrary max iterations for roots
     let max_roots = 100;
     let mut root_iter_count = 0;
 
-    while let Some((root_index, return_instruction, instruction_data, nearest_expression_point)) = root_stack.pop() {
+    while let Some((root_index, return_instructions, nearest_expression_point)) = root_stack.pop() {
         trace!("Makeing instructions for tree starting at index {:?}", root_index);
 
         let mut conditional_stack = vec![];
@@ -440,7 +434,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                             let ((first_expected, first_index), (second_expected, second_index)) = get_resolve_info(node, &nodes);
 
                             let we_are_conditional =
-                                node.get_definition() == Definition::JumpIfFalse || node.get_definition() == Definition::JumpIfTrue;
+                                [Definition::JumpIfFalse, Definition::JumpIfTrue, Definition::And, Definition::Or].contains(&node.get_definition());
 
                             let we_are_parent_conditional_branch =
                                 node.get_definition() == Definition::ElseJump && resolve_node_info.parent_definition != Definition::ElseJump;
@@ -582,20 +576,33 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
 
                                 // after resolving, if a nested expression
                                 // and add nested expressions child to deferred list
-                                let mut return_instruction = (Instruction::EndExpression, None);
+                                let mut return_instructions = vec![(Instruction::EndExpression, None)];
                                 if we_are_conditional {
-                                    return_instruction = match conditional_stack.last() {
+                                    return_instructions = match conditional_stack.last() {
                                         None => implementation_error(format!("Conditional stack empty when attempting to resolve conditional."))?,
                                         // apply if true/false resolve fully before the parent conditional branch
                                         // second look up to get accurate value instruction data will happen when this instruction is placed
                                         // add 1 to account for current base jump
-                                        Some(return_index) => (Instruction::JumpTo, Some(*return_index)),
+                                        Some(return_index) => {
+                                            let mut base = vec![];
+                                            if node.get_definition() == Definition::And || node.get_definition() == Definition::Or {
+                                                base.push((Instruction::Tis, None));
+                                            }
+
+                                            base.push((Instruction::JumpTo, Some(*return_index)));
+
+                                            base
+                                        }
                                     };
-                                    trace!(
-                                        "Return instruction for conditional is {:?} with data {:?}",
-                                        return_instruction.0,
-                                        return_instruction.1
-                                    );
+
+                                    for (i, instruction) in return_instructions.iter().enumerate() {
+                                        trace!(
+                                            "Return instruction {} for conditional is {:?} with data {:?}",
+                                            i,
+                                            instruction.0,
+                                            instruction.1
+                                        );
+                                    }
                                 }
 
                                 // if conditional branch, need to update jump table and pop from conditional stack
@@ -632,7 +639,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                         }
                                         Some(node_index) => {
                                             trace!("Adding index {:?} to root stack", node_index);
-                                            root_stack.insert(0, (node_index, return_instruction.0, return_instruction.1, nearest_expression))
+                                            root_stack.insert(0, (node_index, return_instructions, nearest_expression))
                                         }
                                     }
 
@@ -677,10 +684,12 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
             }
         }
 
-        trace!("Adding return instruction {:?} with data {:?}", return_instruction, instruction_data);
+        for instruction in return_instructions {
+            trace!("Adding return instruction {:?} with data {:?}", instruction.0, instruction.1);
 
-        data.push_instruction(return_instruction, instruction_data)?;
-        metadata.push(InstructionMetadata::new(None));
+            data.push_instruction(instruction.0, instruction.1)?;
+            metadata.push(InstructionMetadata::new(None));
+        }
 
         trace!("Finished instructions for tree starting at index {:?}", root_index);
 
@@ -1668,7 +1677,7 @@ mod operations {
 
     #[test]
     fn and() {
-        assert_instruction_data(
+        assert_instruction_data_jumps(
             1,
             vec![
                 (Definition::Number, Some(1), None, None, "5", TokenType::Number),
@@ -1677,34 +1686,40 @@ mod operations {
             ],
             vec![
                 (Instruction::Put, Some(3)),
-                (Instruction::Put, Some(4)),
-                (Instruction::And, None),
+                (Instruction::JumpIfFalse, Some(2)),
                 (Instruction::EndExpression, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::Tis, None),
+                (Instruction::JumpTo, Some(1)),
             ],
             SimpleDataList::default()
                 .append(SimpleData::Number(5.into()))
                 .append(SimpleData::Number(10.into())),
+            vec![0, 2, 3],
         );
     }
 
     #[test]
     fn or() {
-        assert_instruction_data(
+        assert_instruction_data_jumps(
             1,
             vec![
                 (Definition::Number, Some(1), None, None, "5", TokenType::Number),
-                (Definition::Or, None, Some(0), Some(2), ">=", TokenType::Or),
+                (Definition::Or, None, Some(0), Some(2), "||", TokenType::Or),
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
                 (Instruction::Put, Some(3)),
-                (Instruction::Put, Some(4)),
-                (Instruction::Or, None),
+                (Instruction::JumpIfTrue, Some(2)),
                 (Instruction::EndExpression, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::Tis, None),
+                (Instruction::JumpTo, Some(1)),
             ],
             SimpleDataList::default()
                 .append(SimpleData::Number(5.into()))
                 .append(SimpleData::Number(10.into())),
+            vec![0, 2, 3],
         );
     }
 
@@ -1714,7 +1729,7 @@ mod operations {
             1,
             vec![
                 (Definition::Number, Some(1), None, None, "5", TokenType::Number),
-                (Definition::Xor, None, Some(0), Some(2), ">=", TokenType::Xor),
+                (Definition::Xor, None, Some(0), Some(2), "^^", TokenType::Xor),
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
