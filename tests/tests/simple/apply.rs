@@ -455,11 +455,9 @@ mod tests {
     }
 
     #[test]
-    fn reapply_if_true() {
+    fn reapply() {
         let mut runtime = create_simple_runtime();
 
-        let true1 = runtime.get_data_mut().add_true().unwrap();
-        let _exp1 = runtime.get_data_mut().add_expression(0).unwrap();
         let int1 = runtime.get_data_mut().add_number(20.into()).unwrap();
         let _int2 = runtime.get_data_mut().add_number(30.into()).unwrap();
         let int3 = runtime.get_data_mut().add_number(40.into()).unwrap();
@@ -479,7 +477,6 @@ mod tests {
 
         runtime.get_data_mut().push_jump_point(i1).unwrap();
 
-        runtime.get_data_mut().push_register(true1).unwrap();
         runtime.get_data_mut().push_register(int3).unwrap();
 
         runtime.get_data_mut().push_value_stack(int1).unwrap();
@@ -491,49 +488,6 @@ mod tests {
         assert_eq!(runtime.get_data_mut().get_value_stack_len(), 1);
         assert_eq!(runtime.get_data_mut().get_value(0).unwrap(), int3);
         assert_eq!(next.unwrap(), i1);
-    }
-
-    #[test]
-    fn reapply_if_false() {
-        let mut runtime = create_simple_runtime();
-
-        runtime.get_data_mut().add_false().unwrap();
-        runtime.get_data_mut().add_expression(0).unwrap();
-        runtime.get_data_mut().add_number(20.into()).unwrap();
-        runtime.get_data_mut().add_number(30.into()).unwrap();
-        runtime.get_data_mut().add_number(40.into()).unwrap();
-
-        // 1
-        runtime.get_data_mut().push_instruction(Instruction::Put, Some(1)).unwrap();
-        runtime.get_data_mut().push_instruction(Instruction::Put, Some(2)).unwrap();
-        runtime.get_data_mut().push_instruction(Instruction::Apply, None).unwrap();
-
-        // 4
-        runtime.get_data_mut().push_instruction(Instruction::Put, Some(0)).unwrap();
-        runtime.get_data_mut().push_instruction(Instruction::PutValue, None).unwrap();
-        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
-        runtime.get_data_mut().push_instruction(Instruction::PutValue, None).unwrap();
-        runtime.get_data_mut().push_instruction(Instruction::Reapply, Some(0)).unwrap();
-        runtime.get_data_mut().push_instruction(Instruction::EndExpression, None).unwrap();
-
-        runtime.get_data_mut().push_jump_point(4).unwrap();
-
-        runtime.get_data_mut().push_register(1).unwrap();
-        runtime.get_data_mut().push_register(4).unwrap();
-
-        runtime.get_data_mut().push_value_stack(2).unwrap();
-        runtime.get_data_mut().push_jump_path(9).unwrap();
-
-        runtime.get_data_mut().set_instruction_cursor(8).unwrap();
-
-        let next = runtime.reapply(0).unwrap();
-
-        assert_eq!(runtime.get_data_mut().get_value_stack_len(), 1);
-        assert_eq!(runtime.get_data_mut().get_value(0).unwrap(), 2);
-        assert_eq!(runtime.get_data().get_register_len(), 1);
-        assert_eq!(runtime.get_data().get_register(0).unwrap(), 2);
-        assert_eq!(next.unwrap(), 9);
-        assert_eq!(runtime.get_data_mut().get_jump_path(0).unwrap(), 9);
     }
 
     #[test]

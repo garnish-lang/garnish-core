@@ -1,8 +1,8 @@
-use log::trace;
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
 use crate::{state_error, ErrorType, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
 use garnish_traits::Instruction;
+use log::trace;
 
 use super::context::GarnishLangRuntimeContext;
 
@@ -14,39 +14,24 @@ pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<D
 }
 
 pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let (right_addr, left_addr) = next_two_raw_ref(this)?;
+    let value_addr = next_ref(this)?;
 
-    let mut next_instruction = this.get_instruction_cursor() + Data::Size::one();
-    // only execute if left side is a true like value
-    match this.get_data_type(left_addr)? {
-        ExpressionDataType::Unit | ExpressionDataType::False => {
-            trace!("Left is false, not reapplying");
-            trace!("Next instruction will be {:?}", this.get_instruction_cursor());
-            match this.get_current_value() {
-                None => push_unit(this)?,
-                Some(i) => this.push_register(i)?,
-            }
-        },
-        _ => {
-            let point = match this.get_jump_point(index) {
-                None => state_error(format!("No jump point at index {:?}", index))?,
-                Some(i) => i,
-            };
+    let next_instruction = match this.get_jump_point(index) {
+        None => state_error(format!("No jump point at index {:?}", index))?,
+        Some(i) => i,
+    };
 
-            trace!("Reapplying jumping to instruction at point {:?}", point);
+    trace!("Reapplying jumping to instruction at point {:?}", next_instruction);
 
-            next_instruction = point;
-            match this.pop_value_stack() {
-                None => state_error(format!("Failed to pop input during reapply operation."))?,
-                Some(v) => {
-                    trace!("Popped from value stack value {:?}", v)
-                },
-            }
-
-            trace!("Pushing to value stack value {:?}", right_addr);
-            this.push_value_stack(right_addr)?;
+    match this.pop_value_stack() {
+        None => state_error(format!("Failed to pop input during reapply operation."))?,
+        Some(v) => {
+            trace!("Popped from value stack value {:?}", v)
         }
     }
+
+    trace!("Pushing to value stack value {:?}", value_addr);
+    this.push_value_stack(value_addr)?;
 
     Ok(Some(next_instruction))
 }
