@@ -352,7 +352,11 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         Definition::ApplyTo => {
             data.push_instruction(Instruction::Apply, None)?;
         }
-        Definition::JumpIfTrue | Definition::Or | Definition::Reapply => {
+        Definition::Reapply => {
+            data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index))?;
+            data.push_instruction(Instruction::PutValue, None)?;
+        }
+        Definition::JumpIfTrue | Definition::Or => {
             data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index))?;
         }
         Definition::JumpIfFalse | Definition::And => {
@@ -2119,6 +2123,7 @@ mod operations {
             vec![
                 (Instruction::Put, Some(3)),
                 (Instruction::JumpIfTrue, Some(2)),
+                (Instruction::PutValue, None),
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::Reapply, Some(0)),
@@ -2126,7 +2131,7 @@ mod operations {
             SimpleDataList::default()
                 .append(SimpleData::Number(5.into()))
                 .append(SimpleData::Number(10.into())),
-            vec![0, 2, 3],
+            vec![0, 3, 4],
         );
     }
 }
