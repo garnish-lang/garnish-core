@@ -36,6 +36,7 @@ pub enum Instruction {
     Or,
     Xor,
     Not,
+    Tis,
     JumpIfTrue,
     JumpIfFalse,
     TypeOf,

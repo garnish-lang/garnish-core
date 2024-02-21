@@ -37,6 +37,7 @@ pub enum Definition {
     Or,
     Xor,
     Not,
+    Tis,
     EmptyApply,
     TypeOf,
     TypeCast,
@@ -183,6 +184,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::Or => (Definition::Or, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Xor => (Definition::Xor, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Not => (Definition::Not, SecondaryDefinition::UnaryPrefix),
+        TokenType::Tis => (Definition::Tis, SecondaryDefinition::UnaryPrefix),
         TokenType::TypeOf => (Definition::TypeOf, SecondaryDefinition::UnaryPrefix),
         TokenType::TypeCast => (Definition::TypeCast, SecondaryDefinition::BinaryLeftToRight),
         TokenType::TypeEqual => (Definition::TypeEqual, SecondaryDefinition::BinaryLeftToRight),
@@ -361,6 +363,7 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::Equality, 400);
 
     map.insert(Definition::Not, 400);
+    map.insert(Definition::Tis, 400);
     map.insert(Definition::And, 410);
     map.insert(Definition::Xor, 420);
     map.insert(Definition::Or, 430);
@@ -2522,6 +2525,22 @@ mod tests {
             &result,
             0,
             &[(0, Definition::Not, None, None, Some(1)), (1, Definition::Number, Some(0), None, None)],
+        );
+    }
+
+    #[test]
+    fn tis() {
+        let tokens = vec![
+            LexerToken::new("??".to_string(), TokenType::Tis, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[(0, Definition::Tis, None, None, Some(1)), (1, Definition::Number, Some(0), None, None)],
         );
     }
 

@@ -31,6 +31,7 @@ pub enum TokenType {
     Or,
     Xor,
     Not,
+    Tis,
     StartExpression,
     EndExpression,
     StartGroup,
@@ -191,6 +192,7 @@ impl<'a> Lexer<'a> {
             ("||", TokenType::Or),
             ("^^", TokenType::Xor),
             ("!!", TokenType::Not),
+            ("??", TokenType::Tis),
             ("()", TokenType::UnitLiteral),
             ("{", TokenType::StartExpression),
             ("}", TokenType::EndExpression),
@@ -287,15 +289,6 @@ impl<'a> Lexer<'a> {
     fn start_token(
         &mut self,
         c: char,
-        // current_operator: &mut &'a LexerOperatorNode,
-        // operator_tree: &'a LexerOperatorNode,
-        // state: &mut LexingState,
-        // current_characters: &mut String,
-        // current_token_type: &mut Option<TokenType>,
-        // token_start_column: &mut usize,
-        // token_start_row: &mut usize,
-        // text_column: &mut usize,
-        // text_row: &mut usize,
     ) {
         trace!("Beginning new token");
         self.current_characters = String::new();
@@ -1506,6 +1499,21 @@ mod tests {
             vec![LexerToken {
                 text: "!!".to_string(),
                 token_type: TokenType::Not,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn tis() {
+        let result = lex(&"??".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "??".to_string(),
+                token_type: TokenType::Tis,
                 column: 0,
                 row: 0
             }]

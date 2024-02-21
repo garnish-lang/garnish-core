@@ -68,6 +68,7 @@ where
         );
 
         let next_instruction = match instruction {
+            Instruction::Tis => todo!(),
             Instruction::Invalid => None,
             Instruction::Add => self.add(context)?,
             Instruction::Subtract => self.subtract(context)?,

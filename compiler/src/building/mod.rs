@@ -62,9 +62,7 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         | Definition::Value
         | Definition::Unit
         | Definition::False // Shares logic with subexpression, TODO look into refactoring this logic to specify all three visits instead of just two
-        | Definition::True => {
-            ((false, node.get_left()), (false, node.get_right()))
-        }
+        | Definition::True => ((false, node.get_left()), (false, node.get_right())),
         Definition::Opposite => {
             // if right value is a number, don't resolve it
             // will be handled during opposite's resolve
@@ -80,8 +78,17 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
                 }
             }
         }
-        Definition::AccessLeftInternal | Definition::AbsoluteValue | Definition::BitwiseNot | Definition::Not | Definition::TypeOf | Definition::PrefixApply => ((true, node.get_right()), (false, None)),
-        Definition::EmptyApply | Definition::AccessLengthInternal | Definition::AccessRightInternal | Definition::SuffixApply => ((true, node.get_left()), (false, None)),
+        Definition::AccessLeftInternal
+        | Definition::AbsoluteValue
+        | Definition::BitwiseNot
+        | Definition::Tis
+        | Definition::Not
+        | Definition::TypeOf
+        | Definition::PrefixApply => ((true, node.get_right()), (false, None)),
+        Definition::EmptyApply
+        | Definition::AccessLengthInternal
+        | Definition::AccessRightInternal
+        | Definition::SuffixApply => ((true, node.get_left()), (false, None)),
         Definition::Addition
         | Definition::Subtraction
         | Definition::MultiplicationSign
@@ -114,9 +121,7 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         | Definition::EndExclusiveRange
         | Definition::StartExclusiveRange
         | Definition::ExclusiveRange
-        | Definition::Concatenation => {
-            ((true, node.get_left()), (true, node.get_right()))
-        }
+        | Definition::Concatenation => ((true, node.get_left()), (true, node.get_right())),
         Definition::ApplyTo => ((true, node.get_right()), (true, node.get_left())),
         Definition::List => ((true, node.get_left()), (true, node.get_right())),
         Definition::CommaList | Definition::InfixApply => ((false, node.get_left()), (false, node.get_right())),
@@ -255,6 +260,9 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         }
         Definition::Xor => {
             data.push_instruction(Instruction::Xor, None)?;
+        }
+        Definition::Tis => {
+            data.push_instruction(Instruction::Tis, None)?;
         }
         Definition::Not => {
             data.push_instruction(Instruction::Not, None)?;
@@ -928,7 +936,7 @@ mod metadata {
                 InstructionMetadata::new(Some(4)),
                 InstructionMetadata::new(None),
                 InstructionMetadata::new(Some(2)),
-                InstructionMetadata::new(None)
+                InstructionMetadata::new(None),
             ]
         );
     }
@@ -1635,6 +1643,23 @@ mod operations {
             vec![
                 (Instruction::Resolve, Some(3)),
                 (Instruction::Not, None),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default().append_symbol("value"),
+        );
+    }
+
+    #[test]
+    fn tis() {
+        assert_instruction_data(
+            0,
+            vec![
+                (Definition::Tis, None, None, Some(1), "??", TokenType::Tis),
+                (Definition::Identifier, Some(0), None, None, "value", TokenType::Identifier),
+            ],
+            vec![
+                (Instruction::Resolve, Some(3)),
+                (Instruction::Tis, None),
                 (Instruction::EndExpression, None),
             ],
             SimpleDataList::default().append_symbol("value"),
