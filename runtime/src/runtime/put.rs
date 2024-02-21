@@ -13,7 +13,7 @@ pub(crate) fn put<Data: GarnishLangRuntimeData>(this: &mut Data, i: Data::Size) 
     Ok(None)
 }
 
-pub(crate) fn put_input<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn put_value<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_current_value() {
         None => push_unit(this)?,
         Some(i) => this.push_register(i)?,
@@ -22,7 +22,7 @@ pub(crate) fn put_input<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
     Ok(None)
 }
 
-pub(crate) fn push_input<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn push_value<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
 
     this.push_value_stack(r)?;
@@ -30,7 +30,7 @@ pub(crate) fn push_input<Data: GarnishLangRuntimeData>(this: &mut Data) -> Resul
     Ok(None)
 }
 
-pub(crate) fn push_result<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn upldate_value<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
     match this.get_current_value_mut() {
         None => state_error(format!("No inputs available to update for update value operation."))?,

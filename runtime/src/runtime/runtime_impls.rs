@@ -13,7 +13,7 @@ use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
 use crate::runtime::list::*;
 use crate::runtime::logical::{and, not, or, tis, xor};
 use crate::runtime::pair::make_pair;
-use crate::runtime::put::{push_input, push_result, put, put_input};
+use crate::runtime::put::{push_value, upldate_value, put, put_value};
 use crate::runtime::range::{make_end_exclusive_range, make_exclusive_range, make_range, make_start_exclusive_range};
 use crate::runtime::resolve::resolve;
 use crate::runtime::result::*;
@@ -395,15 +395,15 @@ where
     }
 
     fn put_value(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        put_input(self.get_data_mut())
+        put_value(self.get_data_mut())
     }
 
     fn push_value(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        push_input(self.get_data_mut())
+        push_value(self.get_data_mut())
     }
 
     fn update_value(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        push_result(self.get_data_mut())
+        upldate_value(self.get_data_mut())
     }
 
     //
