@@ -68,7 +68,6 @@ where
         );
 
         let next_instruction = match instruction {
-            Instruction::Tis => todo!(),
             Instruction::Invalid => None,
             Instruction::Add => self.add(context)?,
             Instruction::Subtract => self.subtract(context)?,
@@ -89,6 +88,7 @@ where
             Instruction::Or => self.or()?,
             Instruction::Xor => self.xor()?,
             Instruction::Not => self.not()?,
+            Instruction::Tis => self.tis()?,
             Instruction::PutValue => self.put_value()?,
             Instruction::PushValue => self.push_value()?,
             Instruction::UpdateValue => self.update_value()?,
