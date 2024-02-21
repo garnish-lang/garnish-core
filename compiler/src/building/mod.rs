@@ -433,8 +433,14 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
 
                             let ((first_expected, first_index), (second_expected, second_index)) = get_resolve_info(node, &nodes);
 
-                            let we_are_conditional =
-                                [Definition::JumpIfFalse, Definition::JumpIfTrue, Definition::And, Definition::Or, Definition::Reapply].contains(&node.get_definition());
+                            let we_are_conditional = [
+                                Definition::JumpIfFalse,
+                                Definition::JumpIfTrue,
+                                Definition::And,
+                                Definition::Or,
+                                Definition::Reapply,
+                            ]
+                            .contains(&node.get_definition());
 
                             let we_are_parent_conditional_branch =
                                 node.get_definition() == Definition::ElseJump && resolve_node_info.parent_definition != Definition::ElseJump;
@@ -562,8 +568,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 if resolve {
                                     trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
 
-                                    let instruction_created =
-                                        resolve_node(node, &nodes, data, list_counts.last(), jump_count)?;
+                                    let instruction_created = resolve_node(node, &nodes, data, list_counts.last(), jump_count)?;
 
                                     if instruction_created {
                                         metadata.push(InstructionMetadata::new(resolve_node_info.node_index))
@@ -590,7 +595,8 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                             }
 
                                             if node.get_definition() == Definition::Reapply {
-                                                base.push((Instruction::Reapply, Some(nearest_expression_point)));
+                                                base.push((Instruction::UpdateValue, None));
+                                                base.push((Instruction::JumpTo, Some(nearest_expression_point)));
                                             } else {
                                                 base.push((Instruction::JumpTo, Some(*return_index)));
                                             }
@@ -2126,7 +2132,8 @@ mod operations {
                 (Instruction::PutValue, None),
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(4)),
-                (Instruction::Reapply, Some(0)),
+                (Instruction::UpdateValue, None),
+                (Instruction::JumpTo, Some(0)),
             ],
             SimpleDataList::default()
                 .append(SimpleData::Number(5.into()))
@@ -2729,8 +2736,8 @@ mod conditionals {
                 (Instruction::Put, Some(3)),
                 (Instruction::JumpIfTrue, Some(2)),
                 (Instruction::Put, Some(4)),
-                (Instruction::EndExpression, None), // 4
-                (Instruction::Put, Some(5)),
+                (Instruction::EndExpression, None),
+                (Instruction::Put, Some(5)), // 4
                 (Instruction::JumpTo, Some(1)),
             ],
             SimpleDataList::default()
@@ -2754,16 +2761,19 @@ mod conditionals {
             ],
             vec![
                 (Instruction::Put, Some(3)),
+                (Instruction::JumpIfTrue, Some(2)),
+                (Instruction::PutValue, None),
                 (Instruction::Put, Some(4)),
-                (Instruction::Reapply, Some(0)),
+                (Instruction::EndExpression, None),
                 (Instruction::Put, Some(5)),
-                (Instruction::EndExpression, None), // 4
+                (Instruction::UpdateValue, None),
+                (Instruction::JumpTo, Some(0)),
             ],
             SimpleDataList::default()
                 .append(SimpleData::Number(5.into()))
-                .append(SimpleData::Number(10.into()))
-                .append(SimpleData::Number(15.into())),
-            vec![0, 4], // TODO: Either more tests to verify if extra jump is needed or find way to remove it
+                .append(SimpleData::Number(15.into()))
+                .append(SimpleData::Number(10.into())),
+            vec![0, 4, 5],
         );
     }
 
