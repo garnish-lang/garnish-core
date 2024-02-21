@@ -321,3 +321,66 @@ mod not {
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
     }
 }
+
+#[cfg(test)]
+mod tis {
+    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+
+    use crate::simple::testing_utilities::create_simple_runtime;
+
+    #[test]
+    fn tis_false_is_false() {
+        let mut runtime = create_simple_runtime();
+
+        let int1 = runtime.get_data_mut().add_false().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+
+        runtime.tis().unwrap();
+
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+    }
+
+    #[test]
+    fn tis_any_is_true() {
+        let mut runtime = create_simple_runtime();
+
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+
+        runtime.tis().unwrap();
+
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn tis_true_is_true() {
+        let mut runtime = create_simple_runtime();
+
+        let int1 = runtime.get_data_mut().add_true().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+
+        runtime.tis().unwrap();
+
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+    }
+
+    #[test]
+    fn tis_unit_is_false() {
+        let mut runtime = create_simple_runtime();
+
+        let int1 = runtime.get_data_mut().add_unit().unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+
+        runtime.tis().unwrap();
+
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+    }
+}

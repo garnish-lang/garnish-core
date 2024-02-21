@@ -266,6 +266,7 @@ pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn or(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn xor(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn not(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn tis(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
 
     fn type_of(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn type_equal(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
