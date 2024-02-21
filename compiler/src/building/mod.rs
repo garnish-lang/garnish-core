@@ -113,7 +113,6 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         | Definition::Pair
         | Definition::Access
         | Definition::Subexpression // Same order for child resolution but has special check, might need to move out of here eventually
-        | Definition::Reapply
         | Definition::Apply
         | Definition::Range
         | Definition::EndExclusiveRange
@@ -126,9 +125,10 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         Definition::SideEffect => ((true, node.get_right()), (false, None)),
         Definition::Group => ((true, node.get_right()), (false, None)),
         Definition::NestedExpression => ((false, None), (false, None)),
-        Definition::JumpIfTrue
+        Definition::Reapply
         | Definition::And
         | Definition::Or
+        | Definition::JumpIfTrue
         | Definition::JumpIfFalse => ((true, node.get_left()), (false, None)),
         Definition::ElseJump => ((true, node.get_left()), (true, node.get_right())),
         Definition::Drop => ((false, None), (false, None)),
@@ -142,7 +142,6 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
     data: &mut Data,
     list_count: Option<&Data::Size>,
     current_jump_index: Data::Size,
-    nearest_expression_point: Data::Size,
 ) -> Result<bool, CompilerError<Data::Error>> {
     match node.get_definition() {
         Definition::Unit => {
@@ -353,10 +352,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
         Definition::ApplyTo => {
             data.push_instruction(Instruction::Apply, None)?;
         }
-        Definition::Reapply => {
-            data.push_instruction(Instruction::Reapply, Some(nearest_expression_point))?;
-        }
-        Definition::JumpIfTrue | Definition::Or => {
+        Definition::JumpIfTrue | Definition::Or | Definition::Reapply => {
             data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index))?;
         }
         Definition::JumpIfFalse | Definition::And => {
@@ -434,7 +430,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                             let ((first_expected, first_index), (second_expected, second_index)) = get_resolve_info(node, &nodes);
 
                             let we_are_conditional =
-                                [Definition::JumpIfFalse, Definition::JumpIfTrue, Definition::And, Definition::Or].contains(&node.get_definition());
+                                [Definition::JumpIfFalse, Definition::JumpIfTrue, Definition::And, Definition::Or, Definition::Reapply].contains(&node.get_definition());
 
                             let we_are_parent_conditional_branch =
                                 node.get_definition() == Definition::ElseJump && resolve_node_info.parent_definition != Definition::ElseJump;
@@ -524,7 +520,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                 if node.get_definition() == Definition::Subexpression || node.get_definition().is_value_like() {
                                     trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
 
-                                    let instruction_created = resolve_node(node, &nodes, data, None, Data::Size::zero(), nearest_expression_point)?;
+                                    let instruction_created = resolve_node(node, &nodes, data, None, Data::Size::zero())?;
 
                                     // should always create, but check for posterity
                                     if instruction_created {
@@ -563,7 +559,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                     trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
 
                                     let instruction_created =
-                                        resolve_node(node, &nodes, data, list_counts.last(), jump_count, nearest_expression_point)?;
+                                        resolve_node(node, &nodes, data, list_counts.last(), jump_count)?;
 
                                     if instruction_created {
                                         metadata.push(InstructionMetadata::new(resolve_node_info.node_index))
@@ -589,7 +585,11 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
                                                 base.push((Instruction::Tis, None));
                                             }
 
-                                            base.push((Instruction::JumpTo, Some(*return_index)));
+                                            if node.get_definition() == Definition::Reapply {
+                                                base.push((Instruction::Reapply, Some(nearest_expression_point)));
+                                            } else {
+                                                base.push((Instruction::JumpTo, Some(*return_index)));
+                                            }
 
                                             base
                                         }
@@ -2109,7 +2109,7 @@ mod operations {
 
     #[test]
     fn reapply() {
-        assert_instruction_data(
+        assert_instruction_data_jumps(
             1,
             vec![
                 (Definition::Number, Some(1), None, None, "5", TokenType::Number),
@@ -2118,13 +2118,15 @@ mod operations {
             ],
             vec![
                 (Instruction::Put, Some(3)),
+                (Instruction::JumpIfTrue, Some(2)),
+                (Instruction::EndExpression, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::Reapply, Some(0)),
-                (Instruction::EndExpression, None),
             ],
             SimpleDataList::default()
                 .append(SimpleData::Number(5.into()))
                 .append(SimpleData::Number(10.into())),
+            vec![0, 2, 3],
         );
     }
 }
