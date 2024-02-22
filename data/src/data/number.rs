@@ -313,26 +313,17 @@ impl GarnishNumber for SimpleNumber {
                 Integer(v)
             }
             (Float(v1), Float(v2)) => {
-                let (v, o) = (v1 as i32).overflowing_div(v2 as i32);
-                if o {
-                    return None;
-                }
+                let v = v1.div(v2) as i32;
 
                 Integer(v)
             }
             (Integer(v1), Float(v2)) => {
-                let (v, o) = v1.overflowing_div(v2 as i32);
-                if o {
-                    return None;
-                }
+                let v = (v1 as f64).div(v2) as i32;
 
                 Integer(v)
             }
             (Float(v1), Integer(v2)) => {
-                let (v, o) = (v1 as i32).overflowing_div(v2);
-                if o {
-                    return None;
-                }
+                let v = v1.div(v2 as f64) as i32;
 
                 Integer(v)
             }
@@ -655,8 +646,8 @@ mod tests {
     #[test]
     fn integer_divide() {
         assert_eq!(Integer(10).integer_divide(Integer(20)).unwrap(), Integer(0));
-        assert_eq!(Float(10.0).integer_divide(Float(20.0)).unwrap(), Integer(0));
-        assert_eq!(Integer(10).integer_divide(Float(20.0)).unwrap(), Integer(0));
+        assert_eq!(Float(10.0).integer_divide(Float(2.9)).unwrap(), Integer(3));
+        assert_eq!(Integer(10).integer_divide(Float(2.9)).unwrap(), Integer(3));
         assert_eq!(Float(10.0).integer_divide(Integer(20)).unwrap(), Integer(0));
     }
 
