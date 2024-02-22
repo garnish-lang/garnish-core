@@ -487,6 +487,7 @@ mod slice {
 
 #[cfg(test)]
 mod concatenation {
+    use garnish_data::data::SimpleNumber;
     use garnish_data::data::SimpleNumber::Integer;
     use crate::simple::testing_utilities::{
         add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range, create_simple_runtime,
@@ -632,6 +633,36 @@ mod concatenation {
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 23.into());
+    }
+
+    #[test]
+    fn index_slice_of_concat_of_items_with_duplicate_symbol() {
+        let mut runtime = create_simple_runtime();
+
+        let d1 = add_concatenation_with_start(runtime.get_data_mut(), 10, 20);
+        let d2 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val25").unwrap())
+            .unwrap();
+        let d3 = runtime.get_data_mut().add_number(Integer(123)).unwrap();
+        let d4 = runtime.get_data_mut().add_pair((d2, d3)).unwrap();
+
+        let d5 = runtime.get_data_mut().add_concatenation(d1, d4).unwrap();
+        let d6 = add_range(runtime.get_data_mut(), 2, 11);
+        let d7 = runtime.get_data_mut().add_slice(d5, d6).unwrap();
+
+        let d8 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val25").unwrap())
+            .unwrap();
+
+        runtime.get_data_mut().push_register(d7).unwrap();
+        runtime.get_data_mut().push_register(d8).unwrap();
+
+        runtime.apply(NO_CONTEXT).unwrap();
+
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 123.into());
     }
 
     #[test]

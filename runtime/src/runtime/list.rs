@@ -1,6 +1,6 @@
-use garnish_traits::helpers::{iterate_concatenation_mut, iterate_rev_concatenation_mut};
 use crate::runtime::range::range_len;
 use crate::{get_range, state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants};
+use garnish_traits::helpers::{iterate_concatenation_mut, iterate_rev_concatenation_mut};
 
 pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     if len > this.get_register_len() {
@@ -101,20 +101,14 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 ExpressionDataType::List => index_list(this, value, adjusted_index),
                 ExpressionDataType::CharList => index_char_list(this, value, adjusted_index),
                 ExpressionDataType::ByteList => index_byte_list(this, value, adjusted_index),
-                ExpressionDataType::Concatenation => {
-                    Ok(iterate_concatenation_mut(
-                        this,
-                        value,
-                        |_this, index, addr| {
-                            if index == adjusted_index {
-                                return Ok(Some(addr));
-                            }
+                ExpressionDataType::Concatenation => Ok(iterate_concatenation_mut(this, value, |_this, index, addr| {
+                    if index == adjusted_index {
+                        return Ok(Some(addr));
+                    }
 
-                            Ok(None)
-                        },
-                    )?
-                    .0)
-                }
+                    Ok(None)
+                })?
+                .0),
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
@@ -128,17 +122,13 @@ pub(crate) fn index_concatenation_for<Data: GarnishLangRuntimeData>(
     addr: Data::Size,
     index: Data::Number,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    Ok(iterate_concatenation_mut(
-        this,
-        addr,
-        |_this, current_index, addr| {
-            if current_index == index {
-                return Ok(Some(addr));
-            }
+    Ok(iterate_concatenation_mut(this, addr, |_this, current_index, addr| {
+        if current_index == index {
+            return Ok(Some(addr));
+        }
 
-            Ok(None)
-        },
-    )?
+        Ok(None)
+    })?
     .0)
 }
 
@@ -236,29 +226,32 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                     Ok(item)
                 }
                 ExpressionDataType::Concatenation => {
-                    Ok(iterate_concatenation_mut(
-                        this,
-                        value,
-                        |this, index, addr| {
-                            if index > start && index <= end {
-                                // in range
-                                get_value_if_association(this, addr, sym)
-                            } else {
-                                Ok(None)
+                    let mut found = None;
+                    iterate_concatenation_mut(this, value, |this, index, addr| {
+                        if index > start && index <= end {
+                            // in range
+                            // need the latest value, being the value closest to the end for symbol access
+                            // check entire concatenation, reassigning found each time we find a match
+                            let item = get_value_if_association(this, addr, sym)?;
+                            match item {
+                                None => {}
+                                Some(i) => {
+                                    found = Some(i);
+                                }
                             }
-                        },
-                    )?
-                    .0)
+                        }
+
+                        Ok(None)
+                    })?;
+
+                    Ok(found)
                 }
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
-        ExpressionDataType::Concatenation => Ok(iterate_rev_concatenation_mut(
-            this,
-            value,
-            |this, _index, addr| get_value_if_association(this, addr, sym),
-        )?
-        .0),
+        ExpressionDataType::Concatenation => {
+            Ok(iterate_rev_concatenation_mut(this, value, |this, _index, addr| get_value_if_association(this, addr, sym))?.0)
+        }
         _ => Err(RuntimeError::unsupported_types()),
     }
 }
