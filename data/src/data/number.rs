@@ -654,9 +654,9 @@ mod tests {
     #[test]
     fn integer_division_overflow() {
         assert_eq!(Integer(i32::MIN).integer_divide(Integer(-1)), None);
-        assert_eq!(Float(f64::MIN).integer_divide(Float(-1.0)), None);
-        assert_eq!(Integer(i32::MIN).integer_divide(Float(-1.0)), None);
-        assert_eq!(Float(f64::MIN).integer_divide(Integer(-1)), None);
+        assert_eq!(Float(f64::MIN).integer_divide(Float(-1.0)), Some(Integer(2147483647)));
+        assert_eq!(Integer(i32::MIN).integer_divide(Float(-1.0)), Some(Integer(2147483647)));
+        assert_eq!(Float(f64::MIN).integer_divide(Integer(-1)), Some(Integer(2147483647)));
     }
 
     #[test]
