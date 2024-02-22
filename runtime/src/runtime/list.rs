@@ -201,6 +201,16 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                     // can't push, in case any of the items are a Link or Slice
                     let mut i = start;
                     let mut item: Option<Data::Size> = None;
+                    let length = Data::size_to_number(this.get_list_len(value)?);
+
+                    let end = if end >= length {
+                        length.subtract(Data::Number::one()).or_num_err()?
+                    } else {
+                        end
+                    };
+
+                    // need the latest value, being the value closest to the end for symbol access
+                    // check entire concatenation, reassigning found each time we find a match
                     while i <= end {
                         let list_item = this.get_list_item(value, i)?;
                         match this.get_data_type(list_item)? {
@@ -210,8 +220,6 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                                     ExpressionDataType::Symbol => {
                                         if this.get_symbol(left)? == sym {
                                             item = Some(right);
-                                            // found item break both loops
-                                            break;
                                         }
                                     }
                                     _ => (),

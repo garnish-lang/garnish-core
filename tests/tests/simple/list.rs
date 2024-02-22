@@ -347,7 +347,7 @@ mod ranges {
 
 #[cfg(test)]
 mod slice {
-    use crate::simple::testing_utilities::{add_integer_list, add_list, add_range, create_simple_runtime};
+    use crate::simple::testing_utilities::{add_integer_list, add_list, add_pair, add_range, create_simple_runtime};
     use garnish_data::SimpleDataRuntimeNC;
     use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
@@ -442,6 +442,39 @@ mod slice {
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 50.into());
+    }
+
+    #[test]
+    fn sym_index_slice_of_list_duplicate() {
+        let mut runtime = create_simple_runtime();
+
+        runtime.get_data_mut().start_list(10).unwrap();
+        for i in 0..10 {
+            let d = add_pair(runtime.get_data_mut(), format!("val{}", i).as_str(), (i + 1) * 10);
+            runtime.get_data_mut().add_to_list(d, true).unwrap();
+        }
+
+        let d = add_pair(runtime.get_data_mut(), format!("val{}", 5).as_str(), 123);
+        runtime.get_data_mut().add_to_list(d, true).unwrap();
+
+        let d1 = runtime.get_data_mut().end_list().unwrap();
+
+        let d2 = runtime.get_data_mut().add_number(2.into()).unwrap();
+        let d3 = runtime.get_data_mut().add_number(11.into()).unwrap();
+        let d4 = runtime.get_data_mut().add_range(d2, d3).unwrap();
+        let d5 = runtime.get_data_mut().add_slice(d1, d4).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val5").unwrap())
+            .unwrap();
+
+        runtime.get_data_mut().push_register(d5).unwrap();
+        runtime.get_data_mut().push_register(d6).unwrap();
+
+        runtime.apply(NO_CONTEXT).unwrap();
+
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 123.into());
     }
 
     #[test]
