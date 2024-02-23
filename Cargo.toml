@@ -9,13 +9,3 @@ members = [
     "data",
     "tests",
 ]
-
-[workspace.package]
-version = "0.0.2-alpha"
-authors = ["Chad Collins <chad.collins@capitalone.com>"]
-edition = "2021"
-homepage = "https://github.com/garnish-lang/garnish-core"
-documentation = "https://github.com/garnish-lang/garnish-core"
-repository = "https://github.com/garnish-lang/garnish-core"
-license-file = "./LICENSE"
-readme = "./README.md"

@@ -1,14 +1,14 @@
 [package]
-workspace = "../"
 name = "garnish_lang_traits"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
-homepage.workspace = true
-documentation.workspace = true
-repository.workspace = true
-license.workspace-file = true
-readme.workspace = true
+description = "Shared traits for garnish core libraries."
+version = "0.0.2-alpha"
+authors = ["Chad Collins <chad.collins@capitalone.com>"]
+edition = "2021"
+homepage = "https://github.com/garnish-lang/garnish-core"
+documentation = "https://github.com/garnish-lang/garnish-core"
+repository = "https://github.com/garnish-lang/garnish-core"
+license-file = "./LICENSE"
+readme = "./README.md"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
