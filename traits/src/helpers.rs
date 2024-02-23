@@ -3,6 +3,7 @@ use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeEr
 pub fn iterate_concatenation_mut<Data: GarnishLangRuntimeData, CheckFn>(
     this: &mut Data,
     addr: Data::Size,
+    #[allow(unused_mut)] // removing causes compiler error
     mut check_fn: CheckFn,
 ) -> Result<(Option<Data::Size>, Data::Size), RuntimeError<Data::Error>>
 where
@@ -14,6 +15,7 @@ where
 pub fn iterate_rev_concatenation_mut<Data: GarnishLangRuntimeData, CheckFn>(
     this: &mut Data,
     addr: Data::Size,
+    #[allow(unused_mut)] // removing causes compiler error
     mut check_fn: CheckFn,
 ) -> Result<(Option<Data::Size>, Data::Size), RuntimeError<Data::Error>>
     where
