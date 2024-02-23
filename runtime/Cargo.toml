@@ -1,6 +1,6 @@
 [package]
 name = "garnish_lang_runtime"
-version = "0.0.1-alpha"
+version = "0.0.2-alpha"
 authors = ["Chad Collins <chad.collins@capitalone.com>"]
 edition = "2021"
 description = "Runtime and execution library for Garnish Lang."
