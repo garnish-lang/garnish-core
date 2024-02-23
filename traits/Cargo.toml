@@ -1,13 +1,13 @@
 [package]
 name = "garnish_lang_traits"
-workspace.version = true
-workspace.authors = true
-workspace.edition = true
-workspace.homepage = true
-workspace.documentation = true
-workspace.repository = true
-workspace.license-file = true
-workspace.readme = true
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace-file = true
+readme.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
