@@ -1,4 +1,5 @@
 [package]
+workspace = "../"
 name = "garnish_lang_traits"
 version.workspace = true
 authors.workspace = true
