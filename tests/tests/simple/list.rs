@@ -520,7 +520,6 @@ mod slice {
 
 #[cfg(test)]
 mod concatenation {
-    use garnish_data::data::SimpleNumber;
     use garnish_data::data::SimpleNumber::Integer;
     use crate::simple::testing_utilities::{
         add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range, create_simple_runtime,
