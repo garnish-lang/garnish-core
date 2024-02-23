@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod and {
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
 
     use crate::simple::testing_utilities::create_simple_runtime;
 
@@ -87,7 +87,7 @@ mod and {
 
 #[cfg(test)]
 mod or {
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
 
     use crate::simple::testing_utilities::create_simple_runtime;
 
@@ -174,7 +174,7 @@ mod or {
 
 #[cfg(test)]
 mod xor {
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
 
     use crate::simple::testing_utilities::create_simple_runtime;
 
@@ -261,7 +261,7 @@ mod xor {
 
 #[cfg(test)]
 mod not {
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
 
     use crate::simple::testing_utilities::create_simple_runtime;
 
@@ -324,7 +324,7 @@ mod not {
 
 #[cfg(test)]
 mod tis {
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
 
     use crate::simple::testing_utilities::create_simple_runtime;
 

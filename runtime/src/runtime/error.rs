@@ -1,5 +1,5 @@
-use garnish_traits::Instruction;
-pub use garnish_traits::{ErrorType, RuntimeError};
+use garnish_lang_traits::Instruction;
+pub use garnish_lang_traits::{ErrorType, RuntimeError};
 use std::fmt::Debug;
 
 pub trait OrNumberError<T, Source: 'static + std::error::Error> {

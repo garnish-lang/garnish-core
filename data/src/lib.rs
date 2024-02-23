@@ -4,8 +4,8 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 pub use error::DataError;
-use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, Instruction};
-use garnish_traits::helpers::iterate_concatenation_mut;
+use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, Instruction};
+use garnish_lang_traits::helpers::iterate_concatenation_mut;
 
 use crate::data::{SimpleData, SimpleDataList};
 pub use crate::instruction::InstructionData;

@@ -1,6 +1,6 @@
 use crate::runtime::range::range_len;
 use crate::{get_range, state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError, TypeConstants};
-use garnish_traits::helpers::{iterate_concatenation_mut, iterate_rev_concatenation_mut};
+use garnish_lang_traits::helpers::{iterate_concatenation_mut, iterate_rev_concatenation_mut};
 
 pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     if len > this.get_register_len() {

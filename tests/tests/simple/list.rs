@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_data::data::SimpleNumber;
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction, NO_CONTEXT};
+    use garnish_lang_simple_data::data::SimpleNumber;
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction, NO_CONTEXT};
 
     #[test]
     fn make_list() {
@@ -302,7 +302,7 @@ mod tests {
 mod ranges {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction, NO_CONTEXT};
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction, NO_CONTEXT};
 
     #[test]
     fn apply_with_integer() {
@@ -348,8 +348,8 @@ mod ranges {
 #[cfg(test)]
 mod slice {
     use crate::simple::testing_utilities::{add_integer_list, add_list, add_pair, add_range, create_simple_runtime};
-    use garnish_data::SimpleDataRuntimeNC;
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang_simple_data::SimpleDataRuntimeNC;
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn index_slice_of_list() {
@@ -520,12 +520,12 @@ mod slice {
 
 #[cfg(test)]
 mod concatenation {
-    use garnish_data::data::SimpleNumber::Integer;
+    use garnish_lang_simple_data::data::SimpleNumber::Integer;
     use crate::simple::testing_utilities::{
         add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range, create_simple_runtime,
     };
-    use garnish_data::SimpleDataRuntimeNC;
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang_simple_data::SimpleDataRuntimeNC;
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn index_concat_of_items_with_number() {

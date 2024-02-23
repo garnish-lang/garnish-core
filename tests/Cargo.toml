@@ -19,5 +19,5 @@ colored = "2.0.0"
 
 garnish_lang_runtime = { path = "../runtime"}
 garnish_lang_compiler = { path = "../compiler"}
-garnish_data = { path = "../data" }
-garnish_traits = { path = "../traits" }
+garnish_lang_simple_data = { path = "../data" }
+garnish_lang_traits = { path = "../traits" }

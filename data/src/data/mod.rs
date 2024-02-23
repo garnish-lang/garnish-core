@@ -4,7 +4,7 @@ use std::hash::Hash;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use garnish_traits::ExpressionDataType;
+use garnish_lang_traits::ExpressionDataType;
 pub use number::*;
 pub use parsing::*;
 pub use iterators::*;

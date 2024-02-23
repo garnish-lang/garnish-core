@@ -1,1 +1,1 @@
-pub use garnish_traits::{GarnishLangRuntimeInfo, GarnishLangRuntimeState};
+pub use garnish_lang_traits::{GarnishLangRuntimeInfo, GarnishLangRuntimeState};

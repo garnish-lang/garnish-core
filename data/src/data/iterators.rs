@@ -1,5 +1,5 @@
 use crate::data::number::SimpleNumber;
-use garnish_traits::GarnishNumber;
+use garnish_lang_traits::GarnishNumber;
 
 pub struct SizeIterator {
     min: usize,

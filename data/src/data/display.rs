@@ -239,7 +239,7 @@ mod shared {
 
 #[cfg(test)]
 mod simple {
-    use garnish_traits::ExpressionDataType;
+    use garnish_lang_traits::ExpressionDataType;
 
     use crate::data::display::shared::StructWith;
     use crate::data::{SimpleData, SimpleNumber};
@@ -350,7 +350,7 @@ mod simple {
 
 #[cfg(test)]
 mod simple_list {
-    use garnish_traits::ExpressionDataType;
+    use garnish_lang_traits::ExpressionDataType;
 
     use crate::data::display::shared::StructWith;
     use crate::data::{SimpleData, SimpleDataList, SimpleNumber};

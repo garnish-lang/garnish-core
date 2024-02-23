@@ -1,4 +1,4 @@
-use garnish_traits::Instruction;
+use garnish_lang_traits::Instruction;
 use log::trace;
 
 use crate::{

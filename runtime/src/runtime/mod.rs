@@ -30,4 +30,4 @@ pub(crate) use utilities::*;
 
 use crate::GarnishLangRuntimeInfo;
 
-pub use garnish_traits::GarnishRuntime;
+pub use garnish_lang_traits::GarnishRuntime;

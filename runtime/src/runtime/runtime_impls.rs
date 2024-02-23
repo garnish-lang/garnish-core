@@ -22,7 +22,7 @@ use crate::runtime::sideeffect::*;
 use crate::runtime::concat::concat;
 use crate::runtime::GarnishLangRuntimeInfo;
 use crate::runtime::GarnishRuntime;
-use garnish_traits::Instruction;
+use garnish_lang_traits::Instruction;
 use log::trace;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};

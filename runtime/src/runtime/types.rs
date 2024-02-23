@@ -1,1 +1,1 @@
-pub use garnish_traits::ExpressionDataType;
+pub use garnish_lang_traits::ExpressionDataType;

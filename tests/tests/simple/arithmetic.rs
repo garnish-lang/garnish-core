@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod deferring {
     use crate::simple::testing_utilities::{deferred_op, deferred_unary_op};
-    use garnish_traits::GarnishRuntime;
+    use garnish_lang_traits::GarnishRuntime;
 
     #[test]
     fn add() {
@@ -70,8 +70,8 @@ mod deferring {
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_data::data::SimpleNumber;
-    use garnish_data::SimpleDataRuntimeNC;
+    use garnish_lang_simple_data::data::SimpleNumber;
+    use garnish_lang_simple_data::SimpleDataRuntimeNC;
     use garnish_lang_runtime::{EmptyContext, ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
 
     #[test]

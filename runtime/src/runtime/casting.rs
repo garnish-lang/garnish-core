@@ -1,5 +1,5 @@
-use garnish_traits::helpers::iterate_concatenation_mut;
-use garnish_traits::Instruction;
+use garnish_lang_traits::helpers::iterate_concatenation_mut;
+use garnish_lang_traits::Instruction;
 
 use crate::runtime::internals::concatenation_len;
 use crate::runtime::list::{is_value_association};

@@ -1,4 +1,4 @@
-pub use garnish_traits::Instruction;
+pub use garnish_lang_traits::Instruction;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 

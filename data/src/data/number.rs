@@ -1,7 +1,7 @@
 use crate::data::DataCastResult;
 use crate::data::SimpleNumber::*;
 use crate::DataError;
-use garnish_traits::{GarnishNumber, TypeConstants};
+use garnish_lang_traits::{GarnishNumber, TypeConstants};
 use std::cmp::Ordering;
 use std::fmt::{Display, Formatter};
 use std::hash::{Hash, Hasher};
@@ -441,7 +441,7 @@ impl GarnishNumber for SimpleNumber {
 mod tests {
     use crate::data::SimpleNumber;
     use crate::data::SimpleNumber::*;
-    use garnish_traits::GarnishNumber;
+    use garnish_lang_traits::GarnishNumber;
 
     #[test]
     fn from_all() {

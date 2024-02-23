@@ -2,7 +2,7 @@
 mod general {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
 
     #[test]
     fn less_than_no_references_is_err() {
@@ -35,9 +35,9 @@ mod general {
 #[cfg(test)]
 mod less_than {
     use crate::simple::testing_utilities::{add_byte_list, add_char_list, create_simple_runtime, slice_of_byte_list, slice_of_char_list};
-    use garnish_data::{DataError, SimpleRuntimeData};
+    use garnish_lang_simple_data::{DataError, SimpleRuntimeData};
     use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, RuntimeError};
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, RuntimeError};
 
     fn perform_compare<Setup, Op>(expected: bool, op_name: &str, op: Op, setup: Setup)
     where

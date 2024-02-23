@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod deferring {
     use crate::simple::testing_utilities::deferred_op;
-    use garnish_traits::GarnishRuntime;
+    use garnish_lang_traits::GarnishRuntime;
 
     #[test]
     fn type_cast() {
@@ -15,7 +15,7 @@ mod deferring {
 mod type_of {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
 
     #[test]
     fn type_of_number() {
@@ -36,7 +36,7 @@ mod type_of {
 mod simple {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn no_op_cast_expression() {
@@ -186,8 +186,8 @@ mod simple {
 #[cfg(test)]
 mod primitive {
     use crate::simple::testing_utilities::{add_char_list, create_simple_runtime};
-    use garnish_data::SimpleDataRuntimeNC;
-    use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang_simple_data::SimpleDataRuntimeNC;
+    use garnish_lang_traits::{GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn integer_to_char() {
@@ -348,12 +348,12 @@ mod primitive {
 
 #[cfg(test)]
 mod lists {
-    use garnish_data::{symbol_value, SimpleDataRuntimeNC};
+    use garnish_lang_simple_data::{symbol_value, SimpleDataRuntimeNC};
 
     use crate::simple::testing_utilities::{
         add_byte_list, add_char_list, add_list_with_start, add_range, create_simple_runtime,
     };
-    use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang_traits::{GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn range_to_list() {
@@ -531,10 +531,10 @@ mod lists {
 
 #[cfg(test)]
 mod concatenation {
-    use garnish_data::symbol_value;
+    use garnish_lang_simple_data::symbol_value;
 
     use crate::simple::testing_utilities::{add_concatenation_with_start, add_list_with_start, add_range, create_simple_runtime};
-    use garnish_traits::{GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang_traits::{GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn concatenation_to_list() {
@@ -665,10 +665,10 @@ mod concatenation {
 
 #[cfg(test)]
 mod deferred {
-    use garnish_data::SimpleDataRuntimeNC;
+    use garnish_lang_simple_data::SimpleDataRuntimeNC;
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn char_list() {

@@ -2,7 +2,7 @@ use std::convert::TryInto;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use garnish_traits::GarnishLangRuntimeData;
+use garnish_lang_traits::GarnishLangRuntimeData;
 
 use crate::data::{parse_byte_list, parse_char_list, parse_simple_number, NumberIterator, SimpleNumber, SizeIterator};
 use crate::{symbol_value, DataError, ExpressionDataType, Instruction, InstructionData, SimpleData, SimpleRuntimeData};
@@ -680,7 +680,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use garnish_traits::GarnishLangRuntimeData;
+    use garnish_lang_traits::GarnishLangRuntimeData;
 
     use crate::{ExpressionDataType, Instruction, SimpleRuntimeData};
 

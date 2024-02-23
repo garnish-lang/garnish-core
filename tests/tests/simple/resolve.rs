@@ -2,7 +2,7 @@
 mod deferring {
 
     use crate::simple::testing_utilities::{create_simple_runtime, DeferOpTestContext};
-    use garnish_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
 
     #[test]
     fn resolve() {
@@ -22,10 +22,10 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
-    use garnish_data::{DataError, SimpleRuntimeData};
+    use garnish_lang_simple_data::{DataError, SimpleRuntimeData};
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_traits::{
+    use garnish_lang_traits::{
         EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishRuntime, Instruction, RuntimeError, EMPTY_CONTEXT,
     };
 

@@ -1,1 +1,1 @@
-pub use garnish_traits::{EmptyContext, GarnishLangRuntimeContext, EMPTY_CONTEXT, NO_CONTEXT};
+pub use garnish_lang_traits::{EmptyContext, GarnishLangRuntimeContext, EMPTY_CONTEXT, NO_CONTEXT};

@@ -1,5 +1,5 @@
 [package]
-name = "garnish_traits"
+name = "garnish_lang_traits"
 version = "0.0.1-alpha"
 edition = "2021"
 
