@@ -8,5 +8,4 @@ members = [
     "traits",
     "data",
     "tests",
-    "test-processing"
 ]

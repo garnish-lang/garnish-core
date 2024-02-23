@@ -1,7 +1,6 @@
 use log::trace;
 
-use garnish_lang_runtime::*;
-use garnish_lang_traits::Instruction;
+use garnish_lang_traits::{Instruction, GarnishLangRuntimeData, TypeConstants};
 
 use crate::error::{implementation_error, implementation_error_with_token, CompilerError};
 use crate::parsing::parser::*;
