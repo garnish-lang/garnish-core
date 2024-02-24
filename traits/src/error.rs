@@ -1,3 +1,5 @@
+//! Error implementation for use with Garnish runtimes.
+
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 

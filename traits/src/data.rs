@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
+/// List of Garnish data types
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ExpressionDataType {
@@ -34,6 +35,7 @@ pub trait TypeConstants {
     fn max_value() -> Self;
 }
 
+/// Arithmetic operations required so a runtime can resolve associated instruction.
 pub trait GarnishNumber: Sized {
     fn plus(self, rhs: Self) -> Option<Self>;
     fn subtract(self, rhs: Self) -> Option<Self>;
@@ -54,6 +56,7 @@ pub trait GarnishNumber: Sized {
     fn bitwise_shift_right(self, rhs: Self) -> Option<Self>;
 }
 
+/// Trait defining what a data access operations are required by a runtime.
 pub trait GarnishLangRuntimeData {
     type Error: std::error::Error + 'static;
     type Symbol: Default + Display + Debug + PartialOrd + TypeConstants + Copy;

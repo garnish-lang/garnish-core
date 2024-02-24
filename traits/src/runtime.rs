@@ -11,6 +11,7 @@ pub struct GarnishLangRuntimeInfo {
     state: GarnishLangRuntimeState,
 }
 
+/// Information about the current execution state of a runtime.
 impl GarnishLangRuntimeInfo {
     pub fn new(state: GarnishLangRuntimeState) -> Self {
         return GarnishLangRuntimeInfo { state };
@@ -21,6 +22,9 @@ impl GarnishLangRuntimeInfo {
     }
 }
 
+/// Trait containing instruction operations Garnish needs to execute.
+/// All instruction methods (e.g. all except [`GarnishRuntime::get_data`], [`GarnishRuntime::get_data_mut`], [`GarnishRuntime::execute_current_instruction`] should a Result.
+/// With the Ok value being the next instruction address to be executed if not sequential, otherwise return None
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn get_data(&self) -> &Data;
     fn get_data_mut(&mut self) -> &mut Data;
