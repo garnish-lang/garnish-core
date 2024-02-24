@@ -1,5 +1,10 @@
+//! Helper functions created for core libraries that don't have an implementation of [GarnishLangRuntimeData].
+//! These might be removed when an iterator interface is created for reading data instead of manual indexing.
+//!
+
 use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
 
+/// Iterates through a concatenation at the given address, calling provided 'check_fn' function for each item.
 pub fn iterate_concatenation_mut<Data: GarnishLangRuntimeData, CheckFn>(
     this: &mut Data,
     addr: Data::Size,
@@ -12,6 +17,7 @@ where
     iterate_concatenation_mut_with_method(this, addr, check_fn, Data::get_concatenation)
 }
 
+/// Iterates through a concatenation at the given address in reverse, calling provided 'check_fn' function for each item.
 pub fn iterate_rev_concatenation_mut<Data: GarnishLangRuntimeData, CheckFn>(
     this: &mut Data,
     addr: Data::Size,
@@ -32,6 +38,13 @@ fn get_rev_concatentation<Data: GarnishLangRuntimeData>(
     Ok((right, left))
 }
 
+/// Iterates through a concatenation at the given address where a custom 'get_method' is needed, calling provided 'check_fn' function for each item.
+///
+/// 'get_method' should return the next 2 addresses to process
+///
+/// [`iterate_concatenation_mut`] uses [`GarnishLangRuntimeData::get_concatenation`]
+///
+/// [`iterate_rev_concatenation_mut`] uses function that reverses return value of [`GarnishLangRuntimeData::get_concatenation`]
 pub fn iterate_concatenation_mut_with_method<Data: GarnishLangRuntimeData, CheckFn, GetFn>(
     this: &mut Data,
     addr: Data::Size,
