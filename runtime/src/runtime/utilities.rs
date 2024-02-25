@@ -1,7 +1,8 @@
 // use log::trace;
 
 use crate::runtime::range::range_len;
-use crate::{state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
+use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
+use crate::runtime::error::state_error;
 
 pub(crate) fn next_ref<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Data::Size, RuntimeError<Data::Error>> {
     match this.pop_register() {

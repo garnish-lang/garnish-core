@@ -1,10 +1,8 @@
 use garnish_lang_traits::Instruction;
 use log::trace;
 
-use crate::{
-    next_ref, next_two_raw_ref, push_number, push_unit, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber,
-    RuntimeError, TypeConstants,
-};
+use crate::runtime::utilities::{next_ref, next_two_raw_ref, push_number, push_unit};
+use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
 
 pub fn add<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,

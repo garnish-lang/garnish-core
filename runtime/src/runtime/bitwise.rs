@@ -1,6 +1,5 @@
 use crate::runtime::arithmetic::{perform_op, perform_unary_op};
-use crate::{GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, RuntimeError};
-use garnish_lang_traits::Instruction;
+use garnish_lang_traits::{GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, Instruction, RuntimeError};
 
 pub fn bitwise_not<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,

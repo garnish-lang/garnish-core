@@ -1,6 +1,6 @@
-use crate::{
-    push_unit, runtime::list::get_access_addr, ErrorType, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError,
-};
+use garnish_lang_traits::{ErrorType, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError,};
+use crate::runtime::list::get_access_addr;
+use crate::runtime::utilities::push_unit;
 
 pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,

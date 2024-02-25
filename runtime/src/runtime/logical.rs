@@ -1,4 +1,5 @@
-use crate::{next_ref, next_two_raw_ref, push_boolean, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
+use crate::runtime::utilities::{next_ref, next_two_raw_ref, push_boolean};
+use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
 
 pub(crate) fn and<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (left, right) = next_two_raw_ref(this)?;

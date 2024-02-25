@@ -1,4 +1,6 @@
-use crate::{next_ref, push_unit, state_error, GarnishLangRuntimeData, RuntimeError};
+use crate::runtime::error::state_error;
+use crate::runtime::utilities::{next_ref, push_unit};
+use garnish_lang_traits::{GarnishLangRuntimeData, RuntimeError};
 
 pub(crate) fn put<Data: GarnishLangRuntimeData>(this: &mut Data, i: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match i >= this.get_data_len() {

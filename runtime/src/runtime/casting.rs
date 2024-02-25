@@ -1,12 +1,11 @@
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
 use garnish_lang_traits::Instruction;
 
+use crate::runtime::error::OrNumberError;
 use crate::runtime::internals::concatenation_len;
-use crate::runtime::list::{is_value_association};
-use crate::{
-    get_range, next_ref, next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber,
-    OrNumberError, RuntimeError, TypeConstants,
-};
+use crate::runtime::list::is_value_association;
+use crate::runtime::utilities::{get_range, next_ref, next_two_raw_ref, push_unit};
+use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
 
 pub(crate) fn type_of<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let a = next_ref(this)?;
@@ -104,15 +103,11 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
         (ExpressionDataType::Concatenation, ExpressionDataType::List) => {
             let len = concatenation_len(this, left)?;
             this.start_list(len)?;
-            iterate_concatenation_mut(
-                this,
-                left,
-                |this, _, addr| {
-                    let is_associative = is_value_association(this, addr)?;
-                    this.add_to_list(addr, is_associative)?;
-                    Ok(None)
-                },
-            )?;
+            iterate_concatenation_mut(this, left, |this, _, addr| {
+                let is_associative = is_value_association(this, addr)?;
+                this.add_to_list(addr, is_associative)?;
+                Ok(None)
+            })?;
 
             let addr = this.end_list()?;
             this.push_register(addr)?;
@@ -156,25 +151,21 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
                 ExpressionDataType::Concatenation => {
                     this.start_list(Data::number_to_size(len).or_num_err()?)?;
 
-                    iterate_concatenation_mut(
-                        this,
-                        value,
-                        |this, current_index, addr| {
-                            if current_index < start {
-                                return Ok(None);
-                            }
+                    iterate_concatenation_mut(this, value, |this, current_index, addr| {
+                        if current_index < start {
+                            return Ok(None);
+                        }
 
-                            if current_index > end {
-                                // providing value will end iteration
-                                // even tho we don't need the return value
-                                return Ok(Some(addr));
-                            }
+                        if current_index > end {
+                            // providing value will end iteration
+                            // even tho we don't need the return value
+                            return Ok(Some(addr));
+                        }
 
-                            let is_associative = is_value_association(this, addr)?;
-                            this.add_to_list(addr, is_associative)?;
-                            Ok(None)
-                        },
-                    )?;
+                        let is_associative = is_value_association(this, addr)?;
+                        this.add_to_list(addr, is_associative)?;
+                        Ok(None)
+                    })?;
 
                     let addr = this.end_list()?;
                     this.push_register(addr)?;

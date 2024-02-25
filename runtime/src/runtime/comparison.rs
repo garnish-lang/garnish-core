@@ -1,7 +1,6 @@
-use crate::{
-    get_range, next_two_raw_ref, push_boolean, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError,
-    TypeConstants,
-};
+use crate::runtime::error::OrNumberError;
+use crate::runtime::utilities::{get_range, next_two_raw_ref, push_boolean, push_unit};
+use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
 use std::cmp::Ordering;
 
 pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {

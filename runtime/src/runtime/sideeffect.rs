@@ -1,4 +1,5 @@
-use crate::{state_error, GarnishLangRuntimeData, RuntimeError};
+use crate::runtime::error::state_error;
+use garnish_lang_traits::{GarnishLangRuntimeData, RuntimeError};
 
 pub(crate) fn start_side_effect<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_current_value() {

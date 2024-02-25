@@ -2,12 +2,12 @@ use std::fmt::Debug;
 
 use log::trace;
 
+use crate::runtime::error::state_error;
+use crate::runtime::error::OrNumberError;
 use crate::runtime::internals::concatenation_len;
 use crate::runtime::list::index_concatenation_for;
-use crate::{
-    get_range, next_two_raw_ref, push_boolean, state_error, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError,
-    TypeConstants,
-};
+use crate::runtime::utilities::{get_range, next_two_raw_ref, push_boolean};
+use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
 
 pub(crate) fn equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let equal = perform_equality_check(this)?;

@@ -1,4 +1,6 @@
-use crate::{next_two_raw_ref, push_unit, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, OrNumberError, RuntimeError};
+use garnish_lang_traits::{RuntimeError, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber};
+use crate::runtime::utilities::{next_two_raw_ref, push_unit};
+use crate::runtime::error::OrNumberError;
 
 pub(crate) fn make_range<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     make_range_internal(this, false, false)

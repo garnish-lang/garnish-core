@@ -1,10 +1,10 @@
+use crate::runtime::error::state_error;
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
-use crate::{state_error, ErrorType, ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
-use garnish_lang_traits::Instruction;
+use garnish_lang_traits::{
+    ErrorType, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, Instruction, RuntimeError, TypeConstants,
+};
 use log::trace;
-
-use super::context::GarnishLangRuntimeContext;
 
 pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
     this: &mut Data,

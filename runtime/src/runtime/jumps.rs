@@ -1,6 +1,8 @@
 use log::trace;
 
-use crate::{next_ref, state_error, ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
+use crate::runtime::error::state_error;
+use crate::runtime::utilities::next_ref;
+use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
 
 pub(crate) fn jump<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_jump_point(index) {
@@ -14,7 +16,10 @@ pub(crate) fn jump<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::S
     Ok(None)
 }
 
-pub(crate) fn jump_if_true<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn jump_if_true<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    index: Data::Size,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let point = match this.get_jump_point(index) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => point,
@@ -35,7 +40,10 @@ pub(crate) fn jump_if_true<Data: GarnishLangRuntimeData>(this: &mut Data, index:
     }
 }
 
-pub(crate) fn jump_if_false<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn jump_if_false<Data: GarnishLangRuntimeData>(
+    this: &mut Data,
+    index: Data::Size,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let point = match this.get_jump_point(index) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => point,
@@ -45,7 +53,12 @@ pub(crate) fn jump_if_false<Data: GarnishLangRuntimeData>(this: &mut Data, index
 
     match this.get_data_type(d)? {
         ExpressionDataType::False | ExpressionDataType::Unit => {
-            trace!("Jumping from value of type {:?} with addr {:?} to point {:?}", this.get_data_type(d)?, d, point);
+            trace!(
+                "Jumping from value of type {:?} with addr {:?} to point {:?}",
+                this.get_data_type(d)?,
+                d,
+                point
+            );
             Ok(Some(point))
         }
         t => {
