@@ -14,6 +14,8 @@ mod pair;
 mod put;
 mod range;
 mod resolve;
-pub mod runtime_impls;
+mod runtime_impls;
 mod sideeffect;
 mod utilities;
+
+pub use runtime_impls::SimpleGarnishRuntime;
