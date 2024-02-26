@@ -15,23 +15,3 @@ jobs:
         run: cargo build --verbose
       - name: Test
         run: cargo test --verbose
-      - name: Dry Run Traits
-        run: cargo publish -p garnish_lang_traits --dry-run
-      - name: Dry Run Data
-        run: cargo publish -p garnish_lang_simple_data --dry-run
-      - name: Dry Run Runtime
-        run: cargo publish -p garnish_lang_runtime --dry-run
-      - name: Dry Run Compiler
-        run: cargo publish -p garnish_lang_compiler --dry-run
-      - name: Dry Run Garnish
-        run: cargo publish -p garnish_lang --dry-run
-      - name: Publish Traits
-        run: cargo publish -p garnish_lang_traits
-      - name: Publish Data
-        run: cargo publish -p garnish_lang_simple_data
-      - name: Publish Runtime
-        run: cargo publish -p garnish_lang_runtime
-      - name: Publish Compiler
-        run: cargo publish -p garnish_lang_compiler
-      - name: Publish Garnish
-        run: cargo publish -p garnish_lang
