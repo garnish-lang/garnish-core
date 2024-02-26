@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishLangRuntimeData, GarnishRuntime, Instruction};
+    use garnish_lang_traits::{GarnishData, GarnishRuntime, Instruction};
 
     #[test]
     fn end_expression_no_existing_value_no_path() {

@@ -2,7 +2,7 @@
 mod general {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
 
     #[test]
     fn equality_no_references_is_err() {
@@ -28,7 +28,7 @@ mod general {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -44,7 +44,7 @@ mod general {
         runtime.not_equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -60,7 +60,7 @@ mod general {
         runtime.not_equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -76,7 +76,7 @@ mod general {
         runtime.type_equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -84,7 +84,7 @@ mod general {
         let mut runtime = create_simple_runtime();
 
         let d1 = runtime.get_data_mut().add_number(20.into()).unwrap();
-        let d2 = runtime.get_data_mut().add_type(ExpressionDataType::Number).unwrap();
+        let d2 = runtime.get_data_mut().add_type(GarnishDataType::Number).unwrap();
 
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
@@ -92,7 +92,7 @@ mod general {
         runtime.type_equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -108,7 +108,7 @@ mod general {
         runtime.type_equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
@@ -116,7 +116,7 @@ mod general {
 mod simple_types {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
 
     #[test]
     fn equality_units_equal() {
@@ -131,7 +131,7 @@ mod simple_types {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -147,7 +147,7 @@ mod simple_types {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -163,15 +163,15 @@ mod simple_types {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
     fn types_equal() {
         let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.get_data_mut().add_type(ExpressionDataType::Number).unwrap();
-        let int2 = runtime.get_data_mut().add_type(ExpressionDataType::Number).unwrap();
+        let int1 = runtime.get_data_mut().add_type(GarnishDataType::Number).unwrap();
+        let int2 = runtime.get_data_mut().add_type(GarnishDataType::Number).unwrap();
 
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
@@ -179,15 +179,15 @@ mod simple_types {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
     fn types_not_equal() {
         let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.get_data_mut().add_type(ExpressionDataType::Number).unwrap();
-        let int2 = runtime.get_data_mut().add_type(ExpressionDataType::Char).unwrap();
+        let int1 = runtime.get_data_mut().add_type(GarnishDataType::Number).unwrap();
+        let int2 = runtime.get_data_mut().add_type(GarnishDataType::Char).unwrap();
 
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
@@ -195,7 +195,7 @@ mod simple_types {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
@@ -203,7 +203,7 @@ mod simple_types {
 mod numbers {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
 
     #[test]
     fn equality_integers_equal() {
@@ -218,7 +218,7 @@ mod numbers {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -234,7 +234,7 @@ mod numbers {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
@@ -242,7 +242,7 @@ mod numbers {
 mod chars {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
 
     #[test]
     fn equality_chars_equal() {
@@ -257,7 +257,7 @@ mod chars {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -273,7 +273,7 @@ mod chars {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -298,7 +298,7 @@ mod chars {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -323,7 +323,7 @@ mod chars {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -342,7 +342,7 @@ mod chars {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -362,7 +362,7 @@ mod chars {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -381,7 +381,7 @@ mod chars {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -401,7 +401,7 @@ mod chars {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
@@ -409,7 +409,7 @@ mod chars {
 mod bytes {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
 
     #[test]
     fn equality_bytes_equal() {
@@ -424,7 +424,7 @@ mod bytes {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -440,7 +440,7 @@ mod bytes {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -465,7 +465,7 @@ mod bytes {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -490,7 +490,7 @@ mod bytes {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -509,7 +509,7 @@ mod bytes {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -529,7 +529,7 @@ mod bytes {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -548,7 +548,7 @@ mod bytes {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -568,7 +568,7 @@ mod bytes {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
@@ -576,7 +576,7 @@ mod bytes {
 mod symbols {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
 
     #[test]
     fn equality_equal() {
@@ -591,7 +591,7 @@ mod symbols {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -609,7 +609,7 @@ mod symbols {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
@@ -617,7 +617,7 @@ mod symbols {
 mod expression {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
 
     #[test]
     fn equality_equal() {
@@ -632,7 +632,7 @@ mod expression {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -650,7 +650,7 @@ mod expression {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
@@ -658,7 +658,7 @@ mod expression {
 mod external {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
 
     #[test]
     fn equality_equal() {
@@ -673,7 +673,7 @@ mod external {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -691,7 +691,7 @@ mod external {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
@@ -699,7 +699,7 @@ mod external {
 mod pairs {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
 
     #[test]
     fn equality_equal() {
@@ -719,7 +719,7 @@ mod pairs {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -742,7 +742,7 @@ mod pairs {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
@@ -750,7 +750,7 @@ mod pairs {
 mod ranges {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
 
     #[test]
     fn equality_equal() {
@@ -770,7 +770,7 @@ mod ranges {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -791,7 +791,7 @@ mod ranges {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -812,7 +812,7 @@ mod ranges {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -833,7 +833,7 @@ mod ranges {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -854,7 +854,7 @@ mod ranges {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -875,7 +875,7 @@ mod ranges {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -896,7 +896,7 @@ mod ranges {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -917,7 +917,7 @@ mod ranges {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -938,7 +938,7 @@ mod ranges {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
@@ -946,7 +946,7 @@ mod ranges {
 mod lists {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
 
     #[test]
     fn equality_only_items_equal() {
@@ -976,7 +976,7 @@ mod lists {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -1009,7 +1009,7 @@ mod lists {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -1058,7 +1058,7 @@ mod lists {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -1107,7 +1107,7 @@ mod lists {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -1152,7 +1152,7 @@ mod lists {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -1197,7 +1197,7 @@ mod lists {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
@@ -1205,7 +1205,7 @@ mod lists {
 mod concatenation {
 
     use crate::simple::testing_utilities::{add_concatenation_with_start, add_list_with_start, create_simple_runtime};
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
 
     #[test]
     fn concatenation_concatenation_equal() {
@@ -1220,7 +1220,7 @@ mod concatenation {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -1236,7 +1236,7 @@ mod concatenation {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -1254,7 +1254,7 @@ mod concatenation {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -1272,7 +1272,7 @@ mod concatenation {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -1288,7 +1288,7 @@ mod concatenation {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -1304,7 +1304,7 @@ mod concatenation {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 
     #[test]
@@ -1320,7 +1320,7 @@ mod concatenation {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -1336,7 +1336,7 @@ mod concatenation {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
@@ -1346,7 +1346,7 @@ mod slices {
     use crate::simple::testing_utilities::{
         add_byte_list, add_char_list, add_list_with_start, add_range, create_simple_runtime,
     };
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
 
     #[test]
     fn slice_of_list_slice_of_list() {
@@ -1366,7 +1366,7 @@ mod slices {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -1387,7 +1387,7 @@ mod slices {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -1408,7 +1408,7 @@ mod slices {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -1438,7 +1438,7 @@ mod slices {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::True);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
     }
 
     #[test]
@@ -1469,6 +1469,6 @@ mod slices {
         runtime.equal().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }

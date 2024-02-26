@@ -239,7 +239,7 @@ mod shared {
 
 #[cfg(test)]
 mod simple {
-    use garnish_lang_traits::ExpressionDataType;
+    use garnish_lang_traits::GarnishDataType;
 
     use crate::data::display::shared::StructWith;
     use crate::data::{SimpleData, SimpleNumber};
@@ -265,7 +265,7 @@ mod simple {
 
     #[test]
     fn simple_type() {
-        let data: SimpleData<NoCustom> = SimpleData::Type(ExpressionDataType::Byte);
+        let data: SimpleData<NoCustom> = SimpleData::Type(GarnishDataType::Byte);
         assert_eq!(data.display_simple(), "Type(Byte)".to_string());
     }
 
@@ -350,7 +350,7 @@ mod simple {
 
 #[cfg(test)]
 mod simple_list {
-    use garnish_lang_traits::ExpressionDataType;
+    use garnish_lang_traits::GarnishDataType;
 
     use crate::data::display::shared::StructWith;
     use crate::data::{SimpleData, SimpleDataList, SimpleNumber};
@@ -368,7 +368,7 @@ mod simple_list {
         list.push(SimpleData::Unit);
         list.push(SimpleData::True);
         list.push(SimpleData::False);
-        list.push(SimpleData::Type(ExpressionDataType::Byte));
+        list.push(SimpleData::Type(GarnishDataType::Byte));
         list.push(SimpleData::Number(SimpleNumber::Integer(100)));
         list.push(SimpleData::Char('c'));
         list.push(SimpleData::Byte(10));

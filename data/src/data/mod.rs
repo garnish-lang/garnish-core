@@ -4,7 +4,7 @@ use std::hash::Hash;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use garnish_lang_traits::ExpressionDataType;
+use garnish_lang_traits::GarnishDataType;
 pub use number::*;
 pub use parsing::*;
 pub use iterators::*;
@@ -106,7 +106,7 @@ pub type DataCastResult<T> = Result<T, DataError>;
 /// Alias for [`SimpleData`] with [`NoCustom`] type parameter.
 pub type SimpleDataNC = SimpleData<NoCustom>;
 
-/// Data object to give [`ExpressionDataType`] typed values. Can be passed a type parameter to extend supported data.
+/// Data object to give [`GarnishDataType`] typed values. Can be passed a type parameter to extend supported data.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
 pub enum SimpleData<T = NoCustom>
@@ -116,7 +116,7 @@ where
     Unit,
     True,
     False,
-    Type(ExpressionDataType),
+    Type(GarnishDataType),
     Number(SimpleNumber),
     Char(char),
     Byte(u8),
@@ -137,26 +137,26 @@ impl<T> SimpleData<T>
 where
     T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
-    pub fn get_data_type(&self) -> ExpressionDataType {
+    pub fn get_data_type(&self) -> GarnishDataType {
         match self {
-            SimpleData::Unit => ExpressionDataType::Unit,
-            SimpleData::True => ExpressionDataType::True,
-            SimpleData::False => ExpressionDataType::False,
-            SimpleData::Type(_) => ExpressionDataType::Type,
-            SimpleData::Number(_) => ExpressionDataType::Number,
-            SimpleData::Char(_) => ExpressionDataType::Char,
-            SimpleData::Byte(_) => ExpressionDataType::Byte,
-            SimpleData::Symbol(_) => ExpressionDataType::Symbol,
-            SimpleData::Expression(_) => ExpressionDataType::Expression,
-            SimpleData::External(_) => ExpressionDataType::External,
-            SimpleData::CharList(_) => ExpressionDataType::CharList,
-            SimpleData::ByteList(_) => ExpressionDataType::ByteList,
-            SimpleData::Pair(_, _) => ExpressionDataType::Pair,
-            SimpleData::Concatenation(_, _) => ExpressionDataType::Concatenation,
-            SimpleData::Range(_, _) => ExpressionDataType::Range,
-            SimpleData::Slice(_, _) => ExpressionDataType::Slice,
-            SimpleData::List(_, _) => ExpressionDataType::List,
-            SimpleData::Custom(_) => ExpressionDataType::Custom,
+            SimpleData::Unit => GarnishDataType::Unit,
+            SimpleData::True => GarnishDataType::True,
+            SimpleData::False => GarnishDataType::False,
+            SimpleData::Type(_) => GarnishDataType::Type,
+            SimpleData::Number(_) => GarnishDataType::Number,
+            SimpleData::Char(_) => GarnishDataType::Char,
+            SimpleData::Byte(_) => GarnishDataType::Byte,
+            SimpleData::Symbol(_) => GarnishDataType::Symbol,
+            SimpleData::Expression(_) => GarnishDataType::Expression,
+            SimpleData::External(_) => GarnishDataType::External,
+            SimpleData::CharList(_) => GarnishDataType::CharList,
+            SimpleData::ByteList(_) => GarnishDataType::ByteList,
+            SimpleData::Pair(_, _) => GarnishDataType::Pair,
+            SimpleData::Concatenation(_, _) => GarnishDataType::Concatenation,
+            SimpleData::Range(_, _) => GarnishDataType::Range,
+            SimpleData::Slice(_, _) => GarnishDataType::Slice,
+            SimpleData::List(_, _) => GarnishDataType::List,
+            SimpleData::Custom(_) => GarnishDataType::Custom,
         }
     }
 
@@ -188,7 +188,7 @@ where
         }
     }
 
-    pub fn as_type(&self) -> DataCastResult<ExpressionDataType> {
+    pub fn as_type(&self) -> DataCastResult<GarnishDataType> {
         match self {
             SimpleData::Type(v) => Ok(*v),
             _ => Err(DataError::from(format!("{:?} is not a Number", self))),
@@ -290,27 +290,27 @@ where
 #[cfg(test)]
 mod tests {
     use crate::data::{SimpleDataNC, SimpleNumber};
-    use crate::{ExpressionDataType, NoCustom};
+    use crate::{GarnishDataType, NoCustom};
 
     #[test]
     fn get_data_type() {
-        assert_eq!(SimpleDataNC::Unit.get_data_type(), ExpressionDataType::Unit);
-        assert_eq!(SimpleDataNC::True.get_data_type(), ExpressionDataType::True);
-        assert_eq!(SimpleDataNC::False.get_data_type(), ExpressionDataType::False);
-        assert_eq!(SimpleDataNC::Number(SimpleNumber::Integer(0)).get_data_type(), ExpressionDataType::Number);
-        assert_eq!(SimpleDataNC::Char('a').get_data_type(), ExpressionDataType::Char);
-        assert_eq!(SimpleDataNC::Byte(0).get_data_type(), ExpressionDataType::Byte);
-        assert_eq!(SimpleDataNC::Symbol(0).get_data_type(), ExpressionDataType::Symbol);
-        assert_eq!(SimpleDataNC::Expression(0).get_data_type(), ExpressionDataType::Expression);
-        assert_eq!(SimpleDataNC::External(0).get_data_type(), ExpressionDataType::External);
-        assert_eq!(SimpleDataNC::CharList(String::new()).get_data_type(), ExpressionDataType::CharList);
-        assert_eq!(SimpleDataNC::ByteList(vec![]).get_data_type(), ExpressionDataType::ByteList);
-        assert_eq!(SimpleDataNC::Pair(0, 0).get_data_type(), ExpressionDataType::Pair);
-        assert_eq!(SimpleDataNC::Concatenation(0, 0).get_data_type(), ExpressionDataType::Concatenation);
-        assert_eq!(SimpleDataNC::Range(0, 0).get_data_type(), ExpressionDataType::Range);
-        assert_eq!(SimpleDataNC::Slice(0, 0).get_data_type(), ExpressionDataType::Slice);
-        assert_eq!(SimpleDataNC::List(vec![], vec![]).get_data_type(), ExpressionDataType::List);
-        assert_eq!(SimpleDataNC::Custom(NoCustom {}).get_data_type(), ExpressionDataType::Custom);
+        assert_eq!(SimpleDataNC::Unit.get_data_type(), GarnishDataType::Unit);
+        assert_eq!(SimpleDataNC::True.get_data_type(), GarnishDataType::True);
+        assert_eq!(SimpleDataNC::False.get_data_type(), GarnishDataType::False);
+        assert_eq!(SimpleDataNC::Number(SimpleNumber::Integer(0)).get_data_type(), GarnishDataType::Number);
+        assert_eq!(SimpleDataNC::Char('a').get_data_type(), GarnishDataType::Char);
+        assert_eq!(SimpleDataNC::Byte(0).get_data_type(), GarnishDataType::Byte);
+        assert_eq!(SimpleDataNC::Symbol(0).get_data_type(), GarnishDataType::Symbol);
+        assert_eq!(SimpleDataNC::Expression(0).get_data_type(), GarnishDataType::Expression);
+        assert_eq!(SimpleDataNC::External(0).get_data_type(), GarnishDataType::External);
+        assert_eq!(SimpleDataNC::CharList(String::new()).get_data_type(), GarnishDataType::CharList);
+        assert_eq!(SimpleDataNC::ByteList(vec![]).get_data_type(), GarnishDataType::ByteList);
+        assert_eq!(SimpleDataNC::Pair(0, 0).get_data_type(), GarnishDataType::Pair);
+        assert_eq!(SimpleDataNC::Concatenation(0, 0).get_data_type(), GarnishDataType::Concatenation);
+        assert_eq!(SimpleDataNC::Range(0, 0).get_data_type(), GarnishDataType::Range);
+        assert_eq!(SimpleDataNC::Slice(0, 0).get_data_type(), GarnishDataType::Slice);
+        assert_eq!(SimpleDataNC::List(vec![], vec![]).get_data_type(), GarnishDataType::List);
+        assert_eq!(SimpleDataNC::Custom(NoCustom {}).get_data_type(), GarnishDataType::Custom);
     }
 
     #[test]
@@ -355,7 +355,7 @@ mod tests {
 
     #[test]
     fn is_type() {
-        assert_eq!(SimpleDataNC::Type(ExpressionDataType::Unit).as_type().unwrap(), ExpressionDataType::Unit);
+        assert_eq!(SimpleDataNC::Type(GarnishDataType::Unit).as_type().unwrap(), GarnishDataType::Unit);
     }
 
     #[test]

@@ -5,9 +5,9 @@ use crate::runtime::error::OrNumberError;
 use crate::runtime::internals::concatenation_len;
 use crate::runtime::list::is_value_association;
 use crate::runtime::utilities::{get_range, next_ref, next_two_raw_ref, push_unit};
-use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishDataType, GarnishContext, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
 
-pub(crate) fn type_of<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn type_of<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let a = next_ref(this)?;
     let t = this.get_data_type(a)?;
     this.add_type(t).and_then(|r| this.push_register(r))?;
@@ -15,7 +15,7 @@ pub(crate) fn type_of<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<O
     Ok(None)
 }
 
-pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+pub(crate) fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -23,7 +23,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
 
     let (left_type, mut right_type) = (this.get_data_type(left)?, this.get_data_type(right)?);
 
-    if right_type == ExpressionDataType::Type {
+    if right_type == GarnishDataType::Type {
         // correct actual type we want to cast to
         right_type = this.get_type(right)?;
     }
@@ -33,41 +33,41 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
         (l, r) if l == r => this.push_register(left)?,
 
         // Casts that defer to data object and only expect an addr to push
-        (ExpressionDataType::CharList, ExpressionDataType::Byte) => {
+        (GarnishDataType::CharList, GarnishDataType::Byte) => {
             this.add_byte_from(left).and_then(|r| this.push_register(r))?;
         }
-        (ExpressionDataType::CharList, ExpressionDataType::Number) => {
+        (GarnishDataType::CharList, GarnishDataType::Number) => {
             this.add_number_from(left).and_then(|r| this.push_register(r))?;
         }
-        (_, ExpressionDataType::CharList) => {
+        (_, GarnishDataType::CharList) => {
             this.add_char_list_from(left).and_then(|r| this.push_register(r))?;
         }
-        (_, ExpressionDataType::ByteList) => {
+        (_, GarnishDataType::ByteList) => {
             this.add_byte_list_from(left).and_then(|r| this.push_register(r))?;
         }
-        (_, ExpressionDataType::Symbol) => {
+        (_, GarnishDataType::Symbol) => {
             this.add_symbol_from(left).and_then(|r| this.push_register(r))?;
         }
         // Primitives
-        (ExpressionDataType::Number, ExpressionDataType::Char) => {
+        (GarnishDataType::Number, GarnishDataType::Char) => {
             primitive_cast(this, left, Data::get_number, Data::number_to_char, Data::add_char)?;
         }
-        (ExpressionDataType::Number, ExpressionDataType::Byte) => {
+        (GarnishDataType::Number, GarnishDataType::Byte) => {
             primitive_cast(this, left, Data::get_number, Data::number_to_byte, Data::add_byte)?;
         }
-        (ExpressionDataType::Char, ExpressionDataType::Number) => {
+        (GarnishDataType::Char, GarnishDataType::Number) => {
             primitive_cast(this, left, Data::get_char, Data::char_to_number, Data::add_number)?;
         }
-        (ExpressionDataType::Char, ExpressionDataType::Byte) => {
+        (GarnishDataType::Char, GarnishDataType::Byte) => {
             primitive_cast(this, left, Data::get_char, Data::char_to_byte, Data::add_byte)?;
         }
-        (ExpressionDataType::Byte, ExpressionDataType::Number) => {
+        (GarnishDataType::Byte, GarnishDataType::Number) => {
             primitive_cast(this, left, Data::get_byte, Data::byte_to_number, Data::add_number)?;
         }
-        (ExpressionDataType::Byte, ExpressionDataType::Char) => {
+        (GarnishDataType::Byte, GarnishDataType::Char) => {
             primitive_cast(this, left, Data::get_byte, Data::byte_to_char, Data::add_char)?;
         }
-        (ExpressionDataType::CharList, ExpressionDataType::Char) => {
+        (GarnishDataType::CharList, GarnishDataType::Char) => {
             let len = this.get_char_list_len(left)?;
             if len == Data::Size::one() {
                 this.get_char_list_item(left, Data::Number::zero())
@@ -77,7 +77,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
                 push_unit(this)?;
             }
         }
-        (ExpressionDataType::Range, ExpressionDataType::List) => {
+        (GarnishDataType::Range, GarnishDataType::List) => {
             let (start, end) = this.get_range(left)?;
             let len = end - start + Data::Size::one();
             let (start, end, _) = get_range(this, left)?;
@@ -92,15 +92,15 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
 
             this.end_list().and_then(|r| this.push_register(r))?
         }
-        (ExpressionDataType::CharList, ExpressionDataType::List) => {
+        (GarnishDataType::CharList, GarnishDataType::List) => {
             let len = this.get_char_list_len(left)?;
             list_from_char_list(this, left, Data::Number::zero(), Data::size_to_number(len))?;
         }
-        (ExpressionDataType::ByteList, ExpressionDataType::List) => {
+        (GarnishDataType::ByteList, GarnishDataType::List) => {
             let len = this.get_byte_list_len(left)?;
             list_from_byte_list(this, left, Data::Number::zero(), Data::size_to_number(len))?;
         }
-        (ExpressionDataType::Concatenation, ExpressionDataType::List) => {
+        (GarnishDataType::Concatenation, GarnishDataType::List) => {
             let len = concatenation_len(this, left)?;
             this.start_list(len)?;
             iterate_concatenation_mut(this, left, |this, _, addr| {
@@ -112,11 +112,11 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
             let addr = this.end_list()?;
             this.push_register(addr)?;
         }
-        (ExpressionDataType::Slice, ExpressionDataType::List) => {
+        (GarnishDataType::Slice, GarnishDataType::List) => {
             let (value, range) = this.get_slice(left)?;
             let (start, end, len) = get_range(this, range)?;
             match this.get_data_type(value)? {
-                ExpressionDataType::List => {
+                GarnishDataType::List => {
                     let len = this.get_list_len(value)?;
 
                     this.start_list(len)?;
@@ -126,10 +126,10 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
                     while i <= end {
                         let addr = this.get_list_item(value, i)?;
                         let is_associative = match this.get_data_type(addr)? {
-                            ExpressionDataType::Pair => {
+                            GarnishDataType::Pair => {
                                 let (left, _) = this.get_pair(addr)?;
                                 match this.get_data_type(left)? {
-                                    ExpressionDataType::Symbol => true,
+                                    GarnishDataType::Symbol => true,
                                     _ => false,
                                 }
                             }
@@ -142,13 +142,13 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
 
                     this.end_list().and_then(|r| this.push_register(r))?
                 }
-                ExpressionDataType::CharList => {
+                GarnishDataType::CharList => {
                     list_from_char_list(this, value, start, end.increment().or_num_err()?)?;
                 }
-                ExpressionDataType::ByteList => {
+                GarnishDataType::ByteList => {
                     list_from_byte_list(this, value, start, end.increment().or_num_err()?)?;
                 }
-                ExpressionDataType::Concatenation => {
+                GarnishDataType::Concatenation => {
                     this.start_list(Data::number_to_size(len).or_num_err()?)?;
 
                     iterate_concatenation_mut(this, value, |this, current_index, addr| {
@@ -174,15 +174,15 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
             }
         }
         // Unit and Boolean
-        (ExpressionDataType::Unit, ExpressionDataType::True) | (ExpressionDataType::False, ExpressionDataType::True) => {
+        (GarnishDataType::Unit, GarnishDataType::True) | (GarnishDataType::False, GarnishDataType::True) => {
             this.add_false().and_then(|r| this.push_register(r))?;
         }
-        (ExpressionDataType::Unit, ExpressionDataType::False) => this.add_true().and_then(|r| this.push_register(r))?,
+        (GarnishDataType::Unit, GarnishDataType::False) => this.add_true().and_then(|r| this.push_register(r))?,
 
         // Final Catches
-        (ExpressionDataType::Unit, _) => push_unit(this)?,
-        (_, ExpressionDataType::False) => this.add_false().and_then(|r| this.push_register(r))?,
-        (_, ExpressionDataType::True) => this.add_true().and_then(|r| this.push_register(r))?,
+        (GarnishDataType::Unit, _) => push_unit(this)?,
+        (_, GarnishDataType::False) => this.add_false().and_then(|r| this.push_register(r))?,
+        (_, GarnishDataType::True) => this.add_true().and_then(|r| this.push_register(r))?,
         (l, r) => match context {
             None => push_unit(this)?,
             Some(c) => {
@@ -196,7 +196,7 @@ pub(crate) fn type_cast<Data: GarnishLangRuntimeData, Context: GarnishLangRuntim
     Ok(None)
 }
 
-pub(crate) fn list_from_char_list<Data: GarnishLangRuntimeData>(
+pub(crate) fn list_from_char_list<Data: GarnishData>(
     this: &mut Data,
     byte_list_addr: Data::Size,
     start: Data::Number,
@@ -219,7 +219,7 @@ pub(crate) fn list_from_char_list<Data: GarnishLangRuntimeData>(
     Ok(None)
 }
 
-pub(crate) fn list_from_byte_list<Data: GarnishLangRuntimeData>(
+pub(crate) fn list_from_byte_list<Data: GarnishData>(
     this: &mut Data,
     byte_list_addr: Data::Size,
     start: Data::Number,
@@ -242,7 +242,7 @@ pub(crate) fn list_from_byte_list<Data: GarnishLangRuntimeData>(
     Ok(None)
 }
 
-pub(crate) fn primitive_cast<Data: GarnishLangRuntimeData, From, To, GetFunc, CastFunc, AddFunc>(
+pub(crate) fn primitive_cast<Data: GarnishData, From, To, GetFunc, CastFunc, AddFunc>(
     this: &mut Data,
     addr: Data::Size,
     get: GetFunc,

@@ -7,7 +7,7 @@ use std::fmt::{Display, Formatter};
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum ErrorType {
     Unknown,
-    /// Code used to determine if an operation should be deferred to [`crate::GarnishLangRuntimeContext`].
+    /// Code used to determine if an operation should be deferred to [`crate::GarnishContext`].
     UnsupportedOpTypes,
 }
 

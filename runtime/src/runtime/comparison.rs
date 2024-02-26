@@ -1,9 +1,9 @@
 use crate::runtime::error::OrNumberError;
 use crate::runtime::utilities::{get_range, next_two_raw_ref, push_boolean, push_unit};
-use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
 use std::cmp::Ordering;
 
-pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn less_than<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_comparison(this, Ordering::Greater).and_then(|result| match result {
         Some(result) => push_boolean(this, result.is_lt()),
         None => push_unit(this),
@@ -12,7 +12,7 @@ pub fn less_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option
     Ok(None)
 }
 
-pub fn less_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn less_than_or_equal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_comparison(this, Ordering::Greater).and_then(|result| match result {
         Some(result) => push_boolean(this, result.is_le()),
         None => push_unit(this),
@@ -21,7 +21,7 @@ pub fn less_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Resu
     Ok(None)
 }
 
-pub fn greater_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn greater_than<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_comparison(this, Ordering::Less).and_then(|result| match result {
         Some(result) => push_boolean(this, result.is_gt()),
         None => push_unit(this),
@@ -30,7 +30,7 @@ pub fn greater_than<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Opt
     Ok(None)
 }
 
-pub fn greater_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn greater_than_or_equal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_comparison(this, Ordering::Less).and_then(|result| match result {
         Some(result) => push_boolean(this, result.is_ge()),
         None => push_unit(this),
@@ -39,14 +39,14 @@ pub fn greater_than_or_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> R
     Ok(None)
 }
 
-fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data, false_ord: Ordering) -> Result<Option<Ordering>, RuntimeError<Data::Error>> {
+fn perform_comparison<Data: GarnishData>(this: &mut Data, false_ord: Ordering) -> Result<Option<Ordering>, RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
 
     let result = match (this.get_data_type(left)?, this.get_data_type(right)?) {
-        (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_number(left)?.partial_cmp(&this.get_number(right)?),
-        (ExpressionDataType::Char, ExpressionDataType::Char) => this.get_char(left)?.partial_cmp(&this.get_char(right)?),
-        (ExpressionDataType::Byte, ExpressionDataType::Byte) => this.get_byte(left)?.partial_cmp(&this.get_byte(right)?),
-        (ExpressionDataType::CharList, ExpressionDataType::CharList) => cmp_list(
+        (GarnishDataType::Number, GarnishDataType::Number) => this.get_number(left)?.partial_cmp(&this.get_number(right)?),
+        (GarnishDataType::Char, GarnishDataType::Char) => this.get_char(left)?.partial_cmp(&this.get_char(right)?),
+        (GarnishDataType::Byte, GarnishDataType::Byte) => this.get_byte(left)?.partial_cmp(&this.get_byte(right)?),
+        (GarnishDataType::CharList, GarnishDataType::CharList) => cmp_list(
             this,
             left,
             right,
@@ -55,7 +55,7 @@ fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data, false_ord: 
             Data::get_char_list_item,
             Data::get_char_list_len,
         )?,
-        (ExpressionDataType::ByteList, ExpressionDataType::ByteList) => cmp_list(
+        (GarnishDataType::ByteList, GarnishDataType::ByteList) => cmp_list(
             this,
             left,
             right,
@@ -64,12 +64,12 @@ fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data, false_ord: 
             Data::get_byte_list_item,
             Data::get_byte_list_len,
         )?,
-        (ExpressionDataType::Slice, ExpressionDataType::Slice) => {
+        (GarnishDataType::Slice, GarnishDataType::Slice) => {
             let (left_value, left_range) = this.get_slice(left)?;
             let (right_value, right_range) = this.get_slice(right)?;
 
             match (this.get_data_type(left_value)?, this.get_data_type(right_value)?) {
-                (ExpressionDataType::ByteList, ExpressionDataType::ByteList) => {
+                (GarnishDataType::ByteList, GarnishDataType::ByteList) => {
                     let (start1, ..) = get_range(this, left_range)?;
                     let (start2, ..) = get_range(this, right_range)?;
 
@@ -83,7 +83,7 @@ fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data, false_ord: 
                         Data::get_byte_list_len,
                     )?
                 }
-                (ExpressionDataType::CharList, ExpressionDataType::CharList) => {
+                (GarnishDataType::CharList, GarnishDataType::CharList) => {
                     let (start1, ..) = get_range(this, left_range)?;
                     let (start2, ..) = get_range(this, right_range)?;
 
@@ -106,7 +106,7 @@ fn perform_comparison<Data: GarnishLangRuntimeData>(this: &mut Data, false_ord: 
     Ok(result)
 }
 
-fn cmp_list<Data: GarnishLangRuntimeData, T: PartialOrd, GetFunc, LenFunc>(
+fn cmp_list<Data: GarnishData, T: PartialOrd, GetFunc, LenFunc>(
     this: &mut Data,
     left: Data::Size,
     right: Data::Size,

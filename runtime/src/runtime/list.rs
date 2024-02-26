@@ -3,9 +3,9 @@ use crate::runtime::error::OrNumberError;
 use crate::runtime::range::range_len;
 use crate::runtime::utilities::get_range;
 use garnish_lang_traits::helpers::{iterate_concatenation_mut, iterate_rev_concatenation_mut};
-use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
 
-pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn make_list<Data: GarnishData>(this: &mut Data, len: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     if len > this.get_register_len() {
         state_error(format!("Not enough register values to make list of length {:?}", len))?
     }
@@ -22,10 +22,10 @@ pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data
         };
 
         let is_associative = match this.get_data_type(r)? {
-            ExpressionDataType::Pair => {
+            GarnishDataType::Pair => {
                 let (left, _right) = this.get_pair(r)?;
                 match this.get_data_type(left)? {
-                    ExpressionDataType::Symbol => true,
+                    GarnishDataType::Symbol => true,
                     _ => false,
                 }
             }
@@ -49,17 +49,17 @@ pub(crate) fn make_list<Data: GarnishLangRuntimeData>(this: &mut Data, len: Data
     Ok(None)
 }
 
-pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
+pub(crate) fn get_access_addr<Data: GarnishData>(
     this: &mut Data,
     right: Data::Size,
     left: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_data_type(right)? {
-        ExpressionDataType::Number => {
+        GarnishDataType::Number => {
             let i = this.get_number(right)?;
             access_with_integer(this, i, left)
         }
-        ExpressionDataType::Symbol => {
+        GarnishDataType::Symbol => {
             let sym = this.get_symbol(right)?;
             access_with_symbol(this, sym, left)
         }
@@ -67,19 +67,19 @@ pub(crate) fn get_access_addr<Data: GarnishLangRuntimeData>(
     }
 }
 
-pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
+pub(crate) fn access_with_integer<Data: GarnishData>(
     this: &mut Data,
     index: Data::Number,
     value: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_data_type(value)? {
-        ExpressionDataType::List => index_list(this, value, index),
-        ExpressionDataType::CharList => index_char_list(this, value, index),
-        ExpressionDataType::ByteList => index_byte_list(this, value, index),
-        ExpressionDataType::Range => {
+        GarnishDataType::List => index_list(this, value, index),
+        GarnishDataType::CharList => index_char_list(this, value, index),
+        GarnishDataType::ByteList => index_byte_list(this, value, index),
+        GarnishDataType::Range => {
             let (start, end) = this.get_range(value)?;
             match (this.get_data_type(start)?, this.get_data_type(end)?) {
-                (ExpressionDataType::Number, ExpressionDataType::Number) => {
+                (GarnishDataType::Number, GarnishDataType::Number) => {
                     let start_int = this.get_number(start)?;
                     let end_int = this.get_number(end)?;
                     let len = range_len::<Data>(start_int, end_int)?;
@@ -95,16 +95,16 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 _ => Ok(None),
             }
         }
-        ExpressionDataType::Slice => {
+        GarnishDataType::Slice => {
             let (value, range) = this.get_slice(value)?;
             let (start, _, _) = get_range(this, range)?;
             let adjusted_index = start.plus(index).or_num_err()?;
 
             match this.get_data_type(value)? {
-                ExpressionDataType::List => index_list(this, value, adjusted_index),
-                ExpressionDataType::CharList => index_char_list(this, value, adjusted_index),
-                ExpressionDataType::ByteList => index_byte_list(this, value, adjusted_index),
-                ExpressionDataType::Concatenation => Ok(iterate_concatenation_mut(this, value, |_this, index, addr| {
+                GarnishDataType::List => index_list(this, value, adjusted_index),
+                GarnishDataType::CharList => index_char_list(this, value, adjusted_index),
+                GarnishDataType::ByteList => index_byte_list(this, value, adjusted_index),
+                GarnishDataType::Concatenation => Ok(iterate_concatenation_mut(this, value, |_this, index, addr| {
                     if index == adjusted_index {
                         return Ok(Some(addr));
                     }
@@ -115,12 +115,12 @@ pub(crate) fn access_with_integer<Data: GarnishLangRuntimeData>(
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
-        ExpressionDataType::Concatenation => index_concatenation_for(this, value, index),
+        GarnishDataType::Concatenation => index_concatenation_for(this, value, index),
         _ => Err(RuntimeError::unsupported_types()),
     }
 }
 
-pub(crate) fn index_concatenation_for<Data: GarnishLangRuntimeData>(
+pub(crate) fn index_concatenation_for<Data: GarnishData>(
     this: &mut Data,
     addr: Data::Size,
     index: Data::Number,
@@ -135,7 +135,7 @@ pub(crate) fn index_concatenation_for<Data: GarnishLangRuntimeData>(
     .0)
 }
 
-fn index_list<Data: GarnishLangRuntimeData>(
+fn index_list<Data: GarnishData>(
     this: &mut Data,
     list: Data::Size,
     index: Data::Number,
@@ -151,7 +151,7 @@ fn index_list<Data: GarnishLangRuntimeData>(
     }
 }
 
-fn index_char_list<Data: GarnishLangRuntimeData>(
+fn index_char_list<Data: GarnishData>(
     this: &mut Data,
     list: Data::Size,
     index: Data::Number,
@@ -169,7 +169,7 @@ fn index_char_list<Data: GarnishLangRuntimeData>(
     }
 }
 
-fn index_byte_list<Data: GarnishLangRuntimeData>(
+fn index_byte_list<Data: GarnishData>(
     this: &mut Data,
     list: Data::Size,
     index: Data::Number,
@@ -187,19 +187,19 @@ fn index_byte_list<Data: GarnishLangRuntimeData>(
     }
 }
 
-fn access_with_symbol<Data: GarnishLangRuntimeData>(
+fn access_with_symbol<Data: GarnishData>(
     this: &mut Data,
     sym: Data::Symbol,
     value: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_data_type(value)? {
-        ExpressionDataType::List => Ok(this.get_list_item_with_symbol(value, sym)?),
-        ExpressionDataType::Slice => {
+        GarnishDataType::List => Ok(this.get_list_item_with_symbol(value, sym)?),
+        GarnishDataType::Slice => {
             let (value, range) = this.get_slice(value)?;
             let (start, end, _) = get_range(this, range)?;
 
             match this.get_data_type(value)? {
-                ExpressionDataType::List => {
+                GarnishDataType::List => {
                     // in order to limit to slice range need to check items manually
                     // can't push, in case any of the items are a Link or Slice
                     let mut i = start;
@@ -217,10 +217,10 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                     while i <= end {
                         let list_item = this.get_list_item(value, i)?;
                         match this.get_data_type(list_item)? {
-                            ExpressionDataType::Pair => {
+                            GarnishDataType::Pair => {
                                 let (left, right) = this.get_pair(list_item)?;
                                 match this.get_data_type(left)? {
-                                    ExpressionDataType::Symbol => {
+                                    GarnishDataType::Symbol => {
                                         if this.get_symbol(left)? == sym {
                                             item = Some(right);
                                         }
@@ -236,7 +236,7 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
 
                     Ok(item)
                 }
-                ExpressionDataType::Concatenation => {
+                GarnishDataType::Concatenation => {
                     let mut found = None;
                     iterate_concatenation_mut(this, value, |this, index, addr| {
                         if index > start && index <= end {
@@ -260,23 +260,23 @@ fn access_with_symbol<Data: GarnishLangRuntimeData>(
                 t => state_error(format!("Invalid value for slice {:?}", t)),
             }
         }
-        ExpressionDataType::Concatenation => {
+        GarnishDataType::Concatenation => {
             Ok(iterate_rev_concatenation_mut(this, value, |this, _index, addr| get_value_if_association(this, addr, sym))?.0)
         }
         _ => Err(RuntimeError::unsupported_types()),
     }
 }
 
-pub(crate) fn get_value_if_association<Data: GarnishLangRuntimeData>(
+pub(crate) fn get_value_if_association<Data: GarnishData>(
     this: &mut Data,
     addr: Data::Size,
     sym: Data::Symbol,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_data_type(addr)? {
-        ExpressionDataType::Pair => {
+        GarnishDataType::Pair => {
             let (left, right) = this.get_pair(addr)?;
             match this.get_data_type(left)? {
-                ExpressionDataType::Symbol => {
+                GarnishDataType::Symbol => {
                     if this.get_symbol(left)? == sym {
                         return Ok(Some(right));
                     }
@@ -290,12 +290,12 @@ pub(crate) fn get_value_if_association<Data: GarnishLangRuntimeData>(
     Ok(None)
 }
 
-pub(crate) fn is_value_association<Data: GarnishLangRuntimeData>(this: &Data, addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {
+pub(crate) fn is_value_association<Data: GarnishData>(this: &Data, addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {
     Ok(match this.get_data_type(addr)? {
-        ExpressionDataType::Pair => {
+        GarnishDataType::Pair => {
             let (left, _right) = this.get_pair(addr)?;
             match this.get_data_type(left)? {
-                ExpressionDataType::Symbol => true,
+                GarnishDataType::Symbol => true,
                 _ => false,
             }
         }

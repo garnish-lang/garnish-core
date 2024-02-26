@@ -2,18 +2,18 @@ use crate::runtime::error::state_error;
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
 use garnish_lang_traits::{
-    ErrorType, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, Instruction, RuntimeError, TypeConstants,
+    ErrorType, GarnishDataType, GarnishContext, GarnishData, GarnishNumber, Instruction, RuntimeError, TypeConstants,
 };
 use log::trace;
 
-pub(crate) fn apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
+pub(crate) fn apply<Data: GarnishData, T: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut T>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     apply_internal(this, Instruction::Apply, context)
 }
 
-pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn reapply<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let value_addr = next_ref(this)?;
 
     let next_instruction = match this.get_jump_point(index) {
@@ -36,7 +36,7 @@ pub(crate) fn reapply<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data
     Ok(Some(next_instruction))
 }
 
-pub(crate) fn empty_apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
+pub(crate) fn empty_apply<Data: GarnishData, T: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut T>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -44,7 +44,7 @@ pub(crate) fn empty_apply<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeCon
     apply_internal(this, Instruction::EmptyApply, context)
 }
 
-pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
+pub(crate) fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(
     this: &mut Data,
     instruction: Instruction,
     context: Option<&mut T>,
@@ -57,7 +57,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
     let mut next_instruction = this.get_instruction_cursor() + Data::Size::one();
 
     match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {
-        (ExpressionDataType::Expression, _) => {
+        (GarnishDataType::Expression, _) => {
             let expression_index = this.get_expression(left_addr)?;
 
             // Expression stores index of expression table, look up actual instruction index
@@ -77,7 +77,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
             trace!("Pushing to value stack {:?}", right_addr);
             this.push_value_stack(right_addr)?;
         }
-        (ExpressionDataType::External, _) => {
+        (GarnishDataType::External, _) => {
             let external_value = this.get_external(left_addr)?;
 
             match context {
@@ -92,7 +92,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                 },
             };
         }
-        (ExpressionDataType::List, ExpressionDataType::List) => {
+        (GarnishDataType::List, GarnishDataType::List) => {
             let len = this.get_list_len(right_addr)?;
 
             let mut count = Data::Size::zero();
@@ -104,10 +104,10 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                 let mut item = this.get_list_item(right_addr, i)?;
 
                 let (is_pair_mapping, sym_addr) = match this.get_data_type(item)? {
-                    ExpressionDataType::Pair => {
+                    GarnishDataType::Pair => {
                         let (left, right) = this.get_pair(item)?;
                         match this.get_data_type(left)? {
-                            ExpressionDataType::Symbol => {
+                            GarnishDataType::Symbol => {
                                 // update item to be mapping pair's right
                                 item = right;
                                 (true, left)
@@ -125,10 +125,10 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
                     },
                     Ok(i) => match i {
                         Some(addr) => match this.get_data_type(addr)? {
-                            ExpressionDataType::Pair => {
+                            GarnishDataType::Pair => {
                                 let (left, _right) = this.get_pair(addr)?;
                                 match this.get_data_type(left)? {
-                                    ExpressionDataType::Symbol => (addr, true),
+                                    GarnishDataType::Symbol => (addr, true),
                                     _ => (addr, false),
                                 }
                             }
@@ -151,37 +151,37 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
 
             this.end_list().and_then(|r| this.push_register(r))?;
         }
-        (ExpressionDataType::Range, ExpressionDataType::Range) => {
+        (GarnishDataType::Range, GarnishDataType::Range) => {
             let addr = narrow_range(this, left_addr, right_addr)?;
             this.push_register(addr)?;
         }
-        (ExpressionDataType::Slice, ExpressionDataType::Range) => {
+        (GarnishDataType::Slice, GarnishDataType::Range) => {
             // create new slice by narrowing this give range
             let (value, slice_range) = this.get_slice(left_addr)?;
             let range_addr = narrow_range(this, slice_range, right_addr)?;
             let addr = this.add_slice(value, range_addr)?;
             this.push_register(addr)?;
         }
-        (ExpressionDataType::List, ExpressionDataType::Range)
-        | (ExpressionDataType::Concatenation, ExpressionDataType::Range)
-        | (ExpressionDataType::CharList, ExpressionDataType::Range)
-        | (ExpressionDataType::ByteList, ExpressionDataType::Range) => {
+        (GarnishDataType::List, GarnishDataType::Range)
+        | (GarnishDataType::Concatenation, GarnishDataType::Range)
+        | (GarnishDataType::CharList, GarnishDataType::Range)
+        | (GarnishDataType::ByteList, GarnishDataType::Range) => {
             // create slice
             let addr = this.add_slice(left_addr, right_addr)?;
             this.push_register(addr)?;
         }
-        (ExpressionDataType::List, ExpressionDataType::Number)
-        | (ExpressionDataType::List, ExpressionDataType::Symbol)
-        | (ExpressionDataType::CharList, ExpressionDataType::Number)
-        | (ExpressionDataType::CharList, ExpressionDataType::Symbol)
-        | (ExpressionDataType::ByteList, ExpressionDataType::Number)
-        | (ExpressionDataType::ByteList, ExpressionDataType::Symbol)
-        | (ExpressionDataType::Range, ExpressionDataType::Number)
-        | (ExpressionDataType::Range, ExpressionDataType::Symbol)
-        | (ExpressionDataType::Concatenation, ExpressionDataType::Number)
-        | (ExpressionDataType::Concatenation, ExpressionDataType::Symbol)
-        | (ExpressionDataType::Slice, ExpressionDataType::Number)
-        | (ExpressionDataType::Slice, ExpressionDataType::Symbol) => match get_access_addr(this, right_addr, left_addr)? {
+        (GarnishDataType::List, GarnishDataType::Number)
+        | (GarnishDataType::List, GarnishDataType::Symbol)
+        | (GarnishDataType::CharList, GarnishDataType::Number)
+        | (GarnishDataType::CharList, GarnishDataType::Symbol)
+        | (GarnishDataType::ByteList, GarnishDataType::Number)
+        | (GarnishDataType::ByteList, GarnishDataType::Symbol)
+        | (GarnishDataType::Range, GarnishDataType::Number)
+        | (GarnishDataType::Range, GarnishDataType::Symbol)
+        | (GarnishDataType::Concatenation, GarnishDataType::Number)
+        | (GarnishDataType::Concatenation, GarnishDataType::Symbol)
+        | (GarnishDataType::Slice, GarnishDataType::Number)
+        | (GarnishDataType::Slice, GarnishDataType::Symbol) => match get_access_addr(this, right_addr, left_addr)? {
             None => push_unit(this)?,
             Some(i) => this.push_register(i)?,
         },
@@ -198,7 +198,7 @@ pub(crate) fn apply_internal<Data: GarnishLangRuntimeData, T: GarnishLangRuntime
     Ok(Some(next_instruction))
 }
 
-pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
+pub(crate) fn narrow_range<Data: GarnishData>(
     this: &mut Data,
     to_narrow: Data::Size,
     by: Data::Size,
@@ -207,7 +207,7 @@ pub(crate) fn narrow_range<Data: GarnishLangRuntimeData>(
     let (old_start, _) = this.get_range(to_narrow)?;
 
     match (this.get_data_type(start)?, this.get_data_type(end)?, this.get_data_type(old_start)?) {
-        (ExpressionDataType::Number, ExpressionDataType::Number, ExpressionDataType::Number) => {
+        (GarnishDataType::Number, GarnishDataType::Number, GarnishDataType::Number) => {
             let (start_int, end_int, old_start_int) = (this.get_number(start)?, this.get_number(end)?, this.get_number(old_start)?);
 
             match (old_start_int.plus(start_int), end_int.subtract(start_int)) {

@@ -1025,7 +1025,7 @@ mod iterator {
 mod tests {
     use std::vec;
 
-    use crate::lexing::lexer::create_operator_tree;
+    use crate::lex::lexer::create_operator_tree;
     use crate::{lex, LexerToken, TokenType};
 
     #[test]

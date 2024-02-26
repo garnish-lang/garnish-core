@@ -16,9 +16,9 @@ mod sideeffect;
 
 #[cfg(test)]
 pub mod testing_utilities {
-    use garnish_lang_simple_data::{DataError, SimpleDataRuntimeNC, SimpleRuntimeData};
+    use garnish_lang_simple_data::{DataError, SimpleDataRuntimeNC, SimpleGarnishData};
     use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishRuntime, Instruction, RuntimeError};
+    use garnish_lang_traits::{GarnishDataType, GarnishContext, GarnishData, GarnishRuntime, Instruction, RuntimeError};
 
     pub const DEFERRED_VALUE: usize = 1000;
 
@@ -30,13 +30,13 @@ pub mod testing_utilities {
         }
     }
 
-    impl GarnishLangRuntimeContext<SimpleRuntimeData> for DeferOpTestContext {
+    impl GarnishContext<SimpleGarnishData> for DeferOpTestContext {
         fn defer_op(
             &mut self,
-            data: &mut SimpleRuntimeData,
+            data: &mut SimpleGarnishData,
             _operation: Instruction,
-            _left: (ExpressionDataType, usize),
-            _right: (ExpressionDataType, usize),
+            _left: (GarnishDataType, usize),
+            _right: (GarnishDataType, usize),
         ) -> Result<bool, RuntimeError<DataError>> {
             // add simple value that is produced by any op
             data.add_external(DEFERRED_VALUE).and_then(|r| data.push_register(r))?;
@@ -46,7 +46,7 @@ pub mod testing_utilities {
 
     pub fn deferred_op<F>(func: F)
     where
-        F: Fn(&mut SimpleGarnishRuntime<SimpleRuntimeData>, &mut DeferOpTestContext),
+        F: Fn(&mut SimpleGarnishRuntime<SimpleGarnishData>, &mut DeferOpTestContext),
     {
         let mut runtime = create_simple_runtime();
 
@@ -66,7 +66,7 @@ pub mod testing_utilities {
 
     pub fn deferred_unary_op<F>(func: F)
     where
-        F: Fn(&mut SimpleGarnishRuntime<SimpleRuntimeData>, &mut DeferOpTestContext),
+        F: Fn(&mut SimpleGarnishRuntime<SimpleGarnishData>, &mut DeferOpTestContext),
     {
         let mut runtime = create_simple_runtime();
 
@@ -82,11 +82,11 @@ pub mod testing_utilities {
         assert_eq!(runtime.get_data_mut().get_external(i).unwrap(), DEFERRED_VALUE);
     }
 
-    pub fn create_simple_runtime() -> SimpleGarnishRuntime<SimpleRuntimeData> {
-        SimpleGarnishRuntime::new(SimpleRuntimeData::new())
+    pub fn create_simple_runtime() -> SimpleGarnishRuntime<SimpleGarnishData> {
+        SimpleGarnishRuntime::new(SimpleGarnishData::new())
     }
 
-    pub fn add_pair(runtime: &mut SimpleRuntimeData, key: &str, value: i32) -> usize {
+    pub fn add_pair(runtime: &mut SimpleGarnishData, key: &str, value: i32) -> usize {
         let sym_value = SimpleDataRuntimeNC::parse_symbol(key).unwrap();
         let i1 = runtime.add_symbol(sym_value).unwrap();
         let i2 = runtime.add_number(value.into()).unwrap();
@@ -95,7 +95,7 @@ pub mod testing_utilities {
         return i3;
     }
 
-    pub fn add_list(runtime: &mut SimpleRuntimeData, count: usize) -> usize {
+    pub fn add_list(runtime: &mut SimpleGarnishData, count: usize) -> usize {
         runtime.start_list(count).unwrap();
         for i in 0..count {
             let d = add_pair(runtime, format!("val{}", i).as_str(), (i as i32 + 1) * 10);
@@ -104,7 +104,7 @@ pub mod testing_utilities {
         runtime.end_list().unwrap()
     }
 
-    pub fn add_list_with_start(runtime: &mut SimpleRuntimeData, count: usize, start_value: i32) -> usize {
+    pub fn add_list_with_start(runtime: &mut SimpleGarnishData, count: usize, start_value: i32) -> usize {
         runtime.start_list(count).unwrap();
         for i in 0..count {
             let v = start_value + i as i32;
@@ -119,7 +119,7 @@ pub mod testing_utilities {
         runtime.end_list().unwrap()
     }
 
-    pub fn add_integer_list_with_start(runtime: &mut SimpleRuntimeData, count: usize, start_value: i32) -> usize {
+    pub fn add_integer_list_with_start(runtime: &mut SimpleGarnishData, count: usize, start_value: i32) -> usize {
         runtime.start_list(count).unwrap();
         for i in 0..count {
             let v = start_value + i as i32;
@@ -129,7 +129,7 @@ pub mod testing_utilities {
         runtime.end_list().unwrap()
     }
 
-    pub fn add_integer_list(runtime: &mut SimpleRuntimeData, count: usize) -> usize {
+    pub fn add_integer_list(runtime: &mut SimpleGarnishData, count: usize) -> usize {
         runtime.start_list(count).unwrap();
         for i in 0..count {
             let d = runtime.add_number(((i as i32 + 1) * 10).into()).unwrap();
@@ -138,14 +138,14 @@ pub mod testing_utilities {
         runtime.end_list().unwrap()
     }
 
-    pub fn add_range(runtime: &mut SimpleRuntimeData, start: i32, end: i32) -> usize {
+    pub fn add_range(runtime: &mut SimpleGarnishData, start: i32, end: i32) -> usize {
         let d1 = runtime.add_number(start.into()).unwrap();
         let d2 = runtime.add_number(end.into()).unwrap();
         let d3 = runtime.add_range(d1, d2).unwrap();
         return d3;
     }
 
-    pub fn add_concatenation_with_start(runtime: &mut SimpleRuntimeData, count: usize, start: i32) -> usize {
+    pub fn add_concatenation_with_start(runtime: &mut SimpleGarnishData, count: usize, start: i32) -> usize {
         let v = start as i32;
         let mut left = add_pair(runtime, format!("val{}", v).as_str(), v);
 
@@ -158,7 +158,7 @@ pub mod testing_utilities {
         left
     }
 
-    pub fn add_char_list(runtime: &mut SimpleRuntimeData, s: &str) -> usize {
+    pub fn add_char_list(runtime: &mut SimpleGarnishData, s: &str) -> usize {
         let chars = SimpleDataRuntimeNC::parse_char_list(s).unwrap();
 
         runtime.start_char_list().unwrap();
@@ -169,13 +169,13 @@ pub mod testing_utilities {
         runtime.end_char_list().unwrap()
     }
 
-    pub fn slice_of_char_list(runtime: &mut SimpleRuntimeData, s: &str, start: i32, end: i32) -> usize {
+    pub fn slice_of_char_list(runtime: &mut SimpleGarnishData, s: &str, start: i32, end: i32) -> usize {
         let list = add_char_list(runtime, s);
         let range = add_range(runtime, start, end);
         runtime.add_slice(list, range).unwrap()
     }
 
-    pub fn add_byte_list(runtime: &mut SimpleRuntimeData, s: &str) -> usize {
+    pub fn add_byte_list(runtime: &mut SimpleGarnishData, s: &str) -> usize {
         let bytes = SimpleDataRuntimeNC::parse_byte_list(s).unwrap();
 
         runtime.start_byte_list().unwrap();
@@ -186,7 +186,7 @@ pub mod testing_utilities {
         runtime.end_byte_list().unwrap()
     }
 
-    pub fn slice_of_byte_list(runtime: &mut SimpleRuntimeData, s: &str, start: i32, end: i32) -> usize {
+    pub fn slice_of_byte_list(runtime: &mut SimpleGarnishData, s: &str, start: i32, end: i32) -> usize {
         let list = add_byte_list(runtime, s);
         let range = add_range(runtime, start, end);
         runtime.add_slice(list, range).unwrap()

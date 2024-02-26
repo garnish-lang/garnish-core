@@ -1,8 +1,8 @@
-use garnish_lang_traits::{ErrorType, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError,};
+use garnish_lang_traits::{ErrorType, GarnishDataType, GarnishContext, GarnishData, RuntimeError,};
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::push_unit;
 
-pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>(
+pub fn resolve<Data: GarnishData, T: GarnishContext<Data>>(
     this: &mut Data,
     data: Data::Size,
     context: Option<&mut T>,
@@ -31,7 +31,7 @@ pub fn resolve<Data: GarnishLangRuntimeData, T: GarnishLangRuntimeContext<Data>>
     match context {
         None => (),
         Some(c) => match this.get_data_type(data)? {
-            ExpressionDataType::Symbol => {
+            GarnishDataType::Symbol => {
                 match c.resolve(this.get_symbol(data)?, this)? {
                     true => return Ok(None), // context resovled end look up
                     false => (),           // not resolved fall through

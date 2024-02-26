@@ -1,8 +1,8 @@
 use crate::runtime::error::state_error;
 use crate::runtime::utilities::{next_ref, push_unit};
-use garnish_lang_traits::{GarnishLangRuntimeData, RuntimeError};
+use garnish_lang_traits::{GarnishData, RuntimeError};
 
-pub(crate) fn put<Data: GarnishLangRuntimeData>(this: &mut Data, i: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn put<Data: GarnishData>(this: &mut Data, i: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match i >= this.get_data_len() {
         true => state_error(format!(
             "Attempting to put reference to {:?} which is outside of data bounds {:?}.",
@@ -15,7 +15,7 @@ pub(crate) fn put<Data: GarnishLangRuntimeData>(this: &mut Data, i: Data::Size) 
     Ok(None)
 }
 
-pub(crate) fn put_value<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn put_value<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_current_value() {
         None => push_unit(this)?,
         Some(i) => this.push_register(i)?,
@@ -24,7 +24,7 @@ pub(crate) fn put_value<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result
     Ok(None)
 }
 
-pub(crate) fn push_value<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn push_value<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
 
     this.push_value_stack(r)?;
@@ -32,7 +32,7 @@ pub(crate) fn push_value<Data: GarnishLangRuntimeData>(this: &mut Data) -> Resul
     Ok(None)
 }
 
-pub(crate) fn upldate_value<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn upldate_value<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
     match this.get_current_value_mut() {
         None => state_error(format!("No inputs available to update for update value operation."))?,

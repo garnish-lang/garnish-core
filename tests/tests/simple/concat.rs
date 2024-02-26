@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
 
     #[test]
     fn make_pair() {
@@ -17,7 +17,7 @@ mod tests {
 
         runtime.concat().unwrap();
 
-        assert_eq!(runtime.get_data_mut().get_data_type(start).unwrap(), ExpressionDataType::Concatenation);
+        assert_eq!(runtime.get_data_mut().get_data_type(start).unwrap(), GarnishDataType::Concatenation);
         assert_eq!(runtime.get_data_mut().get_concatenation(start).unwrap(), (i1, i2));
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), start);

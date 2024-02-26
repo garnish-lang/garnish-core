@@ -2,9 +2,9 @@ use log::trace;
 
 use crate::runtime::error::state_error;
 use crate::runtime::utilities::next_ref;
-use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, RuntimeError};
+use garnish_lang_traits::{GarnishDataType, GarnishData, RuntimeError};
 
-pub(crate) fn jump<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn jump<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_jump_point(index) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => {
@@ -16,7 +16,7 @@ pub(crate) fn jump<Data: GarnishLangRuntimeData>(this: &mut Data, index: Data::S
     Ok(None)
 }
 
-pub(crate) fn jump_if_true<Data: GarnishLangRuntimeData>(
+pub(crate) fn jump_if_true<Data: GarnishData>(
     this: &mut Data,
     index: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -28,7 +28,7 @@ pub(crate) fn jump_if_true<Data: GarnishLangRuntimeData>(
     let d = next_ref(this)?;
 
     match this.get_data_type(d)? {
-        ExpressionDataType::False | ExpressionDataType::Unit => {
+        GarnishDataType::False | GarnishDataType::Unit => {
             trace!("Not jumping from value of type {:?} with addr {:?}", this.get_data_type(d)?, d);
             Ok(None)
         }
@@ -40,7 +40,7 @@ pub(crate) fn jump_if_true<Data: GarnishLangRuntimeData>(
     }
 }
 
-pub(crate) fn jump_if_false<Data: GarnishLangRuntimeData>(
+pub(crate) fn jump_if_false<Data: GarnishData>(
     this: &mut Data,
     index: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -52,7 +52,7 @@ pub(crate) fn jump_if_false<Data: GarnishLangRuntimeData>(
     let d = next_ref(this)?;
 
     match this.get_data_type(d)? {
-        ExpressionDataType::False | ExpressionDataType::Unit => {
+        GarnishDataType::False | GarnishDataType::Unit => {
             trace!(
                 "Jumping from value of type {:?} with addr {:?} to point {:?}",
                 this.get_data_type(d)?,
@@ -68,7 +68,7 @@ pub(crate) fn jump_if_false<Data: GarnishLangRuntimeData>(
     }
 }
 
-pub(crate) fn end_expression<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn end_expression<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.pop_jump_path() {
         None => {
             // no more jumps, this should be the end of the entire execution

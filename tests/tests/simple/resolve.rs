@@ -2,7 +2,7 @@
 mod deferring {
 
     use crate::simple::testing_utilities::{create_simple_runtime, DeferOpTestContext};
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
 
     #[test]
     fn resolve() {
@@ -16,17 +16,17 @@ mod deferring {
 
         // resolve never passes to defer make sure default unit is place when not resolved
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_simple_data::{DataError, SimpleRuntimeData};
+    use garnish_lang_simple_data::{DataError, SimpleGarnishData};
 
     use crate::simple::testing_utilities::create_simple_runtime;
     use garnish_lang_traits::{
-        EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishRuntime, Instruction, RuntimeError, EMPTY_CONTEXT,
+        EmptyContext, GarnishDataType, GarnishContext, GarnishData, GarnishRuntime, Instruction, RuntimeError, EMPTY_CONTEXT,
     };
 
     #[allow(const_item_mutation)]
@@ -39,7 +39,7 @@ mod tests {
         runtime.resolve(i2, Some(&mut EMPTY_CONTEXT)).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 
     #[test]
@@ -80,7 +80,7 @@ mod tests {
         runtime.resolve::<EmptyContext>(i5, None).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 
     #[test]
@@ -94,8 +94,8 @@ mod tests {
 
         struct MyContext {}
 
-        impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
-            fn resolve(&mut self, sym_val: u64, runtime: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
+        impl GarnishContext<SimpleGarnishData> for MyContext {
+            fn resolve(&mut self, sym_val: u64, runtime: &mut SimpleGarnishData) -> Result<bool, RuntimeError<DataError>> {
                 assert_eq!(sym_val, 1);
 
                 let addr = runtime.add_number(100.into())?;
@@ -103,7 +103,7 @@ mod tests {
                 Ok(true)
             }
 
-            fn apply(&mut self, _: usize, _: usize, _: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
+            fn apply(&mut self, _: usize, _: usize, _: &mut SimpleGarnishData) -> Result<bool, RuntimeError<DataError>> {
                 Ok(false)
             }
         }

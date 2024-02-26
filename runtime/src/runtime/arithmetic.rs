@@ -2,72 +2,72 @@ use garnish_lang_traits::Instruction;
 use log::trace;
 
 use crate::runtime::utilities::{next_ref, next_two_raw_ref, push_number, push_unit};
-use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishDataType, GarnishContext, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
 
-pub fn add<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+pub fn add<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_op(this, Instruction::Add, Data::Number::plus, context)
 }
 
-pub fn subtract<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+pub fn subtract<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_op(this, Instruction::Subtract, Data::Number::subtract, context)
 }
 
-pub fn multiply<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+pub fn multiply<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_op(this, Instruction::Multiply, Data::Number::multiply, context)
 }
 
-pub fn power<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+pub fn power<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_op(this, Instruction::Power, Data::Number::power, context)
 }
 
-pub fn divide<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+pub fn divide<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_op(this, Instruction::Power, Data::Number::divide, context)
 }
 
-pub fn integer_divide<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+pub fn integer_divide<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_op(this, Instruction::IntegerDivide, Data::Number::integer_divide, context)
 }
 
-pub fn remainder<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+pub fn remainder<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_op(this, Instruction::Remainder, Data::Number::remainder, context)
 }
 
-pub fn absolute_value<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+pub fn absolute_value<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_unary_op(this, Instruction::AbsoluteValue, Data::Number::absolute_value, context)
 }
 
-pub fn opposite<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>>(
+pub fn opposite<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_unary_op(this, Instruction::Opposite, Data::Number::opposite, context)
 }
 
-pub(crate) fn perform_unary_op<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>, Op>(
+pub(crate) fn perform_unary_op<Data: GarnishData, Context: GarnishContext<Data>, Op>(
     this: &mut Data,
     op_name: Instruction,
     op: Op,
@@ -82,7 +82,7 @@ where
     trace!("Attempting {:?} on {:?} at {:?}", op_name, t, addr,);
 
     match t {
-        ExpressionDataType::Number => {
+        GarnishDataType::Number => {
             let value = this.get_number(addr)?;
 
             match op(value) {
@@ -93,7 +93,7 @@ where
         l => match context {
             None => push_unit(this)?,
             Some(c) => {
-                if !c.defer_op(this, op_name, (l, addr), (ExpressionDataType::Unit, Data::Size::zero()))? {
+                if !c.defer_op(this, op_name, (l, addr), (GarnishDataType::Unit, Data::Size::zero()))? {
                     push_unit(this)?
                 }
             }
@@ -103,7 +103,7 @@ where
     Ok(None)
 }
 
-pub(crate) fn perform_op<Data: GarnishLangRuntimeData, Context: GarnishLangRuntimeContext<Data>, Op>(
+pub(crate) fn perform_op<Data: GarnishData, Context: GarnishContext<Data>, Op>(
     this: &mut Data,
     op_name: Instruction,
     op: Op,
@@ -125,7 +125,7 @@ where
     );
 
     match types {
-        (ExpressionDataType::Number, ExpressionDataType::Number) => {
+        (GarnishDataType::Number, GarnishDataType::Number) => {
             let left = this.get_number(left_addr)?;
             let right = this.get_number(right_addr)?;
 

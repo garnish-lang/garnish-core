@@ -7,30 +7,30 @@ use crate::runtime::error::OrNumberError;
 use crate::runtime::internals::concatenation_len;
 use crate::runtime::list::index_concatenation_for;
 use crate::runtime::utilities::{get_range, next_two_raw_ref, push_boolean};
-use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
 
-pub(crate) fn equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn equal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let equal = perform_equality_check(this)?;
     push_boolean(this, equal)?;
 
     Ok(None)
 }
 
-pub fn not_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn not_equal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let equal = perform_equality_check(this)?;
     push_boolean(this, !equal)?;
 
     Ok(None)
 }
 
-pub fn type_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn type_equal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
     let left_type = this.get_data_type(left)?;
     let right_type = this.get_data_type(right)?;
 
     // check if right type needs to be corrected if Type type
     // but only if both aren't Type type
-    let right_type = if right_type == ExpressionDataType::Type {
+    let right_type = if right_type == GarnishDataType::Type {
         this.get_type(right)?
     } else {
         right_type
@@ -42,7 +42,7 @@ pub fn type_equal<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<Optio
     Ok(None)
 }
 
-fn perform_equality_check<Data: GarnishLangRuntimeData>(this: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
+fn perform_equality_check<Data: GarnishData>(this: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
     // hope that can get reduced to a constant
     let two = Data::Size::one() + Data::Size::one();
     if this.get_register_len() < two {
@@ -66,7 +66,7 @@ fn perform_equality_check<Data: GarnishLangRuntimeData>(this: &mut Data) -> Resu
     Ok(true)
 }
 
-fn data_equal<Data: GarnishLangRuntimeData>(
+fn data_equal<Data: GarnishData>(
     this: &mut Data,
     left_addr: Data::Size,
     right_addr: Data::Size,
@@ -74,17 +74,17 @@ fn data_equal<Data: GarnishLangRuntimeData>(
     let (left_type, right_type) = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
 
     let equal = match (left_type, right_type) {
-        (ExpressionDataType::Unit, ExpressionDataType::Unit)
-        | (ExpressionDataType::True, ExpressionDataType::True)
-        | (ExpressionDataType::False, ExpressionDataType::False) => true,
-        (ExpressionDataType::Type, ExpressionDataType::Type) => this.get_type(left_addr)? == this.get_type(right_addr)?,
-        (ExpressionDataType::Expression, ExpressionDataType::Expression) => compare(this, left_addr, right_addr, Data::get_expression)?,
-        (ExpressionDataType::External, ExpressionDataType::External) => compare(this, left_addr, right_addr, Data::get_external)?,
-        (ExpressionDataType::Symbol, ExpressionDataType::Symbol) => compare(this, left_addr, right_addr, Data::get_symbol)?,
-        (ExpressionDataType::Char, ExpressionDataType::Char) => compare(this, left_addr, right_addr, Data::get_char)?,
-        (ExpressionDataType::Byte, ExpressionDataType::Byte) => compare(this, left_addr, right_addr, Data::get_byte)?,
-        (ExpressionDataType::Number, ExpressionDataType::Number) => compare(this, left_addr, right_addr, Data::get_number)?,
-        (ExpressionDataType::Char, ExpressionDataType::CharList) => {
+        (GarnishDataType::Unit, GarnishDataType::Unit)
+        | (GarnishDataType::True, GarnishDataType::True)
+        | (GarnishDataType::False, GarnishDataType::False) => true,
+        (GarnishDataType::Type, GarnishDataType::Type) => this.get_type(left_addr)? == this.get_type(right_addr)?,
+        (GarnishDataType::Expression, GarnishDataType::Expression) => compare(this, left_addr, right_addr, Data::get_expression)?,
+        (GarnishDataType::External, GarnishDataType::External) => compare(this, left_addr, right_addr, Data::get_external)?,
+        (GarnishDataType::Symbol, GarnishDataType::Symbol) => compare(this, left_addr, right_addr, Data::get_symbol)?,
+        (GarnishDataType::Char, GarnishDataType::Char) => compare(this, left_addr, right_addr, Data::get_char)?,
+        (GarnishDataType::Byte, GarnishDataType::Byte) => compare(this, left_addr, right_addr, Data::get_byte)?,
+        (GarnishDataType::Number, GarnishDataType::Number) => compare(this, left_addr, right_addr, Data::get_number)?,
+        (GarnishDataType::Char, GarnishDataType::CharList) => {
             if this.get_char_list_len(right_addr)? == Data::Size::one() {
                 let c1 = this.get_char(left_addr)?;
                 let c2 = this.get_char_list_item(right_addr, Data::Number::zero())?;
@@ -94,7 +94,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 false
             }
         }
-        (ExpressionDataType::CharList, ExpressionDataType::Char) => {
+        (GarnishDataType::CharList, GarnishDataType::Char) => {
             if this.get_char_list_len(left_addr)? == Data::Size::one() {
                 let c1 = this.get_char_list_item(left_addr, Data::Number::zero())?;
                 let c2 = this.get_char(right_addr)?;
@@ -104,7 +104,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 false
             }
         }
-        (ExpressionDataType::Byte, ExpressionDataType::ByteList) => {
+        (GarnishDataType::Byte, GarnishDataType::ByteList) => {
             if this.get_byte_list_len(right_addr)? == Data::Size::one() {
                 let c1 = this.get_byte(left_addr)?;
                 let c2 = this.get_byte_list_item(right_addr, Data::Number::zero())?;
@@ -114,7 +114,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 false
             }
         }
-        (ExpressionDataType::ByteList, ExpressionDataType::Byte) => {
+        (GarnishDataType::ByteList, GarnishDataType::Byte) => {
             if this.get_byte_list_len(left_addr)? == Data::Size::one() {
                 let c1 = this.get_byte_list_item(left_addr, Data::Number::zero())?;
                 let c2 = this.get_byte(right_addr)?;
@@ -124,7 +124,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 false
             }
         }
-        (ExpressionDataType::CharList, ExpressionDataType::CharList) => {
+        (GarnishDataType::CharList, GarnishDataType::CharList) => {
             let len1 = this.get_char_list_len(left_addr)?;
             let len2 = this.get_char_list_len(right_addr)?;
 
@@ -148,7 +148,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 equal
             }
         }
-        (ExpressionDataType::ByteList, ExpressionDataType::ByteList) => {
+        (GarnishDataType::ByteList, GarnishDataType::ByteList) => {
             let len1 = this.get_byte_list_len(left_addr)?;
             let len2 = this.get_byte_list_len(right_addr)?;
 
@@ -172,25 +172,25 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 equal
             }
         }
-        (ExpressionDataType::Range, ExpressionDataType::Range) => {
+        (GarnishDataType::Range, GarnishDataType::Range) => {
             let (start1, end1) = this.get_range(left_addr)?;
             let (start2, end2) = this.get_range(right_addr)?;
 
             let start_equal = match (this.get_data_type(start1)?, this.get_data_type(start2)?) {
-                (ExpressionDataType::Unit, ExpressionDataType::Unit) => true,
-                (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_number(start1)? == this.get_number(start2)?,
+                (GarnishDataType::Unit, GarnishDataType::Unit) => true,
+                (GarnishDataType::Number, GarnishDataType::Number) => this.get_number(start1)? == this.get_number(start2)?,
                 _ => false,
             };
 
             let end_equal = match (this.get_data_type(end1)?, this.get_data_type(end2)?) {
-                (ExpressionDataType::Unit, ExpressionDataType::Unit) => true,
-                (ExpressionDataType::Number, ExpressionDataType::Number) => this.get_number(end1)? == this.get_number(end2)?,
+                (GarnishDataType::Unit, GarnishDataType::Unit) => true,
+                (GarnishDataType::Number, GarnishDataType::Number) => this.get_number(end1)? == this.get_number(end2)?,
                 _ => false,
             };
 
             start_equal && end_equal
         }
-        (ExpressionDataType::Pair, ExpressionDataType::Pair) => {
+        (GarnishDataType::Pair, GarnishDataType::Pair) => {
             let (left1, right1) = this.get_pair(left_addr)?;
             let (left2, right2) = this.get_pair(right_addr)?;
 
@@ -202,7 +202,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
 
             true
         }
-        (ExpressionDataType::Concatenation, ExpressionDataType::Concatenation) => {
+        (GarnishDataType::Concatenation, GarnishDataType::Concatenation) => {
             let len1 = concatenation_len(this, left_addr)?;
             let len2 = concatenation_len(this, right_addr)?;
 
@@ -233,7 +233,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 true
             }
         }
-        (ExpressionDataType::List, ExpressionDataType::Concatenation) => {
+        (GarnishDataType::List, GarnishDataType::Concatenation) => {
             let len1 = this.get_list_len(left_addr)?;
             let len2 = concatenation_len(this, right_addr)?;
 
@@ -261,7 +261,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 true
             }
         }
-        (ExpressionDataType::Concatenation, ExpressionDataType::List) => {
+        (GarnishDataType::Concatenation, GarnishDataType::List) => {
             let len1 = concatenation_len(this, left_addr)?;
             let len2 = this.get_list_len(right_addr)?;
 
@@ -289,7 +289,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 true
             }
         }
-        (ExpressionDataType::Slice, ExpressionDataType::Slice) => {
+        (GarnishDataType::Slice, GarnishDataType::Slice) => {
             let (value1, range1) = this.get_slice(left_addr)?;
             let (value2, range2) = this.get_slice(right_addr)?;
 
@@ -303,7 +303,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 false
             } else {
                 match (this.get_data_type(value1)?, this.get_data_type(value2)?) {
-                    (ExpressionDataType::CharList, ExpressionDataType::CharList) => {
+                    (GarnishDataType::CharList, GarnishDataType::CharList) => {
                         let mut index1 = start1;
                         let mut index2 = start2;
                         let mut count = Data::Number::zero();
@@ -335,7 +335,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
 
                         true
                     }
-                    (ExpressionDataType::ByteList, ExpressionDataType::ByteList) => {
+                    (GarnishDataType::ByteList, GarnishDataType::ByteList) => {
                         let mut index1 = start1;
                         let mut index2 = start2;
                         let mut count = Data::Number::zero();
@@ -367,7 +367,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
 
                         true
                     }
-                    (ExpressionDataType::List, ExpressionDataType::List) => {
+                    (GarnishDataType::List, GarnishDataType::List) => {
                         let mut index1 = start1;
                         let mut index2 = start2;
                         let mut count = Data::Number::zero();
@@ -402,7 +402,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                 }
             }
         }
-        (ExpressionDataType::List, ExpressionDataType::List) => {
+        (GarnishDataType::List, GarnishDataType::List) => {
             let association_len1 = this.get_list_associations_len(left_addr)?;
             let associations_len2 = this.get_list_associations_len(right_addr)?;
             let len1 = this.get_list_len(left_addr)?;
@@ -428,10 +428,10 @@ fn data_equal<Data: GarnishLangRuntimeData>(
                     let right_item = this.get_list_item(right_addr, i)?;
 
                     let (left_is_associative, pair_sym, pair_item) = match this.get_data_type(left_item)? {
-                        ExpressionDataType::Pair => {
+                        GarnishDataType::Pair => {
                             let (left, right) = this.get_pair(left_item)?;
                             match this.get_data_type(left)? {
-                                ExpressionDataType::Symbol => (true, this.get_symbol(left)?, right),
+                                GarnishDataType::Symbol => (true, this.get_symbol(left)?, right),
                                 _ => (false, Data::Symbol::zero(), Data::Size::zero()),
                             }
                         }
@@ -469,7 +469,7 @@ fn data_equal<Data: GarnishLangRuntimeData>(
     Ok(equal)
 }
 
-fn compare<Data: GarnishLangRuntimeData, F, V: PartialOrd + Debug>(
+fn compare<Data: GarnishData, F, V: PartialOrd + Debug>(
     this: &Data,
     left_addr: Data::Size,
     right_addr: Data::Size,

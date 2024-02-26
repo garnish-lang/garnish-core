@@ -1,7 +1,7 @@
 use crate::data::number::SimpleNumber;
 use garnish_lang_traits::GarnishNumber;
 
-/// Custom size iterator for [`garnish_lang_traits::GarnishLangRuntimeData`] implementation.
+/// Custom size iterator for [`garnish_lang_traits::GarnishData`] implementation.
 pub struct SizeIterator {
     min: usize,
     max: usize,
@@ -49,7 +49,7 @@ impl DoubleEndedIterator for SizeIterator {
     }
 }
 
-/// Custom size iterator for [`garnish_lang_traits::GarnishLangRuntimeData`] implementation.
+/// Custom size iterator for [`garnish_lang_traits::GarnishData`] implementation.
 pub struct NumberIterator {
     min: SimpleNumber,
     max: SimpleNumber,

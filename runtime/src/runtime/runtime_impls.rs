@@ -18,7 +18,7 @@ use crate::runtime::sideeffect::*;
 
 use crate::runtime::concat::concat;
 use garnish_lang_traits::{
-    GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishRuntime, Instruction, RuntimeError,
+    GarnishContext, GarnishData, GarnishRuntime, Instruction, RuntimeError,
     TypeConstants,
 };
 use log::trace;
@@ -27,24 +27,24 @@ use serde::{Deserialize, Serialize};
 
 /// State that the runtime is currently in.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GarnishLangRuntimeState {
+pub enum SimpleRuntimeState {
     Running,
     End,
 }
 
 /// Information about the runtime, returned after execution an instruction.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct GarnishLangRuntimeInfo {
-    state: GarnishLangRuntimeState,
+pub struct SimpleRuntimeInfo {
+    state: SimpleRuntimeState,
 }
 
 /// Information about the current execution state of a runtime.
-impl GarnishLangRuntimeInfo {
-    pub fn new(state: GarnishLangRuntimeState) -> Self {
-        return GarnishLangRuntimeInfo { state };
+impl SimpleRuntimeInfo {
+    pub fn new(state: SimpleRuntimeState) -> Self {
+        return SimpleRuntimeInfo { state };
     }
 
-    pub fn get_state(&self) -> GarnishLangRuntimeState {
+    pub fn get_state(&self) -> SimpleRuntimeState {
         self.state
     }
 }
@@ -52,21 +52,21 @@ impl GarnishLangRuntimeInfo {
 /// Implementation of a [`GarnishRuntime`]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
-pub struct SimpleGarnishRuntime<Data: GarnishLangRuntimeData> {
+pub struct SimpleGarnishRuntime<Data: GarnishData> {
     data: Data,
 }
 
-impl<Data: GarnishLangRuntimeData> SimpleGarnishRuntime<Data> {
+impl<Data: GarnishData> SimpleGarnishRuntime<Data> {
     pub fn new(data: Data) -> SimpleGarnishRuntime<Data> {
         SimpleGarnishRuntime { data }
     }
 
-    pub fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
+    pub fn execute_current_instruction<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
-    ) -> Result<GarnishLangRuntimeInfo, RuntimeError<Data::Error>> {
+    ) -> Result<SimpleRuntimeInfo, RuntimeError<Data::Error>> {
         let (instruction, data) = match self.get_data().get_instruction(self.get_data().get_instruction_cursor()) {
-            None => return Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::End)),
+            None => return Ok(SimpleRuntimeInfo::new(SimpleRuntimeState::End)),
             Some(v) => v,
         };
 
@@ -162,10 +162,10 @@ impl<Data: GarnishLangRuntimeData> SimpleGarnishRuntime<Data> {
         };
 
         match next_instruction >= self.get_data().get_instruction_len() {
-            true => Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::End)),
+            true => Ok(SimpleRuntimeInfo::new(SimpleRuntimeState::End)),
             false => {
                 self.get_data_mut().set_instruction_cursor(next_instruction)?;
-                Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::Running))
+                Ok(SimpleRuntimeInfo::new(SimpleRuntimeState::Running))
             }
         }
     }
@@ -173,7 +173,7 @@ impl<Data: GarnishLangRuntimeData> SimpleGarnishRuntime<Data> {
 
 impl<Data> GarnishRuntime<Data> for SimpleGarnishRuntime<Data>
 where
-    Data: GarnishLangRuntimeData,
+    Data: GarnishData,
 {
     fn get_data(&self) -> &Data {
         &self.data
@@ -185,7 +185,7 @@ where
 
     // Apply
 
-    fn apply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn apply<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         apply(self.get_data_mut(), context)
     }
 
@@ -193,7 +193,7 @@ where
         reapply(self.get_data_mut(), index)
     }
 
-    fn empty_apply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn empty_apply<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         empty_apply(self.get_data_mut(), context)
     }
 
@@ -201,45 +201,45 @@ where
     // Arithmetic
     //
 
-    fn add<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn add<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         add(self.get_data_mut(), context)
     }
 
-    fn subtract<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn subtract<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         subtract(self.get_data_mut(), context)
     }
 
-    fn multiply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn multiply<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         multiply(self.get_data_mut(), context)
     }
 
-    fn power<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn power<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         power(self.get_data_mut(), context)
     }
 
-    fn divide<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn divide<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         divide(self.get_data_mut(), context)
     }
 
-    fn integer_divide<T: GarnishLangRuntimeContext<Data>>(
+    fn integer_divide<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         integer_divide(self.get_data_mut(), context)
     }
 
-    fn remainder<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn remainder<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         remainder(self.get_data_mut(), context)
     }
 
-    fn absolute_value<T: GarnishLangRuntimeContext<Data>>(
+    fn absolute_value<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         absolute_value(self.get_data_mut(), context)
     }
 
-    fn opposite<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn opposite<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         opposite(self.get_data_mut(), context)
     }
 
@@ -247,30 +247,30 @@ where
     // Bitwise
     //
 
-    fn bitwise_not<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn bitwise_not<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         bitwise_not(self.get_data_mut(), context)
     }
 
-    fn bitwise_and<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn bitwise_and<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         bitwise_and(self.get_data_mut(), context)
     }
 
-    fn bitwise_or<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn bitwise_or<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         bitwise_or(self.get_data_mut(), context)
     }
 
-    fn bitwise_xor<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn bitwise_xor<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         bitwise_xor(self.get_data_mut(), context)
     }
 
-    fn bitwise_left_shift<T: GarnishLangRuntimeContext<Data>>(
+    fn bitwise_left_shift<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         bitwise_left_shift(self.get_data_mut(), context)
     }
 
-    fn bitwise_right_shift<T: GarnishLangRuntimeContext<Data>>(
+    fn bitwise_right_shift<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -309,7 +309,7 @@ where
         type_of(self.get_data_mut())
     }
 
-    fn type_cast<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    fn type_cast<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         type_cast(self.get_data_mut(), context)
     }
 
@@ -373,21 +373,21 @@ where
         make_list(self.get_data_mut(), len)
     }
 
-    fn access_left_internal<T: GarnishLangRuntimeContext<Data>>(
+    fn access_left_internal<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         access_left_internal(self.get_data_mut(), context)
     }
 
-    fn access_right_internal<T: GarnishLangRuntimeContext<Data>>(
+    fn access_right_internal<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         access_right_internal(self.get_data_mut(), context)
     }
 
-    fn access_length_internal<T: GarnishLangRuntimeContext<Data>>(
+    fn access_length_internal<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -454,7 +454,7 @@ where
     // Resolve
     //
 
-    fn resolve<T: GarnishLangRuntimeContext<Data>>(
+    fn resolve<T: GarnishContext<Data>>(
         &mut self,
         data: Data::Size,
         context: Option<&mut T>,

@@ -7,7 +7,7 @@ use std::ops::{Add, AddAssign, Sub, SubAssign};
 /// List of Garnish data types.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
-pub enum ExpressionDataType {
+pub enum GarnishDataType {
     Invalid = 0,
     Unit = 1,
     Number,
@@ -58,7 +58,7 @@ pub trait GarnishNumber: Sized {
 }
 
 /// Trait defining what a data access operations are required by a runtime.
-pub trait GarnishLangRuntimeData {
+pub trait GarnishData {
     type Error: std::error::Error + 'static;
     type Symbol: Default + Display + Debug + PartialOrd + TypeConstants + Copy;
     type Byte: Default + Display + Debug + PartialOrd + Copy;
@@ -96,10 +96,10 @@ pub trait GarnishLangRuntimeData {
     fn get_current_value_mut(&mut self) -> Option<&mut Self::Size>;
     fn get_value_iter(&self) -> Self::ValueIndexInterator;
 
-    fn get_data_type(&self, addr: Self::Size) -> Result<ExpressionDataType, Self::Error>;
+    fn get_data_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error>;
 
     fn get_number(&self, addr: Self::Size) -> Result<Self::Number, Self::Error>;
-    fn get_type(&self, addr: Self::Size) -> Result<ExpressionDataType, Self::Error>;
+    fn get_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error>;
     fn get_char(&self, addr: Self::Size) -> Result<Self::Char, Self::Error>;
     fn get_byte(&self, addr: Self::Size) -> Result<Self::Byte, Self::Error>;
     fn get_symbol(&self, addr: Self::Size) -> Result<Self::Symbol, Self::Error>;
@@ -131,7 +131,7 @@ pub trait GarnishLangRuntimeData {
     fn add_false(&mut self) -> Result<Self::Size, Self::Error>;
 
     fn add_number(&mut self, value: Self::Number) -> Result<Self::Size, Self::Error>;
-    fn add_type(&mut self, value: ExpressionDataType) -> Result<Self::Size, Self::Error>;
+    fn add_type(&mut self, value: GarnishDataType) -> Result<Self::Size, Self::Error>;
     fn add_char(&mut self, value: Self::Char) -> Result<Self::Size, Self::Error>;
     fn add_byte(&mut self, value: Self::Byte) -> Result<Self::Size, Self::Error>;
     fn add_symbol(&mut self, value: Self::Symbol) -> Result<Self::Size, Self::Error>;

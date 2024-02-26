@@ -2,7 +2,7 @@
 mod tests {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
 
     #[test]
     fn put() {
@@ -52,7 +52,7 @@ mod tests {
         runtime.put_value().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 
     #[test]

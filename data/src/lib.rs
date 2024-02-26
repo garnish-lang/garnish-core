@@ -4,7 +4,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 
 pub use error::DataError;
-use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, Instruction};
+use garnish_lang_traits::{GarnishDataType, GarnishData, Instruction};
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
 
 #[cfg(feature = "serde")]
@@ -16,9 +16,9 @@ mod instruction;
 mod runtime;
 
 pub use data::*;
-pub use instruction::InstructionData;
+pub use instruction::SimpleInstruction;
 
-/// Utility to convert strings to [`u64`], the Symbol type for [`SimpleRuntimeData`].
+/// Utility to convert strings to [`u64`], the Symbol type for [`SimpleGarnishData`].
 pub fn symbol_value(value: &str) -> u64 {
     let mut h = DefaultHasher::new();
     value.hash(&mut h);
@@ -27,7 +27,7 @@ pub fn symbol_value(value: &str) -> u64 {
     hv
 }
 
-/// Default custom type for [`SimpleRuntimeData`] when no custom types are needed.
+/// Default custom type for [`SimpleGarnishData`] when no custom types are needed.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialOrd, PartialEq, Eq, Debug, Hash)]
 pub struct NoCustom {}
@@ -38,10 +38,10 @@ impl Display for NoCustom {
     }
 }
 
-/// Implementation of [`GarnishLangRuntimeData`]. Uses standard Rust collections for storing data.
+/// Implementation of [`GarnishData`]. Uses standard Rust collections for storing data.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
-pub struct SimpleRuntimeData<T = NoCustom>
+pub struct SimpleGarnishData<T = NoCustom>
 where
     T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
@@ -49,7 +49,7 @@ where
     data: SimpleDataList<T>,
     end_of_constant_data: usize,
     values: Vec<usize>,
-    instructions: Vec<InstructionData>,
+    instructions: Vec<SimpleInstruction>,
     instruction_cursor: usize,
     expression_table: Vec<usize>,
     jump_path: Vec<usize>,
@@ -60,12 +60,12 @@ where
     max_char_list_depth: usize,
 }
 
-/// Alias for [`SimpleRuntimeData`] with [`NoCustom`] type parameter.
-pub type SimpleDataRuntimeNC = SimpleRuntimeData<NoCustom>;
+/// Alias for [`SimpleGarnishData`] with [`NoCustom`] type parameter.
+pub type SimpleDataRuntimeNC = SimpleGarnishData<NoCustom>;
 
-impl SimpleRuntimeData<NoCustom> {
+impl SimpleGarnishData<NoCustom> {
     pub fn new() -> Self {
-        SimpleRuntimeData {
+        SimpleGarnishData {
             register: vec![],
             data: SimpleDataList::default(),
             end_of_constant_data: 0,
@@ -83,12 +83,12 @@ impl SimpleRuntimeData<NoCustom> {
     }
 }
 
-impl<T> SimpleRuntimeData<T>
+impl<T> SimpleGarnishData<T>
 where
     T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     pub fn new_custom() -> Self {
-        SimpleRuntimeData {
+        SimpleGarnishData {
             register: vec![],
             data: SimpleDataList::<T>::default(),
             end_of_constant_data: 0,
@@ -137,7 +137,7 @@ where
         &self.expression_table
     }
 
-    pub fn get_instructions(&self) -> &Vec<InstructionData> {
+    pub fn get_instructions(&self) -> &Vec<SimpleInstruction> {
         &self.instructions
     }
 
@@ -202,45 +202,45 @@ where
         }
 
         match self.get_data_type(from)? {
-            ExpressionDataType::Invalid => todo!(),
-            ExpressionDataType::Custom => todo!(),
-            ExpressionDataType::Unit => {
+            GarnishDataType::Invalid => todo!(),
+            GarnishDataType::Custom => todo!(),
+            GarnishDataType::Unit => {
                 self.add_to_char_list('(')?;
                 self.add_to_char_list(')')?;
             }
-            ExpressionDataType::True => {
+            GarnishDataType::True => {
                 self.add_to_char_list('$')?;
                 self.add_to_char_list('?')?;
             }
-            ExpressionDataType::False => {
+            GarnishDataType::False => {
                 self.add_to_char_list('$')?;
                 self.add_to_char_list('!')?;
             }
-            ExpressionDataType::Type => {
+            GarnishDataType::Type => {
                 let s = format!("{:?}", self.get_type(from)?);
                 for c in s.chars() {
                     self.add_to_char_list(c)?;
                 }
             }
-            ExpressionDataType::Number => {
+            GarnishDataType::Number => {
                 let x = self.get_number(from)?;
                 let s = x.to_string();
                 for c in s.chars() {
                     self.add_to_char_list(c)?;
                 }
             }
-            ExpressionDataType::Char => {
+            GarnishDataType::Char => {
                 let c = self.get_char(from)?;
                 self.add_to_char_list(c)?;
             }
-            ExpressionDataType::CharList => {
+            GarnishDataType::CharList => {
                 let len = self.get_char_list_len(from)?;
                 for i in 0..len {
                     let c = self.get_char_list_item(from, i.into())?;
                     self.add_to_char_list(c)?;
                 }
             }
-            ExpressionDataType::Byte => {
+            GarnishDataType::Byte => {
                 let b = self.get_byte(from)?;
                 let s = b.to_string();
                 self.start_char_list()?;
@@ -248,7 +248,7 @@ where
                     self.add_to_char_list(c)?;
                 }
             }
-            ExpressionDataType::ByteList => {
+            GarnishDataType::ByteList => {
                 let len = self.get_byte_list_len(from)?;
                 let mut strs = vec![];
                 for i in 0..len {
@@ -261,7 +261,7 @@ where
                     self.add_to_char_list(c)?;
                 }
             }
-            ExpressionDataType::Symbol => {
+            GarnishDataType::Symbol => {
                 let sym = self.get_symbol(from)?;
                 let s = match self.data.get_symbol(sym) {
                     None => sym.to_string(),
@@ -272,7 +272,7 @@ where
                     self.add_to_char_list(c)?;
                 }
             }
-            ExpressionDataType::Expression => {
+            GarnishDataType::Expression => {
                 let e = self.get_expression(from)?;
                 let s = format!("Expression({})", e);
 
@@ -280,7 +280,7 @@ where
                     self.add_to_char_list(c)?;
                 }
             }
-            ExpressionDataType::External => {
+            GarnishDataType::External => {
                 let e = self.get_external(from)?;
                 let s = format!("External({})", e);
 
@@ -288,7 +288,7 @@ where
                     self.add_to_char_list(c)?;
                 }
             }
-            ExpressionDataType::Range => {
+            GarnishDataType::Range => {
                 let (start, end) = self
                     .get_range(from)
                     .and_then(|(start, end)| Ok((self.get_number(start)?, self.get_number(end)?)))?;
@@ -299,7 +299,7 @@ where
                     self.add_to_char_list(c)?;
                 }
             }
-            ExpressionDataType::Pair => {
+            GarnishDataType::Pair => {
                 let (left, right) = self.get_pair(from)?;
                 if depth > 0 {
                     self.add_to_char_list('(')?;
@@ -313,12 +313,12 @@ where
                     self.add_to_char_list(')')?;
                 }
             }
-            ExpressionDataType::Concatenation => {
+            GarnishDataType::Concatenation => {
                 let (left, right) = self.get_concatenation(from)?;
                 self.add_to_current_char_list(left, depth + 1)?;
                 self.add_to_current_char_list(right, depth + 1)?;
             }
-            ExpressionDataType::List => {
+            GarnishDataType::List => {
                 let len = self.get_list_len(from)?;
 
                 if depth > 0 {
@@ -339,7 +339,7 @@ where
                     self.add_to_char_list(')')?;
                 }
             }
-            ExpressionDataType::Slice => {
+            GarnishDataType::Slice => {
                 let (value, range) = self.get_slice(from)?;
                 let (start, end) = self.get_range(range)?;
                 let (start, end) = (
@@ -348,13 +348,13 @@ where
                 );
 
                 match self.get_data_type(value)? {
-                    ExpressionDataType::CharList => {
+                    GarnishDataType::CharList => {
                         for i in start..=end {
                             let c = self.get_char_list_item(value, i.into())?;
                             self.add_to_char_list(c)?;
                         }
                     }
-                    ExpressionDataType::List => {
+                    GarnishDataType::List => {
                         if depth > 0 {
                             self.add_to_char_list('(')?;
                         }
@@ -373,7 +373,7 @@ where
                             self.add_to_char_list(')')?;
                         }
                     }
-                    ExpressionDataType::Concatenation => {
+                    GarnishDataType::Concatenation => {
                         iterate_concatenation_mut(self, value, |this, index, addr| {
                             let i = index.to_integer().as_integer()?;
                             if i >= start && i <= end {
@@ -400,11 +400,11 @@ where
 
 #[cfg(test)]
 mod data_storage {
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{GarnishData, SimpleGarnishData};
 
     #[test]
     fn unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         assert_eq!(runtime.add_unit().unwrap(), 0);
         assert_eq!(runtime.add_unit().unwrap(), 0);
@@ -416,7 +416,7 @@ mod data_storage {
 
     #[test]
     fn false_data() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         assert_eq!(runtime.add_false().unwrap(), 1);
         assert_eq!(runtime.add_false().unwrap(), 1);
@@ -428,7 +428,7 @@ mod data_storage {
 
     #[test]
     fn true_data() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         assert_eq!(runtime.add_true().unwrap(), 2);
         assert_eq!(runtime.add_true().unwrap(), 2);
@@ -440,7 +440,7 @@ mod data_storage {
 
     #[test]
     fn integers() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         let start = runtime.get_data_len();
         let i1 = runtime.add_number(10.into()).unwrap();
@@ -458,7 +458,7 @@ mod data_storage {
 
     #[test]
     fn symbols() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         let start = runtime.get_data_len();
         let i1 = runtime.add_symbol(1).unwrap();
@@ -476,7 +476,7 @@ mod data_storage {
 
     #[test]
     fn expression() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         let start = runtime.get_data_len();
         let i1 = runtime.add_expression(10).unwrap();
@@ -494,7 +494,7 @@ mod data_storage {
 
     #[test]
     fn external() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         let start = runtime.get_data_len();
         let i1 = runtime.add_external(10).unwrap();
@@ -512,7 +512,7 @@ mod data_storage {
 
     #[test]
     fn similar_values_cache_differently() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         let start = runtime.get_data_len();
         let i1 = runtime.add_external(10).unwrap();
@@ -530,11 +530,11 @@ mod data_storage {
 
 #[cfg(test)]
 mod to_symbol {
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData, symbol_value};
+    use crate::{GarnishData, SimpleGarnishData, symbol_value};
 
     #[test]
     fn unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         let d1 = runtime.add_unit().unwrap();
         let addr = runtime.add_symbol_from(d1).unwrap();
@@ -546,11 +546,11 @@ mod to_symbol {
 
 #[cfg(test)]
 mod to_byte_list {
-    use crate::{GarnishLangRuntimeData, SimpleRuntimeData};
+    use crate::{GarnishData, SimpleGarnishData};
 
     #[test]
     fn unit() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         let d1 = runtime.add_unit().unwrap();
         let addr = runtime.add_byte_list_from(d1).unwrap();
@@ -562,13 +562,13 @@ mod to_byte_list {
 
 #[cfg(test)]
 mod to_char_list {
-    use crate::{ExpressionDataType, GarnishLangRuntimeData, NoCustom, SimpleRuntimeData};
+    use crate::{GarnishDataType, GarnishData, NoCustom, SimpleGarnishData};
 
     fn assert_to_char_list<Func>(expected: &str, setup: Func)
     where
-        Func: FnOnce(&mut SimpleRuntimeData) -> usize,
+        Func: FnOnce(&mut SimpleGarnishData) -> usize,
     {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         let d1 = setup(&mut runtime);
 
@@ -612,7 +612,7 @@ mod to_char_list {
 
     #[test]
     fn type_data() {
-        assert_to_char_list("Unit", |runtime| runtime.add_type(ExpressionDataType::Unit).unwrap())
+        assert_to_char_list("Unit", |runtime| runtime.add_type(GarnishDataType::Unit).unwrap())
     }
 
     #[test]
@@ -651,10 +651,10 @@ mod to_char_list {
 
     #[test]
     fn symbol() {
-        let s = SimpleRuntimeData::<NoCustom>::parse_symbol("my_symbol").unwrap().to_string();
+        let s = SimpleGarnishData::<NoCustom>::parse_symbol("my_symbol").unwrap().to_string();
         assert_to_char_list(s.as_str(), |runtime| {
             runtime
-                .add_symbol(SimpleRuntimeData::<NoCustom>::parse_symbol("my_symbol").unwrap())
+                .add_symbol(SimpleGarnishData::<NoCustom>::parse_symbol("my_symbol").unwrap())
                 .unwrap()
         })
     }

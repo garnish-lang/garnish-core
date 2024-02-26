@@ -2,7 +2,7 @@
 mod general {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
 
     #[test]
     fn less_than_no_references_is_err() {
@@ -28,21 +28,21 @@ mod general {
         runtime.less_than().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::False);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }
 
 #[cfg(test)]
 mod less_than {
     use crate::simple::testing_utilities::{add_byte_list, add_char_list, create_simple_runtime, slice_of_byte_list, slice_of_char_list};
-    use garnish_lang_simple_data::{DataError, SimpleRuntimeData};
+    use garnish_lang_simple_data::{DataError, SimpleGarnishData};
     use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, RuntimeError};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, RuntimeError};
 
     fn perform_compare<Setup, Op>(expected: bool, op_name: &str, op: Op, setup: Setup)
     where
-        Op: Fn(&mut SimpleGarnishRuntime<SimpleRuntimeData>) -> Result<Option<usize>, RuntimeError<DataError>>,
-        Setup: Copy + Fn(&mut SimpleRuntimeData) -> (usize, usize),
+        Op: Fn(&mut SimpleGarnishRuntime<SimpleGarnishData>) -> Result<Option<usize>, RuntimeError<DataError>>,
+        Setup: Copy + Fn(&mut SimpleGarnishData) -> (usize, usize),
     {
         let mut runtime = create_simple_runtime();
 
@@ -56,8 +56,8 @@ mod less_than {
         let i = runtime.get_data_mut().get_register(0).unwrap();
         let result = runtime.get_data_mut().get_data_type(i).unwrap();
         let expected_type = match expected {
-            true => ExpressionDataType::True,
-            false => ExpressionDataType::False,
+            true => GarnishDataType::True,
+            false => GarnishDataType::False,
         };
 
         assert_eq!(result, expected_type, "For op {:?}", op_name);
@@ -65,7 +65,7 @@ mod less_than {
 
     fn perform_all_compare<Setup>(less_than: bool, less_than_equal: bool, greater_than: bool, greater_than_equal: bool, setup: Setup)
     where
-        Setup: Copy + Fn(&mut SimpleRuntimeData) -> (usize, usize),
+        Setup: Copy + Fn(&mut SimpleGarnishData) -> (usize, usize),
     {
         perform_compare(less_than, "less than", SimpleGarnishRuntime::less_than, setup);
         perform_compare(less_than_equal, "less than or equal", SimpleGarnishRuntime::less_than_or_equal, setup);

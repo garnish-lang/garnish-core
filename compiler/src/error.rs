@@ -1,4 +1,5 @@
-use crate::{LexerToken, SecondaryDefinition};
+use crate::lex::LexerToken;
+use crate::parse::SecondaryDefinition;
 use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 

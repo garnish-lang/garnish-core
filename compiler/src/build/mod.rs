@@ -1,9 +1,9 @@
 use log::trace;
 
-use garnish_lang_traits::{Instruction, GarnishLangRuntimeData, TypeConstants};
+use garnish_lang_traits::{Instruction, GarnishData, TypeConstants};
 
 use crate::error::{implementation_error, implementation_error_with_token, CompilerError};
-use crate::parsing::parser::*;
+use crate::parse::*;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -135,7 +135,7 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
 }
 
 // returns true/false on whether or not an instruction was added
-fn resolve_node<Data: GarnishLangRuntimeData>(
+fn resolve_node<Data: GarnishData>(
     node: &ParseNode,
     nodes: &Vec<ParseNode>,
     data: &mut Data,
@@ -373,7 +373,7 @@ fn resolve_node<Data: GarnishLangRuntimeData>(
     Ok(true)
 }
 
-pub fn build_with_data<Data: GarnishLangRuntimeData>(
+pub fn build_with_data<Data: GarnishData>(
     root: usize,
     nodes: Vec<ParseNode>,
     data: &mut Data,
@@ -723,7 +723,7 @@ pub fn build_with_data<Data: GarnishLangRuntimeData>(
 #[cfg(test)]
 mod test_utils {
     use garnish_lang_simple_data::data::SimpleDataList;
-    use garnish_lang_simple_data::InstructionData;
+    use garnish_lang_simple_data::SimpleInstruction;
     use garnish_lang_simple_data::*;
     use garnish_lang_traits::Instruction;
 
@@ -746,7 +746,7 @@ mod test_utils {
         expected_data: SimpleDataList,
         expected_jumps: Vec<usize>,
     ) {
-        let expected_instructions: Vec<InstructionData> = expected_instructions.iter().map(|i| InstructionData::new(i.0, i.1)).collect();
+        let expected_instructions: Vec<SimpleInstruction> = expected_instructions.iter().map(|i| SimpleInstruction::new(i.0, i.1)).collect();
 
         let (result, _) = get_instruction_data(root, nodes).unwrap();
 
@@ -758,13 +758,13 @@ mod test_utils {
     pub fn get_instruction_data(
         root: usize,
         nodes: Vec<(Definition, Option<usize>, Option<usize>, Option<usize>, &str, TokenType)>,
-    ) -> Result<(SimpleRuntimeData, Vec<InstructionMetadata>), CompilerError<DataError>> {
+    ) -> Result<(SimpleGarnishData, Vec<InstructionMetadata>), CompilerError<DataError>> {
         let nodes: Vec<ParseNode> = nodes
             .iter()
             .map(|v| ParseNode::new(v.0, SecondaryDefinition::None, v.1, v.2, v.3, LexerToken::new(v.4.to_string(), v.5, 0, 0)))
             .collect();
 
-        let mut data = SimpleRuntimeData::new();
+        let mut data = SimpleGarnishData::new();
 
         let metadata = build_with_data(root, nodes, &mut data)?;
 

@@ -5,7 +5,7 @@ use crate::error::{
 use log::trace;
 use std::{collections::HashMap, hash::Hash, vec};
 
-use crate::lexing::lexer::*;
+use crate::lex::*;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -1917,7 +1917,7 @@ mod composition_errors {
 
 #[cfg(test)]
 mod tests {
-    use crate::lexing::lexer::*;
+    use crate::lex::lexer::*;
     use crate::*;
 
     type DefAssertionInfo = (usize, Definition, Option<usize>, Option<usize>, Option<usize>);
@@ -3537,7 +3537,7 @@ mod tests {
 #[cfg(test)]
 mod lists {
     use super::tests::*;
-    use crate::lexing::lexer::*;
+    use crate::lex::lexer::*;
     use crate::*;
 
     #[test]
@@ -3929,7 +3929,7 @@ mod lists {
 #[cfg(test)]
 mod side_effects {
     use super::tests::*;
-    use crate::lexing::lexer::*;
+    use crate::lex::lexer::*;
     use crate::*;
 
     #[test]
@@ -4151,7 +4151,7 @@ mod side_effects {
 #[cfg(test)]
 mod groups {
     use super::tests::*;
-    use crate::lexing::lexer::*;
+    use crate::lex::lexer::*;
     use crate::*;
 
     fn assert_group_nested_results(
@@ -4634,7 +4634,7 @@ mod groups {
 #[cfg(test)]
 mod conditionals {
     use super::tests::*;
-    use crate::lexing::lexer::*;
+    use crate::lex::lexer::*;
     use crate::*;
 
     #[test]
@@ -4872,7 +4872,7 @@ mod conditionals {
 #[cfg(test)]
 mod annotations {
     use super::tests::*;
-    use crate::lexing::lexer::*;
+    use crate::lex::lexer::*;
     use crate::*;
 
     #[test]

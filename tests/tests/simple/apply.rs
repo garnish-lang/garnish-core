@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod deferring {
     use crate::simple::testing_utilities::{create_simple_runtime, DeferOpTestContext, DEFERRED_VALUE};
-    use garnish_lang_traits::{GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishData, GarnishRuntime};
 
     #[test]
     fn apply() {
@@ -41,9 +41,9 @@ mod deferring {
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::{create_simple_runtime, DeferOpTestContext, DEFERRED_VALUE};
-    use garnish_lang_simple_data::{symbol_value, DataError, SimpleDataRuntimeNC, SimpleRuntimeData};
+    use garnish_lang_simple_data::{symbol_value, DataError, SimpleDataRuntimeNC, SimpleGarnishData};
     use garnish_lang_traits::{
-        EmptyContext, ExpressionDataType, GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishRuntime, Instruction, RuntimeError,
+        EmptyContext, GarnishDataType, GarnishContext, GarnishData, GarnishRuntime, Instruction, RuntimeError,
     };
 
     #[test]
@@ -319,12 +319,12 @@ mod tests {
         assert_eq!(association_len, 2);
 
         let pair_addr = runtime.get_data_mut().get_list_item(addr, 0.into()).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(pair_addr).unwrap(), ExpressionDataType::Pair);
+        assert_eq!(runtime.get_data_mut().get_data_type(pair_addr).unwrap(), GarnishDataType::Pair);
 
         let (pair_left, pair_right) = runtime.get_data_mut().get_pair(pair_addr).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(pair_left).unwrap(), ExpressionDataType::Symbol);
+        assert_eq!(runtime.get_data_mut().get_data_type(pair_left).unwrap(), GarnishDataType::Symbol);
         assert_eq!(runtime.get_data_mut().get_symbol(pair_left).unwrap(), symbol_value("val3"));
-        assert_eq!(runtime.get_data_mut().get_data_type(pair_right).unwrap(), ExpressionDataType::Number);
+        assert_eq!(runtime.get_data_mut().get_data_type(pair_right).unwrap(), GarnishDataType::Number);
         assert_eq!(runtime.get_data_mut().get_number(pair_right).unwrap(), 30.into());
 
         let association_value1 = runtime
@@ -335,22 +335,22 @@ mod tests {
         assert_eq!(runtime.get_data_mut().get_number(association_value1).unwrap(), 30.into());
 
         let int_addr = runtime.get_data_mut().get_list_item(addr, 1.into()).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(int_addr).unwrap(), ExpressionDataType::Number);
+        assert_eq!(runtime.get_data_mut().get_data_type(int_addr).unwrap(), GarnishDataType::Number);
         assert_eq!(runtime.get_data_mut().get_number(int_addr).unwrap(), 20.into());
 
         let unit1 = runtime.get_data_mut().get_list_item(addr, 2.into()).unwrap();
         let unit2 = runtime.get_data_mut().get_list_item(addr, 3.into()).unwrap();
 
-        assert_eq!(runtime.get_data_mut().get_data_type(unit1).unwrap(), ExpressionDataType::Unit);
-        assert_eq!(runtime.get_data_mut().get_data_type(unit2).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(unit1).unwrap(), GarnishDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(unit2).unwrap(), GarnishDataType::Unit);
 
         let map_pair_addr = runtime.get_data_mut().get_list_item(addr, 4.into()).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(map_pair_addr).unwrap(), ExpressionDataType::Pair);
+        assert_eq!(runtime.get_data_mut().get_data_type(map_pair_addr).unwrap(), GarnishDataType::Pair);
 
         let (map_pair_left, map_pair_right) = runtime.get_data_mut().get_pair(map_pair_addr).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(map_pair_left).unwrap(), ExpressionDataType::Symbol);
+        assert_eq!(runtime.get_data_mut().get_data_type(map_pair_left).unwrap(), GarnishDataType::Symbol);
         assert_eq!(runtime.get_data_mut().get_symbol(map_pair_left).unwrap(), symbol_value("new_key"));
-        assert_eq!(runtime.get_data_mut().get_data_type(map_pair_right).unwrap(), ExpressionDataType::Number);
+        assert_eq!(runtime.get_data_mut().get_data_type(map_pair_right).unwrap(), GarnishDataType::Number);
         assert_eq!(runtime.get_data_mut().get_number(map_pair_right).unwrap(), 10.into());
     }
 
@@ -423,7 +423,7 @@ mod tests {
         let next = runtime.empty_apply::<EmptyContext>(None).unwrap();
 
         let i = runtime.get_data_mut().get_value(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
         assert_eq!(next.unwrap(), i1);
         assert_eq!(runtime.get_data_mut().get_jump_path(0).unwrap(), i3);
     }
@@ -511,16 +511,16 @@ mod tests {
             new_addr: usize,
         }
 
-        impl GarnishLangRuntimeContext<SimpleRuntimeData> for MyContext {
-            fn resolve(&mut self, _: u64, _: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
+        impl GarnishContext<SimpleGarnishData> for MyContext {
+            fn resolve(&mut self, _: u64, _: &mut SimpleGarnishData) -> Result<bool, RuntimeError<DataError>> {
                 Ok(false)
             }
 
-            fn apply(&mut self, external_value: usize, input_addr: usize, data: &mut SimpleRuntimeData) -> Result<bool, RuntimeError<DataError>> {
+            fn apply(&mut self, external_value: usize, input_addr: usize, data: &mut SimpleGarnishData) -> Result<bool, RuntimeError<DataError>> {
                 assert_eq!(external_value, 3);
 
                 let value = match data.get_data_type(input_addr)? {
-                    ExpressionDataType::Number => data.get_number(input_addr)?,
+                    GarnishDataType::Number => data.get_number(input_addr)?,
                     _ => return Ok(false),
                 };
 
@@ -544,7 +544,7 @@ mod tests {
 #[cfg(test)]
 mod slices {
     use crate::simple::testing_utilities::{add_concatenation_with_start, add_list, add_range, create_simple_runtime};
-    use garnish_lang_traits::{EmptyContext, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{EmptyContext, GarnishData, GarnishRuntime};
 
     #[test]
     fn create_with_list() {

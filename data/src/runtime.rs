@@ -2,12 +2,12 @@ use std::convert::TryInto;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use garnish_lang_traits::GarnishLangRuntimeData;
+use garnish_lang_traits::GarnishData;
 
 use crate::data::{parse_byte_list, parse_char_list, parse_simple_number, NumberIterator, SimpleNumber, SizeIterator};
-use crate::{symbol_value, DataError, ExpressionDataType, Instruction, InstructionData, SimpleData, SimpleRuntimeData};
+use crate::{symbol_value, DataError, GarnishDataType, Instruction, SimpleInstruction, SimpleData, SimpleGarnishData};
 
-impl<T> GarnishLangRuntimeData for SimpleRuntimeData<T>
+impl<T> GarnishData for SimpleGarnishData<T>
 where
     T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
@@ -75,7 +75,7 @@ where
         return SizeIterator::new(0, self.instructions.len());
     }
 
-    fn get_data_type(&self, index: usize) -> Result<ExpressionDataType, Self::Error> {
+    fn get_data_type(&self, index: usize) -> Result<GarnishDataType, Self::Error> {
         let d = self.get(index)?;
 
         Ok(d.get_data_type())
@@ -85,7 +85,7 @@ where
         self.get(index)?.as_number()
     }
 
-    fn get_type(&self, addr: Self::Size) -> Result<ExpressionDataType, Self::Error> {
+    fn get_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
         self.get(addr)?.as_type()
     }
 
@@ -193,7 +193,7 @@ where
         Ok(2)
     }
 
-    fn add_type(&mut self, value: ExpressionDataType) -> Result<Self::Size, Self::Error> {
+    fn add_type(&mut self, value: GarnishDataType) -> Result<Self::Size, Self::Error> {
         self.cache_add(SimpleData::Type(value))
     }
 
@@ -362,13 +362,13 @@ where
 
             // should have symbol on left
             match self.get_data_type(association_ref)? {
-                ExpressionDataType::Pair => {
+                GarnishDataType::Pair => {
                     let (left, right) = self.get_pair(association_ref)?;
 
                     let left_ref = left;
 
                     match self.get_data_type(left_ref)? {
-                        ExpressionDataType::Symbol => {
+                        GarnishDataType::Symbol => {
                             let v = self.get_symbol(left_ref)?;
 
                             if v == sym {
@@ -446,7 +446,7 @@ where
     }
 
     fn push_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> Result<usize, Self::Error> {
-        self.instructions.push(InstructionData::new(instruction, data));
+        self.instructions.push(SimpleInstruction::new(instruction, data));
         Ok(self.instructions.len() - 1)
     }
 
@@ -561,7 +561,7 @@ where
 
     fn add_byte_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         match self.get_data_type(from)? {
-            ExpressionDataType::Unit => {
+            GarnishDataType::Unit => {
                 self.start_byte_list()?;
                 self.end_byte_list()
             }
@@ -585,7 +585,7 @@ where
 
     fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         match self.get_data_type(from)? {
-            ExpressionDataType::CharList => {
+            GarnishDataType::CharList => {
                 let len = self.get_char_list_len(from)?;
                 let mut s = String::new();
                 for i in 0..len {
@@ -604,7 +604,7 @@ where
 
     fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         match self.get_data_type(from)? {
-            ExpressionDataType::CharList => {
+            GarnishDataType::CharList => {
                 let len = self.get_char_list_len(from)?;
                 let mut s = String::new();
                 for i in 0..len {
@@ -680,16 +680,16 @@ where
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_traits::GarnishLangRuntimeData;
+    use garnish_lang_traits::GarnishData;
 
-    use crate::{ExpressionDataType, Instruction, SimpleRuntimeData};
+    use crate::{GarnishDataType, Instruction, SimpleGarnishData};
 
     #[test]
     fn type_of() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
         runtime.add_number(10.into()).unwrap();
 
-        assert_eq!(runtime.get_data_type(3).unwrap(), ExpressionDataType::Number);
+        assert_eq!(runtime.get_data_type(3).unwrap(), GarnishDataType::Number);
     }
 
     // #[test]
@@ -704,7 +704,7 @@ mod tests {
 
     #[test]
     fn add_instruction() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         runtime.push_instruction(Instruction::Put, Some(0)).unwrap();
 
@@ -713,7 +713,7 @@ mod tests {
 
     #[test]
     fn get_instruction() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         runtime.push_instruction(Instruction::Put, None).unwrap();
 
@@ -722,7 +722,7 @@ mod tests {
 
     #[test]
     fn get_current_instruction() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         runtime.push_instruction(Instruction::Put, None).unwrap();
 
@@ -733,7 +733,7 @@ mod tests {
 
     #[test]
     fn set_instruction_cursor() {
-        let mut runtime = SimpleRuntimeData::new();
+        let mut runtime = SimpleGarnishData::new();
 
         runtime.push_instruction(Instruction::Put, None).unwrap();
         runtime.push_instruction(Instruction::Put, None).unwrap();

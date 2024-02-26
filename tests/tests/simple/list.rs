@@ -2,7 +2,7 @@
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
     use garnish_lang_simple_data::data::SimpleNumber;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction, NO_CONTEXT};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction, NO_CONTEXT};
 
     #[test]
     fn make_list() {
@@ -188,7 +188,7 @@ mod tests {
         runtime.apply(NO_CONTEXT).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 
     #[test]
@@ -211,7 +211,7 @@ mod tests {
         runtime.apply(NO_CONTEXT).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 
     #[test]
@@ -229,7 +229,7 @@ mod tests {
         runtime.apply(NO_CONTEXT).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 
     #[test]
@@ -252,7 +252,7 @@ mod tests {
         runtime.apply(NO_CONTEXT).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 
     #[test]
@@ -294,7 +294,7 @@ mod tests {
         runtime.apply(NO_CONTEXT).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 }
 
@@ -302,7 +302,7 @@ mod tests {
 mod ranges {
 
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, Instruction, NO_CONTEXT};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction, NO_CONTEXT};
 
     #[test]
     fn apply_with_integer() {
@@ -341,7 +341,7 @@ mod ranges {
         runtime.apply(NO_CONTEXT).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 }
 
@@ -349,7 +349,7 @@ mod ranges {
 mod slice {
     use crate::simple::testing_utilities::{add_integer_list, add_list, add_pair, add_range, create_simple_runtime};
     use garnish_lang_simple_data::SimpleDataRuntimeNC;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn index_slice_of_list() {
@@ -494,7 +494,7 @@ mod slice {
         runtime.apply(NO_CONTEXT).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 
     #[test]
@@ -514,7 +514,7 @@ mod slice {
         runtime.apply(NO_CONTEXT).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 }
 
@@ -525,7 +525,7 @@ mod concatenation {
         add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range, create_simple_runtime,
     };
     use garnish_lang_simple_data::SimpleDataRuntimeNC;
-    use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn index_concat_of_items_with_number() {
@@ -783,7 +783,7 @@ mod concatenation {
         runtime.apply(NO_CONTEXT).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 
     #[test]
@@ -806,6 +806,6 @@ mod concatenation {
         runtime.apply(NO_CONTEXT).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 }

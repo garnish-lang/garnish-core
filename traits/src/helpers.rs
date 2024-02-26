@@ -1,11 +1,11 @@
-//! Helper functions created for core libraries that don't have an implementation of [GarnishLangRuntimeData].
+//! Helper functions created for core libraries that don't have an implementation of [GarnishData].
 //! These might be removed when an iterator interface is created for reading data instead of manual indexing.
 //!
 
-use crate::{ExpressionDataType, GarnishLangRuntimeData, GarnishNumber, RuntimeError, TypeConstants};
+use crate::{GarnishDataType, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
 
 /// Iterates through a concatenation at the given address, calling provided 'check_fn' function for each item.
-pub fn iterate_concatenation_mut<Data: GarnishLangRuntimeData, CheckFn>(
+pub fn iterate_concatenation_mut<Data: GarnishData, CheckFn>(
     this: &mut Data,
     addr: Data::Size,
     #[allow(unused_mut)] // removing causes compiler error
@@ -18,7 +18,7 @@ where
 }
 
 /// Iterates through a concatenation at the given address in reverse, calling provided 'check_fn' function for each item.
-pub fn iterate_rev_concatenation_mut<Data: GarnishLangRuntimeData, CheckFn>(
+pub fn iterate_rev_concatenation_mut<Data: GarnishData, CheckFn>(
     this: &mut Data,
     addr: Data::Size,
     #[allow(unused_mut)] // removing causes compiler error
@@ -30,7 +30,7 @@ pub fn iterate_rev_concatenation_mut<Data: GarnishLangRuntimeData, CheckFn>(
     iterate_concatenation_mut_with_method(this, addr, check_fn, get_rev_concatentation)
 }
 
-fn get_rev_concatentation<Data: GarnishLangRuntimeData>(
+fn get_rev_concatentation<Data: GarnishData>(
     this: &Data,
     addr: Data::Size,
 ) -> Result<(Data::Size, Data::Size), Data::Error> {
@@ -42,10 +42,10 @@ fn get_rev_concatentation<Data: GarnishLangRuntimeData>(
 ///
 /// 'get_method' should return the next 2 addresses to process
 ///
-/// [`iterate_concatenation_mut`] uses [`GarnishLangRuntimeData::get_concatenation`]
+/// [`iterate_concatenation_mut`] uses [`GarnishData::get_concatenation`]
 ///
-/// [`iterate_rev_concatenation_mut`] uses function that reverses return value of [`GarnishLangRuntimeData::get_concatenation`]
-pub fn iterate_concatenation_mut_with_method<Data: GarnishLangRuntimeData, CheckFn, GetFn>(
+/// [`iterate_rev_concatenation_mut`] uses function that reverses return value of [`GarnishData::get_concatenation`]
+pub fn iterate_concatenation_mut_with_method<Data: GarnishData, CheckFn, GetFn>(
     this: &mut Data,
     addr: Data::Size,
     mut check_fn: CheckFn,
@@ -72,12 +72,12 @@ where
             Some(r) => {
                 let mut temp_result = None;
                 match this.get_data_type(r)? {
-                    ExpressionDataType::Concatenation => {
+                    GarnishDataType::Concatenation => {
                         let (current, next) = get_method(this, r)?;
                         this.push_register(next)?;
                         this.push_register(current)?;
                     }
-                    ExpressionDataType::List => {
+                    GarnishDataType::List => {
                         let len = this.get_list_len(r)?;
                         let mut i = Data::Size::zero();
 
