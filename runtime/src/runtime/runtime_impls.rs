@@ -25,12 +25,14 @@ use log::trace;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+/// State that the runtime is currently in.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum GarnishLangRuntimeState {
     Running,
     End,
 }
 
+/// Information about the runtime, returned after execution an instruction.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct GarnishLangRuntimeInfo {
     state: GarnishLangRuntimeState,
@@ -47,7 +49,7 @@ impl GarnishLangRuntimeInfo {
     }
 }
 
-///
+/// Implementation of a [`GarnishRuntime`]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 pub struct SimpleGarnishRuntime<Data: GarnishLangRuntimeData> {

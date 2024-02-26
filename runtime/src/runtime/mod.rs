@@ -18,4 +18,4 @@ mod runtime_impls;
 mod sideeffect;
 mod utilities;
 
-pub use runtime_impls::SimpleGarnishRuntime;
+pub use runtime_impls::{SimpleGarnishRuntime, GarnishLangRuntimeInfo, GarnishLangRuntimeState};
