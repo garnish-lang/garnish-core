@@ -1,5 +1,6 @@
 use std::fmt::{Debug, Display, Formatter};
 
+/// Error implemenation for [`crate::SimpleRuntimeData`].
 #[derive(Debug, Clone)]
 pub struct DataError {
     message: String,

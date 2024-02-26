@@ -16,6 +16,7 @@ mod number;
 mod parsing;
 mod iterators;
 
+/// List of [`SimpleData`] with maps to convert symbolic values to original string.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SimpleDataList<T = NoCustom>
@@ -99,12 +100,13 @@ where
     }
 }
 
+/// Alias for simple error type
 pub type DataCastResult<T> = Result<T, DataError>;
 
-// generic default not being inferred
-// utility type for tests, mainly
+/// Alias for [`SimpleData`] with [`NoCustom`] type parameter.
 pub type SimpleDataNC = SimpleData<NoCustom>;
 
+/// Data object to give [`ExpressionDataType`] typed values. Can be passed a type parameter to extend supported data.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
 pub enum SimpleData<T = NoCustom>

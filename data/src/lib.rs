@@ -18,6 +18,7 @@ mod runtime;
 pub use data::*;
 pub use instruction::InstructionData;
 
+/// Utility to convert strings to [`u64`], the Symbol type for [`SimpleRuntimeData`].
 pub fn symbol_value(value: &str) -> u64 {
     let mut h = DefaultHasher::new();
     value.hash(&mut h);
@@ -26,6 +27,7 @@ pub fn symbol_value(value: &str) -> u64 {
     hv
 }
 
+/// Default custom type for [`SimpleRuntimeData`] when no custom types are needed.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialOrd, PartialEq, Eq, Debug, Hash)]
 pub struct NoCustom {}
@@ -36,6 +38,7 @@ impl Display for NoCustom {
     }
 }
 
+/// Implementation of [`GarnishLangRuntimeData`]. Uses standard Rust collections for storing data.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 pub struct SimpleRuntimeData<T = NoCustom>
@@ -57,8 +60,7 @@ where
     max_char_list_depth: usize,
 }
 
-// generic default not being inferred
-// utility type for tests, and default implementations
+/// Alias for [`SimpleRuntimeData`] with [`NoCustom`] type parameter.
 pub type SimpleDataRuntimeNC = SimpleRuntimeData<NoCustom>;
 
 impl SimpleRuntimeData<NoCustom> {

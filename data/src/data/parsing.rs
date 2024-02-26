@@ -3,6 +3,7 @@ use crate::DataError;
 use std::iter;
 use std::str::FromStr;
 
+/// Called when building instructions to parse strings into character lists.
 pub fn parse_char_list(input: &str) -> Result<String, DataError> {
     let mut new = String::new();
 
@@ -85,6 +86,7 @@ pub fn parse_char_list(input: &str) -> Result<String, DataError> {
     Ok(new)
 }
 
+/// Called when building instructions to parse strings into byte lists.
 pub fn parse_byte_list(input: &str) -> Result<Vec<u8>, DataError> {
     let mut bytes = vec![];
 
@@ -130,7 +132,8 @@ pub fn parse_byte_list(input: &str) -> Result<Vec<u8>, DataError> {
     }
 }
 
-pub fn parse_byte_list_numbers(input: &str) -> Result<Vec<u8>, DataError> {
+/// Called when building instructions to parse strings into byte lists.
+fn parse_byte_list_numbers(input: &str) -> Result<Vec<u8>, DataError> {
     let mut current_number = String::new();
     let mut numbers = vec![];
 
@@ -160,6 +163,7 @@ pub fn parse_byte_list_numbers(input: &str) -> Result<Vec<u8>, DataError> {
     Ok(numbers)
 }
 
+/// Called when building instructions to parse strings into [`SimpleNumber`].
 pub fn parse_simple_number(input: &str) -> Result<SimpleNumber, DataError> {
     parse_number_internal(input, 10)
 }

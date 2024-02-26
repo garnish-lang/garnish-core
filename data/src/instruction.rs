@@ -2,6 +2,7 @@ pub use garnish_lang_traits::Instruction;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+/// Container for [`Instruction`] and any data need by those instructions during execution.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 pub struct InstructionData {

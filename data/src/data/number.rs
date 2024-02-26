@@ -9,6 +9,7 @@ use std::ops::{Add, Div, Mul, Rem, Sub};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+/// Number data type for [`garnish_lang_traits::GarnishLangRuntimeData`]. Implements all math operations and switches between [`i32`] and [`f64`] depending on operands.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Copy, Clone, Debug)]
 pub enum SimpleNumber {
