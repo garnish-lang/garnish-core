@@ -7,16 +7,16 @@ pub use error::DataError;
 use garnish_lang_traits::{ExpressionDataType, GarnishLangRuntimeData, Instruction};
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
 
-use crate::data::{SimpleData, SimpleDataList};
-pub use crate::instruction::InstructionData;
-
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-pub mod data;
+mod data;
 mod error;
-pub mod instruction;
+mod instruction;
 mod runtime;
+
+pub use data::*;
+pub use instruction::InstructionData;
 
 pub fn symbol_value(value: &str) -> u64 {
     let mut h = DefaultHasher::new();

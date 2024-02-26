@@ -15,7 +15,7 @@ pub trait GarnishLangRuntimeContext<Data>
         Ok(false)
     }
 
-    /// Called when an [`ExpressionDataType::ExternalValue`] is on the left side of an [`Instruction::Apply`] operation.
+    /// Called when an [`ExpressionDataType::External`] is on the left side of an [`Instruction::Apply`] operation.
     ///
     /// Return Ok(true) to tell the runtime this apply operation was handled
     ///
@@ -26,7 +26,7 @@ pub trait GarnishLangRuntimeContext<Data>
     }
 
     /// Called during any operation where the types given don't have defined functionality.
-    /// Such as a [`ExpressionDataType::List`] and a [`ExpressionDataType::Number`] in an [`Instruction::Addition`] operation
+    /// Such as a [`ExpressionDataType::List`] and a [`ExpressionDataType::Number`] in an [`Instruction::Add`] operation
     ///
     /// Return Ok(true) to tell the runtime this operation was handled
     ///
