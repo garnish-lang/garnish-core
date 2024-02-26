@@ -1,38 +1,12 @@
 use crate::{GarnishLangRuntimeContext, GarnishLangRuntimeData, RuntimeError};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GarnishLangRuntimeState {
-    Running,
-    End,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub struct GarnishLangRuntimeInfo {
-    state: GarnishLangRuntimeState,
-}
-
-/// Information about the current execution state of a runtime.
-impl GarnishLangRuntimeInfo {
-    pub fn new(state: GarnishLangRuntimeState) -> Self {
-        return GarnishLangRuntimeInfo { state };
-    }
-
-    pub fn get_state(&self) -> GarnishLangRuntimeState {
-        self.state
-    }
-}
 
 /// Trait containing instruction operations Garnish needs to execute.
-/// All instruction methods (e.g. all except [`GarnishRuntime::get_data`], [`GarnishRuntime::get_data_mut`], [`GarnishRuntime::execute_current_instruction`] should a Result.
+/// All instruction methods (e.g. all except [`GarnishRuntime::get_data`], [`GarnishRuntime::get_data_mut`] should a Result.
 /// With the Ok value being the next instruction address to be executed if not sequential, otherwise return None
 pub trait GarnishRuntime<Data: GarnishLangRuntimeData> {
     fn get_data(&self) -> &Data;
     fn get_data_mut(&mut self) -> &mut Data;
-
-    fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
-        &mut self,
-        context: Option<&mut T>,
-    ) -> Result<GarnishLangRuntimeInfo, RuntimeError<Data::Error>>;
 
     fn apply<T: GarnishLangRuntimeContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn reapply(&mut self, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;

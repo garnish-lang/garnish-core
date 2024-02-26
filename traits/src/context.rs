@@ -1,6 +1,6 @@
 use crate::{ExpressionDataType, GarnishLangRuntimeData, Instruction, RuntimeError};
 
-/// Functionality required by Garnish contexts
+/// Functionality required by Garnish contexts.
 pub trait GarnishLangRuntimeContext<Data>
     where
         Data: GarnishLangRuntimeData,
@@ -46,7 +46,9 @@ pub trait GarnishLangRuntimeContext<Data>
 /// Concrete object for when a runtime requires no context functionality. Can use constants [`EMPTY_CONTEXT`] and [`NO_CONTEXT`] if needed as type parameters.
 pub struct EmptyContext {}
 
+/// Constant instantiation of [`EmptyContext`].
 pub const EMPTY_CONTEXT: EmptyContext = EmptyContext {};
+/// An [`Option`] set to None. Typed as a mutable reference to an [`EmptyContext`] for use in [`crate::GarnishRuntime`] instruction methods that require a context be passed.
 pub const NO_CONTEXT: Option<&mut EmptyContext> = None;
 
 impl<Data> GarnishLangRuntimeContext<Data> for EmptyContext where Data: GarnishLangRuntimeData {}

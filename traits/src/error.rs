@@ -3,13 +3,15 @@
 use std::error::Error;
 use std::fmt::{Display, Formatter};
 
+/// List of possible error types a [`RuntimeError`] can be categorized as.
 #[derive(Debug, Eq, PartialEq, Copy, Clone)]
 pub enum ErrorType {
     Unknown,
-    // special code used internally to defer error during complex matching
+    /// Code used to determine if an operation should be deferred to [`crate::GarnishLangRuntimeContext`].
     UnsupportedOpTypes,
 }
 
+/// Error implementation for [`crate::GarnishRuntime`] instruction methods.
 #[derive(Debug, Eq, PartialEq)]
 pub struct RuntimeError<Source: 'static + std::error::Error> {
     code: ErrorType,

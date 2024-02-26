@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
-/// List of Garnish data types
+/// List of Garnish data types.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum ExpressionDataType {
@@ -29,6 +29,7 @@ pub enum ExpressionDataType {
     Custom,
 }
 
+/// Trait to provide constant values that a runtime will need access to.
 pub trait TypeConstants {
     fn zero() -> Self;
     fn one() -> Self;

@@ -4,7 +4,7 @@
 pub use garnish_lang_traits::*;
 
 pub mod simple {
-    //! Re-exports for concrete implementations of garnish traits
+    //! Re-exports for concrete implementations of garnish traits.
     pub use garnish_lang_runtime::*;
     pub use garnish_lang_simple_data::*;
 }

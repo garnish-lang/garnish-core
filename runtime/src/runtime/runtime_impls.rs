@@ -18,12 +18,34 @@ use crate::runtime::sideeffect::*;
 
 use crate::runtime::concat::concat;
 use garnish_lang_traits::{
-    GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishLangRuntimeInfo, GarnishLangRuntimeState, GarnishRuntime, Instruction, RuntimeError,
+    GarnishLangRuntimeContext, GarnishLangRuntimeData, GarnishRuntime, Instruction, RuntimeError,
     TypeConstants,
 };
 use log::trace;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub enum GarnishLangRuntimeState {
+    Running,
+    End,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub struct GarnishLangRuntimeInfo {
+    state: GarnishLangRuntimeState,
+}
+
+/// Information about the current execution state of a runtime.
+impl GarnishLangRuntimeInfo {
+    pub fn new(state: GarnishLangRuntimeState) -> Self {
+        return GarnishLangRuntimeInfo { state };
+    }
+
+    pub fn get_state(&self) -> GarnishLangRuntimeState {
+        self.state
+    }
+}
 
 ///
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -36,21 +58,8 @@ impl<Data: GarnishLangRuntimeData> SimpleGarnishRuntime<Data> {
     pub fn new(data: Data) -> SimpleGarnishRuntime<Data> {
         SimpleGarnishRuntime { data }
     }
-}
 
-impl<Data> GarnishRuntime<Data> for SimpleGarnishRuntime<Data>
-where
-    Data: GarnishLangRuntimeData,
-{
-    fn get_data(&self) -> &Data {
-        &self.data
-    }
-
-    fn get_data_mut(&mut self) -> &mut Data {
-        &mut self.data
-    }
-
-    fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
+    pub fn execute_current_instruction<T: GarnishLangRuntimeContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<GarnishLangRuntimeInfo, RuntimeError<Data::Error>> {
@@ -157,6 +166,19 @@ where
                 Ok(GarnishLangRuntimeInfo::new(GarnishLangRuntimeState::Running))
             }
         }
+    }
+}
+
+impl<Data> GarnishRuntime<Data> for SimpleGarnishRuntime<Data>
+where
+    Data: GarnishLangRuntimeData,
+{
+    fn get_data(&self) -> &Data {
+        &self.data
+    }
+
+    fn get_data_mut(&mut self) -> &mut Data {
+        &mut self.data
     }
 
     // Apply
