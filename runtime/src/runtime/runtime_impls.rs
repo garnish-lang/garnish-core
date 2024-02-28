@@ -61,6 +61,10 @@ impl<Data: GarnishData> SimpleGarnishRuntime<Data> {
         SimpleGarnishRuntime { data }
     }
 
+    pub fn get_data_owned(self) -> Data {
+        self.data
+    }
+
     pub fn execute_current_instruction<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
