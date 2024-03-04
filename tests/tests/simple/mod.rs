@@ -17,7 +17,7 @@ mod sideeffect;
 #[cfg(test)]
 pub mod testing_utilities {
     use garnish_lang_simple_data::{DataError, SimpleDataRuntimeNC, SimpleGarnishData};
-    use garnish_lang_runtime::runtime_impls::SimpleGarnishRuntime;
+    use garnish_lang_runtime::SimpleGarnishRuntime;
     use garnish_lang_traits::{GarnishDataType, GarnishContext, GarnishData, GarnishRuntime, Instruction, RuntimeError};
 
     pub const DEFERRED_VALUE: usize = 1000;

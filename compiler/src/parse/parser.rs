@@ -1220,7 +1220,8 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
 
 #[cfg(test)]
 mod composition_errors {
-    use crate::*;
+    use crate::lex::*;
+    use crate::parse::*;
 
     #[test]
     fn double_value_token() {
@@ -1917,8 +1918,8 @@ mod composition_errors {
 
 #[cfg(test)]
 mod tests {
-    use crate::lex::lexer::*;
-    use crate::*;
+    use crate::lex::*;
+    use crate::parse::*;
 
     type DefAssertionInfo = (usize, Definition, Option<usize>, Option<usize>, Option<usize>);
 
@@ -3537,8 +3538,8 @@ mod tests {
 #[cfg(test)]
 mod lists {
     use super::tests::*;
-    use crate::lex::lexer::*;
-    use crate::*;
+    use crate::lex::*;
+    use crate::parse::*;
 
     #[test]
     fn leading_space_with_hanging_comma() {
@@ -3929,8 +3930,8 @@ mod lists {
 #[cfg(test)]
 mod side_effects {
     use super::tests::*;
-    use crate::lex::lexer::*;
-    use crate::*;
+    use crate::lex::*;
+    use crate::parse::*;
 
     #[test]
     fn alone() {
@@ -4151,8 +4152,8 @@ mod side_effects {
 #[cfg(test)]
 mod groups {
     use super::tests::*;
-    use crate::lex::lexer::*;
-    use crate::*;
+    use crate::lex::*;
+    use crate::parse::*;
 
     fn assert_group_nested_results(
         root: usize,
@@ -4634,8 +4635,8 @@ mod groups {
 #[cfg(test)]
 mod conditionals {
     use super::tests::*;
-    use crate::lex::lexer::*;
-    use crate::*;
+    use crate::lex::*;
+    use crate::parse::*;
 
     #[test]
     fn conditional_if() {
@@ -4872,8 +4873,8 @@ mod conditionals {
 #[cfg(test)]
 mod annotations {
     use super::tests::*;
-    use crate::lex::lexer::*;
-    use crate::*;
+    use crate::lex::*;
+    use crate::parse::*;
 
     #[test]
     fn annotations_are_dropped() {

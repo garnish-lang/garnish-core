@@ -989,7 +989,7 @@ pub fn lex(input: &str) -> Result<Vec<LexerToken>, CompilerError> {
 #[cfg(test)]
 mod errors {
     use crate::error::CompilerError;
-    use crate::lex;
+    use crate::lex::*;
 
     #[test]
     fn error_from_unknown_token() {
@@ -1001,7 +1001,7 @@ mod errors {
 
 #[cfg(test)]
 mod iterator {
-    use crate::{Lexer, LexerToken, TokenType};
+    use crate::lex::*;
 
     #[test]
     fn plus_sign() {
@@ -1026,7 +1026,7 @@ mod tests {
     use std::vec;
 
     use crate::lex::lexer::create_operator_tree;
-    use crate::{lex, LexerToken, TokenType};
+    use crate::lex::*;
 
     #[test]
     fn access_single_string() {
@@ -2676,7 +2676,7 @@ mod tests {
 mod numbers {
     use std::vec;
 
-    use crate::{lex, LexerToken, TokenType};
+    use crate::lex::*;
 
     #[test]
     fn with_visual_separator_underscore() {
@@ -2845,7 +2845,7 @@ mod numbers {
 mod chars_and_bytes {
     use std::vec;
 
-    use crate::{lex, LexerToken, TokenType};
+    use crate::lex::*;
 
     #[test]
     fn character_list_unclosed() {

@@ -70,9 +70,9 @@ mod deferring {
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_simple_data::data::SimpleNumber;
+    use garnish_lang_simple_data::SimpleNumber;
     use garnish_lang_simple_data::SimpleDataRuntimeNC;
-    use garnish_lang_runtime::{EmptyContext, ExpressionDataType, GarnishLangRuntimeData, GarnishRuntime};
+    use garnish_lang_traits::{EmptyContext, GarnishDataType, GarnishData, GarnishRuntime};
 
     #[test]
     fn add() {
@@ -121,7 +121,7 @@ mod tests {
         runtime.add::<EmptyContext>(None).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), ExpressionDataType::Unit);
+        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
 
     #[test]

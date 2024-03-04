@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_simple_data::data::SimpleNumber;
+    use garnish_lang_simple_data::SimpleNumber;
     use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction, NO_CONTEXT};
 
     #[test]
@@ -520,7 +520,7 @@ mod slice {
 
 #[cfg(test)]
 mod concatenation {
-    use garnish_lang_simple_data::data::SimpleNumber::Integer;
+    use garnish_lang_simple_data::SimpleNumber::Integer;
     use crate::simple::testing_utilities::{
         add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range, create_simple_runtime,
     };
