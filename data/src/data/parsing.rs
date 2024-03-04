@@ -193,11 +193,13 @@ fn parse_number_internal(input: &str, default_radix: u32) -> Result<SimpleNumber
         }
     };
 
-    match i32::from_str_radix(input, radix) {
+    // consider remaining underscores visual separators and replace with empty
+    let stripped = input.replace("_", "");
+    match i32::from_str_radix(&stripped, radix) {
         Ok(v) => Ok(v.into()),
         Err(_) => {
             if radix == 10 {
-                match f64::from_str(input) {
+                match f64::from_str(&stripped) {
                     Ok(v) => Ok(v.into()),
                     Err(_) => Err(DataError::from(format!("Could not create SimpleNumber from string {:?}", input))),
                 }
@@ -216,6 +218,12 @@ mod numbers {
     #[test]
     fn just_numbers_integer() {
         let input = "123456";
+        assert_eq!(parse_simple_number(input).unwrap(), Integer(123456));
+    }
+
+    #[test]
+    fn just_numbers_integer_with_visual_separators() {
+        let input = "123_456";
         assert_eq!(parse_simple_number(input).unwrap(), Integer(123456));
     }
 
@@ -247,6 +255,12 @@ mod numbers {
     fn just_numbers_float() {
         let input = "123456.789";
         assert_eq!(parse_simple_number(input).unwrap(), Float(123456.789));
+    }
+
+    #[test]
+    fn just_numbers_float_with_visual_separators() {
+        let input = "123.456_789";
+        assert_eq!(parse_simple_number(input).unwrap(), Float(123.456789));
     }
 
     #[test]
