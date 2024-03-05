@@ -355,10 +355,10 @@ fn resolve_node<Data: GarnishData>(
             data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index))?;
             data.push_instruction(Instruction::PutValue, None)?;
         }
-        Definition::JumpIfTrue | Definition::Or => {
+        Definition::JumpIfTrue | Definition::And => {
             data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index))?;
         }
-        Definition::JumpIfFalse | Definition::And => {
+        Definition::JumpIfFalse | Definition::Or => {
             data.push_instruction(Instruction::JumpIfFalse, Some(current_jump_index))?;
         }
         Definition::SideEffect => {
@@ -1705,7 +1705,7 @@ mod operations {
             ],
             vec![
                 (Instruction::Put, Some(3)),
-                (Instruction::JumpIfFalse, Some(2)),
+                (Instruction::JumpIfTrue, Some(2)),
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::Tis, None),
@@ -1729,7 +1729,7 @@ mod operations {
             ],
             vec![
                 (Instruction::Put, Some(3)),
-                (Instruction::JumpIfTrue, Some(2)),
+                (Instruction::JumpIfFalse, Some(2)),
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::Tis, None),
