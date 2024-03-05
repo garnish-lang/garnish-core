@@ -788,7 +788,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                 next_last_left = last_left;
                 (definition, None, None, None)
             }
-            SecondaryDefinition::Value => append_token_details(
+            SecondaryDefinition::Identifier | SecondaryDefinition::Value => append_token_details(
                 parse_value_like(
                     current_id,
                     definition,
@@ -802,37 +802,6 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                 ),
                 token,
             )?,
-            SecondaryDefinition::Identifier => {
-                // having a parent of access means its on the left
-                // and this identifier a property in the access operation
-                // otherwise its a normal identifier that needs to be resolved
-                let definition = match next_parent {
-                    None => Definition::Identifier,
-                    Some(parent) => match nodes.get(parent) {
-                        None => implementation_error_with_token(format!("No node found at next parent index {:?}", parent), token)?,
-                        Some(p) => {
-                            let p: &ParseNode = p;
-                            if p.definition == Definition::Access {
-                                Definition::Property
-                            } else {
-                                Definition::Identifier
-                            }
-                        }
-                    },
-                };
-
-                parse_value_like(
-                    current_id,
-                    definition,
-                    &mut check_for_list,
-                    &mut next_last_left,
-                    &mut nodes,
-                    last_left,
-                    &priority_map,
-                    last_token,
-                    under_group,
-                )?
-            }
             SecondaryDefinition::BinaryLeftToRight | SecondaryDefinition::OptionalBinaryLeftToRight | SecondaryDefinition::BinaryRightToLeft => {
                 next_parent = Some(current_id);
                 parse_token(
@@ -1144,6 +1113,17 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
         );
 
         if definition != Definition::Drop {
+            let mut definition = definition;
+            match definition {
+                Definition::Identifier => match parent.and_then(|p| nodes.get(p)) {
+                    None => (),
+                    Some(p) => if p.definition == Definition::Access {
+                        definition = Definition::Property;
+                    }
+                }
+                _ => ()
+            }
+
             nodes.push(ParseNode::new(definition, secondary_definition, parent, left, right, token.clone()));
         }
 
@@ -4917,5 +4897,37 @@ mod annotations {
         let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[]);
+    }
+}
+
+#[cfg(test)]
+mod complex_cases {
+    use crate::lex::{LexerToken, TokenType};
+    use crate::parse::{Definition, parse};
+    use crate::parse::parser::tests::assert_result;
+
+    #[test]
+    fn identifier_in_list_after_access() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(".".to_string(), TokenType::Period, 0, 0),
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("other".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(
+            &result,
+            3,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::Access, Some(3), Some(0), Some(2)),
+                (2, Definition::Property, Some(1), None, None),
+                (3, Definition::List, None, Some(1), Some(4)),
+                (4, Definition::Identifier, Some(3), None, None),
+            ],
+        );
     }
 }
