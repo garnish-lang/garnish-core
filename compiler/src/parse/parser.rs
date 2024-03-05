@@ -100,7 +100,7 @@ impl Definition {
     }
 
     pub fn is_conditional(self) -> bool {
-        self == Definition::JumpIfFalse || self == Definition::JumpIfTrue
+        self == Definition::JumpIfFalse || self == Definition::JumpIfTrue || self == Definition::ElseJump
     }
 
     pub fn is_optional(self) -> bool {

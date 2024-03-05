@@ -1,6 +1,6 @@
 use log::trace;
 
-use garnish_lang_traits::{Instruction, GarnishData, TypeConstants};
+use garnish_lang_traits::{GarnishData, Instruction, TypeConstants};
 
 use crate::error::{implementation_error, implementation_error_with_token, CompilerError};
 use crate::parse::*;
@@ -137,6 +137,7 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
 // returns true/false on whether or not an instruction was added
 fn resolve_node<Data: GarnishData>(
     node: &ParseNode,
+    resolve_info: &ResolveNodeInfo,
     nodes: &Vec<ParseNode>,
     data: &mut Data,
     list_count: Option<&Data::Size>,
@@ -372,15 +373,33 @@ fn resolve_node<Data: GarnishData>(
         }
         Definition::JumpIfTrue => {
             data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index))?;
+            if resolve_info.parent_definition != Definition::ElseJump {
+                data.push_instruction(Instruction::PutValue, None)?;
+            }
         }
         Definition::JumpIfFalse => {
             data.push_instruction(Instruction::JumpIfFalse, Some(current_jump_index))?;
+            if resolve_info.parent_definition != Definition::ElseJump {
+                data.push_instruction(Instruction::PutValue, None)?;
+            }
         }
         Definition::SideEffect => {
             data.push_instruction(Instruction::EndSideEffect, None)?;
         }
-        Definition::Group => return Ok((false, None)),    // no additional instructions for groups
-        Definition::ElseJump => return Ok((false, None)), // no additional instructions
+        Definition::Group => return Ok((false, None)), // no additional instructions for groups
+        Definition::ElseJump => {
+            let children_are_conditional = match (node.get_left(), node.get_right()) {
+                (Some(left), Some(right)) => match (nodes.get(left), nodes.get(right)) {
+                    (Some(left), Some(right)) => left.get_definition().is_conditional() && right.get_definition().is_conditional(),
+                    _ => false
+                }
+                _ => false
+            };
+
+            if children_are_conditional && resolve_info.parent_definition != Definition::ElseJump {
+                data.push_instruction(Instruction::PutValue, None)?;
+            }
+        }
         // no runtime meaning, parser only utility
         Definition::Drop => return Err(CompilerError::new_message("Drop definition is not allowed during build.".to_string())),
     }
@@ -431,7 +450,7 @@ pub fn build_with_data<Data: GarnishData>(
                     "None value for node index. All nodes should resolve properly if starting from root node."
                 ))?,
                 Some(p) => *p = jump_point,
-            }
+            },
         }
 
         // limit, maximum times a node is visited is 3
@@ -555,7 +574,8 @@ pub fn build_with_data<Data: GarnishData>(
                                 if node.get_definition() == Definition::Subexpression || node.get_definition().is_value_like() {
                                     trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
 
-                                    let (instruction_created, _jump_slot) = resolve_node(node, &nodes, data, None, Data::Size::zero())?;
+                                    let (instruction_created, _jump_slot) =
+                                        resolve_node(node, &resolve_node_info, &nodes, data, None, Data::Size::zero())?;
 
                                     // should always create, but check for posterity
                                     if instruction_created {
@@ -595,7 +615,8 @@ pub fn build_with_data<Data: GarnishData>(
                                 if resolve {
                                     trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
 
-                                    let (instruction_created, slot) = resolve_node(node, &nodes, data, list_counts.last(), jump_count)?;
+                                    let (instruction_created, slot) =
+                                        resolve_node(node, &resolve_node_info, &nodes, data, list_counts.last(), jump_count)?;
                                     jump_slot = slot;
 
                                     if instruction_created {
@@ -808,7 +829,7 @@ mod test_utils {
 
 #[cfg(test)]
 mod general {
-    
+
     use crate::lex::*;
     use crate::parse::*;
 
@@ -836,7 +857,6 @@ mod values {
     use garnish_lang_simple_data::{SimpleData, SimpleDataList};
     use garnish_lang_traits::Instruction;
 
-    
     use crate::lex::*;
     use crate::parse::*;
 
@@ -1030,7 +1050,6 @@ mod operations {
     use garnish_lang_simple_data::{SimpleData, SimpleDataList};
     use garnish_lang_traits::Instruction;
 
-    
     use crate::lex::*;
     use crate::parse::*;
 
@@ -2191,7 +2210,6 @@ mod lists {
     use garnish_lang_simple_data::{SimpleData, SimpleDataList};
     use garnish_lang_traits::Instruction;
 
-    
     use crate::lex::*;
     use crate::parse::*;
 
@@ -2701,6 +2719,7 @@ mod conditionals {
             vec![
                 (Instruction::Put, Some(3)),
                 (Instruction::JumpIfTrue, Some(2)),
+                (Instruction::PutValue, None),
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::JumpTo, Some(1)),
@@ -2708,7 +2727,7 @@ mod conditionals {
             SimpleDataList::default()
                 .append(SimpleData::Number(5.into()))
                 .append(SimpleData::Number(10.into())),
-            vec![0, 2, 3],
+            vec![0, 3, 4],
         );
     }
 
@@ -2724,6 +2743,7 @@ mod conditionals {
             vec![
                 (Instruction::Put, Some(3)),
                 (Instruction::JumpIfFalse, Some(2)),
+                (Instruction::PutValue, None),
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::JumpTo, Some(1)),
@@ -2731,7 +2751,7 @@ mod conditionals {
             SimpleDataList::default()
                 .append(SimpleData::Number(5.into()))
                 .append(SimpleData::Number(10.into())),
-            vec![0, 2, 3],
+            vec![0, 3, 4],
         );
     }
 
@@ -2753,6 +2773,7 @@ mod conditionals {
                 (Instruction::JumpIfTrue, Some(2)),
                 (Instruction::Put, Some(4)),
                 (Instruction::JumpIfTrue, Some(3)),
+                (Instruction::PutValue, None),
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(5)), // 6
                 (Instruction::JumpTo, Some(1)),
@@ -2764,7 +2785,7 @@ mod conditionals {
                 .append(SimpleData::Number(15.into()))
                 .append(SimpleData::Number(10.into()))
                 .append(SimpleData::Number(20.into())),
-            vec![0, 4, 5, 7],
+            vec![0, 5, 6, 8],
         );
     }
 
@@ -2852,12 +2873,13 @@ mod conditionals {
                 (Instruction::JumpIfTrue, Some(3)), // 4
                 (Instruction::Put, Some(5)),
                 (Instruction::JumpIfTrue, Some(4)), // 6
-                (Instruction::EndExpression, None),
-                (Instruction::Put, Some(6)), // 8
-                (Instruction::JumpTo, Some(1)),
-                (Instruction::Put, Some(7)), // 10
-                (Instruction::JumpTo, Some(1)),
-                (Instruction::Put, Some(8)), // 12
+                (Instruction::PutValue, None),
+                (Instruction::EndExpression, None), // 8
+                (Instruction::Put, Some(6)),
+                (Instruction::JumpTo, Some(1)), // 10
+                (Instruction::Put, Some(7)),
+                (Instruction::JumpTo, Some(1)), // 12
+                (Instruction::Put, Some(8)),
                 (Instruction::JumpTo, Some(1)),
             ],
             SimpleDataList::default()
@@ -2867,18 +2889,18 @@ mod conditionals {
                 .append(SimpleData::Number(10.into()))
                 .append(SimpleData::Number(20.into()))
                 .append(SimpleData::Number(30.into())),
-            vec![0, 6, 7, 9, 11],
+            vec![0, 7, 8, 10, 12],
         );
     }
 }
 
 #[cfg(test)]
 mod complex_cases {
-    use garnish_lang_simple_data::{SimpleData, SimpleDataList};
-    use garnish_lang_traits::Instruction;
     use crate::build::test_utils::assert_instruction_data_jumps;
     use crate::lex::TokenType;
     use crate::parse::Definition;
+    use garnish_lang_simple_data::{SimpleData, SimpleDataList};
+    use garnish_lang_traits::Instruction;
 
     #[test]
     fn ands_in_list() {
