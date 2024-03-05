@@ -141,7 +141,8 @@ fn resolve_node<Data: GarnishData>(
     data: &mut Data,
     list_count: Option<&Data::Size>,
     current_jump_index: Data::Size,
-) -> Result<bool, CompilerError<Data::Error>> {
+) -> Result<(bool, Option<Data::Size>), CompilerError<Data::Error>> {
+    let mut slot = None;
     match node.get_definition() {
         Definition::Unit => {
             // all unit literals will use unit used in the zero element slot of data
@@ -355,22 +356,32 @@ fn resolve_node<Data: GarnishData>(
             data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index))?;
             data.push_instruction(Instruction::PutValue, None)?;
         }
-        Definition::JumpIfTrue | Definition::And => {
+        Definition::And => {
+            // reserve slot for deferred operand
+            slot = Some(data.get_jump_table_len());
+            data.push_jump_point(Data::Size::zero())?;
+
+            data.push_instruction(Instruction::And, Some(current_jump_index))?;
+        }
+        Definition::Or => {
+            data.push_instruction(Instruction::Or, Some(current_jump_index))?;
+        }
+        Definition::JumpIfTrue => {
             data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index))?;
         }
-        Definition::JumpIfFalse | Definition::Or => {
+        Definition::JumpIfFalse => {
             data.push_instruction(Instruction::JumpIfFalse, Some(current_jump_index))?;
         }
         Definition::SideEffect => {
             data.push_instruction(Instruction::EndSideEffect, None)?;
         }
-        Definition::Group => return Ok(false),    // no additional instructions for groups
-        Definition::ElseJump => return Ok(false), // no additional instructions
+        Definition::Group => return Ok((false, None)),    // no additional instructions for groups
+        Definition::ElseJump => return Ok((false, None)), // no additional instructions
         // no runtime meaning, parser only utility
         Definition::Drop => return Err(CompilerError::new_message("Drop definition is not allowed during build.".to_string())),
     }
 
-    Ok(true)
+    Ok((true, slot))
 }
 
 pub fn build_with_data<Data: GarnishData>(
@@ -390,13 +401,13 @@ pub fn build_with_data<Data: GarnishData>(
     let mut jump_count = data.get_jump_table_len() + Data::Size::one();
 
     // tuple of (root node, last instruction of this node, nearest expression jump point)
-    let mut root_stack = vec![(root, vec![(Instruction::EndExpression, None)], data.get_jump_table_len())];
+    let mut root_stack = vec![(root, vec![(Instruction::EndExpression, None)], data.get_jump_table_len(), None)];
 
     // arbitrary max iterations for roots
     let max_roots = 100;
     let mut root_iter_count = 0;
 
-    while let Some((root_index, return_instructions, nearest_expression_point)) = root_stack.pop() {
+    while let Some((root_index, return_instructions, nearest_expression_point, jump_from_slot)) = root_stack.pop() {
         trace!("Makeing instructions for tree starting at index {:?}", root_index);
 
         let mut conditional_stack = vec![];
@@ -406,7 +417,18 @@ pub fn build_with_data<Data: GarnishData>(
         // push start of this expression to jump table
         let jump_point = data.get_instruction_len();
         let jump_index = data.get_jump_table_len();
-        data.push_jump_point(Data::Size::zero())?; // updated down below
+
+        match jump_from_slot {
+            // updated later to allow child jumps to be pushed first
+            None => data.push_jump_point(Data::Size::zero())?,
+            // some deferred roots will have a slot that needs to be updated so it can be reached
+            Some(slot) => match data.get_jump_point_mut(slot) {
+                None => implementation_error(format!(
+                    "None value for node index. All nodes should resolve properly if starting from root node."
+                ))?,
+                Some(p) => *p = jump_point,
+            }
+        }
 
         // limit, maximum times a node is visited is 3
         // so limit to 3 times node count should allow for more than enough
@@ -529,7 +551,7 @@ pub fn build_with_data<Data: GarnishData>(
                                 if node.get_definition() == Definition::Subexpression || node.get_definition().is_value_like() {
                                     trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
 
-                                    let instruction_created = resolve_node(node, &nodes, data, None, Data::Size::zero())?;
+                                    let (instruction_created, _jump_slot) = resolve_node(node, &nodes, data, None, Data::Size::zero())?;
 
                                     // should always create, but check for posterity
                                     if instruction_created {
@@ -563,11 +585,14 @@ pub fn build_with_data<Data: GarnishData>(
 
                                 let resolve = !we_are_subexpression && !we_are_sub_list && !we_are_resolved_value;
 
+                                let mut jump_slot = None;
+
                                 // subexpression already resolved before second child
                                 if resolve {
                                     trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
 
-                                    let instruction_created = resolve_node(node, &nodes, data, list_counts.last(), jump_count)?;
+                                    let (instruction_created, slot) = resolve_node(node, &nodes, data, list_counts.last(), jump_count)?;
+                                    jump_slot = slot;
 
                                     if instruction_created {
                                         metadata.push(InstructionMetadata::new(resolve_node_info.node_index))
@@ -648,7 +673,7 @@ pub fn build_with_data<Data: GarnishData>(
                                         }
                                         Some(node_index) => {
                                             trace!("Adding index {:?} to root stack", node_index);
-                                            root_stack.insert(0, (node_index, return_instructions, nearest_expression))
+                                            root_stack.insert(0, (node_index, return_instructions, nearest_expression, jump_slot))
                                         }
                                     }
 
@@ -708,12 +733,15 @@ pub fn build_with_data<Data: GarnishData>(
             return implementation_error(format!("Max iterations for roots reached."));
         }
 
-        match data.get_jump_point_mut(jump_index) {
-            None => implementation_error(format!(
-                "Failed to update jump point at index {:?} because None was returned.",
-                jump_index
-            ))?,
-            Some(i) => *i = jump_point,
+        if jump_from_slot.is_none() {
+            // new point only added above if none
+            match data.get_jump_point_mut(jump_index) {
+                None => implementation_error(format!(
+                    "Failed to update jump point at index {:?} because None was returned.",
+                    jump_index
+                ))?,
+                Some(i) => *i = jump_point,
+            }
         }
     }
 
@@ -1705,7 +1733,7 @@ mod operations {
             ],
             vec![
                 (Instruction::Put, Some(3)),
-                (Instruction::JumpIfTrue, Some(2)),
+                (Instruction::And, Some(2)),
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::Tis, None),
@@ -1729,7 +1757,7 @@ mod operations {
             ],
             vec![
                 (Instruction::Put, Some(3)),
-                (Instruction::JumpIfFalse, Some(2)),
+                (Instruction::Or, Some(2)),
                 (Instruction::EndExpression, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::Tis, None),
@@ -2836,6 +2864,49 @@ mod conditionals {
                 .append(SimpleData::Number(20.into()))
                 .append(SimpleData::Number(30.into())),
             vec![0, 6, 7, 9, 11],
+        );
+    }
+}
+
+#[cfg(test)]
+mod complex_cases {
+    use garnish_lang_simple_data::{SimpleData, SimpleDataList};
+    use garnish_lang_traits::Instruction;
+    use crate::build::test_utils::assert_instruction_data_jumps;
+    use crate::lex::TokenType;
+    use crate::parse::Definition;
+
+    #[test]
+    fn ands_in_list() {
+        assert_instruction_data_jumps(
+            3,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::And, Some(3), Some(0), Some(2), "&&", TokenType::And),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::CommaList, None, Some(1), Some(5), ",", TokenType::Comma),
+                (Definition::Number, Some(5), None, None, "5", TokenType::Number),
+                (Definition::And, Some(3), Some(4), Some(6), "&&", TokenType::And),
+                (Definition::Number, Some(5), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::And, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::And, Some(4)),
+                (Instruction::MakeList, Some(2)),
+                (Instruction::EndExpression, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::Tis, None),
+                (Instruction::JumpTo, Some(1)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Tis, None),
+                (Instruction::JumpTo, Some(3)),
+            ],
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
+            vec![0, 2, 6, 4, 9],
         );
     }
 }

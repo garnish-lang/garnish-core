@@ -1,174 +1,154 @@
 #[cfg(test)]
 mod and {
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
 
     use crate::simple::testing_utilities::create_simple_runtime;
 
     #[test]
-    fn and_true_booleans() {
+    fn with_true() {
         let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.get_data_mut().add_true().unwrap();
-        let int2 = runtime.get_data_mut().add_true().unwrap();
+        let ta = runtime.get_data_mut().add_true().unwrap();
 
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
+        let i1 = runtime.get_data_mut().push_instruction(Instruction::And, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.and().unwrap();
+        runtime.get_data_mut().push_jump_point(i2).unwrap();
 
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
+        runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
+
+        runtime.get_data_mut().push_register(ta).unwrap();
+
+        let next = runtime.and(0).unwrap();
+
+        assert_eq!(runtime.get_data_mut().get_register_len(), 0);
+        assert_eq!(next.unwrap(), i2);
     }
 
     #[test]
-    fn and_false_on_left() {
+    fn with_false() {
         let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.get_data_mut().add_false().unwrap();
-        let int2 = runtime.get_data_mut().add_true().unwrap();
+        let ta = runtime.get_data_mut().add_false().unwrap();
 
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
+        let i1 = runtime.get_data_mut().push_instruction(Instruction::And, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.and().unwrap();
+        runtime.get_data_mut().push_jump_point(i2).unwrap();
 
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
+        runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
+
+        runtime.get_data_mut().push_register(ta).unwrap();
+
+        let next = runtime.and(0).unwrap();
+
+        assert_eq!(runtime.get_data_mut().get_register_len(), 1);
+        let i = runtime.get_data().get_register(0).unwrap();
+        assert_eq!(runtime.get_data().get_data_type(i).unwrap(), GarnishDataType::False);
+        assert_eq!(next, None);
     }
 
     #[test]
-    fn and_false_on_right() {
+    fn with_invalid_data() {
         let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.get_data_mut().add_true().unwrap();
-        let int2 = runtime.get_data_mut().add_false().unwrap();
+        let ta = runtime.get_data_mut().add_true().unwrap();
 
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
+        let i1 = runtime.get_data_mut().push_instruction(Instruction::And, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.and().unwrap();
+        runtime.get_data_mut().push_jump_point(i2).unwrap();
 
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
-    }
+        runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
 
-    #[test]
-    fn and_false_booleans() {
-        let mut runtime = create_simple_runtime();
+        runtime.get_data_mut().push_register(ta).unwrap();
 
-        let int1 = runtime.get_data_mut().add_false().unwrap();
-        let int2 = runtime.get_data_mut().add_false().unwrap();
+        let next = runtime.and(3);
 
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
-
-        runtime.and().unwrap();
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
-    }
-
-    #[test]
-    fn and_false_unit() {
-        let mut runtime = create_simple_runtime();
-
-        let int1 = runtime.get_data_mut().add_unit().unwrap();
-        let int2 = runtime.get_data_mut().add_unit().unwrap();
-
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
-
-        runtime.and().unwrap();
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
+        assert!(next.is_err())
     }
 }
 
 #[cfg(test)]
 mod or {
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
 
     use crate::simple::testing_utilities::create_simple_runtime;
 
     #[test]
-    fn or_true_booleans() {
+    fn with_true() {
         let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.get_data_mut().add_true().unwrap();
-        let int2 = runtime.get_data_mut().add_true().unwrap();
+        let ta = runtime.get_data_mut().add_true().unwrap();
 
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
+        let i1 = runtime.get_data_mut().push_instruction(Instruction::Or, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.or().unwrap();
+        runtime.get_data_mut().push_jump_point(i2).unwrap();
 
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
+        runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
+
+        runtime.get_data_mut().push_register(ta).unwrap();
+
+        let next = runtime.or(0).unwrap();
+
+        assert_eq!(runtime.get_data_mut().get_register_len(), 1);
+        let i = runtime.get_data().get_register(0).unwrap();
+        assert_eq!(runtime.get_data().get_data_type(i).unwrap(), GarnishDataType::True);
+        assert_eq!(next, None);
     }
 
     #[test]
-    fn or_false_on_left() {
+    fn with_false() {
         let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.get_data_mut().add_false().unwrap();
-        let int2 = runtime.get_data_mut().add_true().unwrap();
+        let ta = runtime.get_data_mut().add_false().unwrap();
 
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
+        let i1 = runtime.get_data_mut().push_instruction(Instruction::Or, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.or().unwrap();
+        runtime.get_data_mut().push_jump_point(i2).unwrap();
 
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
+        runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
+
+        runtime.get_data_mut().push_register(ta).unwrap();
+
+        let next = runtime.or(0).unwrap();
+
+        assert_eq!(runtime.get_data_mut().get_register_len(), 0);
+        assert_eq!(next.unwrap(), i2);
     }
 
     #[test]
-    fn or_false_on_right() {
+    fn with_invalid_data() {
         let mut runtime = create_simple_runtime();
 
-        let int1 = runtime.get_data_mut().add_true().unwrap();
-        let int2 = runtime.get_data_mut().add_false().unwrap();
+        let ta = runtime.get_data_mut().add_false().unwrap();
 
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
+        let i1 = runtime.get_data_mut().push_instruction(Instruction::Or, Some(0)).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
+        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.or().unwrap();
+        runtime.get_data_mut().push_jump_point(i2).unwrap();
 
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
-    }
+        runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
 
-    #[test]
-    fn or_false_booleans() {
-        let mut runtime = create_simple_runtime();
+        runtime.get_data_mut().push_register(ta).unwrap();
 
-        let int1 = runtime.get_data_mut().add_false().unwrap();
-        let int2 = runtime.get_data_mut().add_false().unwrap();
+        let next = runtime.or(3);
 
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
-
-        runtime.or().unwrap();
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
-    }
-
-    #[test]
-    fn or_false_unit() {
-        let mut runtime = create_simple_runtime();
-
-        let int1 = runtime.get_data_mut().add_unit().unwrap();
-        let int2 = runtime.get_data_mut().add_unit().unwrap();
-
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
-
-        runtime.or().unwrap();
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
+        assert!(next.is_err())
     }
 }
 

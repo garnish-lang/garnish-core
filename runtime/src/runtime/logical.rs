@@ -1,30 +1,35 @@
+use crate::runtime::error::state_error;
 use crate::runtime::utilities::{next_ref, next_two_raw_ref, push_boolean};
-use garnish_lang_traits::{GarnishDataType, GarnishData, RuntimeError};
+use garnish_lang_traits::{GarnishData, GarnishDataType, RuntimeError};
 
-pub(crate) fn and<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let (left, right) = next_two_raw_ref(this)?;
+pub(crate) fn and<Data: GarnishData>(this: &mut Data, data: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    let value = next_ref(this)?;
 
-    let result = match (is_true_value(this, left)?, is_true_value(this, right)?) {
-        (true, true) => true,
-        _ => false,
-    };
-
-    push_boolean(this, result)?;
-
-    Ok(None)
+    match is_true_value(this, value)? {
+        true => match this.get_jump_point(data) {
+            Some(v) => Ok(Some(v)),
+            None => state_error(format!("No jump point at index {:?}", data)),
+        },
+        false => {
+            push_boolean(this, false)?;
+            Ok(None)
+        }
+    }
 }
 
-pub fn or<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let (left, right) = next_two_raw_ref(this)?;
+pub fn or<Data: GarnishData>(this: &mut Data, data: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    let value = next_ref(this)?;
 
-    let result = match (is_true_value(this, left)?, is_true_value(this, right)?) {
-        (false, false) => false,
-        _ => true,
-    };
-
-    push_boolean(this, result)?;
-
-    Ok(None)
+    match is_true_value(this, value)? {
+        true => {
+            push_boolean(this, true)?;
+            Ok(None)
+        }
+        false => match this.get_jump_point(data) {
+            Some(v) => Ok(Some(v)),
+            None => state_error(format!("No jump point at index {:?}", data)),
+        }
+    }
 }
 
 pub fn xor<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {

@@ -41,8 +41,8 @@ pub trait GarnishRuntime<Data: GarnishData> {
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
 
-    fn and(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn or(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn and(&mut self, data: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn or(&mut self, data: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn xor(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn not(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn tis(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;

@@ -98,8 +98,6 @@ impl<Data: GarnishData> SimpleGarnishRuntime<Data> {
             Instruction::BitwiseXor => self.bitwise_xor(context)?,
             Instruction::BitwiseShiftLeft => self.bitwise_left_shift(context)?,
             Instruction::BitwiseShiftRight => self.bitwise_right_shift(context)?,
-            Instruction::And => self.and()?,
-            Instruction::Or => self.or()?,
             Instruction::Xor => self.xor()?,
             Instruction::Not => self.not()?,
             Instruction::Tis => self.tis()?,
@@ -130,6 +128,14 @@ impl<Data: GarnishData> SimpleGarnishRuntime<Data> {
             Instruction::EndExpression => self.end_expression()?,
             Instruction::Apply => self.apply(context)?,
             Instruction::EmptyApply => self.empty_apply(context)?,
+            Instruction::And => match data {
+                None => instruction_error(instruction, self.get_data().get_instruction_cursor())?,
+                Some(i) => self.and(i)?,
+            },
+            Instruction::Or => match data {
+                None => instruction_error(instruction, self.get_data().get_instruction_cursor())?,
+                Some(i) => self.or(i)?,
+            },
             Instruction::Put => match data {
                 None => instruction_error(instruction, self.get_data().get_instruction_cursor())?,
                 Some(i) => self.put(i)?,
@@ -285,12 +291,12 @@ where
     // Logical
     //
 
-    fn and(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        and(self.get_data_mut())
+    fn and(&mut self, data: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+        and(self.get_data_mut(), data)
     }
 
-    fn or(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        or(self.get_data_mut())
+    fn or(&mut self, data: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+        or(self.get_data_mut(), data)
     }
 
     fn xor(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
