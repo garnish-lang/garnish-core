@@ -364,6 +364,10 @@ fn resolve_node<Data: GarnishData>(
             data.push_instruction(Instruction::And, Some(current_jump_index))?;
         }
         Definition::Or => {
+            // reserve slot for deferred operand
+            slot = Some(data.get_jump_table_len());
+            data.push_jump_point(Data::Size::zero())?;
+
             data.push_instruction(Instruction::Or, Some(current_jump_index))?;
         }
         Definition::JumpIfTrue => {
@@ -2907,6 +2911,102 @@ mod complex_cases {
                 .append(SimpleData::Number(5.into()))
                 .append(SimpleData::Number(10.into())),
             vec![0, 2, 6, 4, 9],
+        );
+    }
+
+    #[test]
+    fn ands_chained() {
+        assert_instruction_data_jumps(
+            3,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::And, Some(3), Some(0), Some(2), "&&", TokenType::And),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::And, None, Some(1), Some(4), "&&", TokenType::And),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::And, Some(3)),
+                (Instruction::And, Some(4)),
+                (Instruction::EndExpression, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::Tis, None),
+                (Instruction::JumpTo, Some(2)),
+                (Instruction::Put, Some(5)),
+                (Instruction::Tis, None),
+                (Instruction::JumpTo, Some(1)),
+            ],
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into()))
+                .append(SimpleData::Number(15.into())),
+            vec![0, 3, 2, 4, 7],
+        );
+    }
+
+    #[test]
+    fn ors_in_list() {
+        assert_instruction_data_jumps(
+            3,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Or, Some(3), Some(0), Some(2), "&&", TokenType::Or),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::CommaList, None, Some(1), Some(5), ",", TokenType::Comma),
+                (Definition::Number, Some(5), None, None, "5", TokenType::Number),
+                (Definition::Or, Some(3), Some(4), Some(6), "&&", TokenType::Or),
+                (Definition::Number, Some(5), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Or, Some(2)),
+                (Instruction::Put, Some(3)),
+                (Instruction::Or, Some(4)),
+                (Instruction::MakeList, Some(2)),
+                (Instruction::EndExpression, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::Tis, None),
+                (Instruction::JumpTo, Some(1)),
+                (Instruction::Put, Some(4)),
+                (Instruction::Tis, None),
+                (Instruction::JumpTo, Some(3)),
+            ],
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
+            vec![0, 2, 6, 4, 9],
+        );
+    }
+
+    #[test]
+    fn ors_chained() {
+        assert_instruction_data_jumps(
+            3,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::Or, Some(3), Some(0), Some(2), "&&", TokenType::Or),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::Or, None, Some(1), Some(4), "&&", TokenType::Or),
+                (Definition::Number, Some(3), None, None, "15", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::Or, Some(3)),
+                (Instruction::Or, Some(4)),
+                (Instruction::EndExpression, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::Tis, None),
+                (Instruction::JumpTo, Some(2)),
+                (Instruction::Put, Some(5)),
+                (Instruction::Tis, None),
+                (Instruction::JumpTo, Some(1)),
+            ],
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into()))
+                .append(SimpleData::Number(15.into())),
+            vec![0, 3, 2, 4, 7],
         );
     }
 }
