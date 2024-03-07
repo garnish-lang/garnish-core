@@ -372,6 +372,9 @@ fn resolve_node<Data: GarnishData>(
             data.push_instruction(Instruction::Or, Some(current_jump_index))?;
         }
         Definition::JumpIfTrue => {
+            slot = Some(data.get_jump_table_len());
+            data.push_jump_point(Data::Size::zero())?;
+
             data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index))?;
             if resolve_info.parent_definition != Definition::ElseJump {
                 data.push_instruction(Instruction::PutValue, None)?;
@@ -3034,6 +3037,42 @@ mod complex_cases {
                 .append(SimpleData::Number(10.into()))
                 .append(SimpleData::Number(15.into())),
             vec![0, 3, 2, 4, 7],
+        );
+    }
+
+    #[test]
+    fn jump_if_true_list() {
+        assert_instruction_data_jumps(
+            3,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::JumpIfTrue, Some(3), Some(0), Some(2), "?>", TokenType::JumpIfTrue),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+                (Definition::CommaList, None, Some(1), Some(5), ",", TokenType::Comma),
+                (Definition::Number, Some(5), None, None, "15", TokenType::Number),
+                (Definition::JumpIfTrue, Some(3), Some(4), Some(6), "?>", TokenType::JumpIfTrue),
+                (Definition::Number, Some(5), None, None, "25", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::JumpIfTrue, Some(2)),
+                (Instruction::PutValue, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::JumpIfTrue, Some(4)),
+                (Instruction::PutValue, None),
+                (Instruction::MakeList, Some(2)),
+                (Instruction::EndExpression, None),
+                (Instruction::Put, Some(5)),
+                (Instruction::JumpTo, Some(1)),
+                (Instruction::Put, Some(6)),
+                (Instruction::JumpTo, Some(3)),
+            ],
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(15.into()))
+                .append(SimpleData::Number(10.into()))
+                .append(SimpleData::Number(25.into())),
+            vec![0, 3, 8, 6, 10],
         );
     }
 }
