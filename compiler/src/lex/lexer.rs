@@ -598,7 +598,9 @@ impl<'a> Lexer<'a> {
             LexingState::StartByteList => {
                 let end = if c != '\'' {
                     if self.current_characters.len() == 2 {
-                        // meaning, we have 2 double quotes already
+                        // Only supporting byte lists surrounded by 1 pair of quotes
+                        // and surrounded by 3+ pairs of double quotes
+                        // reserved 2 quotes for empty byte lists
                         self.should_create = false;
                         true
                     } else {
