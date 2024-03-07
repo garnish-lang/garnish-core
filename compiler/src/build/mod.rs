@@ -398,7 +398,10 @@ fn resolve_node<Data: GarnishData>(
 
             if children_are_conditional && resolve_info.parent_definition != Definition::ElseJump {
                 data.push_instruction(Instruction::PutValue, None)?;
+                return Ok((true, slot))
             }
+
+            return Ok((false, slot))
         }
         // no runtime meaning, parser only utility
         Definition::Drop => return Err(CompilerError::new_message("Drop definition is not allowed during build.".to_string())),
@@ -1005,6 +1008,7 @@ mod metadata {
             ],
         )
         .unwrap();
+
 
         assert_eq!(
             metadata,
@@ -2788,6 +2792,7 @@ mod conditionals {
             vec![0, 5, 6, 8],
         );
     }
+
 
     #[test]
     fn conditional_chain_with_default_clause() {
