@@ -286,10 +286,7 @@ impl<'a> Lexer<'a> {
         Some(node)
     }
 
-    fn start_token(
-        &mut self,
-        c: char,
-    ) {
+    fn start_token(&mut self, c: char) {
         trace!("Beginning new token");
         self.current_characters = String::new();
         self.current_token_type = None;
@@ -417,7 +414,8 @@ impl<'a> Lexer<'a> {
                         } else if self.current_characters.starts_with(".")
                             && self.current_characters.len() == 2 // To be here should only have the decimal and the current number
                             && c.is_numeric()
-                            && self.can_float {
+                            && self.can_float
+                        {
                             // Range tokens start with a period
                             // but Float numbers can also start with period
                             // If a range token ends up here it should already have length of at least 2
@@ -776,11 +774,11 @@ impl<'a> Lexer<'a> {
             // determine if the next token can be a float
             // cannot immediately follow identifiers, a period, other floats
             self.can_float = ![
-                // $.1
-                // value token is treated same as identifiers for most purposes
-                Some(TokenType::Value),
-                // value.1
+                // $.1 value.1 "text".1
                 // the 1 will be an integer for access operation
+                Some(TokenType::Value),
+                Some(TokenType::CharList),
+                Some(TokenType::ByteList),
                 Some(TokenType::Identifier),
                 // value.1.1
                 // since the period and 1 after value is for access, the next period is considered the same
@@ -1338,22 +1336,26 @@ mod tests {
 
         assert_eq!(
             result,
-            vec![LexerToken {
-                text: "$".to_string(),
-                token_type: TokenType::Value,
-                column: 0,
-                row: 0
-            },LexerToken {
-                text: ".".to_string(),
-                token_type: TokenType::Period,
-                column: 1,
-                row: 0
-            },LexerToken {
-                text: "0".to_string(),
-                token_type: TokenType::Number,
-                column: 2,
-                row: 0
-            }]
+            vec![
+                LexerToken {
+                    text: "$".to_string(),
+                    token_type: TokenType::Value,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: ".".to_string(),
+                    token_type: TokenType::Period,
+                    column: 1,
+                    row: 0
+                },
+                LexerToken {
+                    text: "0".to_string(),
+                    token_type: TokenType::Number,
+                    column: 2,
+                    row: 0
+                }
+            ]
         )
     }
 
@@ -2894,6 +2896,35 @@ mod chars_and_bytes {
     }
 
     #[test]
+    fn byte_list_dot_and_number() {
+        let result = lex(&"'Hello'.4".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "'Hello'".to_string(),
+                    token_type: TokenType::ByteList,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: ".".to_string(),
+                    token_type: TokenType::Period,
+                    column: 7,
+                    row: 0
+                },
+                LexerToken {
+                    text: "4".to_string(),
+                    token_type: TokenType::Number,
+                    column: 8,
+                    row: 0
+                }
+            ]
+        );
+    }
+
+    #[test]
     fn empty_character_list() {
         let result = lex(&"\"\"".to_string()).unwrap();
 
@@ -2914,32 +2945,38 @@ mod chars_and_bytes {
 
         assert_eq!(
             result,
-            vec![LexerToken {
-                text: "5".to_string(),
-                token_type: TokenType::Number,
-                column: 0,
-                row: 0
-            },LexerToken {
-                text: " ".to_string(),
-                token_type: TokenType::Whitespace,
-                column: 1,
-                row: 0
-            },LexerToken {
-                text: "\"\"".to_string(),
-                token_type: TokenType::CharList,
-                column: 2,
-                row: 0
-            },LexerToken {
-                text: " ".to_string(),
-                token_type: TokenType::Whitespace,
-                column: 4,
-                row: 0
-            },LexerToken {
-                text: "5".to_string(),
-                token_type: TokenType::Number,
-                column: 5,
-                row: 0
-            }]
+            vec![
+                LexerToken {
+                    text: "5".to_string(),
+                    token_type: TokenType::Number,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::Whitespace,
+                    column: 1,
+                    row: 0
+                },
+                LexerToken {
+                    text: "\"\"".to_string(),
+                    token_type: TokenType::CharList,
+                    column: 2,
+                    row: 0
+                },
+                LexerToken {
+                    text: " ".to_string(),
+                    token_type: TokenType::Whitespace,
+                    column: 4,
+                    row: 0
+                },
+                LexerToken {
+                    text: "5".to_string(),
+                    token_type: TokenType::Number,
+                    column: 5,
+                    row: 0
+                }
+            ]
         );
     }
 
@@ -2955,6 +2992,35 @@ mod chars_and_bytes {
                 column: 0,
                 row: 0
             }]
+        );
+    }
+
+    #[test]
+    fn character_list_then_access() {
+        let result = lex(&"\"Hello World!\".4".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "\"Hello World!\"".to_string(),
+                    token_type: TokenType::CharList,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: ".".to_string(),
+                    token_type: TokenType::Period,
+                    column: 14,
+                    row: 0
+                },
+                LexerToken {
+                    text: "4".to_string(),
+                    token_type: TokenType::Number,
+                    column: 15,
+                    row: 0
+                }
+            ]
         );
     }
 
