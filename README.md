@@ -202,7 +202,28 @@ impl GarnishContext<SimpleGarnishData> for MathContext {
         }
     }
 }
+```
 
+Now we've implemented a `GarnishContext` we can pass it into the `execute_current_instruction` method instead of None.
+
+```rust
+// ...
+let mut runtime = SimpleGarnishRuntime::new(data);
+let mut context = MathContext::new();
+
+loop {
+    // add new context object
+    match runtime.execute_current_instruction(Some(&mut context)) {
+        Err(e) => {
+            return Err(e.get_message().clone());
+        }
+        Ok(data) => match data.get_state() {
+            SimpleRuntimeState::Running => (),
+            SimpleRuntimeState::End => break,
+        },
+    }
+}
+// ...
 ```
 
 ### Further Reading
