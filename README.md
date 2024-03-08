@@ -139,8 +139,14 @@ pub struct MathContext {
 impl MathContext {
     pub fn new() -> Self {
         let mut symbol_to_data = HashMap::new();
-        symbol_to_data.insert(symbol_value("Math::PI"), SimpleData::Number(SimpleNumber::Float(std::f64::consts::PI)));
-        symbol_to_data.insert(symbol_value("sin"), SimpleData::External(MATH_FUNCTION_SINE));
+        symbol_to_data.insert(
+            symbol_value("Math::PI"), 
+            SimpleData::Number(SimpleNumber::Float(std::f64::consts::PI))
+        );
+        symbol_to_data.insert(
+            symbol_value("sin"), 
+            SimpleData::External(MATH_FUNCTION_SINE)
+        );
 
         BrowserContext {
             symbol_to_expression: HashMap::new(),
@@ -151,11 +157,13 @@ impl MathContext {
 
 impl GarnishContext<SimpleGarnishData> for MathContext {
     // This method is called when ever a script has an unresolved identifier during runtime
-    fn resolve(&mut self, symbol: u64, data: &mut SimpleGarnishData) -> Result<bool, RuntimeError<DataError>> {
+    fn resolve(&mut self, symbol: u64, data: &mut SimpleGarnishData) 
+        -> Result<bool, RuntimeError<DataError>> {
         // lookup given symbol to see if we have a value for it
-        // returning true tells runtime that the symbol was resolved and not to do any more checks
+        // returning true tells runtime that the symbol was resolved 
+        //   and not to do any more checks
         // returning false will let the runtime check additional resolve methods, 
-        // resulting in a Unit value if nothing resolves it
+        //   resulting in a Unit value if nothing resolves it
         match self.symbol_to_data.get(&symbol) {
             Some(v) => match v {
                 SimpleData::External(n) => {
@@ -196,7 +204,7 @@ impl GarnishContext<SimpleGarnishData> for MathContext {
 
             // need to add new data and make sure to push to registers for next operation to use
             // failure to not push expected values and still returning true, 
-            // could cause script to fail due to empty registers
+            //   could cause script to fail due to empty registers
             let addr = data.get_data().len();
             data.get_data_mut().push(new_data);
             data.push_register(addr)?;
