@@ -211,7 +211,8 @@ impl GarnishContext<SimpleGarnishData> for MathContext {
                     .to_string())
             )?;
 
-            // need to add new data and make sure to push to registers for next operation to use
+            // need to add new data 
+            // then push its address to registers for next operation to use
             // failure to not push expected values and still returning true, 
             //   could cause script to fail due to empty registers
             let addr = data.get_data().len();
