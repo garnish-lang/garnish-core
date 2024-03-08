@@ -93,7 +93,8 @@ fn main() -> Result<(), String> {
     
     let mut runtime = SimpleGarnishRuntime::new(data);
     
-    // SimpleGarnishRuntime only provides method to execute instructions 1 at a time, so we loop until finished
+    // SimpleGarnishRuntime only provides method to execute instructions 1 at a time, 
+    // so we loop until finished
     loop {
         // this None argument is where a GarnishContext would be passed
         match runtime.execute_current_instruction(None) {
@@ -109,7 +110,8 @@ fn main() -> Result<(), String> {
     
     // Result of an execution is a data objects current value
     runtime.get_data().get_current_value().and_then(|v| {
-        // get_raw_data is not a trait member of GarnishData, but a convenience function of SimpleGarnishData
+        // get_raw_data is not a trait member of GarnishData, 
+        // but a convenience function of SimpleGarnishData
         println!("Result: {:?}", runtime.get_data().get_raw_data(v))
     });
     
@@ -148,11 +150,12 @@ impl MathContext {
 }
 
 impl GarnishContext<SimpleGarnishData> for MathContext {
-    // When ever a script has an unresolved identifier during runtime, this method is called to resolve it
+    // This method is called when ever a script has an unresolved identifier during runtime
     fn resolve(&mut self, symbol: u64, data: &mut SimpleGarnishData) -> Result<bool, RuntimeError<DataError>> {
         // lookup given symbol to see if we have a value for it
         // returning true tells runtime that the symbol was resolved and not to do any more checks
-        // returning false will let the runtime check additional resolve methods, resulting in a Unit value if nothing resolves it
+        // returning false will let the runtime check additional resolve methods, 
+        // resulting in a Unit value if nothing resolves it
         match self.symbol_to_data.get(&symbol) {
             Some(v) => match v {
                 SimpleData::External(n) => {
@@ -170,7 +173,8 @@ impl GarnishContext<SimpleGarnishData> for MathContext {
         }
     }
     
-    // When ever an External type value is used with Garnish's 'apply' type operations, this method is called
+    // This method is called when ever an External type value 
+    // is used with Garnish's 'apply' type operations
     fn apply(
         &mut self,
         external_value: usize,
@@ -179,7 +183,8 @@ impl GarnishContext<SimpleGarnishData> for MathContext {
     ) -> Result<bool, RuntimeError<DataError>> {
         // check that the external value given is actually supported
         if external_value == MATH_FUNCTION_SINE {
-            // using some non trait methods, whether to use trait methods or implementation specific methods will depend on your use case
+            // using some non trait methods, whether to use trait methods or 
+            // implementation specific methods will depend on your use case
             let new_data = data.get_raw_data(input_addr).and_then(|d| Some(match d {
                 SimpleData::Number(num) => SimpleData::Number(SimpleNumber::Float(match num {
                     SimpleNumber::Integer(n) => f64::sin(n as f64),
@@ -190,7 +195,8 @@ impl GarnishContext<SimpleGarnishData> for MathContext {
             })).ok_or(DataError::from("Failed to retrieve data during external apply 'sin'".to_string()))?;
 
             // need to add new data and make sure to push to registers for next operation to use
-            // failure to not push expected values and still returning true, could cause script to fail due to empty registers
+            // failure to not push expected values and still returning true, 
+            // could cause script to fail due to empty registers
             let addr = data.get_data().len();
             data.get_data_mut().push(new_data);
             data.push_register(addr)?;
