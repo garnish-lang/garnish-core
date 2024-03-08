@@ -128,7 +128,13 @@ The following example provides two items to a script. A constant value for PI an
 ```rust
 use std::collections::HashMap;
 use garnish_lang::{GarnishContext, GarnishData, RuntimeError};
-use garnish_lang::simple::{DataError, SimpleData, SimpleGarnishData, SimpleNumber, symbol_value};
+use garnish_lang::simple::{
+    DataError, 
+    SimpleData, 
+    SimpleGarnishData, 
+    SimpleNumber, 
+    symbol_value
+};
 
 const MATH_FUNCTION_SINE: usize = 1;
 
@@ -200,7 +206,10 @@ impl GarnishContext<SimpleGarnishData> for MathContext {
                 })),
                 // sin function only supports numbers, all other values result in Unit
                 _ => SimpleData::Unit
-            })).ok_or(DataError::from("Failed to retrieve data during external apply 'sin'".to_string()))?;
+            })).ok_or(
+                DataError::from("Failed to retrieve data during external apply 'sin'"
+                    .to_string())
+            )?;
 
             // need to add new data and make sure to push to registers for next operation to use
             // failure to not push expected values and still returning true, 
