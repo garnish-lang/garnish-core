@@ -1,5 +1,4 @@
 use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, Instruction, RuntimeError};
-use crate::runtime::apply::apply_internal;
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::{next_ref, push_unit};
 

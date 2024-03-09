@@ -170,21 +170,6 @@ pub(crate) fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(
             let addr = this.add_slice(left_addr, right_addr)?;
             this.push_register(addr)?;
         }
-        (GarnishDataType::List, GarnishDataType::Number)
-        | (GarnishDataType::List, GarnishDataType::Symbol)
-        | (GarnishDataType::CharList, GarnishDataType::Number)
-        | (GarnishDataType::CharList, GarnishDataType::Symbol)
-        | (GarnishDataType::ByteList, GarnishDataType::Number)
-        | (GarnishDataType::ByteList, GarnishDataType::Symbol)
-        | (GarnishDataType::Range, GarnishDataType::Number)
-        | (GarnishDataType::Range, GarnishDataType::Symbol)
-        | (GarnishDataType::Concatenation, GarnishDataType::Number)
-        | (GarnishDataType::Concatenation, GarnishDataType::Symbol)
-        | (GarnishDataType::Slice, GarnishDataType::Number)
-        | (GarnishDataType::Slice, GarnishDataType::Symbol) => match get_access_addr(this, right_addr, left_addr)? {
-            None => push_unit(this)?,
-            Some(i) => this.push_register(i)?,
-        },
         (l, r) => match context {
             None => push_unit(this)?,
             Some(c) => {

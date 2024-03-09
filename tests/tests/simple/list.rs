@@ -101,7 +101,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_with_integer() {
+    fn access_with_integer() {
         let mut runtime = create_simple_runtime();
 
         let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
@@ -123,7 +123,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_char_list_with_integer() {
+    fn access_char_list_with_integer() {
         let mut runtime = create_simple_runtime();
 
         runtime.get_data_mut().start_char_list().unwrap();
@@ -146,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_byte_list_with_integer() {
+    fn access_byte_list_with_integer() {
         let mut runtime = create_simple_runtime();
 
         runtime.get_data_mut().start_byte_list().unwrap();
@@ -169,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_with_integer_out_of_bounds_is_unit() {
+    fn access_with_integer_out_of_bounds_is_unit() {
         let mut runtime = create_simple_runtime();
 
         let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
@@ -192,7 +192,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_with_number_negative_is_unit() {
+    fn access_with_number_negative_is_unit() {
         let mut runtime = create_simple_runtime();
 
         let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
@@ -215,7 +215,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_non_list_on_left_is_unit() {
+    fn access_non_list_on_left_is_unit() {
         let mut runtime = create_simple_runtime();
 
         let i1 = runtime.get_data_mut().add_number(10.into()).unwrap();
@@ -233,7 +233,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_non_symbol_on_right_is_unit() {
+    fn access_non_symbol_on_right_is_unit() {
         let mut runtime = create_simple_runtime();
 
         let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
@@ -256,7 +256,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_no_refs_is_err() {
+    fn access_no_refs_is_err() {
         let mut runtime = create_simple_runtime();
 
         let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
@@ -275,7 +275,7 @@ mod tests {
     }
 
     #[test]
-    fn apply_with_non_existent_key() {
+    fn access_with_non_existent_key() {
         let mut runtime = create_simple_runtime();
 
         let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
@@ -305,7 +305,7 @@ mod ranges {
     use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction, NO_CONTEXT};
 
     #[test]
-    fn apply_with_integer() {
+    fn access_with_integer() {
         let mut runtime = create_simple_runtime();
 
         let i1 = runtime.get_data_mut().add_number(10.into()).unwrap();
@@ -325,7 +325,7 @@ mod ranges {
     }
 
     #[test]
-    fn apply_with_integer_out_of_range() {
+    fn access_with_integer_out_of_range() {
         let mut runtime = create_simple_runtime();
 
         let i1 = runtime.get_data_mut().add_number(10.into()).unwrap();

@@ -13,6 +13,7 @@ mod put;
 mod range;
 mod resolve;
 mod sideeffect;
+mod access;
 
 #[cfg(test)]
 pub mod testing_utilities {
