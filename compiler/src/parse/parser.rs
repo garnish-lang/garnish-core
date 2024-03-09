@@ -342,6 +342,10 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::BitwiseXor, 112);
     map.insert(Definition::BitwiseOr, 113);
 
+    map.insert(Definition::PrefixApply, 150);
+    map.insert(Definition::SuffixApply, 151);
+    map.insert(Definition::InfixApply, 152);
+
     map.insert(Definition::Range, 200);
     map.insert(Definition::StartExclusiveRange, 200);
     map.insert(Definition::EndExclusiveRange, 200);
@@ -367,10 +371,6 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::And, 410);
     map.insert(Definition::Xor, 420);
     map.insert(Definition::Or, 430);
-
-    map.insert(Definition::PrefixApply, 500);
-    map.insert(Definition::SuffixApply, 510);
-    map.insert(Definition::InfixApply, 520);
 
     map.insert(Definition::Apply, 550);
     map.insert(Definition::ApplyTo, 550);
