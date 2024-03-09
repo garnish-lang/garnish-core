@@ -1,8 +1,7 @@
 use crate::runtime::error::state_error;
-use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::*;
 use garnish_lang_traits::{
-    ErrorType, GarnishDataType, GarnishContext, GarnishData, GarnishNumber, Instruction, RuntimeError, TypeConstants,
+    GarnishDataType, GarnishContext, GarnishData, GarnishNumber, Instruction, RuntimeError, TypeConstants,
 };
 use log::trace;
 
@@ -91,65 +90,6 @@ pub(crate) fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(
                     }
                 },
             };
-        }
-        (GarnishDataType::List, GarnishDataType::List) => {
-            let len = this.get_list_len(right_addr)?;
-
-            let mut count = Data::Size::zero();
-
-            this.start_list(len)?;
-
-            while count < len {
-                let i = Data::size_to_number(count);
-                let mut item = this.get_list_item(right_addr, i)?;
-
-                let (is_pair_mapping, sym_addr) = match this.get_data_type(item)? {
-                    GarnishDataType::Pair => {
-                        let (left, right) = this.get_pair(item)?;
-                        match this.get_data_type(left)? {
-                            GarnishDataType::Symbol => {
-                                // update item to be mapping pair's right
-                                item = right;
-                                (true, left)
-                            }
-                            _ => (false, Data::Size::zero()),
-                        }
-                    }
-                    _ => (false, Data::Size::zero()),
-                };
-
-                let (value, is_associative) = match get_access_addr(this, item, left_addr) {
-                    Err(e) => match e.get_type() {
-                        ErrorType::UnsupportedOpTypes => (this.add_unit()?, false),
-                        _ => Err(e)?,
-                    },
-                    Ok(i) => match i {
-                        Some(addr) => match this.get_data_type(addr)? {
-                            GarnishDataType::Pair => {
-                                let (left, _right) = this.get_pair(addr)?;
-                                match this.get_data_type(left)? {
-                                    GarnishDataType::Symbol => (addr, true),
-                                    _ => (addr, false),
-                                }
-                            }
-                            _ => (addr, false),
-                        },
-                        // make sure there is a unit value to use
-                        None => (this.add_unit()?, false),
-                    },
-                };
-
-                if is_pair_mapping {
-                    let value = this.add_pair((sym_addr, value))?;
-                    this.add_to_list(value, true)?;
-                } else {
-                    this.add_to_list(value, is_associative)?;
-                }
-
-                count += Data::Size::one();
-            }
-
-            this.end_list().and_then(|r| this.push_register(r))?;
         }
         (GarnishDataType::Range, GarnishDataType::Range) => {
             let addr = narrow_range(this, left_addr, right_addr)?;

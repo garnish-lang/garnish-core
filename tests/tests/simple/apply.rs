@@ -41,7 +41,7 @@ mod deferring {
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::{create_simple_runtime, DeferOpTestContext, DEFERRED_VALUE};
-    use garnish_lang_simple_data::{symbol_value, DataError, SimpleDataRuntimeNC, SimpleGarnishData};
+    use garnish_lang_simple_data::{DataError, SimpleGarnishData};
     use garnish_lang_traits::{
         EmptyContext, GarnishDataType, GarnishContext, GarnishData, GarnishRuntime, Instruction, RuntimeError,
     };
@@ -95,109 +95,6 @@ mod tests {
         assert_eq!(runtime.get_data_mut().get_value(0).unwrap(), int2);
         assert_eq!(next.unwrap(), i1);
         assert_eq!(runtime.get_data_mut().get_jump_path(0).unwrap(), i3);
-    }
-
-    #[test]
-    fn apply_list_of_sym_or_integer_to_list() {
-        let mut runtime = create_simple_runtime();
-
-        let i1 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val1").unwrap())
-            .unwrap();
-        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
-        let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
-
-        let i4 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap())
-            .unwrap();
-        let i5 = runtime.get_data_mut().add_number(20.into()).unwrap();
-        let i6 = runtime.get_data_mut().add_pair((i4, i5)).unwrap();
-
-        let i7 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val3").unwrap())
-            .unwrap();
-        let i8 = runtime.get_data_mut().add_number(30.into()).unwrap();
-        let i9 = runtime.get_data_mut().add_pair((i7, i8)).unwrap();
-
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i3, true).unwrap();
-        runtime.get_data_mut().add_to_list(i6, true).unwrap();
-        runtime.get_data_mut().add_to_list(i9, true).unwrap();
-        let i10 = runtime.get_data_mut().end_list().unwrap();
-
-        let i11 = runtime.get_data_mut().add_number(2.into()).unwrap(); // integer access
-        let i12 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap())
-            .unwrap(); // symbol access
-        let i13 = runtime.get_data_mut().add_number(5.into()).unwrap(); // access out of bounds
-        let i14 = runtime.get_data_mut().add_expression(10).unwrap(); // invalid access type
-
-        let i15 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("new_key").unwrap())
-            .unwrap();
-        let i16 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val1").unwrap())
-            .unwrap();
-        let i17 = runtime.get_data_mut().add_pair((i15, i16)).unwrap(); // pair mapping
-        runtime.get_data_mut().start_list(2).unwrap();
-        runtime.get_data_mut().add_to_list(i11, false).unwrap();
-        runtime.get_data_mut().add_to_list(i12, false).unwrap();
-        runtime.get_data_mut().add_to_list(i13, false).unwrap();
-        runtime.get_data_mut().add_to_list(i14, false).unwrap();
-        runtime.get_data_mut().add_to_list(i17, true).unwrap();
-        let i18 = runtime.get_data_mut().end_list().unwrap();
-
-        runtime.get_data_mut().push_register(i10).unwrap();
-        runtime.get_data_mut().push_register(i18).unwrap();
-
-        runtime.apply::<EmptyContext>(None).unwrap();
-
-        let addr = runtime.get_data_mut().pop_register().unwrap();
-        let len = runtime.get_data_mut().get_list_len(addr).unwrap();
-        let association_len = runtime.get_data_mut().get_list_associations_len(addr).unwrap();
-        assert_eq!(len, 5);
-        assert_eq!(association_len, 2);
-
-        let pair_addr = runtime.get_data_mut().get_list_item(addr, 0.into()).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(pair_addr).unwrap(), GarnishDataType::Pair);
-
-        let (pair_left, pair_right) = runtime.get_data_mut().get_pair(pair_addr).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(pair_left).unwrap(), GarnishDataType::Symbol);
-        assert_eq!(runtime.get_data_mut().get_symbol(pair_left).unwrap(), symbol_value("val3"));
-        assert_eq!(runtime.get_data_mut().get_data_type(pair_right).unwrap(), GarnishDataType::Number);
-        assert_eq!(runtime.get_data_mut().get_number(pair_right).unwrap(), 30.into());
-
-        let association_value1 = runtime
-            .get_data_mut()
-            .get_list_item_with_symbol(addr, symbol_value("val3"))
-            .unwrap()
-            .unwrap();
-        assert_eq!(runtime.get_data_mut().get_number(association_value1).unwrap(), 30.into());
-
-        let int_addr = runtime.get_data_mut().get_list_item(addr, 1.into()).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(int_addr).unwrap(), GarnishDataType::Number);
-        assert_eq!(runtime.get_data_mut().get_number(int_addr).unwrap(), 20.into());
-
-        let unit1 = runtime.get_data_mut().get_list_item(addr, 2.into()).unwrap();
-        let unit2 = runtime.get_data_mut().get_list_item(addr, 3.into()).unwrap();
-
-        assert_eq!(runtime.get_data_mut().get_data_type(unit1).unwrap(), GarnishDataType::Unit);
-        assert_eq!(runtime.get_data_mut().get_data_type(unit2).unwrap(), GarnishDataType::Unit);
-
-        let map_pair_addr = runtime.get_data_mut().get_list_item(addr, 4.into()).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(map_pair_addr).unwrap(), GarnishDataType::Pair);
-
-        let (map_pair_left, map_pair_right) = runtime.get_data_mut().get_pair(map_pair_addr).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(map_pair_left).unwrap(), GarnishDataType::Symbol);
-        assert_eq!(runtime.get_data_mut().get_symbol(map_pair_left).unwrap(), symbol_value("new_key"));
-        assert_eq!(runtime.get_data_mut().get_data_type(map_pair_right).unwrap(), GarnishDataType::Number);
-        assert_eq!(runtime.get_data_mut().get_number(map_pair_right).unwrap(), 10.into());
     }
 
     #[test]
