@@ -1109,9 +1109,9 @@ mod operations {
         assert_instruction_data(
             1,
             vec![
-                (Definition::Symbol, Some(1), None, None, ";sym", TokenType::Symbol),
+                (Definition::Symbol, Some(1), None, None, ":sym", TokenType::Symbol),
                 (Definition::Pair, None, Some(0), Some(2), "=", TokenType::Pair),
-                (Definition::Symbol, Some(1), None, None, ";sym", TokenType::Symbol),
+                (Definition::Symbol, Some(1), None, None, ":sym", TokenType::Symbol),
             ],
             vec![
                 (Instruction::Put, Some(3)),
