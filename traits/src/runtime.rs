@@ -64,6 +64,10 @@ pub trait GarnishRuntime<Data: GarnishData> {
     fn end_expression(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
 
     fn make_list(&mut self, len: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn access<T: GarnishContext<Data>>(
+        &mut self,
+        context: Option<&mut T>,
+    ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn access_left_internal<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,

@@ -17,5 +17,6 @@ mod resolve;
 mod runtime_impls;
 mod sideeffect;
 mod utilities;
+mod access;
 
 pub use runtime_impls::{SimpleGarnishRuntime, SimpleRuntimeInfo, SimpleRuntimeState};

@@ -24,6 +24,7 @@ use garnish_lang_traits::{
 use log::trace;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+use crate::runtime::access::access;
 
 /// State that the runtime is currently in.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -116,7 +117,7 @@ impl<Data: GarnishData> SimpleGarnishRuntime<Data> {
             Instruction::GreaterThan => self.greater_than()?,
             Instruction::GreaterThanOrEqual => self.greater_than_or_equal()?,
             Instruction::MakePair => self.make_pair()?,
-            Instruction::Access => self.apply(context)?,
+            Instruction::Access => self.access(context)?,
             Instruction::AccessLeftInternal => self.access_left_internal(context)?,
             Instruction::AccessRightInternal => self.access_right_internal(context)?,
             Instruction::AccessLengthInternal => self.access_length_internal(context)?,
@@ -381,6 +382,13 @@ where
 
     fn make_list(&mut self, len: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
         make_list(self.get_data_mut(), len)
+    }
+
+    fn access<T: GarnishContext<Data>>(
+        &mut self,
+        context: Option<&mut T>,
+    ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+        access(self.get_data_mut(), context)
     }
 
     fn access_left_internal<T: GarnishContext<Data>>(
