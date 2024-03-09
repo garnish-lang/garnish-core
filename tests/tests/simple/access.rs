@@ -1,4 +1,26 @@
+#[cfg(test)]
+mod deferring {
+    use crate::simple::testing_utilities::{create_simple_runtime, DeferOpTestContext, DEFERRED_VALUE};
+    use garnish_lang_traits::{GarnishData, GarnishRuntime};
 
+    #[test]
+    fn apply() {
+        let mut runtime = create_simple_runtime();
+
+        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
+        let int2 = runtime.get_data_mut().add_number(20.into()).unwrap();
+
+        runtime.get_data_mut().push_register(int1).unwrap();
+        runtime.get_data_mut().push_register(int2).unwrap();
+
+        let mut context = DeferOpTestContext::new();
+
+        runtime.access(Some(&mut context)).unwrap();
+
+        let i = runtime.get_data_mut().get_register(0).unwrap();
+        assert_eq!(runtime.get_data_mut().get_external(i).unwrap(), DEFERRED_VALUE);
+    }
+}
 
 #[cfg(test)]
 mod tests {
