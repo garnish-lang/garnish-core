@@ -21,53 +21,53 @@ where
     type NumberIterator = NumberIterator;
     type InstructionIterator = SizeIterator;
     type DataIndexIterator = SizeIterator;
-    type ValueIndexInterator = SizeIterator;
-    type RegisterIndexInterator = SizeIterator;
-    type JumpTableIndexInterator = SizeIterator;
-    type JumpPathIndexInterator = SizeIterator;
-    type ListIndexInterator = NumberIterator;
+    type ValueIndexIterator = SizeIterator;
+    type RegisterIndexIterator = SizeIterator;
+    type JumpTableIndexIterator = SizeIterator;
+    type JumpPathIndexIterator = SizeIterator;
+    type ListIndexIterator = NumberIterator;
 
     fn get_data_iter(&self) -> SizeIterator {
         return SizeIterator::new(0, self.data.len());
     }
 
-    fn get_list_items_iter(&self, list_addr: Self::Size) -> Self::ListIndexInterator {
+    fn get_list_items_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
         self.get_list_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
             .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
     }
 
-    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Self::ListIndexInterator {
+    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
         self.get_list_associations_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
             .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
     }
 
-    fn get_char_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexInterator {
+    fn get_char_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
         self.get_char_list_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
             .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
     }
 
-    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexInterator {
+    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
         self.get_byte_list_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
             .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
     }
 
-    fn get_register_iter(&self) -> Self::RegisterIndexInterator {
+    fn get_register_iter(&self) -> Self::RegisterIndexIterator {
         return SizeIterator::new(0, self.register.len());
     }
 
-    fn get_value_iter(&self) -> Self::ValueIndexInterator {
+    fn get_value_iter(&self) -> Self::ValueIndexIterator {
         return SizeIterator::new(0, self.values.len());
     }
 
-    fn get_jump_path_iter(&self) -> Self::JumpPathIndexInterator {
+    fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
         return SizeIterator::new(0, self.jump_path.len());
     }
 
-    fn get_jump_table_iter(&self) -> Self::JumpTableIndexInterator {
+    fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
         return SizeIterator::new(0, self.expression_table.len());
     }
 

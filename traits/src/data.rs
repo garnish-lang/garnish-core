@@ -78,11 +78,11 @@ pub trait GarnishData {
     type NumberIterator: DoubleEndedIterator<Item = Self::Number>;
     type InstructionIterator: DoubleEndedIterator<Item = Self::Size>;
     type DataIndexIterator: Iterator<Item = Self::Size>;
-    type ValueIndexInterator: DoubleEndedIterator<Item = Self::Size>;
-    type RegisterIndexInterator: DoubleEndedIterator<Item = Self::Size>;
-    type JumpTableIndexInterator: DoubleEndedIterator<Item = Self::Size>;
-    type JumpPathIndexInterator: DoubleEndedIterator<Item = Self::Size>;
-    type ListIndexInterator: DoubleEndedIterator<Item = Self::Number>;
+    type ValueIndexIterator: DoubleEndedIterator<Item = Self::Size>;
+    type RegisterIndexIterator: DoubleEndedIterator<Item = Self::Size>;
+    type JumpTableIndexIterator: DoubleEndedIterator<Item = Self::Size>;
+    type JumpPathIndexIterator: DoubleEndedIterator<Item = Self::Size>;
+    type ListIndexIterator: DoubleEndedIterator<Item = Self::Number>;
 
     fn get_data_len(&self) -> Self::Size;
     fn get_data_iter(&self) -> Self::DataIndexIterator;
@@ -94,7 +94,7 @@ pub trait GarnishData {
     fn get_value_mut(&mut self, addr: Self::Size) -> Option<&mut Self::Size>;
     fn get_current_value(&self) -> Option<Self::Size>;
     fn get_current_value_mut(&mut self) -> Option<&mut Self::Size>;
-    fn get_value_iter(&self) -> Self::ValueIndexInterator;
+    fn get_value_iter(&self) -> Self::ValueIndexIterator;
 
     fn get_data_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error>;
 
@@ -115,16 +115,16 @@ pub trait GarnishData {
     fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error>;
     fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error>;
-    fn get_list_items_iter(&self, list_addr: Self::Size) -> Self::ListIndexInterator;
-    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Self::ListIndexInterator;
+    fn get_list_items_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
+    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
 
     fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error>;
-    fn get_char_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexInterator;
+    fn get_char_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
 
     fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error>;
-    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexInterator;
+    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
 
     fn add_unit(&mut self) -> Result<Self::Size, Self::Error>;
     fn add_true(&mut self) -> Result<Self::Size, Self::Error>;
@@ -158,7 +158,7 @@ pub trait GarnishData {
     fn push_register(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
     fn get_register(&self, addr: Self::Size) -> Option<Self::Size>;
     fn pop_register(&mut self) -> Option<Self::Size>;
-    fn get_register_iter(&self) -> Self::RegisterIndexInterator;
+    fn get_register_iter(&self) -> Self::RegisterIndexIterator;
 
     fn get_instruction_len(&self) -> Self::Size;
     fn push_instruction(&mut self, instruction: Instruction, data: Option<Self::Size>) -> Result<Self::Size, Self::Error>;
@@ -172,11 +172,11 @@ pub trait GarnishData {
     fn push_jump_point(&mut self, index: Self::Size) -> Result<(), Self::Error>;
     fn get_jump_point(&self, index: Self::Size) -> Option<Self::Size>;
     fn get_jump_point_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size>;
-    fn get_jump_table_iter(&self) -> Self::JumpTableIndexInterator;
+    fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator;
 
     fn push_jump_path(&mut self, index: Self::Size) -> Result<(), Self::Error>;
     fn pop_jump_path(&mut self) -> Option<Self::Size>;
-    fn get_jump_path_iter(&self) -> Self::JumpPathIndexInterator;
+    fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator;
 
     // deferred conversions
     fn size_to_number(from: Self::Size) -> Self::Number;
