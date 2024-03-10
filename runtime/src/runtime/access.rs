@@ -9,7 +9,7 @@ pub(crate) fn access<Data: GarnishData, T: GarnishContext<Data>>(
     let right_addr = next_ref(this)?;
     let left_addr = next_ref(this)?;
 
-    match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {
+    match (this.get_data_type(left_addr.clone())?, this.get_data_type(right_addr.clone())?) {
         (GarnishDataType::List, GarnishDataType::Number)
         | (GarnishDataType::List, GarnishDataType::Symbol)
         | (GarnishDataType::CharList, GarnishDataType::Number)

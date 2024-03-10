@@ -71,33 +71,33 @@ where
             ))?,
             Some(r) => {
                 let mut temp_result = None;
-                match this.get_data_type(r)? {
+                match this.get_data_type(r.clone())? {
                     GarnishDataType::Concatenation => {
-                        let (current, next) = get_method(this, r)?;
+                        let (current, next) = get_method(this, r.clone())?;
                         this.push_register(next)?;
                         this.push_register(current)?;
                     }
                     GarnishDataType::List => {
-                        let len = this.get_list_len(r)?;
+                        let len = this.get_list_len(r.clone())?;
                         let mut i = Data::Size::zero();
 
                         while i < len {
-                            let sub_index = Data::size_to_number(i);
-                            let item = this.get_list_item(r, sub_index)?;
+                            let sub_index = Data::size_to_number(i.clone());
+                            let item = this.get_list_item(r.clone(), sub_index.clone())?;
                             temp_result = check_fn(
                                 this,
-                                (Data::size_to_number(index)).plus(sub_index).ok_or(RuntimeError::new("Number error"))?,
+                                (Data::size_to_number(index.clone())).plus(sub_index.clone()).ok_or(RuntimeError::new("Number error"))?,
                                 item,
                             )?;
                             match temp_result {
                                 Some(_) => break,
-                                None => i = i + Data::Size::one(),
+                                None => i = i.clone() + Data::Size::one(),
                             }
                         }
-                        index = index + len;
+                        index = index.clone() + len;
                     }
                     _ => {
-                        temp_result = check_fn(this, Data::size_to_number(index), r)?;
+                        temp_result = check_fn(this, Data::size_to_number(index.clone()), r.clone())?;
                         index += Data::Size::one();
                     }
                 }

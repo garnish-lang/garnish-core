@@ -21,11 +21,11 @@ pub(crate) fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
 
-    let (left_type, mut right_type) = (this.get_data_type(left)?, this.get_data_type(right)?);
+    let (left_type, mut right_type) = (this.get_data_type(left.clone())?, this.get_data_type(right.clone().clone())?);
 
     if right_type == GarnishDataType::Type {
         // correct actual type we want to cast to
-        right_type = this.get_type(right)?;
+        right_type = this.get_type(right.clone())?;
     }
 
     match (left_type, right_type) {
@@ -68,7 +68,7 @@ pub(crate) fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
             primitive_cast(this, left, Data::get_byte, Data::byte_to_char, Data::add_char)?;
         }
         (GarnishDataType::CharList, GarnishDataType::Char) => {
-            let len = this.get_char_list_len(left)?;
+            let len = this.get_char_list_len(left.clone())?;
             if len == Data::Size::one() {
                 this.get_char_list_item(left, Data::Number::zero())
                     .and_then(|c| this.add_char(c))
@@ -78,14 +78,14 @@ pub(crate) fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
             }
         }
         (GarnishDataType::Range, GarnishDataType::List) => {
-            let (start, end) = this.get_range(left)?;
+            let (start, end) = this.get_range(left.clone())?;
             let len = end - start + Data::Size::one();
             let (start, end, _) = get_range(this, left)?;
             let mut count = start;
 
             this.start_list(len)?;
             while count <= end {
-                let addr = this.add_number(count)?;
+                let addr = this.add_number(count.clone())?;
                 this.add_to_list(addr, false)?;
                 count = count.increment().or_num_err()?;
             }
@@ -93,18 +93,18 @@ pub(crate) fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
             this.end_list().and_then(|r| this.push_register(r))?
         }
         (GarnishDataType::CharList, GarnishDataType::List) => {
-            let len = this.get_char_list_len(left)?;
+            let len = this.get_char_list_len(left.clone())?;
             list_from_char_list(this, left, Data::Number::zero(), Data::size_to_number(len))?;
         }
         (GarnishDataType::ByteList, GarnishDataType::List) => {
-            let len = this.get_byte_list_len(left)?;
+            let len = this.get_byte_list_len(left.clone())?;
             list_from_byte_list(this, left, Data::Number::zero(), Data::size_to_number(len))?;
         }
         (GarnishDataType::Concatenation, GarnishDataType::List) => {
-            let len = concatenation_len(this, left)?;
+            let len = concatenation_len(this, left.clone())?;
             this.start_list(len)?;
             iterate_concatenation_mut(this, left, |this, _, addr| {
-                let is_associative = is_value_association(this, addr)?;
+                let is_associative = is_value_association(this, addr.clone())?;
                 this.add_to_list(addr, is_associative)?;
                 Ok(None)
             })?;
@@ -115,19 +115,19 @@ pub(crate) fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
         (GarnishDataType::Slice, GarnishDataType::List) => {
             let (value, range) = this.get_slice(left)?;
             let (start, end, len) = get_range(this, range)?;
-            match this.get_data_type(value)? {
+            match this.get_data_type(value.clone())? {
                 GarnishDataType::List => {
-                    let len = this.get_list_len(value)?;
+                    let len = this.get_list_len(value.clone())?;
 
                     this.start_list(len)?;
 
                     let mut i = start;
 
                     while i <= end {
-                        let addr = this.get_list_item(value, i)?;
-                        let is_associative = match this.get_data_type(addr)? {
+                        let addr = this.get_list_item(value.clone(), i.clone())?;
+                        let is_associative = match this.get_data_type(addr.clone().clone())? {
                             GarnishDataType::Pair => {
-                                let (left, _) = this.get_pair(addr)?;
+                                let (left, _) = this.get_pair(addr.clone())?;
                                 match this.get_data_type(left)? {
                                     GarnishDataType::Symbol => true,
                                     _ => false,
@@ -162,7 +162,7 @@ pub(crate) fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
                             return Ok(Some(addr));
                         }
 
-                        let is_associative = is_value_association(this, addr)?;
+                        let is_associative = is_value_association(this, addr.clone())?;
                         this.add_to_list(addr, is_associative)?;
                         Ok(None)
                     })?;
@@ -202,12 +202,12 @@ pub(crate) fn list_from_char_list<Data: GarnishData>(
     start: Data::Number,
     end: Data::Number,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let len = this.get_char_list_len(byte_list_addr)?;
+    let len = this.get_char_list_len(byte_list_addr.clone())?;
     let mut count = start;
 
     this.start_list(len)?;
     while count < end {
-        let c = this.get_char_list_item(byte_list_addr, count)?;
+        let c = this.get_char_list_item(byte_list_addr.clone(), count.clone())?;
         let addr = this.add_char(c)?;
         this.add_to_list(addr, false)?;
 
@@ -225,12 +225,12 @@ pub(crate) fn list_from_byte_list<Data: GarnishData>(
     start: Data::Number,
     end: Data::Number,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let len = this.get_byte_list_len(byte_list_addr)?;
+    let len = this.get_byte_list_len(byte_list_addr.clone())?;
     let mut count = start;
 
     this.start_list(len)?;
     while count < end {
-        let c = this.get_byte_list_item(byte_list_addr, count)?;
+        let c = this.get_byte_list_item(byte_list_addr.clone(), count.clone())?;
         let addr = this.add_byte(c)?;
         this.add_to_list(addr, false)?;
 

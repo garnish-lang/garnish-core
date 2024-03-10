@@ -60,10 +60,10 @@ pub trait GarnishNumber: Sized {
 /// Trait defining what a data access operations are required by a runtime.
 pub trait GarnishData {
     type Error: std::error::Error + 'static;
-    type Symbol: Default + Display + Debug + PartialOrd + TypeConstants + Copy;
-    type Byte: Default + Display + Debug + PartialOrd + Copy;
-    type Char: Default + Display + Debug + PartialOrd + Copy;
-    type Number: Default + Display + Debug + PartialOrd + TypeConstants + Copy + GarnishNumber;
+    type Symbol: Default + Display + Debug + PartialOrd + TypeConstants + Clone;
+    type Byte: Default + Display + Debug + PartialOrd + Clone;
+    type Char: Default + Display + Debug + PartialOrd + Clone;
+    type Number: Default + Display + Debug + PartialOrd + TypeConstants + Clone + GarnishNumber;
     type Size: Default
         + Display
         + Debug
@@ -73,7 +73,7 @@ pub trait GarnishData {
         + Sub<Output = Self::Size>
         + PartialOrd
         + TypeConstants
-        + Copy;
+        + Clone;
     type SizeIterator: DoubleEndedIterator<Item = Self::Size>;
     type NumberIterator: DoubleEndedIterator<Item = Self::Number>;
     type InstructionIterator: DoubleEndedIterator<Item = Self::Size>;

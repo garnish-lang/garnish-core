@@ -6,7 +6,7 @@ pub(crate) fn and<Data: GarnishData>(this: &mut Data, data: Data::Size) -> Resul
     let value = next_ref(this)?;
 
     match is_true_value(this, value)? {
-        true => match this.get_jump_point(data) {
+        true => match this.get_jump_point(data.clone()) {
             Some(v) => Ok(Some(v)),
             None => state_error(format!("No jump point at index {:?}", data)),
         },
@@ -25,7 +25,7 @@ pub fn or<Data: GarnishData>(this: &mut Data, data: Data::Size) -> Result<Option
             push_boolean(this, true)?;
             Ok(None)
         }
-        false => match this.get_jump_point(data) {
+        false => match this.get_jump_point(data.clone()) {
             Some(v) => Ok(Some(v)),
             None => state_error(format!("No jump point at index {:?}", data)),
         }

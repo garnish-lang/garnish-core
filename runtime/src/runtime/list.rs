@@ -10,20 +10,20 @@ pub(crate) fn make_list<Data: GarnishData>(this: &mut Data, len: Data::Size) -> 
         state_error(format!("Not enough register values to make list of length {:?}", len))?
     }
 
-    this.start_list(len)?;
+    this.start_list(len.clone())?;
 
-    let mut count = this.get_register_len() - len;
+    let mut count = this.get_register_len() - len.clone();
     let end = this.get_register_len();
     // look into getting this to work with a range value
     while count < end {
-        let r = match this.get_register(count) {
+        let r = match this.get_register(count.clone()) {
             None => state_error(format!("No register value at {:?} when making list", count))?,
             Some(r) => r,
         };
 
-        let is_associative = match this.get_data_type(r)? {
+        let is_associative = match this.get_data_type(r.clone().clone())? {
             GarnishDataType::Pair => {
-                let (left, _right) = this.get_pair(r)?;
+                let (left, _right) = this.get_pair(r.clone())?;
                 match this.get_data_type(left)? {
                     GarnishDataType::Symbol => true,
                     _ => false,
@@ -54,7 +54,7 @@ pub(crate) fn get_access_addr<Data: GarnishData>(
     right: Data::Size,
     left: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    match this.get_data_type(right)? {
+    match this.get_data_type(right.clone())? {
         GarnishDataType::Number => {
             let i = this.get_number(right)?;
             access_with_integer(this, i, left)
@@ -72,17 +72,17 @@ pub(crate) fn access_with_integer<Data: GarnishData>(
     index: Data::Number,
     value: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    match this.get_data_type(value)? {
+    match this.get_data_type(value.clone())? {
         GarnishDataType::List => index_list(this, value, index),
         GarnishDataType::CharList => index_char_list(this, value, index),
         GarnishDataType::ByteList => index_byte_list(this, value, index),
         GarnishDataType::Range => {
             let (start, end) = this.get_range(value)?;
-            match (this.get_data_type(start)?, this.get_data_type(end)?) {
+            match (this.get_data_type(start.clone())?, this.get_data_type(end.clone())?) {
                 (GarnishDataType::Number, GarnishDataType::Number) => {
                     let start_int = this.get_number(start)?;
                     let end_int = this.get_number(end)?;
-                    let len = range_len::<Data>(start_int, end_int)?;
+                    let len = range_len::<Data>(start_int.clone(), end_int)?;
 
                     if index >= len {
                         return Ok(None);
@@ -100,7 +100,7 @@ pub(crate) fn access_with_integer<Data: GarnishData>(
             let (start, _, _) = get_range(this, range)?;
             let adjusted_index = start.plus(index).or_num_err()?;
 
-            match this.get_data_type(value)? {
+            match this.get_data_type(value.clone())? {
                 GarnishDataType::List => index_list(this, value, adjusted_index),
                 GarnishDataType::CharList => index_char_list(this, value, adjusted_index),
                 GarnishDataType::ByteList => index_byte_list(this, value, adjusted_index),
@@ -143,7 +143,7 @@ fn index_list<Data: GarnishData>(
     if index < Data::Number::zero() {
         Ok(None)
     } else {
-        if index >= Data::size_to_number(this.get_list_len(list)?) {
+        if index >= Data::size_to_number(this.get_list_len(list.clone())?) {
             Ok(None)
         } else {
             Ok(Some(this.get_list_item(list, index)?))
@@ -159,7 +159,7 @@ fn index_char_list<Data: GarnishData>(
     if index < Data::Number::zero() {
         Ok(None)
     } else {
-        if index >= Data::size_to_number(this.get_char_list_len(list)?) {
+        if index >= Data::size_to_number(this.get_char_list_len(list.clone())?) {
             Ok(None)
         } else {
             let c = this.get_char_list_item(list, index)?;
@@ -177,7 +177,7 @@ fn index_byte_list<Data: GarnishData>(
     if index < Data::Number::zero() {
         Ok(None)
     } else {
-        if index >= Data::size_to_number(this.get_byte_list_len(list)?) {
+        if index >= Data::size_to_number(this.get_byte_list_len(list.clone())?) {
             Ok(None)
         } else {
             let c = this.get_byte_list_item(list, index)?;
@@ -192,19 +192,19 @@ fn access_with_symbol<Data: GarnishData>(
     sym: Data::Symbol,
     value: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    match this.get_data_type(value)? {
-        GarnishDataType::List => Ok(this.get_list_item_with_symbol(value, sym)?),
+    match this.get_data_type(value.clone())? {
+        GarnishDataType::List => Ok(this.get_list_item_with_symbol(value, sym.clone())?),
         GarnishDataType::Slice => {
             let (value, range) = this.get_slice(value)?;
             let (start, end, _) = get_range(this, range)?;
 
-            match this.get_data_type(value)? {
+            match this.get_data_type(value.clone())? {
                 GarnishDataType::List => {
                     // in order to limit to slice range need to check items manually
                     // can't push, in case any of the items are a Link or Slice
                     let mut i = start;
                     let mut item: Option<Data::Size> = None;
-                    let length = Data::size_to_number(this.get_list_len(value)?);
+                    let length = Data::size_to_number(this.get_list_len(value.clone())?);
 
                     let end = if end >= length {
                         length.subtract(Data::Number::one()).or_num_err()?
@@ -215,11 +215,11 @@ fn access_with_symbol<Data: GarnishData>(
                     // need the latest value, being the value closest to the end for symbol access
                     // check entire concatenation, reassigning found each time we find a match
                     while i <= end {
-                        let list_item = this.get_list_item(value, i)?;
-                        match this.get_data_type(list_item)? {
+                        let list_item = this.get_list_item(value.clone(), i.clone())?;
+                        match this.get_data_type(list_item.clone())? {
                             GarnishDataType::Pair => {
                                 let (left, right) = this.get_pair(list_item)?;
-                                match this.get_data_type(left)? {
+                                match this.get_data_type(left.clone())? {
                                     GarnishDataType::Symbol => {
                                         if this.get_symbol(left)? == sym {
                                             item = Some(right);
@@ -243,7 +243,7 @@ fn access_with_symbol<Data: GarnishData>(
                             // in range
                             // need the latest value, being the value closest to the end for symbol access
                             // check entire concatenation, reassigning found each time we find a match
-                            let item = get_value_if_association(this, addr, sym)?;
+                            let item = get_value_if_association(this, addr, sym.clone())?;
                             match item {
                                 None => {}
                                 Some(i) => {
@@ -261,7 +261,7 @@ fn access_with_symbol<Data: GarnishData>(
             }
         }
         GarnishDataType::Concatenation => {
-            Ok(iterate_rev_concatenation_mut(this, value, |this, _index, addr| get_value_if_association(this, addr, sym))?.0)
+            Ok(iterate_rev_concatenation_mut(this, value, |this, _index, addr| get_value_if_association(this, addr, sym.clone()))?.0)
         }
         _ => Err(RuntimeError::unsupported_types()),
     }
@@ -272,10 +272,10 @@ pub(crate) fn get_value_if_association<Data: GarnishData>(
     addr: Data::Size,
     sym: Data::Symbol,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    match this.get_data_type(addr)? {
+    match this.get_data_type(addr.clone())? {
         GarnishDataType::Pair => {
             let (left, right) = this.get_pair(addr)?;
-            match this.get_data_type(left)? {
+            match this.get_data_type(left.clone())? {
                 GarnishDataType::Symbol => {
                     if this.get_symbol(left)? == sym {
                         return Ok(Some(right));
@@ -291,7 +291,7 @@ pub(crate) fn get_value_if_association<Data: GarnishData>(
 }
 
 pub(crate) fn is_value_association<Data: GarnishData>(this: &Data, addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {
-    Ok(match this.get_data_type(addr)? {
+    Ok(match this.get_data_type(addr.clone())? {
         GarnishDataType::Pair => {
             let (left, _right) = this.get_pair(addr)?;
             match this.get_data_type(left)? {

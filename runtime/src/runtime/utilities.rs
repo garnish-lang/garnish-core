@@ -23,12 +23,12 @@ pub(crate) fn get_range<Data: GarnishData>(
     addr: Data::Size,
 ) -> Result<(Data::Number, Data::Number, Data::Number), RuntimeError<Data::Error>> {
     let (start, end) = this.get_range(addr)?;
-    let (start, end) = match (this.get_data_type(start)?, this.get_data_type(end)?) {
+    let (start, end) = match (this.get_data_type(start.clone())?, this.get_data_type(end.clone())?) {
         (GarnishDataType::Number, GarnishDataType::Number) => (this.get_number(start)?, this.get_number(end)?),
         (s, e) => state_error(format!("Invalid range values {:?} {:?}", s, e))?,
     };
 
-    Ok((start, end, range_len::<Data>(start, end)?))
+    Ok((start.clone(), end.clone(), range_len::<Data>(start, end)?))
 }
 
 // push utilities

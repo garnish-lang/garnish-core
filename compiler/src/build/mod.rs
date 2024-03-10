@@ -321,7 +321,7 @@ fn resolve_node<Data: GarnishData>(
         Definition::List | Definition::CommaList => match list_count {
             None => implementation_error_with_token(format!("No list count passed to list node resolve."), &node.get_lex_token())?,
             Some(count) => {
-                data.push_instruction(Instruction::MakeList, Some(*count))?;
+                data.push_instruction(Instruction::MakeList, Some(count.clone()))?;
             }
         },
         Definition::Subexpression => {
@@ -342,7 +342,7 @@ fn resolve_node<Data: GarnishData>(
             match list_count {
                 None => implementation_error_with_token(format!("No list count passed to infix apply node resolve."), &node.get_lex_token())?,
                 Some(count) => {
-                    data.push_instruction(Instruction::MakeList, Some(*count))?;
+                    data.push_instruction(Instruction::MakeList, Some(count.clone()))?;
                 }
             }
             data.push_instruction(Instruction::Apply, None)?;
@@ -433,7 +433,7 @@ pub fn build_with_data<Data: GarnishData>(
     let mut jump_count = data.get_jump_table_len() + Data::Size::one();
 
     // tuple of (root node, last instruction of this node, nearest expression jump point)
-    let mut root_stack = vec![(root, vec![(Instruction::EndExpression, None)], data.get_jump_table_len(), None)];
+    let mut root_stack = vec![(root, vec![(Instruction::EndExpression, None)], data.get_jump_table_len(), None::<Data::Size>)];
 
     // arbitrary max iterations for roots
     let max_roots = 100;
@@ -454,11 +454,11 @@ pub fn build_with_data<Data: GarnishData>(
             // updated later to allow child jumps to be pushed first
             None => data.push_jump_point(Data::Size::zero())?,
             // some deferred roots will have a slot that needs to be updated so it can be reached
-            Some(slot) => match data.get_jump_point_mut(slot) {
+            Some(ref slot) => match data.get_jump_point_mut(slot.clone()) {
                 None => implementation_error(format!(
                     "None value for node index. All nodes should resolve properly if starting from root node."
                 ))?,
-                Some(p) => *p = jump_point,
+                Some(p) => *p = jump_point.clone(),
             },
         }
 
@@ -625,7 +625,7 @@ pub fn build_with_data<Data: GarnishData>(
                                     trace!("Resolving {:?} at {:?}", node.get_definition(), node_index);
 
                                     let (instruction_created, slot) =
-                                        resolve_node(node, &resolve_node_info, &nodes, data, list_counts.last(), jump_count)?;
+                                        resolve_node(node, &resolve_node_info, &nodes, data, list_counts.last(), jump_count.clone().clone())?;
                                     jump_slot = slot;
 
                                     if instruction_created {
@@ -654,9 +654,9 @@ pub fn build_with_data<Data: GarnishData>(
 
                                             if node.get_definition() == Definition::Reapply {
                                                 base.push((Instruction::UpdateValue, None));
-                                                base.push((Instruction::JumpTo, Some(nearest_expression_point)));
+                                                base.push((Instruction::JumpTo, Some(nearest_expression_point.clone().clone())));
                                             } else {
-                                                base.push((Instruction::JumpTo, Some(*return_index)));
+                                                base.push((Instruction::JumpTo, Some(return_index.clone())));
                                             }
 
                                             base
@@ -678,7 +678,7 @@ pub fn build_with_data<Data: GarnishData>(
                                     let count = data.get_instruction_len();
                                     match conditional_stack.pop() {
                                         None => implementation_error(format!("End of conditional branch and conditional stack is empty."))?,
-                                        Some(jump_index) => match data.get_jump_point_mut(jump_index) {
+                                        Some(jump_index) => match data.get_jump_point_mut(jump_index.clone()) {
                                             None => implementation_error(format!(
                                                 "No value in jump table at index {:?} to update for conditional branch.",
                                                 jump_index
@@ -697,9 +697,9 @@ pub fn build_with_data<Data: GarnishData>(
 
                                 if node.get_definition() == Definition::NestedExpression || we_are_conditional {
                                     let nearest_expression = if node.get_definition() == Definition::NestedExpression {
-                                        jump_count
+                                        jump_count.clone()
                                     } else {
-                                        nearest_expression_point
+                                        nearest_expression_point.clone()
                                     };
                                     match node.get_right() {
                                         None => {
@@ -769,7 +769,7 @@ pub fn build_with_data<Data: GarnishData>(
 
         if jump_from_slot.is_none() {
             // new point only added above if none
-            match data.get_jump_point_mut(jump_index) {
+            match data.get_jump_point_mut(jump_index.clone()) {
                 None => implementation_error(format!(
                     "Failed to update jump point at index {:?} because None was returned.",
                     jump_index

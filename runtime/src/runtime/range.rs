@@ -28,7 +28,7 @@ fn make_range_internal<Data: GarnishData>(
     end_exclusive: bool,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
-    let types = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
+    let types = (this.get_data_type(left_addr.clone())?, this.get_data_type(right_addr.clone())?);
 
     match types {
         (GarnishDataType::Number, GarnishDataType::Number) => {

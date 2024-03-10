@@ -5,7 +5,7 @@ use crate::runtime::utilities::next_ref;
 use garnish_lang_traits::{GarnishDataType, GarnishData, RuntimeError};
 
 pub(crate) fn jump<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    match this.get_jump_point(index) {
+    match this.get_jump_point(index.clone()) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => {
             trace!("Jumping to point {:?}", point);
@@ -20,16 +20,16 @@ pub(crate) fn jump_if_true<Data: GarnishData>(
     this: &mut Data,
     index: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let point = match this.get_jump_point(index) {
+    let point = match this.get_jump_point(index.clone()) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => point,
     };
 
     let d = next_ref(this)?;
 
-    match this.get_data_type(d)? {
+    match this.get_data_type(d.clone())? {
         GarnishDataType::False | GarnishDataType::Unit => {
-            trace!("Not jumping from value of type {:?} with addr {:?}", this.get_data_type(d)?, d);
+            trace!("Not jumping from value of type {:?} with addr {:?}", this.get_data_type(d.clone())?, d);
             Ok(None)
         }
         // all other values are considered true
@@ -44,18 +44,18 @@ pub(crate) fn jump_if_false<Data: GarnishData>(
     this: &mut Data,
     index: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let point = match this.get_jump_point(index) {
+    let point = match this.get_jump_point(index.clone()) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => point,
     };
 
     let d = next_ref(this)?;
 
-    match this.get_data_type(d)? {
+    match this.get_data_type(d.clone())? {
         GarnishDataType::False | GarnishDataType::Unit => {
             trace!(
                 "Jumping from value of type {:?} with addr {:?} to point {:?}",
-                this.get_data_type(d)?,
+                this.get_data_type(d.clone())?,
                 d,
                 point
             );

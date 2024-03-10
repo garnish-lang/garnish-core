@@ -10,14 +10,14 @@ pub(crate) fn access_left_internal<Data: GarnishData, Context: GarnishContext<Da
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
-    match this.get_data_type(r)? {
+    match this.get_data_type(r.clone())? {
         GarnishDataType::Pair => {
             let (left, _) = this.get_pair(r)?;
             this.push_register(left)?;
         }
         GarnishDataType::Range => {
             let (start, _) = this.get_range(r)?;
-            match this.get_data_type(start)? {
+            match this.get_data_type(start.clone())? {
                 GarnishDataType::Number => {
                     this.push_register(start)?;
                 }
@@ -55,14 +55,14 @@ pub(crate) fn access_right_internal<Data: GarnishData, Context: GarnishContext<D
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
-    match this.get_data_type(r)? {
+    match this.get_data_type(r.clone())? {
         GarnishDataType::Pair => {
             let (_, right) = this.get_pair(r)?;
             this.push_register(right)?;
         }
         GarnishDataType::Range => {
             let (_, end) = this.get_range(r)?;
-            match this.get_data_type(end)? {
+            match this.get_data_type(end.clone())? {
                 GarnishDataType::Number => {
                     this.push_register(end)?;
                 }
@@ -100,7 +100,7 @@ pub(crate) fn access_length_internal<Data: GarnishData, Context: GarnishContext<
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
-    match this.get_data_type(r)? {
+    match this.get_data_type(r.clone())? {
         GarnishDataType::List => {
             let len = Data::size_to_number(this.get_list_len(r)?);
             push_number(this, len)?;
@@ -115,7 +115,7 @@ pub(crate) fn access_length_internal<Data: GarnishData, Context: GarnishContext<
         }
         GarnishDataType::Range => {
             let (start, end) = this.get_range(r)?;
-            match (this.get_data_type(end)?, this.get_data_type(start)?) {
+            match (this.get_data_type(end.clone())?, this.get_data_type(start.clone())?) {
                 (GarnishDataType::Number, GarnishDataType::Number) => {
                     let start_int = this.get_number(start)?;
                     let end_int = this.get_number(end)?;
@@ -130,7 +130,7 @@ pub(crate) fn access_length_internal<Data: GarnishData, Context: GarnishContext<
         GarnishDataType::Slice => {
             let (_, range_addr) = this.get_slice(r)?;
             let (start, end) = this.get_range(range_addr)?;
-            match (this.get_data_type(start)?, this.get_data_type(end)?) {
+            match (this.get_data_type(start.clone())?, this.get_data_type(end.clone())?) {
                 (GarnishDataType::Number, GarnishDataType::Number) => {
                     let start = this.get_number(start)?;
                     let end = this.get_number(end)?;

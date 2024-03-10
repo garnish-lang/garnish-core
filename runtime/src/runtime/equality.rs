@@ -26,7 +26,7 @@ pub fn not_equal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
 pub fn type_equal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
     let left_type = this.get_data_type(left)?;
-    let right_type = this.get_data_type(right)?;
+    let right_type = this.get_data_type(right.clone())?;
 
     // check if right type needs to be corrected if Type type
     // but only if both aren't Type type
@@ -71,7 +71,7 @@ fn data_equal<Data: GarnishData>(
     left_addr: Data::Size,
     right_addr: Data::Size,
 ) -> Result<bool, RuntimeError<Data::Error>> {
-    let (left_type, right_type) = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
+    let (left_type, right_type) = (this.get_data_type(left_addr.clone())?, this.get_data_type(right_addr.clone())?);
 
     let equal = match (left_type, right_type) {
         (GarnishDataType::Unit, GarnishDataType::Unit)
@@ -85,7 +85,7 @@ fn data_equal<Data: GarnishData>(
         (GarnishDataType::Byte, GarnishDataType::Byte) => compare(this, left_addr, right_addr, Data::get_byte)?,
         (GarnishDataType::Number, GarnishDataType::Number) => compare(this, left_addr, right_addr, Data::get_number)?,
         (GarnishDataType::Char, GarnishDataType::CharList) => {
-            if this.get_char_list_len(right_addr)? == Data::Size::one() {
+            if this.get_char_list_len(right_addr.clone())? == Data::Size::one() {
                 let c1 = this.get_char(left_addr)?;
                 let c2 = this.get_char_list_item(right_addr, Data::Number::zero())?;
 
@@ -95,7 +95,7 @@ fn data_equal<Data: GarnishData>(
             }
         }
         (GarnishDataType::CharList, GarnishDataType::Char) => {
-            if this.get_char_list_len(left_addr)? == Data::Size::one() {
+            if this.get_char_list_len(left_addr.clone())? == Data::Size::one() {
                 let c1 = this.get_char_list_item(left_addr, Data::Number::zero())?;
                 let c2 = this.get_char(right_addr)?;
 
@@ -105,7 +105,7 @@ fn data_equal<Data: GarnishData>(
             }
         }
         (GarnishDataType::Byte, GarnishDataType::ByteList) => {
-            if this.get_byte_list_len(right_addr)? == Data::Size::one() {
+            if this.get_byte_list_len(right_addr.clone())? == Data::Size::one() {
                 let c1 = this.get_byte(left_addr)?;
                 let c2 = this.get_byte_list_item(right_addr, Data::Number::zero())?;
 
@@ -115,7 +115,7 @@ fn data_equal<Data: GarnishData>(
             }
         }
         (GarnishDataType::ByteList, GarnishDataType::Byte) => {
-            if this.get_byte_list_len(left_addr)? == Data::Size::one() {
+            if this.get_byte_list_len(left_addr.clone())? == Data::Size::one() {
                 let c1 = this.get_byte_list_item(left_addr, Data::Number::zero())?;
                 let c2 = this.get_byte(right_addr)?;
 
@@ -125,8 +125,8 @@ fn data_equal<Data: GarnishData>(
             }
         }
         (GarnishDataType::CharList, GarnishDataType::CharList) => {
-            let len1 = this.get_char_list_len(left_addr)?;
-            let len2 = this.get_char_list_len(right_addr)?;
+            let len1 = this.get_char_list_len(left_addr.clone())?;
+            let len2 = this.get_char_list_len(right_addr.clone())?;
 
             if len1 != len2 {
                 false
@@ -134,9 +134,9 @@ fn data_equal<Data: GarnishData>(
                 let mut count = Data::Size::one();
                 let mut equal = true;
                 while count < len1 {
-                    let i = Data::size_to_number(count);
-                    let c1 = this.get_char_list_item(left_addr, i)?;
-                    let c2 = this.get_char_list_item(right_addr, i)?;
+                    let i = Data::size_to_number(count.clone());
+                    let c1 = this.get_char_list_item(left_addr.clone(), i.clone())?;
+                    let c2 = this.get_char_list_item(right_addr.clone(), i)?;
 
                     if c1 != c2 {
                         equal = false;
@@ -149,8 +149,8 @@ fn data_equal<Data: GarnishData>(
             }
         }
         (GarnishDataType::ByteList, GarnishDataType::ByteList) => {
-            let len1 = this.get_byte_list_len(left_addr)?;
-            let len2 = this.get_byte_list_len(right_addr)?;
+            let len1 = this.get_byte_list_len(left_addr.clone())?;
+            let len2 = this.get_byte_list_len(right_addr.clone())?;
 
             if len1 != len2 {
                 false
@@ -158,9 +158,9 @@ fn data_equal<Data: GarnishData>(
                 let mut count = Data::Size::one();
                 let mut equal = true;
                 while count < len1 {
-                    let i = Data::size_to_number(count);
-                    let c1 = this.get_byte_list_item(left_addr, i)?;
-                    let c2 = this.get_byte_list_item(right_addr, i)?;
+                    let i = Data::size_to_number(count.clone());
+                    let c1 = this.get_byte_list_item(left_addr.clone(), i.clone())?;
+                    let c2 = this.get_byte_list_item(right_addr.clone(), i)?;
 
                     if c1 != c2 {
                         equal = false;
@@ -176,13 +176,13 @@ fn data_equal<Data: GarnishData>(
             let (start1, end1) = this.get_range(left_addr)?;
             let (start2, end2) = this.get_range(right_addr)?;
 
-            let start_equal = match (this.get_data_type(start1)?, this.get_data_type(start2)?) {
+            let start_equal = match (this.get_data_type(start1.clone())?, this.get_data_type(start2.clone())?) {
                 (GarnishDataType::Unit, GarnishDataType::Unit) => true,
                 (GarnishDataType::Number, GarnishDataType::Number) => this.get_number(start1)? == this.get_number(start2)?,
                 _ => false,
             };
 
-            let end_equal = match (this.get_data_type(end1)?, this.get_data_type(end2)?) {
+            let end_equal = match (this.get_data_type(end1.clone())?, this.get_data_type(end2.clone())?) {
                 (GarnishDataType::Unit, GarnishDataType::Unit) => true,
                 (GarnishDataType::Number, GarnishDataType::Number) => this.get_number(end1)? == this.get_number(end2)?,
                 _ => false,
@@ -203,8 +203,8 @@ fn data_equal<Data: GarnishData>(
             true
         }
         (GarnishDataType::Concatenation, GarnishDataType::Concatenation) => {
-            let len1 = concatenation_len(this, left_addr)?;
-            let len2 = concatenation_len(this, right_addr)?;
+            let len1 = concatenation_len(this, left_addr.clone())?;
+            let len2 = concatenation_len(this, right_addr.clone())?;
 
             if len1 != len2 {
                 false
@@ -216,8 +216,8 @@ fn data_equal<Data: GarnishData>(
                     // need to find faster way
                     // curent way is to index each concatenation one item at a time
                     match (
-                        index_concatenation_for(this, left_addr, count)?,
-                        index_concatenation_for(this, right_addr, count)?,
+                        index_concatenation_for(this, left_addr.clone(), count.clone())?,
+                        index_concatenation_for(this, right_addr.clone(), count.clone())?,
                     ) {
                         (Some(left), Some(right)) => {
                             this.push_register(left)?;
@@ -234,8 +234,8 @@ fn data_equal<Data: GarnishData>(
             }
         }
         (GarnishDataType::List, GarnishDataType::Concatenation) => {
-            let len1 = this.get_list_len(left_addr)?;
-            let len2 = concatenation_len(this, right_addr)?;
+            let len1 = this.get_list_len(left_addr.clone())?;
+            let len2 = concatenation_len(this, right_addr.clone())?;
 
             if len1 != len2 {
                 false
@@ -246,7 +246,7 @@ fn data_equal<Data: GarnishData>(
                 while count < len {
                     // need to find faster way
                     // curent way is to index each concatenation one item at a time
-                    match (this.get_list_item(left_addr, count)?, index_concatenation_for(this, right_addr, count)?) {
+                    match (this.get_list_item(left_addr.clone(), count.clone())?, index_concatenation_for(this, right_addr.clone(), count.clone())?) {
                         (left, Some(right)) => {
                             this.push_register(left)?;
                             this.push_register(right)?;
@@ -262,8 +262,8 @@ fn data_equal<Data: GarnishData>(
             }
         }
         (GarnishDataType::Concatenation, GarnishDataType::List) => {
-            let len1 = concatenation_len(this, left_addr)?;
-            let len2 = this.get_list_len(right_addr)?;
+            let len1 = concatenation_len(this, left_addr.clone())?;
+            let len2 = this.get_list_len(right_addr.clone())?;
 
             if len1 != len2 {
                 false
@@ -274,7 +274,7 @@ fn data_equal<Data: GarnishData>(
                 while count < len {
                     // need to find faster way
                     // curent way is to index each concatenation one item at a time
-                    match (index_concatenation_for(this, left_addr, count)?, this.get_list_item(right_addr, count)?) {
+                    match (index_concatenation_for(this, left_addr.clone(), count.clone())?, this.get_list_item(right_addr.clone(), count.clone())?) {
                         (Some(left), right) => {
                             this.push_register(left)?;
                             this.push_register(right)?;
@@ -302,24 +302,24 @@ fn data_equal<Data: GarnishData>(
             if len1 != len2 {
                 false
             } else {
-                match (this.get_data_type(value1)?, this.get_data_type(value2)?) {
+                match (this.get_data_type(value1.clone())?, this.get_data_type(value2.clone())?) {
                     (GarnishDataType::CharList, GarnishDataType::CharList) => {
                         let mut index1 = start1;
                         let mut index2 = start2;
                         let mut count = Data::Number::zero();
 
-                        let list_len1 = Data::size_to_number(this.get_char_list_len(value1)?);
-                        let list_len2 = Data::size_to_number(this.get_char_list_len(value2)?);
+                        let list_len1 = Data::size_to_number(this.get_char_list_len(value1.clone())?);
+                        let list_len2 = Data::size_to_number(this.get_char_list_len(value2.clone())?);
 
                         while count < len1 {
                             let item1 = if index1 < list_len1 {
-                                this.get_char_list_item(value1, index1)?
+                                this.get_char_list_item(value1.clone(), index1.clone())?
                             } else {
                                 return Ok(false);
                             };
 
                             let item2 = if index2 < list_len2 {
-                                this.get_char_list_item(value2, index2)?
+                                this.get_char_list_item(value2.clone(), index2.clone())?
                             } else {
                                 return Ok(false);
                             };
@@ -340,18 +340,18 @@ fn data_equal<Data: GarnishData>(
                         let mut index2 = start2;
                         let mut count = Data::Number::zero();
 
-                        let list_len1 = Data::size_to_number(this.get_byte_list_len(value1)?);
-                        let list_len2 = Data::size_to_number(this.get_byte_list_len(value2)?);
+                        let list_len1 = Data::size_to_number(this.get_byte_list_len(value1.clone())?);
+                        let list_len2 = Data::size_to_number(this.get_byte_list_len(value2.clone())?);
 
                         while count < len1 {
                             let item1 = if index1 < list_len1 {
-                                this.get_byte_list_item(value1, index1)?
+                                this.get_byte_list_item(value1.clone(), index1.clone())?
                             } else {
                                 return Ok(false);
                             };
 
                             let item2 = if index2 < list_len2 {
-                                this.get_byte_list_item(value2, index2)?
+                                this.get_byte_list_item(value2.clone(), index2.clone())?
                             } else {
                                 return Ok(false);
                             };
@@ -372,18 +372,18 @@ fn data_equal<Data: GarnishData>(
                         let mut index2 = start2;
                         let mut count = Data::Number::zero();
 
-                        let list_len1 = Data::size_to_number(this.get_list_len(value1)?);
-                        let list_len2 = Data::size_to_number(this.get_list_len(value2)?);
+                        let list_len1 = Data::size_to_number(this.get_list_len(value1.clone())?);
+                        let list_len2 = Data::size_to_number(this.get_list_len(value2.clone())?);
 
                         while count < len1 {
                             let item1 = if index1 < list_len1 {
-                                this.get_list_item(value1, index1)?
+                                this.get_list_item(value1.clone(), index1.clone())?
                             } else {
                                 this.add_unit()?
                             };
 
                             let item2 = if index2 < list_len2 {
-                                this.get_list_item(value2, index2)?
+                                this.get_list_item(value2.clone(), index2.clone())?
                             } else {
                                 this.add_unit()?
                             };
@@ -403,10 +403,10 @@ fn data_equal<Data: GarnishData>(
             }
         }
         (GarnishDataType::List, GarnishDataType::List) => {
-            let association_len1 = this.get_list_associations_len(left_addr)?;
-            let associations_len2 = this.get_list_associations_len(right_addr)?;
-            let len1 = this.get_list_len(left_addr)?;
-            let len2 = this.get_list_len(right_addr)?;
+            let association_len1 = this.get_list_associations_len(left_addr.clone())?;
+            let associations_len2 = this.get_list_associations_len(right_addr.clone())?;
+            let len1 = this.get_list_len(left_addr.clone())?;
+            let len2 = this.get_list_len(right_addr.clone())?;
 
             // Equality is determined sequentially
             // associations and non associations must be in the same positions
@@ -423,14 +423,14 @@ fn data_equal<Data: GarnishData>(
             } else {
                 let mut count = Data::Size::zero();
                 while count < len1 {
-                    let i = Data::size_to_number(count);
-                    let left_item = this.get_list_item(left_addr, i)?;
-                    let right_item = this.get_list_item(right_addr, i)?;
+                    let i = Data::size_to_number(count.clone());
+                    let left_item = this.get_list_item(left_addr.clone(), i.clone())?;
+                    let right_item = this.get_list_item(right_addr.clone(), i)?;
 
-                    let (left_is_associative, pair_sym, pair_item) = match this.get_data_type(left_item)? {
+                    let (left_is_associative, pair_sym, pair_item) = match this.get_data_type(left_item.clone().clone())? {
                         GarnishDataType::Pair => {
-                            let (left, right) = this.get_pair(left_item)?;
-                            match this.get_data_type(left)? {
+                            let (left, right) = this.get_pair(left_item.clone())?;
+                            match this.get_data_type(left.clone())? {
                                 GarnishDataType::Symbol => (true, this.get_symbol(left)?, right),
                                 _ => (false, Data::Symbol::zero(), Data::Size::zero()),
                             }
@@ -439,7 +439,7 @@ fn data_equal<Data: GarnishData>(
                     };
 
                     if left_is_associative {
-                        match this.get_list_item_with_symbol(right_addr, pair_sym)? {
+                        match this.get_list_item_with_symbol(right_addr.clone(), pair_sym)? {
                             Some(right_item) => {
                                 // has same association, push both items for comparison
                                 this.push_register(pair_item)?;

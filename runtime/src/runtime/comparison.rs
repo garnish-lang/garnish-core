@@ -42,7 +42,7 @@ pub fn greater_than_or_equal<Data: GarnishData>(this: &mut Data) -> Result<Optio
 fn perform_comparison<Data: GarnishData>(this: &mut Data, false_ord: Ordering) -> Result<Option<Ordering>, RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
 
-    let result = match (this.get_data_type(left)?, this.get_data_type(right)?) {
+    let result = match (this.get_data_type(left.clone())?, this.get_data_type(right.clone())?) {
         (GarnishDataType::Number, GarnishDataType::Number) => this.get_number(left)?.partial_cmp(&this.get_number(right)?),
         (GarnishDataType::Char, GarnishDataType::Char) => this.get_char(left)?.partial_cmp(&this.get_char(right)?),
         (GarnishDataType::Byte, GarnishDataType::Byte) => this.get_byte(left)?.partial_cmp(&this.get_byte(right)?),
@@ -68,7 +68,7 @@ fn perform_comparison<Data: GarnishData>(this: &mut Data, false_ord: Ordering) -
             let (left_value, left_range) = this.get_slice(left)?;
             let (right_value, right_range) = this.get_slice(right)?;
 
-            match (this.get_data_type(left_value)?, this.get_data_type(right_value)?) {
+            match (this.get_data_type(left_value.clone())?, this.get_data_type(right_value.clone())?) {
                 (GarnishDataType::ByteList, GarnishDataType::ByteList) => {
                     let (start1, ..) = get_range(this, left_range)?;
                     let (start2, ..) = get_range(this, right_range)?;
@@ -119,13 +119,13 @@ where
     GetFunc: Fn(&Data, Data::Size, Data::Number) -> Result<T, Data::Error>,
     LenFunc: Fn(&Data, Data::Size) -> Result<Data::Size, Data::Error>,
 {
-    let (len1, len2) = (Data::size_to_number(len_func(this, left)?), Data::size_to_number(len_func(this, right)?));
+    let (len1, len2) = (Data::size_to_number(len_func(this, left.clone())?), Data::size_to_number(len_func(this, right.clone())?));
 
     let mut left_index = left_start;
     let mut right_index = right_start;
 
     while left_index < len1 && right_index < len2 {
-        match get_func(this, left, left_index)?.partial_cmp(&get_func(this, right, right_index)?) {
+        match get_func(this, left.clone(), left_index.clone())?.partial_cmp(&get_func(this, right.clone(), right_index.clone())?) {
             Some(Ordering::Equal) => (),
             Some(non_eq) => return Ok(Some(non_eq)),
             None => (), // deferr

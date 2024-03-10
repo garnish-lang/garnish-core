@@ -78,7 +78,7 @@ where
 {
     let addr = next_ref(this)?;
 
-    let t = this.get_data_type(addr)?;
+    let t = this.get_data_type(addr.clone())?;
     trace!("Attempting {:?} on {:?} at {:?}", op_name, t, addr,);
 
     match t {
@@ -114,7 +114,7 @@ where
 {
     let (right_addr, left_addr) = next_two_raw_ref(this)?;
 
-    let types = (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?);
+    let types = (this.get_data_type(left_addr.clone())?, this.get_data_type(right_addr.clone())?);
     trace!(
         "Attempting {:?} between {:?} at {:?} and {:?} at {:?}",
         op_name,

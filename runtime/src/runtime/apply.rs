@@ -15,7 +15,7 @@ pub(crate) fn apply<Data: GarnishData, T: GarnishContext<Data>>(
 pub(crate) fn reapply<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let value_addr = next_ref(this)?;
 
-    let next_instruction = match this.get_jump_point(index) {
+    let next_instruction = match this.get_jump_point(index.clone()) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(i) => i,
     };
@@ -55,12 +55,12 @@ pub(crate) fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(
     // assume default, apply expression will update to its value
     let mut next_instruction = this.get_instruction_cursor() + Data::Size::one();
 
-    match (this.get_data_type(left_addr)?, this.get_data_type(right_addr)?) {
+    match (this.get_data_type(left_addr.clone())?, this.get_data_type(right_addr.clone())?) {
         (GarnishDataType::Expression, _) => {
             let expression_index = this.get_expression(left_addr)?;
 
             // Expression stores index of expression table, look up actual instruction index
-            let n = match this.get_jump_point(expression_index) {
+            let n = match this.get_jump_point(expression_index.clone()) {
                 None => state_error(format!("No jump point at index {:?}", expression_index))?,
                 Some(i) => i,
             };
@@ -131,17 +131,17 @@ pub(crate) fn narrow_range<Data: GarnishData>(
     let (start, end) = this.get_range(by)?;
     let (old_start, _) = this.get_range(to_narrow)?;
 
-    match (this.get_data_type(start)?, this.get_data_type(end)?, this.get_data_type(old_start)?) {
+    match (this.get_data_type(start.clone())?, this.get_data_type(end.clone())?, this.get_data_type(old_start.clone())?) {
         (GarnishDataType::Number, GarnishDataType::Number, GarnishDataType::Number) => {
             let (start_int, end_int, old_start_int) = (this.get_number(start)?, this.get_number(end)?, this.get_number(old_start)?);
 
-            match (old_start_int.plus(start_int), end_int.subtract(start_int)) {
+            match (old_start_int.plus(start_int.clone()), end_int.subtract(start_int)) {
                 (Some(new_start), Some(adjusted_end)) => {
                     // end is always len away from start
                     // offset end by same amount as start
-                    match new_start.plus(adjusted_end) {
+                    match new_start.clone().plus(adjusted_end.clone()) {
                         Some(new_end) => {
-                            let start_addr = this.add_number(new_start)?;
+                            let start_addr = this.add_number(new_start.clone())?;
                             let end_addr = this.add_number(new_end)?;
                             let range_addr = this.add_range(start_addr, end_addr)?;
 
