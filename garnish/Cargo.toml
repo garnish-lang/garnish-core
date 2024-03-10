@@ -1,7 +1,7 @@
 [package]
 name = "garnish_lang"
 description = "Single library for re-exporting and documenting all Garnish core libraries."
-version = "0.0.7-alpha"
+version = "0.0.8-alpha"
 authors = ["Chad Collins <chad.collins@capitalone.com>"]
 edition = "2021"
 homepage = "https://github.com/garnish-lang/garnish-core"
@@ -13,10 +13,10 @@ readme = "../README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-garnish_lang_traits = { version = "0.0.7-alpha",  path = "../traits" }
-garnish_lang_simple_data = { version = "0.0.7-alpha",  path = "../data" }
-garnish_lang_compiler = { version = "0.0.7-alpha",  path = "../compiler" }
-garnish_lang_runtime = { version = "0.0.7-alpha",  path = "../runtime" }
+garnish_lang_traits = { version = "0.0.8-alpha",  path = "../traits" }
+garnish_lang_simple_data = { version = "0.0.8-alpha",  path = "../data" }
+garnish_lang_compiler = { version = "0.0.8-alpha",  path = "../compiler" }
+garnish_lang_runtime = { version = "0.0.8-alpha",  path = "../runtime" }
 
 [features]
 serde = ["garnish_lang_traits/serde", "garnish_lang_simple_data/serde", "garnish_lang_compiler/serde", "garnish_lang_runtime/serde"]
