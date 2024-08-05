@@ -248,24 +248,48 @@ impl ParseNode {
         self.definition
     }
 
+    pub fn set_definition(&mut self, definition: Definition) {
+        self.definition = definition;
+    }
+
     pub fn get_secondary_definition(&self) -> SecondaryDefinition {
         self.secondary_definition
+    }
+
+    pub fn set_secondary_definition(&mut self, definition: SecondaryDefinition) {
+        self.secondary_definition = definition;
     }
 
     pub fn get_parent(&self) -> Option<usize> {
         self.parent
     }
 
+    pub fn set_parent(&mut self, parent: Option<usize>) {
+        self.parent = parent;
+    }
+
     pub fn get_left(&self) -> Option<usize> {
         self.left
+    }
+
+    pub fn set_left(&mut self, left: Option<usize>) {
+        self.left = left;
     }
 
     pub fn get_right(&self) -> Option<usize> {
         self.right
     }
 
+    pub fn set_right(&mut self, right: Option<usize>) {
+        self.right = right;
+    }
+
     pub fn get_lex_token(&self) -> LexerToken {
         self.lex_token.clone()
+    }
+
+    pub fn set_lex_token(&mut self, token: LexerToken) {
+        self.lex_token = token;
     }
 }
 
