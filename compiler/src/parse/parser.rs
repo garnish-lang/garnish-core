@@ -325,6 +325,10 @@ impl ParseResult {
         self.nodes.get(index)
     }
 
+    pub fn get_node_mut(&mut self, index: usize) -> Option<&mut ParseNode> {
+        self.nodes.get_mut(index)
+    }
+
     pub fn add_node(&mut self, node: ParseNode) {
         self.nodes.push(node);
     }
