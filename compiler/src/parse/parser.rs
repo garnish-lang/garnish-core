@@ -11,7 +11,7 @@ use crate::lex::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash,)]
+#[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash, )]
 pub enum Definition {
     Number,
     CharList,
@@ -277,16 +277,39 @@ pub struct ParseResult {
 }
 
 impl ParseResult {
+    pub fn new() -> Self {
+        Self { root: 0, nodes: vec![] }
+    }
+
     pub fn get_root(&self) -> usize {
         self.root
+    }
+
+    pub fn set_root(&mut self, root: usize) {
+        self.root = root;
     }
 
     pub fn get_nodes(&self) -> &Vec<ParseNode> {
         &self.nodes
     }
 
+    pub fn set_nodes(&mut self, nodes: Vec<ParseNode>) {
+        self.nodes = nodes;
+    }
+
     pub fn get_node(&self, index: usize) -> Option<&ParseNode> {
         self.nodes.get(index)
+    }
+
+    pub fn add_node(&mut self, node: ParseNode) {
+        self.nodes.push(node);
+    }
+
+    pub fn replace_node(&mut self, index: usize, node: ParseNode) {
+        match self.nodes.get_mut(index) {
+            None => (),
+            Some(n) => *n = node
+        }
     }
 }
 
@@ -436,9 +459,9 @@ fn parse_token(
                 trace!("Check group. Current group is {:?}. Current index is {:?}", under_group, left_index);
                 let is_our_group = n.definition.is_group_like()
                     && match under_group {
-                        None => false,
-                        Some(group_index) => group_index == left_index,
-                    };
+                    None => false,
+                    Some(group_index) => group_index == left_index,
+                };
 
                 let stop = my_priority < their_priority;
 
@@ -712,7 +735,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
     let trimmed = trim_tokens(&lex_tokens);
 
     if trimmed.is_empty() {
-        return Ok(ParseResult { root: 0, nodes });
+        return Ok(ParseResult::new());
     }
 
     for (i, token) in trimmed.iter().enumerate() {
@@ -978,7 +1001,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                                     expected_token,
                                     token.get_token_type()
                                 ))
-                                .append_token_details(&token))?;
+                                    .append_token_details(&token))?;
                             }
                         }
                     },
