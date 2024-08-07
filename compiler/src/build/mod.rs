@@ -52,6 +52,7 @@ type DefinitionResolveInfo = (bool, Option<usize>);
 
 fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
+        Definition::ExpressionTerminator => todo!(),
         Definition::Number
         | Definition::CharList
         | Definition::ByteList
@@ -85,7 +86,6 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         | Definition::TypeOf
         | Definition::PrefixApply => ((true, node.get_right()), (false, None)),
         Definition::EmptyApply
-        | Definition::ExpressionTerminator
         | Definition::AccessLengthInternal
         | Definition::AccessRightInternal
         | Definition::SuffixApply => ((true, node.get_left()), (false, None)),
@@ -412,10 +412,10 @@ fn resolve_node<Data: GarnishData>(
 
             if children_are_conditional && resolve_info.parent_definition != Definition::ElseJump {
                 data.push_instruction(Instruction::PutValue, None)?;
-                return Ok((true, slot))
+                return Ok((true, slot));
             }
 
-            return Ok((false, slot))
+            return Ok((false, slot));
         }
         // no runtime meaning, parser only utility
         Definition::Drop => return Err(CompilerError::new_message("Drop definition is not allowed during build.".to_string())),
@@ -501,7 +501,7 @@ pub fn build_with_data<Data: GarnishData>(
                                 Definition::Or,
                                 Definition::Reapply,
                             ]
-                            .contains(&node.get_definition());
+                                .contains(&node.get_definition());
 
                             let we_are_parent_conditional_branch =
                                 node.get_definition() == Definition::ElseJump && resolve_node_info.parent_definition != Definition::ElseJump;
@@ -848,7 +848,6 @@ mod test_utils {
 
 #[cfg(test)]
 mod general {
-
     use crate::lex::*;
     use crate::parse::*;
 
@@ -984,7 +983,6 @@ mod values {
 
 #[cfg(test)]
 mod metadata {
-
     use crate::build::*;
     use crate::lex::*;
 
@@ -1006,7 +1004,7 @@ mod metadata {
                 (Definition::Number, Some(0), None, None, "5", TokenType::Number),
             ],
         )
-        .unwrap();
+            .unwrap();
 
         assert_eq!(metadata, vec![InstructionMetadata::new(Some(1)), InstructionMetadata::new(None)])
     }
@@ -1023,7 +1021,7 @@ mod metadata {
                 (Definition::Number, Some(3), None, None, "15", TokenType::Number),
             ],
         )
-        .unwrap();
+            .unwrap();
 
 
         assert_eq!(
@@ -1049,7 +1047,7 @@ mod metadata {
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
         )
-        .unwrap();
+            .unwrap();
 
         assert_eq!(
             metadata,
@@ -2938,7 +2936,7 @@ mod conditionals {
 
 #[cfg(test)]
 mod complex_cases {
-    use crate::build::test_utils::assert_instruction_data_jumps;
+    use crate::build::test_utils::{assert_instruction_data_jumps};
     use crate::lex::TokenType;
     use crate::parse::Definition;
     use garnish_lang_simple_data::{SimpleData, SimpleDataList};
@@ -3129,6 +3127,43 @@ mod complex_cases {
                 (Instruction::PutValue, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::JumpIfFalse, Some(4)),
+                (Instruction::PutValue, None),
+                (Instruction::MakeList, Some(2)),
+                (Instruction::EndExpression, None),
+                (Instruction::Put, Some(5)),
+                (Instruction::JumpTo, Some(1)),
+                (Instruction::Put, Some(6)),
+                (Instruction::JumpTo, Some(3)),
+            ],
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(15.into()))
+                .append(SimpleData::Number(10.into()))
+                .append(SimpleData::Number(25.into())),
+            vec![0, 3, 8, 6, 10],
+        );
+    }
+
+    #[test]
+    #[should_panic] // pending implementation of stack frames to prevent memory leak
+    fn expression_terminator() {
+        assert_instruction_data_jumps(
+            3,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::JumpIfTrue, Some(3), Some(0), Some(2), "?>", TokenType::JumpIfTrue),
+                (Definition::ExpressionTerminator, Some(1), None, None, ";;", TokenType::ExpressionTerminator),
+                (Definition::CommaList, None, Some(1), Some(5), ",", TokenType::Comma),
+                (Definition::Number, Some(5), None, None, "15", TokenType::Number),
+                (Definition::JumpIfTrue, Some(3), Some(4), Some(6), "?>", TokenType::JumpIfTrue),
+                (Definition::Number, Some(5), None, None, "25", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::JumpIfTrue, Some(2)),
+                (Instruction::PutValue, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::JumpIfTrue, Some(4)),
                 (Instruction::PutValue, None),
                 (Instruction::MakeList, Some(2)),
                 (Instruction::EndExpression, None),
