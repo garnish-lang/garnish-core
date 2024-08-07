@@ -52,7 +52,7 @@ type DefinitionResolveInfo = (bool, Option<usize>);
 
 fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
-        Definition::ExpressionTerminator => todo!(),
+        Definition::ExpressionTerminator => unimplemented!(),
         Definition::Number
         | Definition::CharList
         | Definition::ByteList
@@ -330,7 +330,7 @@ fn resolve_node<Data: GarnishData>(
             data.push_instruction(Instruction::UpdateValue, None)?;
         }
         Definition::ExpressionTerminator => {
-            todo!()
+            unimplemented!()
         }
         Definition::Subexpression => {
             data.push_instruction(Instruction::UpdateValue, None)?;
