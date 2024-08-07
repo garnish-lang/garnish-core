@@ -65,6 +65,8 @@ pub enum Definition {
     Value,
     Unit,
     Subexpression,
+    ExpressionTerminator,
+    ExpressionSeparator,
     Group,
     NestedExpression,
     SideEffect,
@@ -155,6 +157,8 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::LineAnnotation => (Definition::Drop, SecondaryDefinition::Annotation),
         TokenType::Whitespace => (Definition::Drop, SecondaryDefinition::Whitespace),
         TokenType::Subexpression => (Definition::Subexpression, SecondaryDefinition::Subexpression),
+        TokenType::ExpressionTerminator => (Definition::ExpressionTerminator, SecondaryDefinition::UnarySuffix),
+        TokenType::ExpressionSeparator => (Definition::ExpressionSeparator, SecondaryDefinition::UnarySuffix),
 
         // Operations
         TokenType::EmptyApply => (Definition::EmptyApply, SecondaryDefinition::UnarySuffix),
@@ -423,6 +427,8 @@ fn make_priority_map() -> HashMap<Definition, usize> {
     map.insert(Definition::Xor, 420);
     map.insert(Definition::Or, 430);
 
+    map.insert(Definition::ExpressionTerminator, 500);
+
     map.insert(Definition::Apply, 550);
     map.insert(Definition::ApplyTo, 550);
 
@@ -435,6 +441,7 @@ fn make_priority_map() -> HashMap<Definition, usize> {
 
     map.insert(Definition::CommaList, 900);
 
+    map.insert(Definition::ExpressionSeparator, 990);
     map.insert(Definition::Subexpression, 1000);
 
     map
@@ -3183,6 +3190,44 @@ mod tests {
             &[
                 (0, Definition::Identifier, Some(1), None, None),
                 (1, Definition::EmptyApply, None, Some(0), None),
+            ],
+        );
+    }
+
+    #[test]
+    fn expression_terminator() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(";".to_string(), TokenType::ExpressionTerminator, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::ExpressionTerminator, None, Some(0), None),
+            ],
+        );
+    }
+
+    #[test]
+    fn expression_separator() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionSeparator, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::ExpressionSeparator, None, Some(0), None),
             ],
         );
     }

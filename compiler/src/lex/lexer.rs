@@ -47,6 +47,8 @@ pub enum TokenType {
     ByteList,
     Whitespace,
     Subexpression,
+    ExpressionTerminator,
+    ExpressionSeparator,
     Annotation,
     LineAnnotation,
     Apply,
@@ -230,6 +232,8 @@ impl<'a> Lexer<'a> {
             (">..", TokenType::StartExclusiveRange),
             ("..<", TokenType::EndExclusiveRange),
             (">..<", TokenType::ExclusiveRange),
+            (";;", TokenType::ExpressionTerminator),
+            (";", TokenType::ExpressionSeparator),
         ]);
 
         let current_characters = String::new();
@@ -2162,6 +2166,36 @@ mod tests {
                     row: 2
                 }
             ]
+        )
+    }
+
+    #[test]
+    fn expression_terminator() {
+        let result = lex(&";;".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ";;".to_string(),
+                token_type: TokenType::ExpressionTerminator,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn expression_separator() {
+        let result = lex(&";".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: ";".to_string(),
+                token_type: TokenType::ExpressionSeparator,
+                column: 0,
+                row: 0
+            }]
         )
     }
 

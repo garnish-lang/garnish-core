@@ -85,6 +85,8 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         | Definition::TypeOf
         | Definition::PrefixApply => ((true, node.get_right()), (false, None)),
         Definition::EmptyApply
+        | Definition::ExpressionTerminator
+        | Definition::ExpressionSeparator
         | Definition::AccessLengthInternal
         | Definition::AccessRightInternal
         | Definition::SuffixApply => ((true, node.get_left()), (false, None)),
@@ -323,7 +325,13 @@ fn resolve_node<Data: GarnishData>(
             Some(count) => {
                 data.push_instruction(Instruction::MakeList, Some(count.clone()))?;
             }
-        },
+        }
+        Definition::ExpressionSeparator => {
+            todo!()
+        }
+        Definition::ExpressionTerminator => {
+            todo!()
+        }
         Definition::Subexpression => {
             data.push_instruction(Instruction::UpdateValue, None)?;
         }
