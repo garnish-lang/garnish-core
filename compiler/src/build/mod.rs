@@ -86,7 +86,6 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         | Definition::PrefixApply => ((true, node.get_right()), (false, None)),
         Definition::EmptyApply
         | Definition::ExpressionTerminator
-        | Definition::ExpressionSeparator
         | Definition::AccessLengthInternal
         | Definition::AccessRightInternal
         | Definition::SuffixApply => ((true, node.get_left()), (false, None)),
@@ -114,6 +113,7 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         | Definition::Pair
         | Definition::Access
         | Definition::Subexpression // Same order for child resolution but has special check, might need to move out of here eventually
+        | Definition::ExpressionSeparator // ditto subexpression comment
         | Definition::Apply
         | Definition::Range
         | Definition::EndExclusiveRange
@@ -327,7 +327,7 @@ fn resolve_node<Data: GarnishData>(
             }
         }
         Definition::ExpressionSeparator => {
-            todo!()
+            data.push_instruction(Instruction::UpdateValue, None)?;
         }
         Definition::ExpressionTerminator => {
             todo!()
@@ -588,7 +588,9 @@ pub fn build_with_data<Data: GarnishData>(
                             } else if (second_expected || second_index.is_some()) && !resolve_node_info.second_resolved {
                                 // special check for subexpression, so far is only operations that isn't fully depth first
                                 // gets resolved before second child
-                                if node.get_definition() == Definition::Subexpression || node.get_definition().is_value_like() {
+                                if node.get_definition() == Definition::Subexpression
+                                    || node.get_definition() == Definition::ExpressionSeparator
+                                    || node.get_definition().is_value_like() {
                                     trace!("Resolving {:?} at {:?} (Subexpression)", node.get_definition(), node_index);
 
                                     let (instruction_created, _jump_slot) =
@@ -622,7 +624,7 @@ pub fn build_with_data<Data: GarnishData>(
                             } else {
                                 // all children resolved, now resolve this node
                                 let we_are_resolved_value = node.get_definition().is_value_like() && resolve_node_info.resolved;
-                                let we_are_subexpression = node.get_definition() == Definition::Subexpression;
+                                let we_are_subexpression = node.get_definition() == Definition::Subexpression || node.get_definition() == Definition::ExpressionSeparator;
 
                                 let resolve = !we_are_subexpression && !we_are_sub_list && !we_are_resolved_value;
 
@@ -1932,6 +1934,27 @@ mod operations {
             vec![
                 (Definition::Number, Some(1), None, None, "5", TokenType::Number),
                 (Definition::Subexpression, None, Some(0), Some(2), "\n\n", TokenType::Subexpression),
+                (Definition::Number, Some(1), None, None, "10", TokenType::Number),
+            ],
+            vec![
+                (Instruction::Put, Some(3)),
+                (Instruction::UpdateValue, None),
+                (Instruction::Put, Some(4)),
+                (Instruction::EndExpression, None),
+            ],
+            SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into())),
+        );
+    }
+
+    #[test]
+    fn expression_separator() {
+        assert_instruction_data(
+            1,
+            vec![
+                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
+                (Definition::ExpressionSeparator, None, Some(0), Some(2), ";", TokenType::ExpressionSeparator),
                 (Definition::Number, Some(1), None, None, "10", TokenType::Number),
             ],
             vec![
