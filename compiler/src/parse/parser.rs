@@ -3377,6 +3377,30 @@ mod tests {
     }
 
     #[test]
+    fn expression_separator_and_subexpression_drop_multiple_in_a_row() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(";".to_string(), TokenType::ExpressionSeparator, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new(";".to_string(), TokenType::ExpressionSeparator, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::ExpressionSeparator, None, Some(0), Some(2)),
+                (2, Definition::Identifier, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
     fn empty_apply() {
         let tokens = vec![
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
