@@ -121,6 +121,7 @@ pub enum SecondaryDefinition {
     BinaryRightToLeft,
     UnaryPrefix,
     UnarySuffix,
+    NonValueUnarySuffix,
     StartSideEffect,
     EndSideEffect,
     StartGrouping,
@@ -157,7 +158,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::LineAnnotation => (Definition::Drop, SecondaryDefinition::Annotation),
         TokenType::Whitespace => (Definition::Drop, SecondaryDefinition::Whitespace),
         TokenType::Subexpression => (Definition::Subexpression, SecondaryDefinition::Subexpression),
-        TokenType::ExpressionTerminator => (Definition::ExpressionTerminator, SecondaryDefinition::UnarySuffix),
+        TokenType::ExpressionTerminator => (Definition::ExpressionTerminator, SecondaryDefinition::NonValueUnarySuffix),
         TokenType::ExpressionSeparator => (Definition::ExpressionSeparator, SecondaryDefinition::UnarySuffix),
 
         // Operations
@@ -683,8 +684,10 @@ fn check_composition(
         (SecondaryDefinition::None, SecondaryDefinition::EndGrouping)
         | (SecondaryDefinition::None, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::None, SecondaryDefinition::UnarySuffix)
+        | (SecondaryDefinition::None, SecondaryDefinition::NonValueUnarySuffix)
         | (SecondaryDefinition::Subexpression, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::Subexpression, SecondaryDefinition::UnarySuffix)
+        | (SecondaryDefinition::Subexpression, SecondaryDefinition::NonValueUnarySuffix)
         | (SecondaryDefinition::Value, SecondaryDefinition::Identifier)
         | (SecondaryDefinition::Value, SecondaryDefinition::StartGrouping)
         | (SecondaryDefinition::Value, SecondaryDefinition::UnaryPrefix)
@@ -696,6 +699,7 @@ fn check_composition(
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::EndGrouping)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnarySuffix)
+        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::NonValueUnarySuffix)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Value)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Identifier)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::StartGrouping)
@@ -703,6 +707,7 @@ fn check_composition(
         | (SecondaryDefinition::StartSideEffect, SecondaryDefinition::EndSideEffect)
         | (SecondaryDefinition::StartSideEffect, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::StartSideEffect, SecondaryDefinition::UnarySuffix)
+        | (SecondaryDefinition::StartSideEffect, SecondaryDefinition::NonValueUnarySuffix)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::None)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::Subexpression)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::EndGrouping)
@@ -719,7 +724,13 @@ fn check_composition(
         | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Value)
         | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Identifier)
         | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::StartGrouping)
-        | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::UnaryPrefix) => composition_error(previous, current, &token),
+        | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::UnaryPrefix)
+        | (SecondaryDefinition::Value, SecondaryDefinition::NonValueUnarySuffix)
+        | (SecondaryDefinition::Identifier, SecondaryDefinition::NonValueUnarySuffix)
+        | (SecondaryDefinition::NonValueUnarySuffix, SecondaryDefinition::Value)
+        | (SecondaryDefinition::NonValueUnarySuffix, SecondaryDefinition::Identifier)
+        | (SecondaryDefinition::NonValueUnarySuffix, SecondaryDefinition::StartGrouping)
+        | (SecondaryDefinition::NonValueUnarySuffix, SecondaryDefinition::UnaryPrefix) => composition_error(previous, current, &token),
         _ => Ok(()),
     }
 }
@@ -914,7 +925,8 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
 
                 (definition, parent, None, right)
             }
-            SecondaryDefinition::UnarySuffix => {
+            SecondaryDefinition::UnarySuffix
+            | SecondaryDefinition::NonValueUnarySuffix => {
                 next_parent = Some(current_id);
                 parse_token(
                     current_id,
@@ -1519,6 +1531,150 @@ mod composition_errors {
         let result = parse(&tokens);
 
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn value_non_value_unary_prefix() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(&tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn identifier_non_value_unary_prefix() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(&tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn end_group_non_value_unary_prefix() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(&tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn non_value_unary_prefix_end_group() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(&tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn non_value_unary_prefix_binary() {
+        let tokens = vec![
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
+            LexerToken::new("+".to_string(), TokenType::PlusSign, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(&tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn non_value_unary_suffix_value() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+        ];
+
+        let result = parse(&tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn non_value_unary_suffix_identifier() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(&tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn non_value_unary_suffix_non_value_unary_prefix() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(&tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn non_value_unary_suffix_start_group() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(&tokens);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn expression_terminator_after_value() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
+        ];
+
+        let result = parse(&tokens);
+
+        assert!(result.is_err())
+    }
+
+    #[test]
+    fn expression_terminator_after_identifier() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
+        ];
+
+        let result = parse(&tokens);
+
+        assert!(result.is_err())
     }
 
     #[test]
@@ -3198,17 +3354,19 @@ mod tests {
     fn expression_terminator() {
         let tokens = vec![
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
-            LexerToken::new(";".to_string(), TokenType::ExpressionTerminator, 0, 0),
+            LexerToken::new("~~".to_string(), TokenType::EmptyApply, 0, 0),
+            LexerToken::new(";;".to_string(), TokenType::ExpressionTerminator, 0, 0),
         ];
 
         let result = parse(&tokens).unwrap();
 
         assert_result(
             &result,
-            1,
+            2,
             &[
                 (0, Definition::Identifier, Some(1), None, None),
-                (1, Definition::ExpressionTerminator, None, Some(0), None),
+                (1, Definition::EmptyApply, Some(2), Some(0), None),
+                (2, Definition::ExpressionTerminator, None, Some(1), None),
             ],
         );
     }
@@ -3217,7 +3375,7 @@ mod tests {
     fn expression_separator() {
         let tokens = vec![
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
-            LexerToken::new(";;".to_string(), TokenType::ExpressionSeparator, 0, 0),
+            LexerToken::new(";".to_string(), TokenType::ExpressionSeparator, 0, 0),
         ];
 
         let result = parse(&tokens).unwrap();
