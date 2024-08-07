@@ -159,7 +159,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::Whitespace => (Definition::Drop, SecondaryDefinition::Whitespace),
         TokenType::Subexpression => (Definition::Subexpression, SecondaryDefinition::Subexpression),
         TokenType::ExpressionTerminator => (Definition::ExpressionTerminator, SecondaryDefinition::NonValueUnarySuffix),
-        TokenType::ExpressionSeparator => (Definition::ExpressionSeparator, SecondaryDefinition::UnarySuffix),
+        TokenType::ExpressionSeparator => (Definition::ExpressionSeparator, SecondaryDefinition::Subexpression),
 
         // Operations
         TokenType::EmptyApply => (Definition::EmptyApply, SecondaryDefinition::UnarySuffix),
@@ -1147,7 +1147,8 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                                     left_node.right = None;
                                 }
 
-                                left_node.definition == Definition::Subexpression || left_node.definition == Definition::NestedExpression
+                                left_node.secondary_definition == SecondaryDefinition::Subexpression
+                                    || left_node.definition == Definition::NestedExpression
                             }
                         },
                     };
@@ -1161,7 +1162,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                         next_parent = Some(current_id);
                         parse_token(
                             current_id,
-                            Definition::Subexpression,
+                            definition,
                             last_left,
                             assumed_right,
                             &mut nodes,
@@ -3332,6 +3333,50 @@ mod tests {
     }
 
     #[test]
+    fn expression_separator() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(";".to_string(), TokenType::ExpressionSeparator, 0, 0),
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::ExpressionSeparator, None, Some(0), Some(2)),
+                (2, Definition::Identifier, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn expression_separator_drop_multiple_in_a_row() {
+        let tokens = vec![
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new(";".to_string(), TokenType::ExpressionSeparator, 0, 0),
+            LexerToken::new(";".to_string(), TokenType::ExpressionSeparator, 0, 0),
+            LexerToken::new(";".to_string(), TokenType::ExpressionSeparator, 0, 0),
+            LexerToken::new("property".to_string(), TokenType::Identifier, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Identifier, Some(1), None, None),
+                (1, Definition::ExpressionSeparator, None, Some(0), Some(2)),
+                (2, Definition::Identifier, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
     fn empty_apply() {
         let tokens = vec![
             LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
@@ -3367,25 +3412,6 @@ mod tests {
                 (0, Definition::Identifier, Some(1), None, None),
                 (1, Definition::EmptyApply, Some(2), Some(0), None),
                 (2, Definition::ExpressionTerminator, None, Some(1), None),
-            ],
-        );
-    }
-
-    #[test]
-    fn expression_separator() {
-        let tokens = vec![
-            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
-            LexerToken::new(";".to_string(), TokenType::ExpressionSeparator, 0, 0),
-        ];
-
-        let result = parse(&tokens).unwrap();
-
-        assert_result(
-            &result,
-            1,
-            &[
-                (0, Definition::Identifier, Some(1), None, None),
-                (1, Definition::ExpressionSeparator, None, Some(0), None),
             ],
         );
     }
