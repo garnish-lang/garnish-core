@@ -1,3 +1,4 @@
+use std::ops::Sub;
 use log::trace;
 
 use garnish_lang_traits::{GarnishData, Instruction, TypeConstants};
@@ -52,7 +53,6 @@ type DefinitionResolveInfo = (bool, Option<usize>);
 
 fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
-        Definition::ExpressionTerminator => unimplemented!(),
         Definition::Number
         | Definition::CharList
         | Definition::ByteList
@@ -62,7 +62,8 @@ fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionReso
         | Definition::Value
         | Definition::Unit
         | Definition::False // Shares logic with subexpression, TODO look into refactoring this logic to specify all three visits instead of just two
-        | Definition::True => ((false, node.get_left()), (false, node.get_right())),
+        | Definition::True
+        | Definition::ExpressionTerminator=> ((false, node.get_left()), (false, node.get_right())),
         Definition::Opposite => {
             // if right value is a number, don't resolve it
             // will be handled during opposite's resolve
@@ -330,7 +331,7 @@ fn resolve_node<Data: GarnishData>(
             data.push_instruction(Instruction::UpdateValue, None)?;
         }
         Definition::ExpressionTerminator => {
-            unimplemented!()
+            data.push_instruction(Instruction::EndExpression, None)?;
         }
         Definition::Subexpression => {
             data.push_instruction(Instruction::UpdateValue, None)?;
@@ -765,6 +766,15 @@ pub fn build_with_data<Data: GarnishData>(
         for instruction in return_instructions {
             trace!("Adding return instruction {:?} with data {:?}", instruction.0, instruction.1);
 
+            // possible to have a ExpressionTerminator directly before implicit end of expression
+            // skip if last instruction and this instruction are same
+            match data.get_instruction_iter().last().and_then(|i| data.get_instruction(i)) {
+                None => (),
+                Some((last_instruction, _)) => if instruction.0 == last_instruction {
+                    continue;
+                }
+            }
+
             data.push_instruction(instruction.0, instruction.1)?;
             metadata.push(InstructionMetadata::new(None));
         }
@@ -879,6 +889,16 @@ mod values {
     use crate::parse::*;
 
     use super::test_utils::*;
+
+    #[test]
+    fn expression_terminator() {
+        assert_instruction_data(
+            0,
+            vec![(Definition::ExpressionTerminator, None, None, None, ";;", TokenType::ExpressionTerminator)],
+            vec![(Instruction::EndExpression, None)],
+            SimpleDataList::default(),
+        );
+    }
 
     #[test]
     fn put_integer() {
@@ -3127,43 +3147,6 @@ mod complex_cases {
                 (Instruction::PutValue, None),
                 (Instruction::Put, Some(4)),
                 (Instruction::JumpIfFalse, Some(4)),
-                (Instruction::PutValue, None),
-                (Instruction::MakeList, Some(2)),
-                (Instruction::EndExpression, None),
-                (Instruction::Put, Some(5)),
-                (Instruction::JumpTo, Some(1)),
-                (Instruction::Put, Some(6)),
-                (Instruction::JumpTo, Some(3)),
-            ],
-            SimpleDataList::default()
-                .append(SimpleData::Number(5.into()))
-                .append(SimpleData::Number(15.into()))
-                .append(SimpleData::Number(10.into()))
-                .append(SimpleData::Number(25.into())),
-            vec![0, 3, 8, 6, 10],
-        );
-    }
-
-    #[test]
-    #[should_panic] // pending implementation of stack frames to prevent memory leak
-    fn expression_terminator() {
-        assert_instruction_data_jumps(
-            3,
-            vec![
-                (Definition::Number, Some(1), None, None, "5", TokenType::Number),
-                (Definition::JumpIfTrue, Some(3), Some(0), Some(2), "?>", TokenType::JumpIfTrue),
-                (Definition::ExpressionTerminator, Some(1), None, None, ";;", TokenType::ExpressionTerminator),
-                (Definition::CommaList, None, Some(1), Some(5), ",", TokenType::Comma),
-                (Definition::Number, Some(5), None, None, "15", TokenType::Number),
-                (Definition::JumpIfTrue, Some(3), Some(4), Some(6), "?>", TokenType::JumpIfTrue),
-                (Definition::Number, Some(5), None, None, "25", TokenType::Number),
-            ],
-            vec![
-                (Instruction::Put, Some(3)),
-                (Instruction::JumpIfTrue, Some(2)),
-                (Instruction::PutValue, None),
-                (Instruction::Put, Some(4)),
-                (Instruction::JumpIfTrue, Some(4)),
                 (Instruction::PutValue, None),
                 (Instruction::MakeList, Some(2)),
                 (Instruction::EndExpression, None),
