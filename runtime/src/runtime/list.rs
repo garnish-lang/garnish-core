@@ -40,7 +40,7 @@ pub(crate) fn make_list<Data: GarnishData>(this: &mut Data, len: Data::Size) -> 
     // remove used registers
     count = Data::Size::zero();
     while count < len {
-        this.pop_register();
+        this.pop_register()?;
         count += Data::Size::one();
     }
 

@@ -65,7 +65,7 @@ where
     let mut result = None;
 
     while this.get_register_len() > start_register {
-        match this.pop_register() {
+        match this.pop_register()? {
             None => Err(RuntimeError::new(
                 format!("Popping more registers than placed during concatenation indexing.").as_str(),
             ))?,
@@ -115,7 +115,7 @@ where
 
     // clear borrowed registers
     while this.get_register_len() > start_register {
-        this.pop_register();
+        this.pop_register()?;
     }
 
     Ok((result, index))

@@ -5,7 +5,7 @@ use garnish_lang_traits::{GarnishDataType, GarnishData, RuntimeError};
 use crate::runtime::error::state_error;
 
 pub(crate) fn next_ref<Data: GarnishData>(this: &mut Data) -> Result<Data::Size, RuntimeError<Data::Error>> {
-    match this.pop_register() {
+    match this.pop_register()? {
         None => state_error(format!("No references in register."))?,
         Some(i) => Ok(i),
     }

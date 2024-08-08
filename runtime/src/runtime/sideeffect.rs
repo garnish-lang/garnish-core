@@ -19,7 +19,7 @@ pub(crate) fn end_side_effect<Data: GarnishData>(this: &mut Data) -> Result<Opti
         None => state_error("Could not pop value at end of side effect.".to_string())?,
     }
 
-    match this.pop_register() {
+    match this.pop_register()? {
         Some(_) => Ok(None),
         None => state_error("Could not pop register at end of side effect.".to_string()),
     }

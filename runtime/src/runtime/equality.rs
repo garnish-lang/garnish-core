@@ -56,7 +56,7 @@ fn perform_equality_check<Data: GarnishData>(this: &mut Data) -> Result<bool, Ru
         if !data_equal(this, left, right)? {
             // ending early need to remove any remaining values from registers
             while this.get_register_len() > start {
-                this.pop_register();
+                this.pop_register()?;
             }
 
             return Ok(false);

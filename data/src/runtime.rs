@@ -408,8 +408,17 @@ where
         self.register.get(addr).cloned()
     }
 
-    fn pop_register(&mut self) -> Option<usize> {
-        self.register.pop()
+    fn pop_register(&mut self) -> Result<Option<Self::Size>, Self::Error> {
+        match self.register.pop() {
+            None => Ok(None),
+            Some(value) => match self.data.get(value) {
+                None => Err(format!("Register address ({}) has no data", value))?,
+                Some(data) => match data {
+                    SimpleData::StackFrame(_) => Err(format!("Popped StackFrame from registers. Should only be done when popping jump path."))?,
+                    _ => Ok(Some(value))
+                }
+            }
+        }
     }
 
     fn get_data_len(&self) -> usize {
@@ -784,5 +793,20 @@ mod tests {
         assert_eq!(r, None);
 
         assert_eq!(data.register.len(), 0);
+    }
+
+    #[test]
+    fn pop_register_of_stack_frame_gives_error() {
+        let mut data = SimpleGarnishData::new();
+
+        let data_addr = data.add_number(SimpleNumber::Integer(10)).unwrap(); // 3
+
+        data.push_register(data_addr).unwrap();
+        data.push_register(data_addr).unwrap();
+        data.push_jump_path(10).unwrap();
+
+        let result = data.pop_register();
+
+        assert!(result.is_err());
     }
 }
