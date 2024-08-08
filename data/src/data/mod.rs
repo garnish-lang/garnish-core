@@ -10,11 +10,13 @@ pub use parsing::*;
 pub use iterators::*;
 
 use crate::{DataError, NoCustom, symbol_value};
+use crate::data::stack_frame::SimpleStackFrame;
 
 mod display;
 mod number;
 mod parsing;
 mod iterators;
+mod stack_frame;
 
 /// List of [`SimpleData`] with maps to convert symbolic values to original string.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -130,6 +132,7 @@ where
     Slice(usize, usize),
     List(Vec<usize>, Vec<usize>),
     Concatenation(usize, usize),
+    StackFrame(SimpleStackFrame),
     Custom(T),
 }
 
@@ -156,7 +159,8 @@ where
             SimpleData::Range(_, _) => GarnishDataType::Range,
             SimpleData::Slice(_, _) => GarnishDataType::Slice,
             SimpleData::List(_, _) => GarnishDataType::List,
-            SimpleData::Custom(_) => GarnishDataType::Custom,
+            SimpleData::StackFrame(_)
+            | SimpleData::Custom(_) => GarnishDataType::Custom,
         }
     }
 
@@ -178,6 +182,13 @@ where
         match self {
             SimpleData::False => true,
             _ => false,
+        }
+    }
+
+    pub fn as_stack_frame(&self) -> DataCastResult<SimpleStackFrame> {
+        match self {
+            SimpleData::StackFrame(v) => Ok(*v),
+            _ => Err(DataError::from(format!("{:?} is not a StackFrame", self))),
         }
     }
 
@@ -291,6 +302,7 @@ where
 mod tests {
     use crate::data::{SimpleDataNC, SimpleNumber};
     use crate::{GarnishDataType, NoCustom};
+    use crate::data::stack_frame::SimpleStackFrame;
 
     #[test]
     fn get_data_type() {
@@ -310,6 +322,7 @@ mod tests {
         assert_eq!(SimpleDataNC::Range(0, 0).get_data_type(), GarnishDataType::Range);
         assert_eq!(SimpleDataNC::Slice(0, 0).get_data_type(), GarnishDataType::Slice);
         assert_eq!(SimpleDataNC::List(vec![], vec![]).get_data_type(), GarnishDataType::List);
+        assert_eq!(SimpleDataNC::StackFrame(SimpleStackFrame::new(0, 0)).get_data_type(), GarnishDataType::Custom);
         assert_eq!(SimpleDataNC::Custom(NoCustom {}).get_data_type(), GarnishDataType::Custom);
     }
 
@@ -345,6 +358,12 @@ mod tests {
 
     #[test]
     fn is_custom() {
+        assert_eq!(SimpleDataNC::StackFrame(SimpleStackFrame::new(0, 0))
+                       .as_stack_frame().unwrap(), SimpleStackFrame::new(0, 0));
+    }
+
+    #[test]
+    fn is_stack_frame() {
         assert_eq!(SimpleDataNC::Custom(NoCustom {}).as_custom().unwrap(), NoCustom {});
     }
 

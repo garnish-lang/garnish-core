@@ -33,6 +33,7 @@ where
                 h.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(", ")
             ),
             SimpleData::Concatenation(l, r) => format!("Concatenation({}, {})", l, r),
+            SimpleData::StackFrame(s) => format!("StackFrame{{return: {}, previous: {}}}", s.return_addr(), s.previous_frame()),
             SimpleData::Custom(c) => format!("{}", c),
         }
     }
@@ -243,6 +244,7 @@ mod simple {
 
     use crate::data::display::shared::StructWith;
     use crate::data::{SimpleData, SimpleNumber};
+    use crate::data::stack_frame::SimpleStackFrame;
     use crate::NoCustom;
 
     #[test]
@@ -339,6 +341,12 @@ mod simple {
     fn simple_list() {
         let data: SimpleData<NoCustom> = SimpleData::List(vec![10, 20], vec![20, 10]);
         assert_eq!(data.display_simple(), "List([10, 20], [20, 10])".to_string());
+    }
+
+    #[test]
+    fn simple_stack_frame() {
+        let data: SimpleData<NoCustom> = SimpleData::StackFrame(SimpleStackFrame::new(5, 10));
+        assert_eq!(data.display_simple(), "StackFrame{return: 5, previous: 10}".to_string());
     }
 
     #[test]
