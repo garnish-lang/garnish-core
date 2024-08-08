@@ -94,7 +94,6 @@ mod tests {
 
         assert_eq!(runtime.get_data_mut().get_value(0).unwrap(), int2);
         assert_eq!(next.unwrap(), i1);
-        assert_eq!(runtime.get_data_mut().get_jump_path(0).unwrap(), i3);
     }
 
     #[test]
@@ -126,7 +125,6 @@ mod tests {
         let i = runtime.get_data_mut().get_value(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
         assert_eq!(next.unwrap(), i1);
-        assert_eq!(runtime.get_data_mut().get_jump_path(0).unwrap(), i3);
     }
 
     #[test]

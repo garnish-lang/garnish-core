@@ -8,9 +8,9 @@ use garnish_lang_traits::GarnishDataType;
 pub use number::*;
 pub use parsing::*;
 pub use iterators::*;
+pub use stack_frame::*;
 
 use crate::{DataError, NoCustom, symbol_value};
-use crate::data::stack_frame::SimpleStackFrame;
 
 mod display;
 mod number;
@@ -322,7 +322,7 @@ mod tests {
         assert_eq!(SimpleDataNC::Range(0, 0).get_data_type(), GarnishDataType::Range);
         assert_eq!(SimpleDataNC::Slice(0, 0).get_data_type(), GarnishDataType::Slice);
         assert_eq!(SimpleDataNC::List(vec![], vec![]).get_data_type(), GarnishDataType::List);
-        assert_eq!(SimpleDataNC::StackFrame(SimpleStackFrame::new(0, 0)).get_data_type(), GarnishDataType::Custom);
+        assert_eq!(SimpleDataNC::StackFrame(SimpleStackFrame::new(0)).get_data_type(), GarnishDataType::Custom);
         assert_eq!(SimpleDataNC::Custom(NoCustom {}).get_data_type(), GarnishDataType::Custom);
     }
 
@@ -358,8 +358,8 @@ mod tests {
 
     #[test]
     fn is_custom() {
-        assert_eq!(SimpleDataNC::StackFrame(SimpleStackFrame::new(0, 0))
-                       .as_stack_frame().unwrap(), SimpleStackFrame::new(0, 0));
+        assert_eq!(SimpleDataNC::StackFrame(SimpleStackFrame::new(0))
+                       .as_stack_frame().unwrap(), SimpleStackFrame::new(0));
     }
 
     #[test]

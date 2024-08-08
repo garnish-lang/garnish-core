@@ -46,6 +46,7 @@ where
     T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     register: Vec<usize>,
+    current_frame: usize,
     data: SimpleDataList<T>,
     end_of_constant_data: usize,
     values: Vec<usize>,
@@ -67,6 +68,7 @@ impl SimpleGarnishData<NoCustom> {
     pub fn new() -> Self {
         SimpleGarnishData {
             register: vec![],
+            current_frame: 0,
             data: SimpleDataList::default(),
             end_of_constant_data: 0,
             values: vec![],
@@ -90,6 +92,7 @@ where
     pub fn new_custom() -> Self {
         SimpleGarnishData {
             register: vec![],
+            current_frame: 0,
             data: SimpleDataList::<T>::default(),
             end_of_constant_data: 0,
             values: vec![],
@@ -114,6 +117,11 @@ where
 
     pub fn add_custom(&mut self, data: T) -> Result<usize, DataError> {
         self.data.push(SimpleData::Custom(data));
+        Ok(self.data.len() - 1)
+    }
+
+    pub fn add_stack_frame(&mut self, frame: SimpleStackFrame) -> Result<usize, DataError> {
+        self.data.push(SimpleData::StackFrame(frame));
         Ok(self.data.len() - 1)
     }
 

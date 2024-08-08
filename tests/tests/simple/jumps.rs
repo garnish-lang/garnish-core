@@ -68,6 +68,7 @@ mod tests {
 
         runtime.get_data_mut().push_register(1).unwrap();
         runtime.get_data_mut().push_jump_path(4).unwrap();
+        runtime.get_data_mut().push_register(1).unwrap();
         runtime.get_data_mut().set_instruction_cursor(2).unwrap();
 
         runtime.get_data_mut().push_value_stack(1).unwrap();

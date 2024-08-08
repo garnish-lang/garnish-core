@@ -33,7 +33,7 @@ where
                 h.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(", ")
             ),
             SimpleData::Concatenation(l, r) => format!("Concatenation({}, {})", l, r),
-            SimpleData::StackFrame(s) => format!("StackFrame{{return: {}, previous: {}}}", s.return_addr(), s.previous_frame()),
+            SimpleData::StackFrame(s) => format!("StackFrame{{return: {}}}", s.return_addr()),
             SimpleData::Custom(c) => format!("{}", c),
         }
     }
@@ -345,8 +345,8 @@ mod simple {
 
     #[test]
     fn simple_stack_frame() {
-        let data: SimpleData<NoCustom> = SimpleData::StackFrame(SimpleStackFrame::new(5, 10));
-        assert_eq!(data.display_simple(), "StackFrame{return: 5, previous: 10}".to_string());
+        let data: SimpleData<NoCustom> = SimpleData::StackFrame(SimpleStackFrame::new(5));
+        assert_eq!(data.display_simple(), "StackFrame{return: 5}".to_string());
     }
 
     #[test]

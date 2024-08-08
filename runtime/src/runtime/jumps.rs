@@ -69,16 +69,19 @@ pub(crate) fn jump_if_false<Data: GarnishData>(
 }
 
 pub(crate) fn end_expression<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    // store return value
+    let r = next_ref(this)?;
+
     match this.pop_jump_path() {
         None => {
             // no more jumps, this should be the end of the entire execution
-            let r = next_ref(this)?;
             trace!(
                 "No remaining return points. Pushing {:?} to values. Setting cursor to instruction length {:?}.",
                 r,
                 this.get_instruction_len()
             );
 
+            // set value to ended expressions return value
             match this.get_current_value_mut() {
                 None => state_error(format!("No inputs available to update during end expression operation."))?,
                 Some(v) => *v = r,

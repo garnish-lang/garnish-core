@@ -5,7 +5,7 @@ use std::hash::Hash;
 use garnish_lang_traits::GarnishData;
 
 use crate::data::{parse_byte_list, parse_char_list, parse_simple_number, NumberIterator, SimpleNumber, SizeIterator};
-use crate::{symbol_value, DataError, GarnishDataType, Instruction, SimpleInstruction, SimpleData, SimpleGarnishData};
+use crate::{symbol_value, DataError, GarnishDataType, Instruction, SimpleInstruction, SimpleData, SimpleGarnishData, SimpleStackFrame};
 
 impl<T> GarnishData for SimpleGarnishData<T>
 where
@@ -489,12 +489,22 @@ where
     }
 
     fn push_jump_path(&mut self, index: usize) -> Result<(), Self::Error> {
-        self.jump_path.push(index);
-        Ok(())
+        let r = self.add_stack_frame(SimpleStackFrame::new(index))?;
+        self.push_register(r)
     }
 
     fn pop_jump_path(&mut self) -> Option<usize> {
-        self.jump_path.pop()
+        while let Some(item) = self.register.pop() {
+            match self.data.get(item) {
+                None => return None, // should probably be error
+                Some(data) => match data {
+                    SimpleData::StackFrame(frame) => return Some(frame.return_addr()),
+                    _ => (),
+                }
+            }
+        }
+
+        None
     }
 
     fn get_jump_point_mut(&mut self, index: usize) -> Option<&mut usize> {
@@ -682,7 +692,8 @@ where
 mod tests {
     use garnish_lang_traits::GarnishData;
 
-    use crate::{GarnishDataType, Instruction, SimpleGarnishData};
+    use crate::{GarnishDataType, Instruction, SimpleGarnishData, SimpleNumber, SimpleStackFrame};
+    use crate::SimpleData::StackFrame;
 
     #[test]
     fn type_of() {
@@ -742,5 +753,37 @@ mod tests {
         runtime.set_instruction_cursor(2).unwrap();
 
         assert_eq!(runtime.get_current_instruction().unwrap().0, Instruction::Add);
+    }
+
+    #[test]
+    fn pop_jump_path_clears_registers_to_current_frame() {
+        let mut data = SimpleGarnishData::new();
+
+        let data_addr = data.add_number(SimpleNumber::Integer(10)).unwrap(); // 3
+
+        data.push_register(data_addr).unwrap();
+        data.push_register(data_addr).unwrap();
+        data.push_jump_path(10).unwrap();
+        data.push_register(data_addr).unwrap();
+        data.push_register(data_addr).unwrap();
+        data.push_register(data_addr).unwrap();
+        data.push_jump_path(20).unwrap();
+        data.push_register(data_addr).unwrap();
+        data.push_register(data_addr).unwrap();
+
+        assert_eq!(data.register.len(), 9);
+
+        let r = data.pop_jump_path();
+        assert_eq!(r, Some(20));
+        assert_eq!(data.register.len(), 6);
+
+        let r = data.pop_jump_path();
+        assert_eq!(r, Some(10));
+        assert_eq!(data.register.len(), 2);
+
+        let r = data.pop_jump_path();
+        assert_eq!(r, None);
+
+        assert_eq!(data.register.len(), 0);
     }
 }
