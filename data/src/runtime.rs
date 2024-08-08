@@ -64,7 +64,7 @@ where
     }
 
     fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
-        return SizeIterator::new(0, self.jump_path.len());
+        unimplemented!() // not sure whether this function is needed currently unused by core
     }
 
     fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
@@ -692,8 +692,7 @@ where
 mod tests {
     use garnish_lang_traits::GarnishData;
 
-    use crate::{GarnishDataType, Instruction, SimpleGarnishData, SimpleNumber, SimpleStackFrame};
-    use crate::SimpleData::StackFrame;
+    use crate::{GarnishDataType, Instruction, SimpleGarnishData, SimpleNumber};
 
     #[test]
     fn type_of() {

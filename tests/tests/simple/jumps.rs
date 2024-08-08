@@ -95,7 +95,6 @@ mod tests {
 
         let next = runtime.jump(0).unwrap();
 
-        assert!(runtime.get_data_mut().get_jump_path_vec().is_empty());
         assert_eq!(next.unwrap(), i1);
     }
 

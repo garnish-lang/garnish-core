@@ -46,14 +46,12 @@ where
     T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     register: Vec<usize>,
-    current_frame: usize,
     data: SimpleDataList<T>,
     end_of_constant_data: usize,
     values: Vec<usize>,
     instructions: Vec<SimpleInstruction>,
     instruction_cursor: usize,
     expression_table: Vec<usize>,
-    jump_path: Vec<usize>,
     current_list: Option<(Vec<usize>, Vec<usize>)>,
     current_char_list: Option<String>,
     current_byte_list: Option<Vec<u8>>,
@@ -68,14 +66,12 @@ impl SimpleGarnishData<NoCustom> {
     pub fn new() -> Self {
         SimpleGarnishData {
             register: vec![],
-            current_frame: 0,
             data: SimpleDataList::default(),
             end_of_constant_data: 0,
             values: vec![],
             instruction_cursor: 0,
             instructions: vec![],
             expression_table: vec![],
-            jump_path: vec![],
             current_list: None,
             current_char_list: None,
             current_byte_list: None,
@@ -92,14 +88,12 @@ where
     pub fn new_custom() -> Self {
         SimpleGarnishData {
             register: vec![],
-            current_frame: 0,
             data: SimpleDataList::<T>::default(),
             end_of_constant_data: 0,
             values: vec![],
             instruction_cursor: 0,
             instructions: vec![],
             expression_table: vec![],
-            jump_path: vec![],
             current_list: None,
             current_char_list: None,
             current_byte_list: None,
@@ -137,10 +131,6 @@ where
         &self.register
     }
 
-    pub fn get_jump_path_vec(&self) -> &Vec<usize> {
-        &self.jump_path
-    }
-
     pub fn get_jump_points(&self) -> &Vec<usize> {
         &self.expression_table
     }
@@ -168,10 +158,6 @@ where
 
     pub fn get_end_of_constant_data(&self) -> usize {
         self.end_of_constant_data
-    }
-
-    pub fn get_jump_path(&self, index: usize) -> Option<usize> {
-        self.jump_path.get(index).cloned()
     }
 
     pub fn get_current_instruction(&self) -> Option<(Instruction, Option<usize>)> {
