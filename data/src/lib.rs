@@ -43,7 +43,7 @@ impl Display for NoCustom {
 #[derive(Debug, Clone)]
 pub struct SimpleGarnishData<T = NoCustom>
 where
-    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     register: Vec<usize>,
     data: SimpleDataList<T>,
@@ -83,7 +83,7 @@ impl SimpleGarnishData<NoCustom> {
 
 impl<T> SimpleGarnishData<T>
 where
-    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     pub fn new_custom() -> Self {
         SimpleGarnishData {

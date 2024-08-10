@@ -5,7 +5,7 @@ use crate::data::{SimpleData, SimpleDataList};
 
 impl<T> SimpleData<T>
 where
-    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     pub fn display_simple(&self) -> String
     where
@@ -41,7 +41,7 @@ where
 
 impl<T> SimpleDataList<T>
 where
-    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     pub fn display_for_item(&self, index: usize) -> String
     where

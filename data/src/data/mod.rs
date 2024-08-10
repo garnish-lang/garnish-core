@@ -23,7 +23,7 @@ mod stack_frame;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SimpleDataList<T = NoCustom>
 where
-    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     list: Vec<SimpleData<T>>,
     symbol_to_name: HashMap<u64, String>,
@@ -33,7 +33,7 @@ where
 
 impl<T> Default for SimpleDataList<T>
 where
-    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     fn default() -> Self {
         SimpleDataList::new()
@@ -45,7 +45,7 @@ where
 
 impl<T> SimpleDataList<T>
 where
-    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     pub fn new() -> Self {
         SimpleDataList {
@@ -113,7 +113,7 @@ pub type SimpleDataNC = SimpleData<NoCustom>;
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
 pub enum SimpleData<T = NoCustom>
 where
-    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     Unit,
     True,
@@ -138,7 +138,7 @@ where
 
 impl<T> SimpleData<T>
 where
-    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     pub fn get_data_type(&self) -> GarnishDataType {
         match self {
@@ -194,7 +194,7 @@ where
 
     pub fn as_custom(&self) -> DataCastResult<T> {
         match self {
-            SimpleData::Custom(v) => Ok(*v),
+            SimpleData::Custom(v) => Ok(v.clone()),
             _ => Err(DataError::from(format!("{:?} is not a Custom", self))),
         }
     }

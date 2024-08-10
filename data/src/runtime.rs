@@ -9,7 +9,7 @@ use crate::{symbol_value, DataError, GarnishDataType, Instruction, SimpleInstruc
 
 impl<T> GarnishData for SimpleGarnishData<T>
 where
-    T: Clone + Copy + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
     type Error = DataError;
     type Symbol = u64;
