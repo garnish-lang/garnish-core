@@ -59,7 +59,7 @@ where
             Some(item) => match item {
                 SimpleData::Symbol(s) => match self.symbol_to_name.get(s) {
                     None => item.display_simple(),
-                    Some(s) => format!(";{}", s),
+                    Some(s) => format!(":{}", s),
                 },
                 SimpleData::Expression(i) => match self.expression_to_symbol.get(i).and_then(|s| self.symbol_to_name.get(s)) {
                     None => item.display_simple(),
@@ -401,7 +401,7 @@ mod simple_list {
         list.insert_symbol(100, "my_symbol");
         list.push(SimpleData::Symbol(100));
 
-        assert_eq!(list.display_for_item(0), ";my_symbol");
+        assert_eq!(list.display_for_item(0), ":my_symbol");
     }
 
     #[test]
