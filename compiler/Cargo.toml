@@ -1,7 +1,7 @@
 [package]
 name = "garnish_lang_compiler"
 description = "Utilites to compile garnish scripts."
-version = "0.0.12-alpha"
+version = "0.0.13-alpha"
 authors = ["Chad Collins <chad.collins@capitalone.com>"]
 edition = "2021"
 homepage = "https://github.com/garnish-lang/garnish-core"
@@ -14,11 +14,11 @@ readme = "../README.md"
 
 [dependencies]
 log = "0.4"
-garnish_lang_traits = { version = "0.0.12-alpha",  path = "../traits" }
+garnish_lang_traits = { version = "0.0.13-alpha",  path = "../traits" }
 serde = { version = "1.0.196", features = ["derive"], optional = true }
 
 [dev-dependencies]
-garnish_lang_simple_data = { version = "0.0.12-alpha", path = "../data" }
+garnish_lang_simple_data = { version = "0.0.13-alpha", path = "../data" }
 
 [features]
 serde = ["dep:serde"]
