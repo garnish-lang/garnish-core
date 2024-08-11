@@ -18,6 +18,8 @@ mod parsing;
 mod iterators;
 mod stack_frame;
 
+pub use display::*;
+
 pub type CustomDataDisplayHandler<T> = fn(&SimpleDataList<T>, &T) -> String;
 
 /// List of [`SimpleData`] with maps to convert symbolic values to original string.
@@ -30,8 +32,7 @@ where
     list: Vec<SimpleData<T>>,
     symbol_to_name: HashMap<u64, String>,
     expression_to_symbol: HashMap<usize, u64>,
-    external_to_symbol: HashMap<usize, u64>,
-    custom_data_display_handler: Option<CustomDataDisplayHandler<T>>
+    external_to_symbol: HashMap<usize, u64>
 }
 
 impl<T> Default for SimpleDataList<T>
@@ -56,7 +57,6 @@ where
             symbol_to_name: HashMap::new(),
             expression_to_symbol: HashMap::new(),
             external_to_symbol: HashMap::new(),
-            custom_data_display_handler: None,
         }
     }
 
@@ -103,10 +103,6 @@ where
 
     pub fn insert_external(&mut self, external: usize, sym: u64) {
         self.external_to_symbol.insert(external, sym);
-    }
-
-    pub fn set_custom_data_display_handler(&mut self, handler: CustomDataDisplayHandler<T>) {
-        self.custom_data_display_handler = Some(handler)
     }
 }
 

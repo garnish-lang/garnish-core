@@ -38,6 +38,12 @@ impl Display for NoCustom {
     }
 }
 
+impl DisplayForCustomItem for NoCustom {
+    fn display_with_list(&self, _list: &SimpleDataList, _level: usize) -> String {
+        format!("{}", self)
+    }
+}
+
 /// Implementation of [`GarnishData`]. Uses standard Rust collections for storing data.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
@@ -169,7 +175,7 @@ where
         Ok(())
     }
 
-    pub fn display_current_value(&self) -> String where T:Display {
+    pub fn display_current_value(&self) -> String where T:Display + DisplayForCustomItem {
         self.values.last().and_then(|l| Some(self.data.display_for_item(*l))).unwrap_or("<NoData>".to_string())
     }
 

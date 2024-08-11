@@ -3,13 +3,15 @@ use std::hash::Hash;
 
 use crate::data::{SimpleData, SimpleDataList};
 
+pub trait DisplayForCustomItem {
+    fn display_with_list(&self, list: &SimpleDataList<Self>, level: usize) -> String where Self: Clone + PartialEq + Eq + PartialOrd + Debug + Hash;
+}
+
 impl<T> SimpleData<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash + Display + DisplayForCustomItem,
 {
     pub fn display_simple(&self) -> String
-    where
-        T: Display,
     {
         match self {
             SimpleData::Unit => "()".into(),
@@ -41,26 +43,19 @@ where
 
 impl<T> SimpleDataList<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash + Display + DisplayForCustomItem,
 {
     pub fn display_for_item(&self, index: usize) -> String
-    where
-        T: Display,
     {
         self.display_for_item_internal(index, 0)
     }
 
     fn display_for_item_internal(&self, index: usize, level: usize) -> String
-    where
-        T: Display,
     {
         match self.get(index) {
             None => String::from("<NoData>"),
             Some(item) => match item {
-                SimpleData::Custom(c) => match self.custom_data_display_handler {
-                    None => item.display_simple(),
-                    Some(handler) => handler(self, c)
-                }
+                SimpleData::Custom(c) => c.display_with_list(self, level),
                 SimpleData::Symbol(s) => match self.symbol_to_name.get(s) {
                     None => item.display_simple(),
                     Some(s) => format!(":{}", s),
@@ -231,6 +226,7 @@ where
 #[cfg(test)]
 mod shared {
     use std::fmt::{Display, Formatter};
+    use crate::{DisplayForCustomItem, SimpleDataList};
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Debug, Hash)]
     pub struct Date {
@@ -241,6 +237,12 @@ mod shared {
     impl Display for Date {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
             f.write_str(&format!("{}/{}", self.day, self.month))
+        }
+    }
+
+    impl DisplayForCustomItem for Date {
+        fn display_with_list(&self, _list: &SimpleDataList<Date>, _level: usize) -> String {
+            format!("day {} of month {}", self.day, self.month)
         }
     }
 }
@@ -381,7 +383,6 @@ mod simple_list {
     fn custom_data_formatter() {
         let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.push(SimpleData::Custom(Date { day: 1, month: 10 }));
-        list.set_custom_data_display_handler(|_data, date| format!("day {} of month {}", date.day, date.month));
 
         assert_eq!(list.display_for_item(0), "day 1 of month 10".to_string());
     }
@@ -407,7 +408,7 @@ mod simple_list {
 
         assert_eq!(
             list.display_for_item(13),
-            "(), True, False, Type(Byte), 100, \"c\", 10, Symbol(100), Expression(100), External(100), \"test\", (10 20), 1/10, <NoData>"
+            "(), True, False, Type(Byte), 100, \"c\", 10, Symbol(100), Expression(100), External(100), \"test\", (10 20), day 1 of month 10, <NoData>"
         );
     }
 
