@@ -19,12 +19,12 @@ where
             SimpleData::False => "False".into(),
             SimpleData::Type(t) => format!("Type({:?})", t),
             SimpleData::Number(n) => format!("{}", n),
-            SimpleData::Char(c) => format!("\"{}\"", c),
+            SimpleData::Char(c) => format!("{}", c),
             SimpleData::Byte(b) => b.to_string(),
             SimpleData::Symbol(s) => format!("Symbol({})", s),
             SimpleData::Expression(e) => format!("Expression({})", e),
             SimpleData::External(e) => format!("External({})", e),
-            SimpleData::CharList(s) => format!("\"{}\"", s),
+            SimpleData::CharList(s) => format!("{}", s),
             SimpleData::ByteList(l) => format!("'{}'", l.iter().map(|b| b.to_string()).collect::<Vec<String>>().join(" ")),
             SimpleData::Pair(l, r) => format!("Pair({}, {})", l, r),
             SimpleData::Range(s, e) => format!("Range({}, {})", s, e),
@@ -289,7 +289,7 @@ mod simple {
     #[test]
     fn simple_char() {
         let data: SimpleData<NoCustom> = SimpleData::Char('c');
-        assert_eq!(data.display_simple(), "\"c\"".to_string());
+        assert_eq!(data.display_simple(), "c".to_string());
     }
 
     #[test]
@@ -313,7 +313,7 @@ mod simple {
     #[test]
     fn simple_character_list() {
         let data: SimpleData<NoCustom> = SimpleData::CharList("test".to_string());
-        assert_eq!(data.display_simple(), "\"test\"".to_string());
+        assert_eq!(data.display_simple(), "test".to_string());
     }
 
     #[test]
@@ -408,7 +408,7 @@ mod simple_list {
 
         assert_eq!(
             list.display_for_item(13),
-            "(), True, False, Type(Byte), 100, \"c\", 10, Symbol(100), Expression(100), External(100), \"test\", (10 20), day 1 of month 10, <NoData>"
+            "(), True, False, Type(Byte), 100, c, 10, Symbol(100), Expression(100), External(100), test, (10 20), day 1 of month 10, <NoData>"
         );
     }
 
@@ -480,7 +480,7 @@ mod simple_list {
 
         list.push(SimpleData::Pair(0, 1));
 
-        assert_eq!(list.display_for_item(2), "100 = \"test\"");
+        assert_eq!(list.display_for_item(2), "100 = test");
     }
 
     #[test]
@@ -493,7 +493,7 @@ mod simple_list {
         list.push(SimpleData::Number(SimpleNumber::Integer(200)));
         list.push(SimpleData::Pair(3, 2));
 
-        assert_eq!(list.display_for_item(4), "200 = 100 = \"test\"");
+        assert_eq!(list.display_for_item(4), "200 = 100 = test");
     }
 
     #[test]
