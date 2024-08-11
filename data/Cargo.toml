@@ -1,7 +1,7 @@
 [package]
 name = "garnish_lang_simple_data"
 description = "Data implementation for garnish runtimes using simple list of variants"
-version = "0.0.15-alpha"
+version = "0.0.16-alpha"
 authors = ["Chad Collins <chad.collins@capitalone.com>"]
 edition = "2021"
 homepage = "https://github.com/garnish-lang/garnish-core"
@@ -13,7 +13,7 @@ readme = "../README.md"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-garnish_lang_traits = { version = "0.0.15-alpha", path = "../traits" }
+garnish_lang_traits = { version = "0.0.16-alpha", path = "../traits" }
 serde = { version = "1.0.196", optional = true, features = ["derive"] }
 
 [features]
