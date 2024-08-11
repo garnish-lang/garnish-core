@@ -57,6 +57,10 @@ where
         match self.get(index) {
             None => String::from("<NoData>"),
             Some(item) => match item {
+                SimpleData::Custom(c) => match self.custom_data_display_handler {
+                    None => item.display_simple(),
+                    Some(handler) => handler(self, c)
+                }
                 SimpleData::Symbol(s) => match self.symbol_to_name.get(s) {
                     None => item.display_simple(),
                     Some(s) => format!(":{}", s),
@@ -229,11 +233,14 @@ mod shared {
     use std::fmt::{Display, Formatter};
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Debug, Hash)]
-    pub struct StructWith {}
+    pub struct Date {
+        pub day: usize,
+        pub month: usize,
+    }
 
-    impl Display for StructWith {
+    impl Display for Date {
         fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-            f.write_str("StructWith")
+            f.write_str(&format!("{}/{}", self.day, self.month))
         }
     }
 }
@@ -242,7 +249,7 @@ mod shared {
 mod simple {
     use garnish_lang_traits::GarnishDataType;
 
-    use crate::data::display::shared::StructWith;
+    use crate::data::display::shared::Date;
     use crate::data::{SimpleData, SimpleNumber};
     use crate::data::stack_frame::SimpleStackFrame;
     use crate::NoCustom;
@@ -351,8 +358,8 @@ mod simple {
 
     #[test]
     fn simple_custom() {
-        let data: SimpleData<StructWith> = SimpleData::Custom(StructWith {});
-        assert_eq!(data.display_simple(), "StructWith".to_string());
+        let data: SimpleData<Date> = SimpleData::Custom(Date { day: 1, month: 10 });
+        assert_eq!(data.display_simple(), "1/10".to_string());
     }
 }
 
@@ -360,19 +367,28 @@ mod simple {
 mod simple_list {
     use garnish_lang_traits::GarnishDataType;
 
-    use crate::data::display::shared::StructWith;
+    use crate::data::display::shared::Date;
     use crate::data::{SimpleData, SimpleDataList, SimpleNumber};
 
     #[test]
     fn non_existent_item_is_none() {
-        let list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let list: SimpleDataList<Date> = SimpleDataList::new();
 
         assert_eq!(list.display_for_item(10), "<NoData>".to_string())
     }
 
     #[test]
+    fn custom_data_formatter() {
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
+        list.push(SimpleData::Custom(Date { day: 1, month: 10 }));
+        list.set_custom_data_display_handler(|_data, date| format!("day {} of month {}", date.day, date.month));
+
+        assert_eq!(list.display_for_item(0), "day 1 of month 10".to_string());
+    }
+
+    #[test]
     fn list_of_items() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.push(SimpleData::Unit);
         list.push(SimpleData::True);
         list.push(SimpleData::False);
@@ -385,19 +401,19 @@ mod simple_list {
         list.push(SimpleData::External(100));
         list.push(SimpleData::CharList("test".to_string()));
         list.push(SimpleData::ByteList(vec![10, 20]));
-        list.push(SimpleData::Custom(StructWith {}));
+        list.push(SimpleData::Custom(Date { day: 1, month: 10 }));
 
         list.push(SimpleData::List(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15], vec![]));
 
         assert_eq!(
             list.display_for_item(13),
-            "(), True, False, Type(Byte), 100, \"c\", 10, Symbol(100), Expression(100), External(100), \"test\", (10 20), StructWith, <NoData>"
+            "(), True, False, Type(Byte), 100, \"c\", 10, Symbol(100), Expression(100), External(100), \"test\", (10 20), 1/10, <NoData>"
         );
     }
 
     #[test]
     fn symbol_name() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.insert_symbol(100, "my_symbol");
         list.push(SimpleData::Symbol(100));
 
@@ -406,7 +422,7 @@ mod simple_list {
 
     #[test]
     fn symbol_no_name() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
 
         list.push(SimpleData::Symbol(100));
 
@@ -415,7 +431,7 @@ mod simple_list {
 
     #[test]
     fn expression_name() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.insert_symbol(100, "my_expression");
         list.insert_expression(1, 100);
 
@@ -426,7 +442,7 @@ mod simple_list {
 
     #[test]
     fn expression_no_name() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.insert_symbol(100, "my_expression");
 
         list.push(SimpleData::Expression(1));
@@ -436,7 +452,7 @@ mod simple_list {
 
     #[test]
     fn external_name() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.insert_symbol(100, "my_external");
         list.insert_external(1, 100);
 
@@ -447,7 +463,7 @@ mod simple_list {
 
     #[test]
     fn external_no_name() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.insert_symbol(100, "my_external");
 
         list.push(SimpleData::External(1));
@@ -457,7 +473,7 @@ mod simple_list {
 
     #[test]
     fn pair() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.push(SimpleData::Number(SimpleNumber::Integer(100)));
         list.push(SimpleData::CharList("test".to_string()));
 
@@ -468,7 +484,7 @@ mod simple_list {
 
     #[test]
     fn pair_nested() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.push(SimpleData::Number(SimpleNumber::Integer(100)));
         list.push(SimpleData::CharList("test".to_string()));
         list.push(SimpleData::Pair(0, 1));
@@ -481,7 +497,7 @@ mod simple_list {
 
     #[test]
     fn range() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.push(SimpleData::Number(SimpleNumber::Integer(100)));
         list.push(SimpleData::Number(SimpleNumber::Integer(200)));
 
@@ -492,7 +508,7 @@ mod simple_list {
 
     #[test]
     fn concatenation() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.push(SimpleData::Number(SimpleNumber::Integer(100)));
         list.push(SimpleData::Number(SimpleNumber::Integer(200)));
         list.push(SimpleData::Number(SimpleNumber::Integer(300)));
@@ -507,7 +523,7 @@ mod simple_list {
 
     #[test]
     fn concatenation_of_list_with_concatenation_and_list() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.push(SimpleData::Number(SimpleNumber::Integer(100))); // 0
         list.push(SimpleData::Number(SimpleNumber::Integer(200))); // 1
 
@@ -532,7 +548,7 @@ mod simple_list {
 
     #[test]
     fn slice_of_list() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.push(SimpleData::Number(SimpleNumber::Integer(100)));
         list.push(SimpleData::Number(SimpleNumber::Integer(200)));
         list.push(SimpleData::Number(SimpleNumber::Integer(300)));
@@ -555,7 +571,7 @@ mod simple_list {
 
     #[test]
     fn slice_of_concatenation() {
-        let mut list: SimpleDataList<StructWith> = SimpleDataList::new();
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
         list.push(SimpleData::Number(SimpleNumber::Integer(100)));
         list.push(SimpleData::Number(SimpleNumber::Integer(200)));
         list.push(SimpleData::Number(SimpleNumber::Integer(300)));
