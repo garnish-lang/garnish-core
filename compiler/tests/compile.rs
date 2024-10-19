@@ -21,9 +21,10 @@ mod tests {
 
         let lexed = lex(&source).unwrap();
 
-        for token in lexed.iter() {
-            println!("{:?}", token);
-        }
+        // Not showing in debugger on Windows, uncomment to inspect in output
+        // for token in lexed.iter() {
+        //     println!("{:?}", token);
+        // }
 
         let parsed = parse(&lexed).unwrap();
         let mut data = SimpleGarnishData::new();
