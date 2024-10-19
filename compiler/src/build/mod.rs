@@ -802,7 +802,7 @@ pub fn build_with_data<Data: GarnishData>(
 }
 
 #[cfg(test)]
-mod test_utils {
+pub mod test_utils {
     use garnish_lang_simple_data::SimpleDataList;
     use garnish_lang_simple_data::SimpleInstruction;
     use garnish_lang_simple_data::*;
