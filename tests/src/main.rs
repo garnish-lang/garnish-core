@@ -4,7 +4,7 @@ use garnish_lang_compiler::build::build_with_data;
 use garnish_lang_compiler::lex::lex;
 use garnish_lang_compiler::parse::{parse};
 use garnish_lang_simple_data::{SimpleData, SimpleGarnishData};
-use log::{error, info};
+use log::{error};
 use std::fs::read_to_string;
 use colored::Colorize;
 use garnish_lang_runtime::{SimpleGarnishRuntime, SimpleRuntimeState};
@@ -81,11 +81,13 @@ fn main() {
                 }
             };
 
-            match result {
-                SimpleData::True => println!("{}: {}", "addition", "passed".green()),
-                SimpleData::False => println!("{}: {}", "addition", "failed".red()),
-                t => println!("{}{}", "addition", format!("Test failed: Expected a True or False value, got {:?}", t).yellow())
-            }
+            let message = match result {
+                SimpleData::True => "passed".green(),
+                SimpleData::False => "failed".red(),
+                t => format!("Expected a True or False value, got {:?}", t).yellow()
+            };
+
+            println!("{}: {}", "addition", message)
         }
     }
 }
