@@ -4,7 +4,7 @@ use garnish_lang_compiler::build::build_with_data;
 use garnish_lang_compiler::lex::lex;
 use garnish_lang_compiler::parse::{parse};
 use garnish_lang_simple_data::{SimpleData, SimpleGarnishData};
-use log::{info};
+use log::{error, info};
 use std::fs::read_to_string;
 use colored::Colorize;
 use garnish_lang_runtime::{SimpleGarnishRuntime, SimpleRuntimeState};
@@ -28,12 +28,12 @@ fn main() {
                 })
                 .or_else(|e| Err(format!("{}", e)))
         }) {
-        Err(e) => info!("Test failed: {}", e),
+        Err(e) => error!("Test failed: {}", e),
         Ok(_) => {
             let start = match data.get_jump_points().get(0) {
                 Some(jump_points) => *jump_points,
                 None => {
-                    info!("Test failed: No jump point");
+                    error!("Test failed: No jump point");
                     return;
                 },
             };
@@ -41,7 +41,7 @@ fn main() {
             match data.set_instruction_cursor(start) {
                 Ok(_) => (),
                 Err(e) => {
-                    info!("Test failed: {}", e);
+                    error!("Test failed: {}", e);
                     return;
                 },
             }
@@ -49,7 +49,7 @@ fn main() {
             match data.add_unit().and_then(|e| data.push_value_stack(e)) {
                 Ok(_) => (),
                 Err(e) => {
-                    info!("Test failed: {}", e);
+                    error!("Test failed: {}", e);
                     return;
                 },
             }
@@ -60,7 +60,7 @@ fn main() {
             loop {
                 match runtime.execute_current_instruction(Some(&mut context)) {
                     Err(e) => {
-                        info!("Test failed: {}", e);
+                        error!("Test failed: {}", e);
                         return;
                     }
                     Ok(data) => match data.get_state() {
@@ -76,7 +76,7 @@ fn main() {
                 .and_then(|i| data.get_data().get(i)) {
                 Some(value) => value,
                 None => {
-                    info!("Test failed: No current value after execution");
+                    error!("Test failed: No current value after execution");
                     return;
                 }
             };
