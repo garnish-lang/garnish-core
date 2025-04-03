@@ -307,7 +307,7 @@ impl<'a> Lexer<'a> {
                 None => unreachable!(),
                 Some(node) => node.token_type,
             };
-        } else if c == ' ' || c == '\t' {
+        } else if [' ', '\t', '\r'].contains(&c) {
             self.state = LexingState::Spaces;
             self.current_token_type = Some(TokenType::Whitespace);
         } else if c.is_ascii_whitespace() {
@@ -2068,6 +2068,21 @@ mod tests {
                 },
             ]
         );
+    }
+
+    #[test]
+    fn carriage_return_is_white_space() {
+        let result = lex(&"\r\n".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "\r\n".to_string(),
+                token_type: TokenType::Whitespace,
+                column: 0,
+                row: 0
+            },]
+        )
     }
 
     #[test]
