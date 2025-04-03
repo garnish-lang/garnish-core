@@ -58,7 +58,7 @@ fn main() {
             },
             TestResult::Failure(s) => {
                 failures += 1;
-                format!("failure - [{}]", s).red()
+                format!("failure - {}", s).red()
             },
             TestResult::Error(s) => {
                 failures += 1;
@@ -158,7 +158,7 @@ fn execute_script(script_path: &String) -> TestResult {
                             if left == right {
                                 TestResult::Success
                             } else {
-                                TestResult::Failure(format!("failed [{} = {}]",
+                                TestResult::Failure(format!("[{} = {}]",
                                         data.get_data().display_for_item(*left_index),
                                         data.get_data().display_for_item(*right_index)
                                 ))
