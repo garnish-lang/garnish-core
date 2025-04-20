@@ -1,8 +1,8 @@
 use crate::runtime::error::state_error;
+use crate::runtime::list::{access_with_integer, access_with_symbol};
 use crate::runtime::utilities::*;
 use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, GarnishNumber, Instruction, RuntimeError, TypeConstants};
 use log::trace;
-use crate::runtime::list::{access_with_integer, access_with_symbol};
 
 pub(crate) fn apply<Data: GarnishData, T: GarnishContext<Data>>(
     this: &mut Data,
@@ -105,15 +105,32 @@ fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(
             let num = this.get_number(right_addr)?;
             match access_with_integer(this, num, left_addr)? {
                 None => push_unit(this)?,
-                Some(i) => this.push_register(i)?
+                Some(i) => this.push_register(i)?,
             }
         }
         (GarnishDataType::List, GarnishDataType::Symbol) => {
             let sym = this.get_symbol(right_addr)?;
             match access_with_symbol(this, sym, left_addr)? {
                 None => push_unit(this)?,
-                Some(i) => this.push_register(i)?
+                Some(i) => this.push_register(i)?,
             }
+        }
+        (GarnishDataType::List, GarnishDataType::SymbolList) => {
+            let mut iter = this.get_symbol_list_iter(right_addr.clone());
+            let mut current = left_addr.clone();
+            while let Some(sym_index) = iter.next() {
+                let sym = this.get_symbol_list_item(right_addr.clone(), sym_index)?;
+
+                match access_with_symbol(this, sym, current)? {
+                    None => {
+                        current = this.add_unit()?;
+                        break;
+                    }
+                    Some(i) => current = i,
+                }
+            }
+
+            this.push_register(current)?;
         }
         (GarnishDataType::List, GarnishDataType::Range)
         | (GarnishDataType::Concatenation, GarnishDataType::Range)
@@ -179,9 +196,9 @@ pub(crate) fn narrow_range<Data: GarnishData>(
 
 #[cfg(test)]
 mod tests {
-    use crate::runtime::tests::MockGarnishData;
-    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
     use crate::runtime::apply::apply;
+    use crate::runtime::tests::{MockGarnishData, MockIterator};
+    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
 
     struct StackData {
         addrs: Vec<i32>,
@@ -238,6 +255,40 @@ mod tests {
         };
         mock_data.stub_push_register = |_, i| {
             assert_eq!(i, 30);
+            Ok(())
+        };
+
+        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+
+        assert_eq!(result, Some(1));
+    }
+
+    #[test]
+    fn apply_symbol_list_to_list() {
+        let mut mock_data = MockGarnishData::default_with_data(StackData { addrs: vec![10, 20] });
+
+        mock_data.stub_get_instruction_cursor = |_| 0;
+        mock_data.stub_pop_register = |data| Ok(Some(data.addrs.pop().unwrap()));
+        mock_data.stub_get_data_type = |_, i| Ok(if i == 10 || i == 30 { GarnishDataType::List } else { GarnishDataType::SymbolList });
+        mock_data.stub_get_symbol_list_iter = |_, _| MockIterator::new(2);
+        mock_data.stub_get_symbol_list_item = |_, list, i| {
+            assert_eq!(list, 20);
+            Ok((i + 1) as u32 * 100u32)
+        };
+        mock_data.stub_get_list_item_with_symbol = |_, list, i| {
+            if i == 100 {
+                assert_eq!(list, 10);
+                Ok(Some(30))
+            } else if i == 200 {
+                assert_eq!(list, 30);
+                Ok(Some(40))
+            } else {
+                assert!(false);
+                Ok(None)
+            }
+        };
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 40);
             Ok(())
         };
 

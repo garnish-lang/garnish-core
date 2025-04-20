@@ -40,11 +40,21 @@ mod tests {
 
     pub struct MockIterator {
         current: i32,
+        max: i32
+    }
+    
+    impl MockIterator {
+        pub fn new(count: i32) -> Self {
+            Self {
+                current: 0,
+                max: count
+            }
+        }
     }
 
     impl Default for MockIterator {
         fn default() -> Self {
-            MockIterator { current: 0 }
+            MockIterator { current: 0, max: 0 }
         }
     }
 
@@ -52,15 +62,25 @@ mod tests {
         type Item = i32;
 
         fn next(&mut self) -> Option<Self::Item> {
-            self.current += 1;
-            Some(self.current)
+            if self.current >= self.max {
+                None
+            } else {
+                let value = Some(self.current);
+                self.current += 1;
+                value
+            }
         }
     }
 
     impl DoubleEndedIterator for MockIterator {
         fn next_back(&mut self) -> Option<Self::Item> {
-            self.current -= 1;
-            Some(self.current)
+            if self.current < 0 {
+                None
+            } else {
+                let value = Some(self.current);
+                self.current -= 1;
+                value
+            }
         }
     }
 
