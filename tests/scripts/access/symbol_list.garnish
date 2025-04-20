@@ -1,11 +1,11 @@
-:object = (
+(
     :nested = (
         :still_nested = (
             :more_nesting = (
-                :value = 5
-            )
-        )
-    )
+                :value = 5,
+            ),
+        ),
+    ),
 ) ~ :nested.still_nested.more_nesting.value
 
 $ = 5
