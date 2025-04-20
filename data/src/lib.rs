@@ -659,14 +659,14 @@ mod to_char_list {
                 .unwrap()
         })
     }
-    
+
     #[test]
     fn symbol_list() {
         assert_to_char_list("symbol_one, symbol_two, symbol_three", |runtime| {
             let sym1 = runtime.parse_add_symbol("symbol_one").unwrap();
             let sym2 = runtime.parse_add_symbol("symbol_two").unwrap();
             runtime
-                .add_symbol_list(sym1, sym2)
+                .merge_to_symbol_list(sym1, sym2)
                 .unwrap()
         })
     }

@@ -144,9 +144,10 @@ pub trait GarnishData {
     fn add_external(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_pair(&mut self, value: (Self::Size, Self::Size)) -> Result<Self::Size, Self::Error>;
     fn add_concatenation(&mut self, left: Self::Size, right: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn add_symbol_list(&mut self, first: Self::Size, second: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_range(&mut self, start: Self::Size, end: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error>;
+
+    fn merge_to_symbol_list(&mut self, first: Self::Size, second: Self::Size) -> Result<Self::Size, Self::Error>;
 
     fn start_list(&mut self, len: Self::Size) -> Result<(), Self::Error>;
     fn add_to_list(&mut self, addr: Self::Size, is_associative: bool) -> Result<(), Self::Error>;
