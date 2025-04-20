@@ -332,6 +332,19 @@ where
             (Some(SimpleData::Symbol(sym1)), Some(SimpleData::Symbol(sym2))) => {
                 self.data.push(SimpleData::SymbolList(vec![*sym1, *sym2]));
             }
+            (Some(SimpleData::SymbolList(list1)), Some(SimpleData::SymbolList(list2))) => {
+                self.data.push(SimpleData::SymbolList(list1.iter().chain(list2).map(|i| *i).collect()));
+            }
+            (Some(SimpleData::SymbolList(list)), Some(SimpleData::Symbol(sym))) => {
+                let mut new_list = list.clone();
+                new_list.push(*sym);
+                self.data.push(SimpleData::SymbolList(new_list));
+            }
+            (Some(SimpleData::Symbol(sym)), Some(SimpleData::SymbolList(list))) => {
+                let mut new_list = list.clone();
+                new_list.insert(0, *sym);
+                self.data.push(SimpleData::SymbolList(new_list));
+            }
             (Some(t1), Some(t2)) => Err(format!("Cannot create symbol list from types: {:?} {:?}", t1, t2))?,
             (None, None) => Err(format!("Failed to create symbol list. No data at either operand indices, {}, {}", first, second))?,
             (None, _) => Err(format!("Failed to create symbol list. No data at left operand index, {}", first))?,
@@ -841,6 +854,14 @@ mod add_data {
             SimpleDataRuntimeNC::parse_symbol("symbol_two").unwrap()
         }
 
+        fn s3() -> u64 {
+            SimpleDataRuntimeNC::parse_symbol("symbol_three").unwrap()
+        }
+
+        fn s4() -> u64 {
+            SimpleDataRuntimeNC::parse_symbol("symbol_four").unwrap()
+        }
+
         #[test]
         fn add_symbol_list_with_symbol_symbol() {
             let mut runtime = SimpleGarnishData::new();
@@ -853,6 +874,60 @@ mod add_data {
             let data = runtime.get_data().get(sym_list).unwrap().as_symbol_list().unwrap();
 
             assert_eq!(data, vec![s1(), s2()]);
+        }
+
+        #[test]
+        fn add_symbol_list_with_symbol_list_symbol() {
+            let mut runtime = SimpleGarnishData::new();
+            let sym1 = runtime.add_symbol(s1()).unwrap();
+            let sym2 = runtime.add_symbol(s2()).unwrap();
+            let sym3 = runtime.add_symbol(s3()).unwrap();
+
+            let sym_list1 = runtime.merge_to_symbol_list(sym1, sym2).unwrap();
+            
+            let sym_list2 = runtime.merge_to_symbol_list(sym_list1, sym3).unwrap();
+
+            assert_eq!(runtime.get_data_type(sym_list2).unwrap(), GarnishDataType::SymbolList);
+            let data = runtime.get_data().get(sym_list2).unwrap().as_symbol_list().unwrap();
+
+            assert_eq!(data, vec![s1(), s2(), s3()]);
+        }
+
+        #[test]
+        fn add_symbol_list_with_symbol_symbol_list() {
+            let mut runtime = SimpleGarnishData::new();
+            let sym1 = runtime.add_symbol(s1()).unwrap();
+            let sym2 = runtime.add_symbol(s2()).unwrap();
+            let sym3 = runtime.add_symbol(s3()).unwrap();
+
+            let sym_list1 = runtime.merge_to_symbol_list(sym1, sym2).unwrap();
+
+            let sym_list2 = runtime.merge_to_symbol_list(sym3, sym_list1).unwrap();
+
+            assert_eq!(runtime.get_data_type(sym_list2).unwrap(), GarnishDataType::SymbolList);
+            let data = runtime.get_data().get(sym_list2).unwrap().as_symbol_list().unwrap();
+
+            assert_eq!(data, vec![s3(), s1(), s2()]);
+        }
+
+        #[test]
+        fn add_symbol_list_with_symbol_list_symbol_list() {
+            let mut runtime = SimpleGarnishData::new();
+            let sym1 = runtime.add_symbol(s1()).unwrap();
+            let sym2 = runtime.add_symbol(s2()).unwrap();
+            let sym3 = runtime.add_symbol(s3()).unwrap();
+            let sym4 = runtime.add_symbol(s4()).unwrap();
+
+            let sym_list1 = runtime.merge_to_symbol_list(sym1, sym2).unwrap();
+
+            let sym_list2 = runtime.merge_to_symbol_list(sym3, sym4).unwrap();
+            
+            let sym_list3 = runtime.merge_to_symbol_list(sym_list1, sym_list2).unwrap();
+
+            assert_eq!(runtime.get_data_type(sym_list3).unwrap(), GarnishDataType::SymbolList);
+            let data = runtime.get_data().get(sym_list3).unwrap().as_symbol_list().unwrap();
+
+            assert_eq!(data, vec![s1(), s2(), s3(), s4()]);
         }
 
         #[test]
