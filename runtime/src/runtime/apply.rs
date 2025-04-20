@@ -2,7 +2,7 @@ use crate::runtime::error::state_error;
 use crate::runtime::utilities::*;
 use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, GarnishNumber, Instruction, RuntimeError, TypeConstants};
 use log::trace;
-use crate::runtime::list::access_with_integer;
+use crate::runtime::list::{access_with_integer, access_with_symbol};
 
 pub(crate) fn apply<Data: GarnishData, T: GarnishContext<Data>>(
     this: &mut Data,
@@ -108,6 +108,13 @@ fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(
                 Some(i) => this.push_register(i)?
             }
         }
+        (GarnishDataType::List, GarnishDataType::Symbol) => {
+            let sym = this.get_symbol(right_addr)?;
+            match access_with_symbol(this, sym, left_addr)? {
+                None => push_unit(this)?,
+                Some(i) => this.push_register(i)?
+            }
+        }
         (GarnishDataType::List, GarnishDataType::Range)
         | (GarnishDataType::Concatenation, GarnishDataType::Range)
         | (GarnishDataType::CharList, GarnishDataType::Range)
@@ -202,6 +209,32 @@ mod tests {
             assert_eq!(list, 10);
             assert_eq!(i, 0);
             Ok(30)
+        };
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 30);
+            Ok(())
+        };
+
+        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+
+        assert_eq!(result, Some(1));
+    }
+
+    #[test]
+    fn apply_symbol_to_list() {
+        let mut mock_data = MockGarnishData::default_with_data(StackData { addrs: vec![10, 20] });
+
+        mock_data.stub_get_instruction_cursor = |_| 0;
+        mock_data.stub_pop_register = |data| Ok(Some(data.addrs.pop().unwrap()));
+        mock_data.stub_get_data_type = |_, i| Ok(if i == 10 { GarnishDataType::List } else { GarnishDataType::Symbol });
+        mock_data.stub_get_symbol = |_, i| {
+            assert_eq!(i, 20);
+            Ok(0)
+        };
+        mock_data.stub_get_list_item_with_symbol = |_, list, i| {
+            assert_eq!(list, 10);
+            assert_eq!(i, 0);
+            Ok(Some(30))
         };
         mock_data.stub_push_register = |_, i| {
             assert_eq!(i, 30);

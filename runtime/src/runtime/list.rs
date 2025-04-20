@@ -187,7 +187,7 @@ fn index_byte_list<Data: GarnishData>(
     }
 }
 
-fn access_with_symbol<Data: GarnishData>(
+pub(crate) fn access_with_symbol<Data: GarnishData>(
     this: &mut Data,
     sym: Data::Symbol,
     value: Data::Size,
