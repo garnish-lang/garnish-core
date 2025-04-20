@@ -131,6 +131,7 @@ where
     Char(char),
     Byte(u8),
     Symbol(u64),
+    SymbolList(Vec<u64>),
     Expression(usize),
     External(usize),
     CharList(String),
@@ -158,6 +159,7 @@ where
             SimpleData::Char(_) => GarnishDataType::Char,
             SimpleData::Byte(_) => GarnishDataType::Byte,
             SimpleData::Symbol(_) => GarnishDataType::Symbol,
+            SimpleData::SymbolList(_) => GarnishDataType::SymbolList,
             SimpleData::Expression(_) => GarnishDataType::Expression,
             SimpleData::External(_) => GarnishDataType::External,
             SimpleData::CharList(_) => GarnishDataType::CharList,
@@ -241,6 +243,13 @@ where
             _ => Err(DataError::from(format!("{:?} is not a Symbol", self))),
         }
     }
+    
+    pub fn as_symbol_list(&self) -> DataCastResult<Vec<u64>> {
+        match self { 
+            SimpleData::SymbolList(v) => Ok(v.clone()),
+            _ => Err(DataError::from(format!("{:?} is not a SymbolList", self))),
+        }
+    }
 
     pub fn as_expression(&self) -> DataCastResult<usize> {
         match self {
@@ -321,6 +330,7 @@ mod tests {
         assert_eq!(SimpleDataNC::Char('a').get_data_type(), GarnishDataType::Char);
         assert_eq!(SimpleDataNC::Byte(0).get_data_type(), GarnishDataType::Byte);
         assert_eq!(SimpleDataNC::Symbol(0).get_data_type(), GarnishDataType::Symbol);
+        assert_eq!(SimpleDataNC::SymbolList(vec![1, 2, 3]).get_data_type(), GarnishDataType::SymbolList);
         assert_eq!(SimpleDataNC::Expression(0).get_data_type(), GarnishDataType::Expression);
         assert_eq!(SimpleDataNC::External(0).get_data_type(), GarnishDataType::External);
         assert_eq!(SimpleDataNC::CharList(String::new()).get_data_type(), GarnishDataType::CharList);
@@ -431,6 +441,16 @@ mod tests {
     #[test]
     fn as_symbol_not_symbol() {
         assert!(SimpleDataNC::Unit.as_symbol().is_err());
+    }
+
+    #[test]
+    fn as_symbol_list() {
+        assert_eq!(SimpleDataNC::SymbolList(vec![10, 20]).as_symbol_list().unwrap(), vec![10, 20]);
+    }
+
+    #[test]
+    fn as_symbol_list_not_symbol_list() {
+        assert!(SimpleDataNC::Unit.as_symbol_list().is_err());
     }
 
     #[test]

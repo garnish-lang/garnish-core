@@ -272,6 +272,7 @@ where
                     self.add_to_char_list(c)?;
                 }
             }
+            GarnishDataType::SymbolList => { todo!() }
             GarnishDataType::Expression => {
                 let e = self.get_expression(from)?;
                 let s = format!("Expression({})", e);
@@ -655,6 +656,17 @@ mod to_char_list {
         assert_to_char_list(s.as_str(), |runtime| {
             runtime
                 .add_symbol(SimpleGarnishData::<NoCustom>::parse_symbol("my_symbol").unwrap())
+                .unwrap()
+        })
+    }
+    
+    #[test]
+    fn symbol_list() {
+        assert_to_char_list("symbol_one, symbol_two, symbol_three", |runtime| {
+            let sym1 = runtime.parse_add_symbol("symbol_one").unwrap();
+            let sym2 = runtime.parse_add_symbol("symbol_two").unwrap();
+            runtime
+                .add_symbol_list(sym1, sym2)
                 .unwrap()
         })
     }

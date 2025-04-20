@@ -55,6 +55,12 @@ where
             .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
     }
 
+    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+        self.get_symbol_list_len(list_addr)
+            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+    }
+
     fn get_register_iter(&self) -> Self::RegisterIndexIterator {
         return SizeIterator::new(0, self.register.len());
     }
@@ -160,7 +166,7 @@ where
     fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error> {
         match item_index {
             SimpleNumber::Integer(item_index) => match self.get(addr)?.as_char_list()?.chars().nth(item_index as usize) {
-                None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
+                None => Err(format!("No value at index {:?} for char list at {:?}", item_index, addr))?,
                 Some(c) => Ok(c),
             },
             SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index char list with decimal value."))), // should return None
@@ -174,10 +180,24 @@ where
     fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error> {
         match item_index {
             SimpleNumber::Integer(item_index) => match self.get(addr)?.as_byte_list()?.get(item_index as usize) {
-                None => Err(format!("No character at index {:?} for char list at {:?}", item_index, addr))?,
+                None => Err(format!("No value at index {:?} for byte list at {:?}", item_index, addr))?,
                 Some(c) => Ok(*c),
             },
             SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index byte list with decimal value."))), // should return None
+        }
+    }
+
+    fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
+        Ok(self.get(addr)?.as_byte_list()?.len())
+    }
+
+    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Symbol, Self::Error> {
+        match item_index {
+            SimpleNumber::Integer(item_index) => match self.get(addr)?.as_symbol_list()?.get(item_index as usize) {
+                None => Err(format!("No value at index {:?} for symbol list at {:?}", item_index, addr))?,
+                Some(c) => Ok(*c),
+            },
+            SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index symbol list with decimal value."))), // should return None
         }
     }
 
@@ -228,6 +248,20 @@ where
 
     fn add_concatenation(&mut self, left: Self::Size, right: Self::Size) -> Result<Self::Size, Self::Error> {
         self.data.push(SimpleData::Concatenation(left, right));
+        Ok(self.data.len() - 1)
+    }
+
+    fn add_symbol_list(&mut self, first: Self::Size, second: Self::Size) -> Result<Self::Size, Self::Error> {
+        match (self.get_data().get(first), self.get_data().get(second)) {
+            (Some(SimpleData::Symbol(sym1)), Some(SimpleData::Symbol(sym2))) => {
+                self.data.push(SimpleData::SymbolList(vec![*sym1, *sym2]));
+            }
+            (Some(t1), Some(t2)) => Err(format!("Cannot create symbol list from types: {:?} {:?}", t1, t2))?,
+            (None, None) => Err(format!("Failed to create symbol list. No data at either operand indices, {}, {}", first, second))?,
+            (None, _) => Err(format!("Failed to create symbol list. No data at left operand index, {}", first))?,
+            (_, None) => Err(format!("Failed to create symbol list. No data at right operand index, {}", second))?,
+        }
+        
         Ok(self.data.len() - 1)
     }
 
@@ -808,5 +842,33 @@ mod tests {
         let result = data.pop_register();
 
         assert!(result.is_err());
+    }
+}
+
+#[cfg(test)]
+mod add_data {
+    use garnish_lang_traits::{GarnishData, GarnishDataType};
+    use crate::{SimpleDataRuntimeNC, SimpleGarnishData};
+    
+    fn s1() -> u64 {
+        SimpleDataRuntimeNC::parse_symbol("symbol_one").unwrap()
+    }
+    
+    fn s2() -> u64 {
+        SimpleDataRuntimeNC::parse_symbol("symbol_two").unwrap()
+    }
+
+    #[test]
+    fn add_symbol_list_with_symbol_symbol() {
+        let mut runtime = SimpleGarnishData::new();
+        let sym1 = runtime.add_symbol(s1()).unwrap();
+        let sym2 = runtime.add_symbol(s2()).unwrap();
+        
+        let sym_list = runtime.add_symbol_list(sym1, sym2).unwrap();
+        
+        assert_eq!(runtime.get_data_type(sym_list).unwrap(), GarnishDataType::SymbolList);
+        let data = runtime.get_data().get(sym_list).unwrap().as_symbol_list().unwrap();
+        
+        assert_eq!(data, vec![s1(), s2()]);
     }
 }

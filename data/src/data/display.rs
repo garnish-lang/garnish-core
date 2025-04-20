@@ -22,6 +22,7 @@ where
             SimpleData::Char(c) => format!("{}", c),
             SimpleData::Byte(b) => b.to_string(),
             SimpleData::Symbol(s) => format!("Symbol({})", s),
+            SimpleData::SymbolList(s) => format!("SymbolList({})", s.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(", ")),
             SimpleData::Expression(e) => format!("Expression({})", e),
             SimpleData::External(e) => format!("External({})", e),
             SimpleData::CharList(s) => format!("{}", s),
@@ -296,6 +297,12 @@ mod simple {
     fn simple_symbol() {
         let data: SimpleData<NoCustom> = SimpleData::Symbol(100);
         assert_eq!(data.display_simple(), "Symbol(100)".to_string());
+    }
+
+    #[test]
+    fn simple_symbol_list() {
+        let data: SimpleData<NoCustom> = SimpleData::SymbolList(vec![100, 200]);
+        assert_eq!(data.display_simple(), "SymbolList(100, 200)".to_string());
     }
 
     #[test]

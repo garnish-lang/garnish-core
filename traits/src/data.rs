@@ -17,6 +17,7 @@ pub enum GarnishDataType {
     Byte,
     ByteList,
     Symbol,
+    SymbolList,
     Pair,
     Range,
     Concatenation,
@@ -126,6 +127,10 @@ pub trait GarnishData {
     fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error>;
     fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
 
+    fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
+    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Symbol, Self::Error>;
+    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
+
     fn add_unit(&mut self) -> Result<Self::Size, Self::Error>;
     fn add_true(&mut self) -> Result<Self::Size, Self::Error>;
     fn add_false(&mut self) -> Result<Self::Size, Self::Error>;
@@ -139,6 +144,7 @@ pub trait GarnishData {
     fn add_external(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_pair(&mut self, value: (Self::Size, Self::Size)) -> Result<Self::Size, Self::Error>;
     fn add_concatenation(&mut self, left: Self::Size, right: Self::Size) -> Result<Self::Size, Self::Error>;
+    fn add_symbol_list(&mut self, first: Self::Size, second: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_range(&mut self, start: Self::Size, end: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error>;
 
