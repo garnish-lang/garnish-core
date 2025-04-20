@@ -669,8 +669,8 @@ mod tests {
             (self.stub_get_jump_path_iter)(self.data())
         }
 
-        fn size_to_number(_from: Self::Size) -> Self::Number {
-            unimplemented!()
+        fn size_to_number(from: Self::Size) -> Self::Number {
+            from
         }
 
         fn number_to_size(_from: Self::Number) -> Option<Self::Size> {
