@@ -904,4 +904,33 @@ mod add_data {
 
         assert!(sym_list.is_err());
     }
+
+    #[test]
+    fn add_symbol_list_with_invalid_first_index() {
+        let mut runtime = SimpleGarnishData::new();
+        let sym2 = runtime.add_number(10.into()).unwrap();
+
+        let sym_list = runtime.merge_to_symbol_list(100, sym2);
+
+        assert!(sym_list.is_err());
+    }
+
+    #[test]
+    fn add_symbol_list_with_invalid_second_index() {
+        let mut runtime = SimpleGarnishData::new();
+        let sym1 = runtime.add_number(10.into()).unwrap();
+
+        let sym_list = runtime.merge_to_symbol_list(sym1, 200);
+
+        assert!(sym_list.is_err());
+    }
+
+    #[test]
+    fn add_symbol_list_with_invalid_indices() {
+        let mut runtime = SimpleGarnishData::new();
+        
+        let sym_list = runtime.merge_to_symbol_list(100, 200);
+
+        assert!(sym_list.is_err());
+    }
 }
