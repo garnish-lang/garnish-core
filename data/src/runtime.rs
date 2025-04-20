@@ -829,90 +829,92 @@ mod tests {
 
 #[cfg(test)]
 mod add_data {
-    use garnish_lang_traits::{GarnishData, GarnishDataType};
-    use crate::{SimpleDataRuntimeNC, SimpleGarnishData};
+    mod symbol_list {
+        use garnish_lang_traits::{GarnishData, GarnishDataType};
+        use crate::{SimpleDataRuntimeNC, SimpleGarnishData};
 
-    fn s1() -> u64 {
-        SimpleDataRuntimeNC::parse_symbol("symbol_one").unwrap()
-    }
+        fn s1() -> u64 {
+            SimpleDataRuntimeNC::parse_symbol("symbol_one").unwrap()
+        }
 
-    fn s2() -> u64 {
-        SimpleDataRuntimeNC::parse_symbol("symbol_two").unwrap()
-    }
+        fn s2() -> u64 {
+            SimpleDataRuntimeNC::parse_symbol("symbol_two").unwrap()
+        }
 
-    #[test]
-    fn add_symbol_list_with_symbol_symbol() {
-        let mut runtime = SimpleGarnishData::new();
-        let sym1 = runtime.add_symbol(s1()).unwrap();
-        let sym2 = runtime.add_symbol(s2()).unwrap();
+        #[test]
+        fn add_symbol_list_with_symbol_symbol() {
+            let mut runtime = SimpleGarnishData::new();
+            let sym1 = runtime.add_symbol(s1()).unwrap();
+            let sym2 = runtime.add_symbol(s2()).unwrap();
 
-        let sym_list = runtime.merge_to_symbol_list(sym1, sym2).unwrap();
+            let sym_list = runtime.merge_to_symbol_list(sym1, sym2).unwrap();
 
-        assert_eq!(runtime.get_data_type(sym_list).unwrap(), GarnishDataType::SymbolList);
-        let data = runtime.get_data().get(sym_list).unwrap().as_symbol_list().unwrap();
+            assert_eq!(runtime.get_data_type(sym_list).unwrap(), GarnishDataType::SymbolList);
+            let data = runtime.get_data().get(sym_list).unwrap().as_symbol_list().unwrap();
 
-        assert_eq!(data, vec![s1(), s2()]);
-    }
+            assert_eq!(data, vec![s1(), s2()]);
+        }
 
-    #[test]
-    fn add_symbol_list_with_number_symbol() {
-        let mut runtime = SimpleGarnishData::new();
-        let sym1 = runtime.add_number(10.into()).unwrap();
-        let sym2 = runtime.add_symbol(s2()).unwrap();
+        #[test]
+        fn add_symbol_list_with_number_symbol() {
+            let mut runtime = SimpleGarnishData::new();
+            let sym1 = runtime.add_number(10.into()).unwrap();
+            let sym2 = runtime.add_symbol(s2()).unwrap();
 
-        let sym_list = runtime.merge_to_symbol_list(sym1, sym2);
-        
-        assert!(sym_list.is_err());
-    }
+            let sym_list = runtime.merge_to_symbol_list(sym1, sym2);
 
-    #[test]
-    fn add_symbol_list_with_symbol_number() {
-        let mut runtime = SimpleGarnishData::new();
-        let sym1 = runtime.add_symbol(s1()).unwrap();
-        let sym2 = runtime.add_number(10.into()).unwrap();
+            assert!(sym_list.is_err());
+        }
 
-        let sym_list = runtime.merge_to_symbol_list(sym1, sym2);
+        #[test]
+        fn add_symbol_list_with_symbol_number() {
+            let mut runtime = SimpleGarnishData::new();
+            let sym1 = runtime.add_symbol(s1()).unwrap();
+            let sym2 = runtime.add_number(10.into()).unwrap();
 
-        assert!(sym_list.is_err());
-    }
+            let sym_list = runtime.merge_to_symbol_list(sym1, sym2);
 
-    #[test]
-    fn add_symbol_list_with_number_number() {
-        let mut runtime = SimpleGarnishData::new();
-        let sym1 = runtime.add_number(10.into()).unwrap();
-        let sym2 = runtime.add_number(10.into()).unwrap();
+            assert!(sym_list.is_err());
+        }
 
-        let sym_list = runtime.merge_to_symbol_list(sym1, sym2);
+        #[test]
+        fn add_symbol_list_with_number_number() {
+            let mut runtime = SimpleGarnishData::new();
+            let sym1 = runtime.add_number(10.into()).unwrap();
+            let sym2 = runtime.add_number(10.into()).unwrap();
 
-        assert!(sym_list.is_err());
-    }
+            let sym_list = runtime.merge_to_symbol_list(sym1, sym2);
 
-    #[test]
-    fn add_symbol_list_with_invalid_first_index() {
-        let mut runtime = SimpleGarnishData::new();
-        let sym2 = runtime.add_number(10.into()).unwrap();
+            assert!(sym_list.is_err());
+        }
 
-        let sym_list = runtime.merge_to_symbol_list(100, sym2);
+        #[test]
+        fn add_symbol_list_with_invalid_first_index() {
+            let mut runtime = SimpleGarnishData::new();
+            let sym2 = runtime.add_number(10.into()).unwrap();
 
-        assert!(sym_list.is_err());
-    }
+            let sym_list = runtime.merge_to_symbol_list(100, sym2);
 
-    #[test]
-    fn add_symbol_list_with_invalid_second_index() {
-        let mut runtime = SimpleGarnishData::new();
-        let sym1 = runtime.add_number(10.into()).unwrap();
+            assert!(sym_list.is_err());
+        }
 
-        let sym_list = runtime.merge_to_symbol_list(sym1, 200);
+        #[test]
+        fn add_symbol_list_with_invalid_second_index() {
+            let mut runtime = SimpleGarnishData::new();
+            let sym1 = runtime.add_number(10.into()).unwrap();
 
-        assert!(sym_list.is_err());
-    }
+            let sym_list = runtime.merge_to_symbol_list(sym1, 200);
 
-    #[test]
-    fn add_symbol_list_with_invalid_indices() {
-        let mut runtime = SimpleGarnishData::new();
-        
-        let sym_list = runtime.merge_to_symbol_list(100, 200);
+            assert!(sym_list.is_err());
+        }
 
-        assert!(sym_list.is_err());
+        #[test]
+        fn add_symbol_list_with_invalid_indices() {
+            let mut runtime = SimpleGarnishData::new();
+
+            let sym_list = runtime.merge_to_symbol_list(100, 200);
+
+            assert!(sym_list.is_err());
+        }
     }
 }
