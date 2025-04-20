@@ -13,8 +13,8 @@ where
 {
     type Error = DataError;
     type Symbol = u64;
-    type Char = char;
     type Byte = u8;
+    type Char = char;
     type Number = SimpleNumber;
     type Size = usize;
     type SizeIterator = SizeIterator;
@@ -27,58 +27,45 @@ where
     type JumpPathIndexIterator = SizeIterator;
     type ListIndexIterator = NumberIterator;
 
+    fn get_data_len(&self) -> usize {
+        self.data.len()
+    }
+
     fn get_data_iter(&self) -> SizeIterator {
-        return SizeIterator::new(0, self.data.len());
+        SizeIterator::new(0, self.data.len())
     }
 
-    fn get_list_items_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-        self.get_list_len(list_addr)
-            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+    fn get_value_stack_len(&self) -> usize {
+        self.values.len()
     }
 
-    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-        self.get_list_associations_len(list_addr)
-            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+    fn push_value_stack(&mut self, addr: usize) -> Result<(), Self::Error> {
+        self.values.push(addr);
+        Ok(())
     }
 
-    fn get_char_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-        self.get_char_list_len(list_addr)
-            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+    fn pop_value_stack(&mut self) -> Option<usize> {
+        self.values.pop()
     }
 
-    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-        self.get_byte_list_len(list_addr)
-            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+    fn get_value(&self, index: usize) -> Option<usize> {
+        self.values.get(index).cloned()
     }
 
-    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-        self.get_symbol_list_len(list_addr)
-            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+    fn get_value_mut(&mut self, index: usize) -> Option<&mut usize> {
+        self.values.get_mut(index)
     }
 
-    fn get_register_iter(&self) -> Self::RegisterIndexIterator {
-        return SizeIterator::new(0, self.register.len());
+    fn get_current_value(&self) -> Option<usize> {
+        self.values.last().cloned()
+    }
+
+    fn get_current_value_mut(&mut self) -> Option<&mut usize> {
+        self.values.last_mut()
     }
 
     fn get_value_iter(&self) -> Self::ValueIndexIterator {
-        return SizeIterator::new(0, self.values.len());
-    }
-
-    fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
-        unimplemented!() // not sure whether this function is needed currently unused by core
-    }
-
-    fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
-        return SizeIterator::new(0, self.expression_table.len());
-    }
-
-    fn get_instruction_iter(&self) -> Self::InstructionIterator {
-        return SizeIterator::new(0, self.instructions.len());
+        SizeIterator::new(0, self.values.len())
     }
 
     fn get_data_type(&self, index: usize) -> Result<GarnishDataType, Self::Error> {
@@ -141,7 +128,7 @@ where
                 None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
                 Some(v) => Ok(*v),
             },
-            SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index list with decimal value."))), // should return None
+            SimpleNumber::Float(_) => Err(DataError::from("Cannot index list with decimal value.".to_string())), // should return None
         }
     }
 
@@ -155,8 +142,69 @@ where
                 None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
                 Some(v) => Ok(*v),
             },
-            SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index list with decimal value."))), // should return None
+            SimpleNumber::Float(_) => Err(DataError::from("Cannot index list with decimal value.".to_string())), // should return None
         }
+    }
+
+    fn get_list_item_with_symbol(&self, list_addr: usize, sym: u64) -> Result<Option<usize>, Self::Error> {
+        let associations_len = self.get_list_associations_len(list_addr)?;
+
+        if associations_len == 0 {
+            return Ok(None);
+        }
+
+        let mut i = sym as usize % associations_len;
+        let mut count = 0;
+
+        loop {
+            // check to make sure item has same symbol
+            let association_ref = self.get_list_association(list_addr, i.into())?;
+
+            // should have symbol on left
+            match self.get_data_type(association_ref)? {
+                GarnishDataType::Pair => {
+                    let (left, right) = self.get_pair(association_ref)?;
+
+                    let left_ref = left;
+
+                    match self.get_data_type(left_ref)? {
+                        GarnishDataType::Symbol => {
+                            let v = self.get_symbol(left_ref)?;
+
+                            if v == sym {
+                                // found match
+                                // insert pair right as value
+                                return Ok(Some(right));
+                            }
+                        }
+                        t => Err(format!("Association created with non-symbol type {:?} on pair left.", t))?,
+                    }
+                }
+                t => Err(format!("Association created with non-pair type {:?}.", t))?,
+            }
+
+            i += 1;
+            if i >= associations_len {
+                i = 0;
+            }
+
+            count += 1;
+            if count > associations_len {
+                return Ok(None);
+            }
+        }
+    }
+
+    fn get_list_items_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+        self.get_list_len(list_addr)
+            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+    }
+
+    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+        self.get_list_associations_len(list_addr)
+            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
     }
 
     fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -169,8 +217,14 @@ where
                 None => Err(format!("No value at index {:?} for char list at {:?}", item_index, addr))?,
                 Some(c) => Ok(c),
             },
-            SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index char list with decimal value."))), // should return None
+            SimpleNumber::Float(_) => Err(DataError::from("Cannot index char list with decimal value.".to_string())), // should return None
         }
+    }
+
+    fn get_char_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+        self.get_char_list_len(list_addr)
+            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
     }
 
     fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -183,8 +237,14 @@ where
                 None => Err(format!("No value at index {:?} for byte list at {:?}", item_index, addr))?,
                 Some(c) => Ok(*c),
             },
-            SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index byte list with decimal value."))), // should return None
+            SimpleNumber::Float(_) => Err(DataError::from("Cannot index byte list with decimal value.".to_string())), // should return None
         }
+    }
+
+    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+        self.get_byte_list_len(list_addr)
+            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
     }
 
     fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -197,28 +257,34 @@ where
                 None => Err(format!("No value at index {:?} for symbol list at {:?}", item_index, addr))?,
                 Some(c) => Ok(*c),
             },
-            SimpleNumber::Float(_) => Err(DataError::from(format!("Cannot index symbol list with decimal value."))), // should return None
+            SimpleNumber::Float(_) => Err(DataError::from("Cannot index symbol list with decimal value.".to_string())), // should return None
         }
+    }
+
+    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+        self.get_symbol_list_len(list_addr)
+            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
     }
 
     fn add_unit(&mut self) -> Result<usize, Self::Error> {
         Ok(0)
     }
 
-    fn add_false(&mut self) -> Result<usize, Self::Error> {
-        Ok(1)
-    }
-
     fn add_true(&mut self) -> Result<usize, Self::Error> {
         Ok(2)
     }
 
-    fn add_type(&mut self, value: GarnishDataType) -> Result<Self::Size, Self::Error> {
-        self.cache_add(SimpleData::Type(value))
+    fn add_false(&mut self) -> Result<usize, Self::Error> {
+        Ok(1)
     }
 
     fn add_number(&mut self, value: SimpleNumber) -> Result<usize, Self::Error> {
         self.cache_add(SimpleData::Number(value))
+    }
+
+    fn add_type(&mut self, value: GarnishDataType) -> Result<Self::Size, Self::Error> {
+        self.cache_add(SimpleData::Type(value))
     }
 
     fn add_char(&mut self, value: Self::Char) -> Result<Self::Size, Self::Error> {
@@ -282,7 +348,7 @@ where
 
     fn add_to_list(&mut self, addr: usize, is_associative: bool) -> Result<(), Self::Error> {
         match &mut self.current_list {
-            None => Err(format!("Not currently creating a list."))?,
+            None => Err("Not currently creating a list.".to_string())?,
             Some((items, associations)) => {
                 items.push(addr);
 
@@ -297,7 +363,7 @@ where
 
     fn end_list(&mut self) -> Result<usize, Self::Error> {
         match &mut self.current_list {
-            None => Err(format!("Not currently creating a list."))?,
+            None => Err("Not currently creating a list.".to_string())?,
             Some((items, associations)) => {
                 // reorder associative values by modulo value
                 let mut ordered = vec![0usize; associations.len()];
@@ -313,7 +379,7 @@ where
 
                         count += 1;
                         if count > associations.len() {
-                            Err(format!("Could not place associative value"))?;
+                            Err("Could not place associative value".to_string())?;
                         }
                     }
 
@@ -333,7 +399,7 @@ where
 
     fn add_to_char_list(&mut self, c: Self::Char) -> Result<(), Self::Error> {
         match &mut self.current_char_list {
-            None => Err(format!("Attempting to add to unstarted char list."))?,
+            None => Err("Attempting to add to unstarted char list.".to_string())?,
             Some(s) => s.push(c),
         }
 
@@ -342,7 +408,7 @@ where
 
     fn end_char_list(&mut self) -> Result<Self::Size, Self::Error> {
         let data = match &self.current_char_list {
-            None => Err(format!("Attempting to end unstarted char list."))?,
+            None => Err("Attempting to end unstarted char list.".to_string())?,
             Some(s) => SimpleData::CharList(s.clone()),
         };
 
@@ -360,7 +426,7 @@ where
 
     fn add_to_byte_list(&mut self, c: Self::Byte) -> Result<(), Self::Error> {
         match &mut self.current_byte_list {
-            None => Err(format!("Attempting to add to unstarted byte list."))?,
+            None => Err("Attempting to add to unstarted byte list.".to_string())?,
             Some(l) => l.push(c),
         }
 
@@ -369,7 +435,7 @@ where
 
     fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error> {
         let data = match &self.current_byte_list {
-            None => Err(format!("Attempting to end unstarted byte list."))?,
+            None => Err("Attempting to end unstarted byte list.".to_string())?,
             Some(l) => SimpleData::ByteList(l.clone()),
         };
 
@@ -378,55 +444,6 @@ where
         self.current_byte_list = None;
 
         Ok(addr)
-    }
-
-    fn get_list_item_with_symbol(&self, list_addr: usize, sym: u64) -> Result<Option<usize>, Self::Error> {
-        let assocations_len = self.get_list_associations_len(list_addr)?;
-
-        if assocations_len == 0 {
-            return Ok(None);
-        }
-
-        let mut i = sym as usize % assocations_len;
-        let mut count = 0;
-
-        loop {
-            // check to make sure item has same symbol
-            let association_ref = self.get_list_association(list_addr, i.into())?;
-
-            // should have symbol on left
-            match self.get_data_type(association_ref)? {
-                GarnishDataType::Pair => {
-                    let (left, right) = self.get_pair(association_ref)?;
-
-                    let left_ref = left;
-
-                    match self.get_data_type(left_ref)? {
-                        GarnishDataType::Symbol => {
-                            let v = self.get_symbol(left_ref)?;
-
-                            if v == sym {
-                                // found match
-                                // insert pair right as value
-                                return Ok(Some(right));
-                            }
-                        }
-                        t => Err(format!("Association created with non-symbol type {:?} on pair left.", t))?,
-                    }
-                }
-                t => Err(format!("Association created with non-pair type {:?}.", t))?,
-            }
-
-            i += 1;
-            if i >= assocations_len {
-                i = 0;
-            }
-
-            count += 1;
-            if count > assocations_len {
-                return Ok(None);
-            }
-        }
     }
 
     fn get_register_len(&self) -> Self::Size {
@@ -448,44 +465,19 @@ where
             Some(value) => match self.data.get(value) {
                 None => Err(format!("Register address ({}) has no data", value))?,
                 Some(data) => match data {
-                    SimpleData::StackFrame(_) => Err(format!("Popped StackFrame from registers. Should only be done when popping jump path."))?,
+                    SimpleData::StackFrame(_) => Err("Popped StackFrame from registers. Should only be done when popping jump path.".to_string())?,
                     _ => Ok(Some(value))
                 }
             }
         }
     }
 
-    fn get_data_len(&self) -> usize {
-        self.data.len()
+    fn get_register_iter(&self) -> Self::RegisterIndexIterator {
+        SizeIterator::new(0, self.register.len())
     }
 
-    fn push_value_stack(&mut self, addr: usize) -> Result<(), Self::Error> {
-        self.values.push(addr);
-        Ok(())
-    }
-
-    fn pop_value_stack(&mut self) -> Option<usize> {
-        self.values.pop()
-    }
-
-    fn get_value(&self, index: usize) -> Option<usize> {
-        self.values.get(index).cloned()
-    }
-
-    fn get_value_mut(&mut self, index: usize) -> Option<&mut usize> {
-        self.values.get_mut(index)
-    }
-
-    fn get_value_stack_len(&self) -> usize {
-        self.values.len()
-    }
-
-    fn get_current_value(&self) -> Option<usize> {
-        self.values.last().cloned()
-    }
-
-    fn get_current_value_mut(&mut self) -> Option<&mut usize> {
-        self.values.last_mut()
+    fn get_instruction_len(&self) -> usize {
+        self.instructions.len()
     }
 
     fn push_instruction(&mut self, instruction: Instruction, data: Option<usize>) -> Result<usize, Self::Error> {
@@ -497,28 +489,24 @@ where
         self.instructions.get(index).and_then(|i| Some((i.instruction, i.data)))
     }
 
-    fn set_instruction_cursor(&mut self, index: usize) -> Result<(), Self::Error> {
-        self.instruction_cursor = index;
-        Ok(())
+    fn get_instruction_iter(&self) -> Self::InstructionIterator {
+        SizeIterator::new(0, self.instructions.len())
     }
 
     fn get_instruction_cursor(&self) -> usize {
         self.instruction_cursor
     }
 
-    fn get_instruction_len(&self) -> usize {
-        self.instructions.len()
+    fn set_instruction_cursor(&mut self, index: usize) -> Result<(), Self::Error> {
+        self.instruction_cursor = index;
+        Ok(())
+    }
+
+    fn get_jump_table_len(&self) -> usize {
+        self.expression_table.len()
     }
 
     fn push_jump_point(&mut self, index: usize) -> Result<(), Self::Error> {
-        // if index >= self.instructions.len() {
-        //     Err(format!(
-        //         "Specified jump point {:?} is out of bounds of instructions with length {:?}",
-        //         index,
-        //         self.instructions.len()
-        //     ))?;
-        // }
-
         self.expression_table.push(index);
         Ok(())
     }
@@ -527,8 +515,12 @@ where
         self.expression_table.get(index).cloned()
     }
 
-    fn get_jump_table_len(&self) -> usize {
-        self.expression_table.len()
+    fn get_jump_point_mut(&mut self, index: usize) -> Option<&mut usize> {
+        self.expression_table.get_mut(index)
+    }
+
+    fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
+        SizeIterator::new(0, self.expression_table.len())
     }
 
     fn push_jump_path(&mut self, index: usize) -> Result<(), Self::Error> {
@@ -550,8 +542,8 @@ where
         None
     }
 
-    fn get_jump_point_mut(&mut self, index: usize) -> Option<&mut usize> {
-        self.expression_table.get_mut(index)
+    fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
+        unimplemented!() // not sure whether this function is needed currently unused by core
     }
 
     //
@@ -744,16 +736,6 @@ mod tests {
 
         assert_eq!(runtime.get_data_type(3).unwrap(), GarnishDataType::Number);
     }
-
-    // #[test]
-    // fn add_jump_point_out_of_bounds() {
-    //     let mut runtime = SimpleRuntimeData::new();
-    //
-    //     runtime.push_instruction(Instruction::EndExpression, None).unwrap();
-    //     let result = runtime.push_jump_point(5);
-    //
-    //     assert!(result.is_err());
-    // }
 
     #[test]
     fn add_instruction() {
