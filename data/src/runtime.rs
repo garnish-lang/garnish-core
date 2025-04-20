@@ -248,7 +248,7 @@ where
     }
 
     fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        Ok(self.get(addr)?.as_byte_list()?.len())
+        Ok(self.get(addr)?.as_symbol_list()?.len())
     }
 
     fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Symbol, Self::Error> {

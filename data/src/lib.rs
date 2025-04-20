@@ -272,7 +272,23 @@ where
                     self.add_to_char_list(c)?;
                 }
             }
-            GarnishDataType::SymbolList => { todo!() }
+            GarnishDataType::SymbolList => {
+                let len = self.get_symbol_list_len(from)?;
+                let mut strs = vec![];
+                for i in 0..len {
+                    let sym = self.get_symbol_list_item(from, i.into())?;
+                    let s = match self.data.get_symbol(sym) {
+                        None => sym.to_string(),
+                        Some(s) => s.clone(),
+                    };
+                    strs.push(format!("{}", s));
+                }
+                let s = strs.join(", ");
+                self.start_char_list()?;
+                for c in s.chars() {
+                    self.add_to_char_list(c)?;
+                }
+            }
             GarnishDataType::Expression => {
                 let e = self.get_expression(from)?;
                 let s = format!("Expression({})", e);
@@ -662,7 +678,7 @@ mod to_char_list {
 
     #[test]
     fn symbol_list() {
-        assert_to_char_list("symbol_one, symbol_two, symbol_three", |runtime| {
+        assert_to_char_list("symbol_one, symbol_two", |runtime| {
             let sym1 = runtime.parse_add_symbol("symbol_one").unwrap();
             let sym2 = runtime.parse_add_symbol("symbol_two").unwrap();
             runtime
