@@ -42,7 +42,7 @@ mod tests {
         current: i32,
         max: i32
     }
-    
+
     impl MockIterator {
         pub fn new(count: i32) -> Self {
             Self {
@@ -81,6 +81,19 @@ mod tests {
                 self.current -= 1;
                 value
             }
+        }
+    }
+
+    #[derive(Default)]
+    pub struct BasicData {
+        type_stack: Vec<GarnishDataType>,
+        registers: Vec<i32>
+    }
+
+    impl BasicData {
+        pub fn new(type_stack: Vec<GarnishDataType>) -> Self {
+            let registers = type_stack.iter().enumerate().map(|(i, _)| i as i32).collect();
+            Self { type_stack, registers }
         }
     }
 
@@ -217,6 +230,25 @@ mod tests {
         // stub_parse_byte: fn(&T, from: &str) -> Result<u8, MockError>,
         // stub_parse_char_list: fn(&T, from: &str) -> Result<Vec<char>, MockError>,
         // stub_parse_byte_list: fn(&T, from: &str) -> Result<Vec<u8>, MockError>,
+    }
+
+    impl MockGarnishData<BasicData> {
+        pub fn new_basic_data(type_stack: Vec<GarnishDataType>) -> Self {
+            let data = BasicData::new(type_stack);
+            let mut mock = Self::default_with_data(data);
+            
+            mock.stub_get_data_type = |data, i| Ok(data.type_stack.get(i as usize).cloned().unwrap_or(GarnishDataType::Unit));
+            mock.stub_pop_register = |data| match data.registers.pop() {
+                None => {
+                    assert!(false, "Ran out of test register data.");
+                    Err(MockError {})
+                },
+                i => Ok(i)
+            };
+            mock.stub_get_instruction_cursor = |_| 0;
+            
+            mock
+        }
     }
 
     impl<T> MockGarnishData<T> where T: Default {

@@ -200,30 +200,17 @@ mod tests {
     use crate::runtime::tests::{MockGarnishData, MockIterator};
     use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
 
-    struct StackData {
-        addrs: Vec<i32>,
-    }
-
-    impl Default for StackData {
-        fn default() -> Self {
-            StackData { addrs: vec![] }
-        }
-    }
-
     #[test]
     fn apply_integer_to_list() {
-        let mut mock_data = MockGarnishData::default_with_data(StackData { addrs: vec![10, 20] });
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::List, GarnishDataType::Number]);
 
-        mock_data.stub_get_instruction_cursor = |_| 0;
-        mock_data.stub_pop_register = |data| Ok(Some(data.addrs.pop().unwrap()));
-        mock_data.stub_get_data_type = |_, i| Ok(if i == 10 { GarnishDataType::List } else { GarnishDataType::Number });
         mock_data.stub_get_number = |_, i| {
-            assert_eq!(i, 20);
+            assert_eq!(i, 1);
             Ok(0)
         };
         mock_data.stub_get_list_len = |_, _| Ok(1);
         mock_data.stub_get_list_item = |_, list, i| {
-            assert_eq!(list, 10);
+            assert_eq!(list, 0);
             assert_eq!(i, 0);
             Ok(30)
         };
@@ -239,17 +226,14 @@ mod tests {
 
     #[test]
     fn apply_symbol_to_list() {
-        let mut mock_data = MockGarnishData::default_with_data(StackData { addrs: vec![10, 20] });
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::List, GarnishDataType::Symbol]);
 
-        mock_data.stub_get_instruction_cursor = |_| 0;
-        mock_data.stub_pop_register = |data| Ok(Some(data.addrs.pop().unwrap()));
-        mock_data.stub_get_data_type = |_, i| Ok(if i == 10 { GarnishDataType::List } else { GarnishDataType::Symbol });
         mock_data.stub_get_symbol = |_, i| {
-            assert_eq!(i, 20);
+            assert_eq!(i, 1);
             Ok(0)
         };
         mock_data.stub_get_list_item_with_symbol = |_, list, i| {
-            assert_eq!(list, 10);
+            assert_eq!(list, 0);
             assert_eq!(i, 0);
             Ok(Some(30))
         };
@@ -265,22 +249,19 @@ mod tests {
 
     #[test]
     fn apply_symbol_list_to_list() {
-        let mut mock_data = MockGarnishData::default_with_data(StackData { addrs: vec![10, 20] });
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::List, GarnishDataType::List, GarnishDataType::SymbolList]);
 
-        mock_data.stub_get_instruction_cursor = |_| 0;
-        mock_data.stub_pop_register = |data| Ok(Some(data.addrs.pop().unwrap()));
-        mock_data.stub_get_data_type = |_, i| Ok(if i == 10 || i == 30 { GarnishDataType::List } else { GarnishDataType::SymbolList });
         mock_data.stub_get_symbol_list_iter = |_, _| MockIterator::new(2);
         mock_data.stub_get_symbol_list_item = |_, list, i| {
-            assert_eq!(list, 20);
+            assert_eq!(list, 2);
             Ok((i + 1) as u32 * 100u32)
         };
         mock_data.stub_get_list_item_with_symbol = |_, list, i| {
             if i == 100 {
-                assert_eq!(list, 10);
-                Ok(Some(30))
+                assert_eq!(list, 1);
+                Ok(Some(0))
             } else if i == 200 {
-                assert_eq!(list, 30);
+                assert_eq!(list, 0);
                 Ok(Some(40))
             } else {
                 assert!(false);

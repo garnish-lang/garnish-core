@@ -50,25 +50,13 @@ mod tests {
     use crate::runtime::tests::MockGarnishData;
     use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
 
-    struct StackData {
-        addrs: Vec<i32>,
-    }
-
-    impl Default for StackData {
-        fn default() -> Self {
-            StackData { addrs: vec![] }
-        }
-    }
-
     #[test]
     fn create_symbol_list() {
-        let mut mock_data = MockGarnishData::default_with_data(StackData { addrs: vec![10, 20] });
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Symbol, GarnishDataType::Symbol]);
 
-        mock_data.stub_pop_register = |data| Ok(Some(data.addrs.pop().unwrap()));
-        mock_data.stub_get_data_type = |_, _| Ok(GarnishDataType::Symbol);
         mock_data.stub_merge_to_symbol_list = |_, first, second| {
-            assert_eq!(first, 10);
-            assert_eq!(second, 20);
+            assert_eq!(first, 0);
+            assert_eq!(second, 1);
             Ok(30)
         };
         mock_data.stub_push_register = |_, i| {
@@ -83,13 +71,11 @@ mod tests {
 
     #[test]
     fn extend_symbol_list_from_left() {
-        let mut mock_data = MockGarnishData::default_with_data(StackData { addrs: vec![10, 20] });
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Symbol, GarnishDataType::SymbolList]);
 
-        mock_data.stub_pop_register = |data| Ok(Some(data.addrs.pop().unwrap()));
-        mock_data.stub_get_data_type = |_, i| Ok(if i == 10 { GarnishDataType::Symbol } else { GarnishDataType::SymbolList });
         mock_data.stub_merge_to_symbol_list = |_, first, second| {
-            assert_eq!(first, 10);
-            assert_eq!(second, 20);
+            assert_eq!(first, 0);
+            assert_eq!(second, 1);
             Ok(30)
         };
         mock_data.stub_push_register = |_, i| {
@@ -104,13 +90,11 @@ mod tests {
 
     #[test]
     fn extend_symbol_list_from_right() {
-        let mut mock_data = MockGarnishData::default_with_data(StackData { addrs: vec![10, 20] });
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::SymbolList, GarnishDataType::Symbol]);
 
-        mock_data.stub_pop_register = |data| Ok(Some(data.addrs.pop().unwrap()));
-        mock_data.stub_get_data_type = |_, i| Ok(if i == 10 { GarnishDataType::SymbolList } else { GarnishDataType::Symbol });
         mock_data.stub_merge_to_symbol_list = |_, first, second| {
-            assert_eq!(first, 10);
-            assert_eq!(second, 20);
+            assert_eq!(first, 0);
+            assert_eq!(second, 1);
             Ok(30)
         };
         mock_data.stub_push_register = |_, i| {
@@ -125,13 +109,11 @@ mod tests {
 
     #[test]
     fn merge_symbol_lists() {
-        let mut mock_data = MockGarnishData::default_with_data(StackData { addrs: vec![10, 20] });
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::SymbolList, GarnishDataType::SymbolList]);
 
-        mock_data.stub_pop_register = |data| Ok(Some(data.addrs.pop().unwrap()));
-        mock_data.stub_get_data_type = |_, i| Ok(if i == 10 { GarnishDataType::SymbolList } else { GarnishDataType::SymbolList });
         mock_data.stub_merge_to_symbol_list = |_, first, second| {
-            assert_eq!(first, 10);
-            assert_eq!(second, 20);
+            assert_eq!(first, 0);
+            assert_eq!(second, 1);
             Ok(30)
         };
         mock_data.stub_push_register = |_, i| {
