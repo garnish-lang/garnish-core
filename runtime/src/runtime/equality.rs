@@ -568,6 +568,40 @@ mod tests {
     }
 
     #[test]
+    fn symbol_list_items_not_equal_to_symbol_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![GarnishDataType::SymbolList, GarnishDataType::SymbolList],
+            registers: vec![0, 1],
+            lens: vec![2, 2],
+            items: vec![
+                vec![10, 30],
+                vec![10, 20]
+            ]
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_symbol_list_iter = |data, i| MockIterator::new(data.lens.get(i as usize).unwrap().clone());
+        data.stub_get_symbol_list_len = |data, i| Ok(data.lens.get(i as usize).unwrap().clone());
+        data.stub_start_list = |_, _| Ok(());
+        data.stub_get_symbol_list_item = |data, list_index, i| {
+            let item = data.items.get(list_index as usize).unwrap().get(i as usize).unwrap().clone();
+            Ok(item as u32)
+        };
+
+        data.stub_add_false = |_| Ok(999);
+        data.stub_push_register = |_, i| {
+            assert_eq!(i, 999);
+            Ok(())
+        };
+
+        let result = equal(&mut data).unwrap();
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
     fn symbol_list_not_equal_to_symbol_list() {
         let mut data = MockGarnishData::default_with_data(ListCompData {
             types: vec![GarnishDataType::SymbolList, GarnishDataType::SymbolList],
