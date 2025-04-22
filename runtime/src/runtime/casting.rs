@@ -77,6 +77,18 @@ pub(crate) fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
                 push_unit(this)?;
             }
         }
+        (GarnishDataType::SymbolList, GarnishDataType::List) => {
+            let mut iter = this.get_symbol_list_iter(left.clone());
+            let len = this.get_symbol_list_len(left.clone())?;
+            
+            this.start_list(len)?;
+            while let Some(index) = iter.next() {
+                let sym = this.get_symbol_list_item(left.clone(), index)?;
+                let item_index = this.add_symbol(sym)?;
+                this.add_to_list(item_index, false)?;
+            }
+            this.end_list().and_then(|r| this.push_register(r))?
+        }
         (GarnishDataType::Range, GarnishDataType::List) => {
             let (start, end) = this.get_range(left.clone())?;
             let len = end - start + Data::Size::one();
@@ -264,4 +276,41 @@ where
     }
 
     Ok(None)
+}
+
+#[cfg(test)]
+mod tests {
+    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
+    use crate::runtime::casting::type_cast;
+    use crate::runtime::tests::{MockGarnishData, MockIterator};
+
+    #[test]
+    fn symbol_list_to_list() {
+        let mut data = MockGarnishData::new_basic_data(vec![
+            GarnishDataType::SymbolList,
+            GarnishDataType::List,
+        ]);
+        
+        data.stub_get_symbol_list_iter = |_, _| MockIterator::new(2);
+        data.stub_get_symbol_list_len = |_, _| Ok(2);
+        data.stub_start_list = |_, _| Ok(());
+        data.stub_get_symbol_list_item = |_, _, i| Ok(i as u32 + 10);
+        data.stub_add_symbol = |_, sym| {
+            assert!([10, 11].contains(&sym));
+            Ok(sym as i32)
+        };
+        data.stub_add_to_list = |_, addr, _| {
+            assert!([10, 11].contains(&addr));
+            Ok(())
+        };
+        data.stub_end_list = |_| Ok(999);
+        data.stub_push_register = |_, i| {
+            assert_eq!(i, 999);
+            Ok(())
+        };
+        
+        let result = type_cast(&mut data, NO_CONTEXT).unwrap();
+        
+        assert_eq!(result, None);
+    }
 }
