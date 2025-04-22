@@ -22,6 +22,7 @@ pub(crate) fn access<Data: GarnishData, T: GarnishContext<Data>>(
         | (GarnishDataType::CharList, GarnishDataType::Symbol)
         | (GarnishDataType::ByteList, GarnishDataType::Number)
         | (GarnishDataType::ByteList, GarnishDataType::Symbol)
+        | (GarnishDataType::SymbolList, GarnishDataType::Number)
         | (GarnishDataType::Range, GarnishDataType::Number)
         | (GarnishDataType::Range, GarnishDataType::Symbol)
         | (GarnishDataType::Concatenation, GarnishDataType::Number)
@@ -118,6 +119,30 @@ mod tests {
         };
         mock_data.stub_push_register = |_, i| {
             assert_eq!(i, 30);
+            Ok(())
+        };
+
+        let result = access(&mut mock_data, NO_CONTEXT).unwrap();
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn access_symbol_list_with_number() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::SymbolList, GarnishDataType::Number]);
+
+        mock_data.stub_get_number = |_, num| {
+            assert_eq!(num, 1);
+            Ok(1)
+        };
+        mock_data.stub_get_symbol_list_len = |_, _| Ok(2);
+        mock_data.stub_get_symbol_list_item = |_, _, index| Ok((index + 1) as u32 * 10);
+        mock_data.stub_add_symbol = |_, sym| {
+            assert_eq!(sym, 20);
+            Ok(5)
+        };
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 5);
             Ok(())
         };
 

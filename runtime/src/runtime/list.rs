@@ -76,6 +76,7 @@ pub(crate) fn access_with_integer<Data: GarnishData>(
         GarnishDataType::List => index_list(this, value, index),
         GarnishDataType::CharList => index_char_list(this, value, index),
         GarnishDataType::ByteList => index_byte_list(this, value, index),
+        GarnishDataType::SymbolList => index_symbol_list(this, value, index),
         GarnishDataType::Range => {
             let (start, end) = this.get_range(value)?;
             match (this.get_data_type(start.clone())?, this.get_data_type(end.clone())?) {
@@ -182,6 +183,24 @@ fn index_byte_list<Data: GarnishData>(
         } else {
             let c = this.get_byte_list_item(list, index)?;
             let addr = this.add_byte(c)?;
+            Ok(Some(addr))
+        }
+    }
+}
+
+fn index_symbol_list<Data: GarnishData>(
+    this: &mut Data,
+    list: Data::Size,
+    index: Data::Number,
+) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    if index < Data::Number::zero() {
+        Ok(None)
+    } else {
+        if index >= Data::size_to_number(this.get_symbol_list_len(list.clone())?) {
+            Ok(None)
+        } else {
+            let c = this.get_symbol_list_item(list, index)?;
+            let addr = this.add_symbol(c)?;
             Ok(Some(addr))
         }
     }
