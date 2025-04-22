@@ -21,7 +21,7 @@ where
             SimpleData::Number(n) => format!("{}", n),
             SimpleData::Char(c) => format!("{}", c),
             SimpleData::Byte(b) => b.to_string(),
-            SimpleData::Symbol(s) => format!("Symbol({})", s),
+            SimpleData::Symbol(s) => Self::display_simple_symbol(s),
             SimpleData::SymbolList(s) => format!("SymbolList({})", s.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(", ")),
             SimpleData::Expression(e) => format!("Expression({})", e),
             SimpleData::External(e) => format!("External({})", e),
@@ -39,6 +39,10 @@ where
             SimpleData::StackFrame(s) => format!("StackFrame{{return: {}}}", s.return_addr()),
             SimpleData::Custom(c) => format!("{}", c),
         }
+    }
+
+    pub fn display_simple_symbol(sym: &u64) -> String {
+        format!("Symbol({})", sym)
     }
 }
 
@@ -73,6 +77,14 @@ where
                     true => format!("({})", bytes.iter().map(|b| b.to_string()).collect::<Vec<String>>().join(" ")),
                     false => format!("{}", bytes.iter().map(|b| b.to_string()).collect::<Vec<String>>().join(" ")),
                 },
+                SimpleData::SymbolList(symbols) => {
+                    let base = symbols.iter().map(|s| match self.symbol_to_name.get(s) {
+                        None => SimpleData::<T>::display_simple_symbol(s),
+                        Some(s) => format!("{}", s),
+                    }).collect::<Vec<String>>().join(".");
+
+                    format!(":{}", base)
+                }
                 SimpleData::Pair(left, right) => {
                     format!(
                         "{} = {}",
@@ -397,6 +409,9 @@ mod simple_list {
     #[test]
     fn list_of_items() {
         let mut list: SimpleDataList<Date> = SimpleDataList::new();
+        list.insert_symbol(150, "my_symbol");
+        list.insert_symbol(250, "their_symbol");
+
         list.push(SimpleData::Unit);
         list.push(SimpleData::True);
         list.push(SimpleData::False);
@@ -410,12 +425,13 @@ mod simple_list {
         list.push(SimpleData::CharList("test".to_string()));
         list.push(SimpleData::ByteList(vec![10, 20]));
         list.push(SimpleData::Custom(Date { day: 1, month: 10 }));
+        list.push(SimpleData::SymbolList(vec![150, 250]));
 
-        list.push(SimpleData::List(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 15], vec![]));
+        list.push(SimpleData::List(vec![0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 100], vec![]));
 
         assert_eq!(
-            list.display_for_item(13),
-            "(), True, False, Type(Byte), 100, c, 10, Symbol(100), Expression(100), External(100), test, (10 20), day 1 of month 10, <NoData>"
+            list.display_for_item(14),
+            "(), True, False, Type(Byte), 100, c, 10, Symbol(100), Expression(100), External(100), test, (10 20), day 1 of month 10, :my_symbol.their_symbol, <NoData>"
         );
     }
 
@@ -435,6 +451,16 @@ mod simple_list {
         list.push(SimpleData::Symbol(100));
 
         assert_eq!(list.display_for_item(0), "Symbol(100)");
+    }
+
+    #[test]
+    fn symbol_list() {
+        let mut list: SimpleDataList<Date> = SimpleDataList::new();
+        list.insert_symbol(100, "my_symbol");
+
+        list.push(SimpleData::SymbolList(vec![100, 200]));
+
+        assert_eq!(list.display_for_item(0), ":my_symbol.Symbol(200)".to_string());
     }
 
     #[test]

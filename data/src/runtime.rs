@@ -688,7 +688,7 @@ where
     }
 
     fn parse_symbol(from: &str) -> Result<Self::Symbol, Self::Error> {
-        Ok(symbol_value(from))
+        Ok(symbol_value(from.trim_matches(':')))
     }
 
     fn parse_char(from: &str) -> Result<Self::Char, Self::Error> {
@@ -842,6 +842,18 @@ mod tests {
 
 #[cfg(test)]
 mod add_data {
+    mod parsing {
+        use garnish_lang_traits::{GarnishData};
+        use crate::{SimpleDataRuntimeNC};
+
+        #[test]
+        fn symbols_are_stripped_of_colon() {
+            let s1 = SimpleDataRuntimeNC::parse_symbol(":my_symbol").unwrap();
+            let s2 = SimpleDataRuntimeNC::parse_symbol("my_symbol").unwrap();
+            
+            assert_eq!(s1, s2);
+        }
+    }
     mod symbol_list {
         use garnish_lang_traits::{GarnishData, GarnishDataType};
         use crate::{SimpleDataRuntimeNC, SimpleGarnishData};
