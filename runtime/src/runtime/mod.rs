@@ -236,7 +236,7 @@ mod tests {
         pub fn new_basic_data(type_stack: Vec<GarnishDataType>) -> Self {
             let data = BasicData::new(type_stack);
             let mut mock = Self::default_with_data(data);
-            
+
             mock.stub_get_data_type = |data, i| Ok(data.type_stack.get(i as usize).cloned().unwrap_or(GarnishDataType::Unit));
             mock.stub_pop_register = |data| match data.registers.pop() {
                 None => {
@@ -246,7 +246,7 @@ mod tests {
                 i => Ok(i)
             };
             mock.stub_get_instruction_cursor = |_| 0;
-            
+
             mock
         }
     }

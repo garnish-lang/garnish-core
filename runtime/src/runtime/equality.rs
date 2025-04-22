@@ -172,6 +172,29 @@ fn data_equal<Data: GarnishData>(
                 equal
             }
         }
+        (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => {
+            let len1 = this.get_symbol_list_len(left_addr.clone())?;
+            let len2 = this.get_symbol_list_len(right_addr.clone())?;
+
+            if len1 != len2 {
+                false
+            } else {
+                let mut iter1 = this.get_symbol_list_iter(left_addr.clone());
+                let mut iter2 = this.get_symbol_list_iter(right_addr.clone());
+
+                let mut equal = true;
+                while let (Some(next_left), Some(next_right)) = (iter1.next(), iter2.next()) {
+                    let s1 = this.get_symbol_list_item(left_addr.clone(), next_left.clone())?;
+                    let s2 = this.get_symbol_list_item(right_addr.clone(), next_right.clone())?;
+
+                    if s1 != s2 {
+                        equal = false;
+                    }
+                }
+
+                equal
+            }
+        }
         (GarnishDataType::Range, GarnishDataType::Range) => {
             let (start1, end1) = this.get_range(left_addr)?;
             let (start2, end2) = this.get_range(right_addr)?;
@@ -484,4 +507,63 @@ where
     trace!("Comparing {:?} == {:?}", left, right);
 
     Ok(left == right)
+}
+
+#[cfg(test)]
+mod tests {
+    use garnish_lang_traits::{GarnishDataType};
+    use crate::runtime::equality::equal;
+    use crate::runtime::tests::{MockGarnishData, MockIterator};
+
+    struct ListCompData {
+        types: Vec<GarnishDataType>,
+        registers: Vec<i32>,
+        lens: Vec<i32>,
+        items: Vec<Vec<u32>>
+    }
+
+    impl Default for ListCompData {
+        fn default() -> Self {
+            Self {
+                types: vec![],
+                registers: vec![],
+                lens: vec![],
+                items: vec![],
+            }
+        }
+    }
+
+    #[test]
+    fn symbol_list_equal_to_symbol_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![GarnishDataType::SymbolList, GarnishDataType::SymbolList],
+            registers: vec![0, 1],
+            lens: vec![2, 2],
+            items: vec![
+                vec![10, 20],
+                vec![10, 20]
+            ]
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_symbol_list_iter = |data, i| MockIterator::new(data.lens.get(i as usize).unwrap().clone());
+        data.stub_get_symbol_list_len = |data, i| Ok(data.lens.get(i as usize).unwrap().clone());
+        data.stub_start_list = |_, _| Ok(());
+        data.stub_get_symbol_list_item = |data, list_index, i| {
+            let item = data.items.get(list_index as usize).unwrap().get(i as usize).unwrap().clone();
+            Ok(item as u32)
+        };
+        
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |_, i| {
+            assert_eq!(i, 999);
+            Ok(())
+        };
+
+        let result = equal(&mut data).unwrap();
+
+        assert_eq!(result, None);
+    }
 }
