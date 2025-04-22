@@ -141,7 +141,8 @@ fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(
         (GarnishDataType::List, GarnishDataType::Range)
         | (GarnishDataType::Concatenation, GarnishDataType::Range)
         | (GarnishDataType::CharList, GarnishDataType::Range)
-        | (GarnishDataType::ByteList, GarnishDataType::Range) => {
+        | (GarnishDataType::ByteList, GarnishDataType::Range)
+        | (GarnishDataType::SymbolList, GarnishDataType::Range) => {
             // create slice
             let addr = this.add_slice(left_addr, right_addr)?;
             this.push_register(addr)?;
@@ -353,6 +354,38 @@ mod tests {
         mock_data.stub_get_symbol_list_item = |_, _, index| Ok((index + 1) as u32 * 10);
         mock_data.stub_add_symbol = |_, sym| {
             assert_eq!(sym, 20);
+            Ok(5)
+        };
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 5);
+            Ok(())
+        };
+
+        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+
+        assert_eq!(result, Some(1));
+    }
+}
+
+#[cfg(test)]
+mod slice {
+    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
+    use crate::runtime::apply::apply;
+    use crate::runtime::tests::MockGarnishData;
+
+    #[test]
+    fn symbol_list() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::SymbolList, GarnishDataType::Range]);
+
+        mock_data.stub_get_number = |_, num| {
+            assert_eq!(num, 1);
+            Ok(1)
+        };
+        mock_data.stub_get_symbol_list_len = |_, _| Ok(2);
+        mock_data.stub_get_symbol_list_item = |_, _, index| Ok((index + 1) as u32 * 10);
+        mock_data.stub_add_slice = |_, list, range| {
+            assert_eq!(list, 0);
+            assert_eq!(range, 1);
             Ok(5)
         };
         mock_data.stub_push_register = |_, i| {
