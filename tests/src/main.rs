@@ -47,9 +47,10 @@ fn main() {
     let mut successes = 0;
     let mut failures = 0;
     let mut messages = vec![];
-    let manual_filter: [&str; 0] = [
-        
-    ];
+
+    // future cli options
+    let manual_filter: [&str; 0] = [];
+    let display_successes = false;
 
     for script_path in script_paths {
         let mut path = PathBuf::from(&script_path);
@@ -68,22 +69,23 @@ fn main() {
 
         let result = execute_script(&script_path);
 
-        let message = match result {
+        match result {
             TestResult::Success => {
                 successes += 1;
-                "success".green()
+                if display_successes {
+                    messages.push(format!("{} - {}", script_name, "success".green()))
+                }
             }
             TestResult::Failure(s) => {
                 failures += 1;
-                format!("failure - {}", s).red()
+                messages.push(format!("{} - {}", script_name, format!("failure - {}", s).red()));
             }
             TestResult::Error(s) => {
                 failures += 1;
-                format!("error - {}", s).yellow()
+
+                messages.push(format!("{} - {}", script_name, format!("error - {}", s).yellow()));
             }
         };
-
-        messages.push(format!("{} - {}", script_name, message));
     }
 
     println!(

@@ -2,12 +2,12 @@ use std::fmt::Debug;
 
 use log::trace;
 
-use crate::runtime::error::state_error;
 use crate::runtime::error::OrNumberError;
+use crate::runtime::error::state_error;
 use crate::runtime::internals::concatenation_len;
 use crate::runtime::list::index_concatenation_for;
 use crate::runtime::utilities::{get_range, next_two_raw_ref, push_boolean};
-use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishData, GarnishDataType, GarnishNumber, RuntimeError, TypeConstants};
 
 pub(crate) fn equal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let equal = perform_equality_check(this)?;
@@ -28,8 +28,7 @@ pub fn type_equal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Siz
     let left_type = this.get_data_type(left)?;
     let right_type = this.get_data_type(right.clone())?;
 
-    // check if right type needs to be corrected if Type type
-    // but only if both aren't Type type
+    // if right is a Garnish Type value, then comparison is against that value
     let right_type = if right_type == GarnishDataType::Type {
         this.get_type(right)?
     } else {
@@ -46,7 +45,7 @@ fn perform_equality_check<Data: GarnishData>(this: &mut Data) -> Result<bool, Ru
     // hope that can get reduced to a constant
     let two = Data::Size::one() + Data::Size::one();
     if this.get_register_len() < two {
-        state_error(format!("Not enough registers to perform comparison."))?;
+        state_error("Not enough registers to perform comparison.".to_string())?;
     }
 
     let start = this.get_register_len() - two;
@@ -66,11 +65,7 @@ fn perform_equality_check<Data: GarnishData>(this: &mut Data) -> Result<bool, Ru
     Ok(true)
 }
 
-fn data_equal<Data: GarnishData>(
-    this: &mut Data,
-    left_addr: Data::Size,
-    right_addr: Data::Size,
-) -> Result<bool, RuntimeError<Data::Error>> {
+fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {
     let (left_type, right_type) = (this.get_data_type(left_addr.clone())?, this.get_data_type(right_addr.clone())?);
 
     let equal = match (left_type, right_type) {
@@ -237,7 +232,7 @@ fn data_equal<Data: GarnishData>(
 
                 while count < len {
                     // need to find faster way
-                    // curent way is to index each concatenation one item at a time
+                    // current way is to index each concatenation one item at a time
                     match (
                         index_concatenation_for(this, left_addr.clone(), count.clone())?,
                         index_concatenation_for(this, right_addr.clone(), count.clone())?,
@@ -268,8 +263,11 @@ fn data_equal<Data: GarnishData>(
 
                 while count < len {
                     // need to find faster way
-                    // curent way is to index each concatenation one item at a time
-                    match (this.get_list_item(left_addr.clone(), count.clone())?, index_concatenation_for(this, right_addr.clone(), count.clone())?) {
+                    // current way is to index each concatenation one item at a time
+                    match (
+                        this.get_list_item(left_addr.clone(), count.clone())?,
+                        index_concatenation_for(this, right_addr.clone(), count.clone())?,
+                    ) {
                         (left, Some(right)) => {
                             this.push_register(left)?;
                             this.push_register(right)?;
@@ -296,8 +294,11 @@ fn data_equal<Data: GarnishData>(
 
                 while count < len {
                     // need to find faster way
-                    // curent way is to index each concatenation one item at a time
-                    match (index_concatenation_for(this, left_addr.clone(), count.clone())?, this.get_list_item(right_addr.clone(), count.clone())?) {
+                    // current way is to index each concatenation one item at a time
+                    match (
+                        index_concatenation_for(this, left_addr.clone(), count.clone())?,
+                        this.get_list_item(right_addr.clone(), count.clone())?,
+                    ) {
                         (Some(left), right) => {
                             this.push_register(left)?;
                             this.push_register(right)?;
@@ -313,11 +314,13 @@ fn data_equal<Data: GarnishData>(
             }
         }
         (GarnishDataType::Slice, GarnishDataType::Slice) => {
-            let (value1, range1) = this.get_slice(left_addr)?;
-            let (value2, range2) = this.get_slice(right_addr)?;
+            let (value1, range1) = this.get_slice(left_addr.clone())?;
+            let (value2, range2) = this.get_slice(right_addr.clone())?;
 
             let (start1, _, len1) = get_range(this, range1)?;
             let (start2, _, len2) = get_range(this, range2)?;
+
+            let (mut slice_iter1, mut slice_iter2) = (this.get_slice_iter(left_addr.clone()), this.get_slice_iter(right_addr.clone()));
 
             // slices need same len of range
             // if so, run through list and push to register
@@ -390,6 +393,20 @@ fn data_equal<Data: GarnishData>(
 
                         true
                     }
+                    (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => {
+                        while let (Some(index1), Some(index2)) = (slice_iter1.next(), slice_iter2.next()) {
+                            let (item1, item2) = (this.get_symbol_list_item(value1.clone(), index1)?, this.get_symbol_list_item(value2.clone(), index2)?);
+                            if item1 != item2 {
+                                return Ok(false);
+                            }
+                        }
+
+                        match (slice_iter1.next(), slice_iter2.next()) {
+                            (Some(_), Some(_)) => state_error("Both slice operand's have remaining values in iterators after comparison".to_string())?,
+                            (None, Some(_)) | (Some(_), None) => false, // one operand as more items, automatically not equal
+                            (None, None) => true,
+                        }
+                    }
                     (GarnishDataType::List, GarnishDataType::List) => {
                         let mut index1 = start1;
                         let mut index2 = start2;
@@ -435,7 +452,7 @@ fn data_equal<Data: GarnishData>(
             // associations and non associations must be in the same positions
             // Ex. (for list position x)
             //      left has association at x, right has association at x
-            //          right is check for the same association at left.x
+            //          right is checked for the same association at left.x
             //          if right has association, position not considered, values are pushed for equality check
             //      left has item at x, right has item at x
             //          both items are pushed for equality
@@ -475,7 +492,7 @@ fn data_equal<Data: GarnishData>(
                             }
                         }
                     } else {
-                        // not an association, push both for comparision
+                        // not an association, push both for comparison
                         this.push_register(left_item)?;
                         this.push_register(right_item)?;
                     }
@@ -511,15 +528,22 @@ where
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_traits::{GarnishDataType};
     use crate::runtime::equality::equal;
-    use crate::runtime::tests::{MockGarnishData, MockIterator};
+    use crate::runtime::tests::{MockError, MockGarnishData, MockIterator};
+    use garnish_lang_traits::GarnishDataType;
 
     struct ListCompData {
         types: Vec<GarnishDataType>,
         registers: Vec<i32>,
         lens: Vec<i32>,
-        items: Vec<Vec<u32>>
+        items: Vec<Vec<u32>>,
+    }
+    
+    impl ListCompData {
+        fn get_symbol_list_item(&self, list: i32, index: i32) -> Result<u32, MockError> {
+            let item = self.items.get(list as usize).unwrap().get(index as usize).unwrap().clone();
+            Ok(item)
+        }
     }
 
     impl Default for ListCompData {
@@ -539,10 +563,7 @@ mod tests {
             types: vec![GarnishDataType::SymbolList, GarnishDataType::SymbolList],
             registers: vec![0, 1],
             lens: vec![2, 2],
-            items: vec![
-                vec![10, 20],
-                vec![10, 20]
-            ]
+            items: vec![vec![10, 20], vec![10, 20]],
         });
 
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
@@ -551,11 +572,8 @@ mod tests {
         data.stub_get_symbol_list_iter = |data, i| MockIterator::new(data.lens.get(i as usize).unwrap().clone());
         data.stub_get_symbol_list_len = |data, i| Ok(data.lens.get(i as usize).unwrap().clone());
         data.stub_start_list = |_, _| Ok(());
-        data.stub_get_symbol_list_item = |data, list_index, i| {
-            let item = data.items.get(list_index as usize).unwrap().get(i as usize).unwrap().clone();
-            Ok(item as u32)
-        };
-        
+        data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
+
         data.stub_add_true = |_| Ok(999);
         data.stub_push_register = |_, i| {
             assert_eq!(i, 999);
@@ -573,10 +591,7 @@ mod tests {
             types: vec![GarnishDataType::SymbolList, GarnishDataType::SymbolList],
             registers: vec![0, 1],
             lens: vec![2, 2],
-            items: vec![
-                vec![10, 30],
-                vec![10, 20]
-            ]
+            items: vec![vec![10, 30], vec![10, 20]],
         });
 
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
@@ -585,10 +600,7 @@ mod tests {
         data.stub_get_symbol_list_iter = |data, i| MockIterator::new(data.lens.get(i as usize).unwrap().clone());
         data.stub_get_symbol_list_len = |data, i| Ok(data.lens.get(i as usize).unwrap().clone());
         data.stub_start_list = |_, _| Ok(());
-        data.stub_get_symbol_list_item = |data, list_index, i| {
-            let item = data.items.get(list_index as usize).unwrap().get(i as usize).unwrap().clone();
-            Ok(item as u32)
-        };
+        data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_false = |_| Ok(999);
         data.stub_push_register = |_, i| {
@@ -607,10 +619,7 @@ mod tests {
             types: vec![GarnishDataType::SymbolList, GarnishDataType::SymbolList],
             registers: vec![0, 1],
             lens: vec![2, 4],
-            items: vec![
-                vec![10, 20],
-                vec![10, 20]
-            ]
+            items: vec![vec![10, 20], vec![10, 20]],
         });
 
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
@@ -619,6 +628,52 @@ mod tests {
         data.stub_get_symbol_list_len = |data, i| Ok(data.lens.get(i as usize).unwrap().clone());
 
         data.stub_add_false = |_| Ok(999);
+        data.stub_push_register = |_, i| {
+            assert_eq!(i, 999);
+            Ok(())
+        };
+
+        let result = equal(&mut data).unwrap();
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn slice_of_symbol_list_equals_slice_of_symbol_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::SymbolList,
+                GarnishDataType::SymbolList,
+                GarnishDataType::Range,
+                GarnishDataType::Range,
+                GarnishDataType::Slice,
+                GarnishDataType::Slice,
+                GarnishDataType::Number,
+            ],
+            registers: vec![4, 5],
+            lens: vec![2, 2],
+            items: vec![vec![10, 20], vec![10, 20]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_range = |_, _| Ok((6, 6));
+        data.stub_get_number = |_, _| Ok(0);
+        data.stub_get_slice = |_, addr| {
+            if addr == 4 {
+                Ok((0, 2))
+            } else if addr == 5 {
+                Ok((1, 3))
+            } else {
+                assert!(false);
+                Err(MockError {})
+            }
+        };
+        data.stub_get_slice_iter = |_, _| MockIterator::new(2);
+        data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
+
+        data.stub_add_true = |_| Ok(999);
         data.stub_push_register = |_, i| {
             assert_eq!(i, 999);
             Ok(())
