@@ -167,29 +167,14 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
                 equal
             }
         }
-        (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => {
-            let len1 = this.get_symbol_list_len(left_addr.clone())?;
-            let len2 = this.get_symbol_list_len(right_addr.clone())?;
-
-            if len1 != len2 {
-                false
-            } else {
-                let mut iter1 = this.get_symbol_list_iter(left_addr.clone());
-                let mut iter2 = this.get_symbol_list_iter(right_addr.clone());
-
-                let mut equal = true;
-                while let (Some(next_left), Some(next_right)) = (iter1.next(), iter2.next()) {
-                    let s1 = this.get_symbol_list_item(left_addr.clone(), next_left.clone())?;
-                    let s2 = this.get_symbol_list_item(right_addr.clone(), next_right.clone())?;
-
-                    if s1 != s2 {
-                        equal = false;
-                    }
-                }
-
-                equal
-            }
-        }
+        (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => compare_iterator_values(
+            this,
+            this.get_symbol_list_iter(left_addr.clone()),
+            this.get_symbol_list_iter(right_addr.clone()),
+            left_addr,
+            right_addr,
+            Data::get_symbol_list_item,
+        )?,
         (GarnishDataType::Range, GarnishDataType::Range) => {
             let (start1, end1) = this.get_range(left_addr)?;
             let (start2, end2) = this.get_range(right_addr)?;
@@ -429,7 +414,7 @@ where
             return Ok(false);
         }
     }
-    
+
     check_last_iter_values::<Data>(iter1, iter2)
 }
 
@@ -575,7 +560,8 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_symbol_list_len = |data, i| Ok(data.lens.get(i as usize).unwrap().clone());
+        data.stub_get_symbol_list_iter = |data, i| MockIterator::new(data.lens.get(i as usize).unwrap().clone());
+        data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_false = |_| Ok(999);
         data.stub_push_register = |_, i| {
@@ -684,7 +670,7 @@ mod tests {
                 GarnishDataType::Range,
                 GarnishDataType::Slice,
                 GarnishDataType::Slice,
-                GarnishDataType::Number
+                GarnishDataType::Number,
             ],
             registers: vec![4, 5],
             lens: vec![2, 2],
@@ -711,7 +697,7 @@ mod tests {
         data.stub_add_true = |_| Ok(999);
         data.stub_push_register = |_, i| {
             if i == 6 {
-                return Ok(())
+                return Ok(());
             }
             assert_eq!(i, 999);
             Ok(())
@@ -741,8 +727,6 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_range = |_, _| Ok((6, 6));
-        data.stub_get_number = |_, _| Ok(0);
         data.stub_get_slice = |_, addr| {
             if addr == 4 {
                 Ok((0, 2))
