@@ -206,14 +206,7 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
             true
         }
         (GarnishDataType::Concatenation, GarnishDataType::Concatenation) => {
-            let (mut iter1, mut iter2) = (this.get_concatenation_iter(left_addr.clone()), this.get_concatenation_iter(right_addr.clone()));
-
-            while let (Some(index1), Some(index2)) = (iter1.next(), iter2.next()) {
-                this.push_register(index1)?;
-                this.push_register(index2)?;
-            }
-
-            check_last_iter_values::<Data, Data::ConcatenationItemIterator>(iter1, iter2)?
+            compare_item_iterators(this, left_addr, right_addr, Data::get_concatenation_iter)?
         }
         (GarnishDataType::List, GarnishDataType::Concatenation) => {
             let len1 = this.get_list_len(left_addr.clone())?;
@@ -306,14 +299,7 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
             }
         }
         (GarnishDataType::List, GarnishDataType::List) => {
-            let (mut iter1, mut iter2) = (this.get_list_item_iter(left_addr.clone()), this.get_list_item_iter(right_addr.clone()));
-
-            while let (Some(index1), Some(index2)) = (iter1.next(), iter2.next()) {
-                this.push_register(index1)?;
-                this.push_register(index2)?;
-            }
-
-            check_last_iter_values::<Data, Data::ListItemIterator>(iter1, iter2)?
+            compare_item_iterators(this, left_addr, right_addr, Data::get_list_item_iter)?
         }
         _ => false,
     };
@@ -346,10 +332,27 @@ where
     check_last_iter_values::<Data, Data::ListIndexIterator>(iter1, iter2)
 }
 
-fn check_last_iter_values<Data: GarnishData, Iter: Iterator>(
-    mut iter1: Iter,
-    mut iter2: Iter,
-) -> Result<bool, RuntimeError<Data::Error>> {
+fn compare_item_iterators<Data: GarnishData, Iter, GetFn>(
+    this: &mut Data,
+    left_addr: Data::Size,
+    right_addr: Data::Size,
+    get_iter: GetFn,
+) -> Result<bool, RuntimeError<Data::Error>>
+where
+    Iter: Iterator<Item = Data::Size>,
+    GetFn: Fn(&Data, Data::Size) -> Iter,
+{
+    let (mut iter1, mut iter2) = (get_iter(this, left_addr.clone()), get_iter(this, right_addr.clone()));
+
+    while let (Some(index1), Some(index2)) = (iter1.next(), iter2.next()) {
+        this.push_register(index1)?;
+        this.push_register(index2)?;
+    }
+
+    check_last_iter_values::<Data, Iter>(iter1, iter2)
+}
+
+fn check_last_iter_values<Data: GarnishData, Iter: Iterator>(mut iter1: Iter, mut iter2: Iter) -> Result<bool, RuntimeError<Data::Error>> {
     Ok(match (iter1.next(), iter2.next()) {
         (Some(_), Some(_)) => state_error("Both slice operand's have remaining values in iterators after comparison".to_string())?,
         (None, Some(_)) | (Some(_), None) => false, // one operand as more items, automatically not equal
