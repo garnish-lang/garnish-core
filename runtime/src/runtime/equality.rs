@@ -164,7 +164,7 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
                 equal
             }
         }
-        (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => compare_iterator_values(
+        (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => compare_index_iterator_values(
             this,
             this.get_symbol_list_iter(left_addr.clone()),
             this.get_symbol_list_iter(right_addr.clone()),
@@ -217,7 +217,7 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
             let (value2, _) = this.get_slice(right_addr.clone())?;
 
             match (this.get_data_type(value1.clone())?, this.get_data_type(value2.clone())?) {
-                (GarnishDataType::CharList, GarnishDataType::CharList) => compare_iterator_values(
+                (GarnishDataType::CharList, GarnishDataType::CharList) => compare_index_iterator_values(
                     this,
                     this.get_slice_iter(left_addr.clone()),
                     this.get_slice_iter(right_addr.clone()),
@@ -225,7 +225,7 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
                     value2,
                     Data::get_char_list_item,
                 )?,
-                (GarnishDataType::ByteList, GarnishDataType::ByteList) => compare_iterator_values(
+                (GarnishDataType::ByteList, GarnishDataType::ByteList) => compare_index_iterator_values(
                     this,
                     this.get_slice_iter(left_addr.clone()),
                     this.get_slice_iter(right_addr.clone()),
@@ -233,7 +233,7 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
                     value2,
                     Data::get_byte_list_item,
                 )?,
-                (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => compare_iterator_values(
+                (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => compare_index_iterator_values(
                     this,
                     this.get_slice_iter(left_addr.clone()),
                     this.get_slice_iter(right_addr.clone()),
@@ -262,7 +262,7 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
     Ok(equal)
 }
 
-fn compare_iterator_values<Data: GarnishData, R, GetFn>(
+fn compare_index_iterator_values<Data: GarnishData, R, GetFn>(
     this: &mut Data,
     iter1: Data::ListIndexIterator,
     iter2: Data::ListIndexIterator,
