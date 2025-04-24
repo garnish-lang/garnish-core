@@ -50,6 +50,10 @@ mod tests {
                 max: count
             }
         }
+        
+        pub fn new_range(start: i32, end: i32) -> Self {
+            Self { current: start, max: end }
+        }
     }
 
     impl Default for MockIterator {
@@ -169,6 +173,7 @@ mod tests {
         pub stub_get_symbol_list_item: fn(&T, addr: i32, item_index: i32) -> Result<u32, MockError>,
         pub stub_get_symbol_list_iter: fn(&T, list_addr: i32) -> MockIterator,
         pub stub_get_slice_iter: fn(&T, addr: i32) -> MockIterator,
+        pub stub_get_concatenation_iter: fn(&T, addr: i32) -> MockIterator,
         pub stub_add_unit: fn(&mut T) -> Result<i32, MockError>,
         pub stub_add_true: fn(&mut T) -> Result<i32, MockError>,
         pub stub_add_false: fn(&mut T) -> Result<i32, MockError>,
@@ -313,6 +318,7 @@ mod tests {
                 stub_get_symbol_list_item: stub_fn_2,
                 stub_get_symbol_list_iter: stub_fn_1,
                 stub_get_slice_iter: stub_fn_1,
+                stub_get_concatenation_iter: stub_fn_1,
                 stub_add_unit: stub_fn_0_mut,
                 stub_add_true: stub_fn_0_mut,
                 stub_add_false: stub_fn_0_mut,
@@ -398,6 +404,7 @@ mod tests {
         type JumpTableIndexIterator = MockIterator;
         type JumpPathIndexIterator = MockIterator;
         type ListIndexIterator = MockIterator;
+        type ConcatenationItemIterator = MockIterator;
 
         fn get_data_len(&self) -> Self::Size {
             (self.stub_get_data_len)(self.data())
@@ -553,6 +560,10 @@ mod tests {
 
         fn get_slice_iter(&self, addr: Self::Size) -> Self::ListIndexIterator {
             (self.stub_get_slice_iter)(self.data(), addr)
+        }
+
+        fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
+            (self.stub_get_concatenation_iter)(self.data(), addr)
         }
 
         fn add_unit(&mut self) -> Result<Self::Size, Self::Error> {

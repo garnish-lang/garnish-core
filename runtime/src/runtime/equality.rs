@@ -206,35 +206,14 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
             true
         }
         (GarnishDataType::Concatenation, GarnishDataType::Concatenation) => {
-            let len1 = concatenation_len(this, left_addr.clone())?;
-            let len2 = concatenation_len(this, right_addr.clone())?;
+            let (mut iter1, mut iter2) = (this.get_concatenation_iter(left_addr.clone()), this.get_concatenation_iter(right_addr.clone()));
 
-            if len1 != len2 {
-                false
-            } else {
-                let mut count = Data::Number::zero();
-                let len = Data::size_to_number(len1);
-
-                while count < len {
-                    // need to find faster way
-                    // current way is to index each concatenation one item at a time
-                    match (
-                        index_concatenation_for(this, left_addr.clone(), count.clone())?,
-                        index_concatenation_for(this, right_addr.clone(), count.clone())?,
-                    ) {
-                        (Some(left), Some(right)) => {
-                            this.push_register(left)?;
-                            this.push_register(right)?;
-                        }
-                        _ => {
-                            return Ok(false);
-                        }
-                    }
-                    count = count.increment().or_num_err()?;
-                }
-
-                true
+            while let (Some(index1), Some(index2)) = (iter1.next(), iter2.next()) {
+                this.push_register(index1)?;
+                this.push_register(index2)?;
             }
+
+            check_last_iter_values::<Data, Data::ConcatenationItemIterator>(iter1, iter2)?
         }
         (GarnishDataType::List, GarnishDataType::Concatenation) => {
             let len1 = this.get_list_len(left_addr.clone())?;
@@ -321,7 +300,7 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
                         this.push_register(item2)?;
                     }
 
-                    check_last_iter_values::<Data>(slice_iter1, slice_iter2)?
+                    check_last_iter_values::<Data, Data::ListIndexIterator>(slice_iter1, slice_iter2)?
                 }
                 _ => false,
             }
@@ -415,12 +394,12 @@ where
         }
     }
 
-    check_last_iter_values::<Data>(iter1, iter2)
+    check_last_iter_values::<Data, Data::ListIndexIterator>(iter1, iter2)
 }
 
-fn check_last_iter_values<Data: GarnishData>(
-    mut iter1: Data::ListIndexIterator,
-    mut iter2: Data::ListIndexIterator,
+fn check_last_iter_values<Data: GarnishData, Iter: Iterator>(
+    mut iter1: Iter,
+    mut iter2: Iter,
 ) -> Result<bool, RuntimeError<Data::Error>> {
     Ok(match (iter1.next(), iter2.next()) {
         (Some(_), Some(_)) => state_error("Both slice operand's have remaining values in iterators after comparison".to_string())?,
@@ -453,10 +432,10 @@ mod tests {
     use garnish_lang_traits::GarnishDataType;
 
     struct ListCompData {
-        types: Vec<GarnishDataType>,
-        registers: Vec<i32>,
-        lens: Vec<i32>,
-        items: Vec<Vec<u32>>,
+        pub types: Vec<GarnishDataType>,
+        pub registers: Vec<i32>,
+        pub lens: Vec<i32>,
+        pub items: Vec<Vec<u32>>,
     }
 
     impl ListCompData {
@@ -510,14 +489,15 @@ mod tests {
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_true = |_| Ok(999);
-        data.stub_push_register = |_, i| {
-            assert_eq!(i, 999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
             Ok(())
         };
 
-        let result = equal(&mut data).unwrap();
+        let result = equal(&mut data);
 
-        assert_eq!(result, None);
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
     }
 
     #[test]
@@ -538,14 +518,15 @@ mod tests {
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_false = |_| Ok(999);
-        data.stub_push_register = |_, i| {
-            assert_eq!(i, 999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
             Ok(())
         };
 
-        let result = equal(&mut data).unwrap();
+        let result = equal(&mut data);
 
-        assert_eq!(result, None);
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
     }
 
     #[test]
@@ -564,14 +545,15 @@ mod tests {
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_false = |_| Ok(999);
-        data.stub_push_register = |_, i| {
-            assert_eq!(i, 999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
             Ok(())
         };
 
-        let result = equal(&mut data).unwrap();
+        let result = equal(&mut data);
 
-        assert_eq!(result, None);
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
     }
 
     #[test]
@@ -607,14 +589,15 @@ mod tests {
         data.stub_get_char_list_item = ListCompData::get_character_list_item;
 
         data.stub_add_true = |_| Ok(999);
-        data.stub_push_register = |_, i| {
-            assert_eq!(i, 999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
             Ok(())
         };
 
-        let result = equal(&mut data).unwrap();
+        let result = equal(&mut data);
 
-        assert_eq!(result, None);
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
     }
 
     #[test]
@@ -650,14 +633,15 @@ mod tests {
         data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
 
         data.stub_add_true = |_| Ok(999);
-        data.stub_push_register = |_, i| {
-            assert_eq!(i, 999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
             Ok(())
         };
 
-        let result = equal(&mut data).unwrap();
+        let result = equal(&mut data);
 
-        assert_eq!(result, None);
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
     }
 
     #[test]
@@ -695,17 +679,15 @@ mod tests {
         data.stub_get_number = |_, _| Ok(10);
 
         data.stub_add_true = |_| Ok(999);
-        data.stub_push_register = |_, i| {
-            if i == 6 {
-                return Ok(());
-            }
-            assert_eq!(i, 999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
             Ok(())
         };
 
-        let result = equal(&mut data).unwrap();
+        let result = equal(&mut data);
 
-        assert_eq!(result, None);
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
     }
 
     #[test]
@@ -741,13 +723,46 @@ mod tests {
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_true = |_| Ok(999);
-        data.stub_push_register = |_, i| {
-            assert_eq!(i, 999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
             Ok(())
         };
 
-        let result = equal(&mut data).unwrap();
+        let result = equal(&mut data);
 
-        assert_eq!(result, None);
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn concatenation_equals_concatenation() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::Concatenation,
+                GarnishDataType::Concatenation,
+                GarnishDataType::Number,
+                GarnishDataType::Number,
+            ],
+            registers: vec![0, 1],
+            lens: vec![],
+            items: vec![],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_concatenation_iter = |_, _| MockIterator::new_range(2, 4);
+        data.stub_get_number = |_, _| Ok(10);
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
     }
 }

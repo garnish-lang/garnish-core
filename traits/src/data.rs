@@ -84,6 +84,7 @@ pub trait GarnishData {
     type JumpTableIndexIterator: DoubleEndedIterator<Item = Self::Size>;
     type JumpPathIndexIterator: DoubleEndedIterator<Item = Self::Size>;
     type ListIndexIterator: DoubleEndedIterator<Item = Self::Number>;
+    type ConcatenationItemIterator: Iterator<Item = Self::Size>;
 
     fn get_data_len(&self) -> Self::Size;
     fn get_data_iter(&self) -> Self::DataIndexIterator;
@@ -130,8 +131,10 @@ pub trait GarnishData {
     fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Symbol, Self::Error>;
     fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
-    
+
     fn get_slice_iter(&self, addr: Self::Size) -> Self::ListIndexIterator;
+    
+    fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator;
 
     fn add_unit(&mut self) -> Result<Self::Size, Self::Error>;
     fn add_true(&mut self) -> Result<Self::Size, Self::Error>;
