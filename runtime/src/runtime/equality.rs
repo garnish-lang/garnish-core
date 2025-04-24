@@ -306,65 +306,14 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
             }
         }
         (GarnishDataType::List, GarnishDataType::List) => {
-            let association_len1 = this.get_list_associations_len(left_addr.clone())?;
-            let associations_len2 = this.get_list_associations_len(right_addr.clone())?;
-            let len1 = this.get_list_len(left_addr.clone())?;
-            let len2 = this.get_list_len(right_addr.clone())?;
+            let (mut iter1, mut iter2) = (this.get_list_item_iter(left_addr.clone()), this.get_list_item_iter(right_addr.clone()));
 
-            // Equality is determined sequentially
-            // associations and non associations must be in the same positions
-            // Ex. (for list position x)
-            //      left has association at x, right has association at x
-            //          right is checked for the same association at left.x
-            //          if right has association, position not considered, values are pushed for equality check
-            //      left has item at x, right has item at x
-            //          both items are pushed for equality
-            //      left has association at x, right has item at x (and vice versa)
-            //          list is not equal, end comparison by returning false
-            if association_len1 != associations_len2 || len1 != len2 {
-                false
-            } else {
-                let mut count = Data::Size::zero();
-                while count < len1 {
-                    let i = Data::size_to_number(count.clone());
-                    let left_item = this.get_list_item(left_addr.clone(), i.clone())?;
-                    let right_item = this.get_list_item(right_addr.clone(), i)?;
-
-                    let (left_is_associative, pair_sym, pair_item) = match this.get_data_type(left_item.clone().clone())? {
-                        GarnishDataType::Pair => {
-                            let (left, right) = this.get_pair(left_item.clone())?;
-                            match this.get_data_type(left.clone())? {
-                                GarnishDataType::Symbol => (true, this.get_symbol(left)?, right),
-                                _ => (false, Data::Symbol::zero(), Data::Size::zero()),
-                            }
-                        }
-                        _ => (false, Data::Symbol::zero(), Data::Size::zero()),
-                    };
-
-                    if left_is_associative {
-                        match this.get_list_item_with_symbol(right_addr.clone(), pair_sym)? {
-                            Some(right_item) => {
-                                // has same association, push both items for comparison
-                                this.push_register(pair_item)?;
-                                this.push_register(right_item)?;
-                            }
-                            None => {
-                                // right does not have association
-                                // lists are not equal, return false
-                                return Ok(false);
-                            }
-                        }
-                    } else {
-                        // not an association, push both for comparison
-                        this.push_register(left_item)?;
-                        this.push_register(right_item)?;
-                    }
-
-                    count += Data::Size::one();
-                }
-
-                true
+            while let (Some(index1), Some(index2)) = (iter1.next(), iter2.next()) {
+                this.push_register(index1)?;
+                this.push_register(index2)?;
             }
+
+            check_last_iter_values::<Data, Data::ListItemIterator>(iter1, iter2)?
         }
         _ => false,
     };
@@ -752,6 +701,38 @@ mod tests {
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
         data.stub_get_concatenation_iter = |_, _| MockIterator::new_range(2, 4);
+        data.stub_get_number = |_, _| Ok(10);
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn list_equals_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::List,
+                GarnishDataType::List,
+                GarnishDataType::Number,
+                GarnishDataType::Number,
+            ],
+            registers: vec![0, 1],
+            lens: vec![],
+            items: vec![],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_list_item_iter = |_, _| MockIterator::new_range(2, 4);
         data.stub_get_number = |_, _| Ok(10);
 
         data.stub_add_true = |_| Ok(999);
