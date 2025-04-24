@@ -136,6 +136,8 @@ pub trait GarnishData {
     fn get_list_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator;
     fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator;
     fn get_slice_iter(&self, addr: Self::Size) -> Self::ListIndexIterator;
+    fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator;
+    fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator;
 
     fn add_unit(&mut self) -> Result<Self::Size, Self::Error>;
     fn add_true(&mut self) -> Result<Self::Size, Self::Error>;

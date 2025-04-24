@@ -175,6 +175,8 @@ mod tests {
         pub stub_get_list_item_iter:  fn(&T, addr: i32) -> MockIterator,
         pub stub_get_concatenation_iter: fn(&T, addr: i32) -> MockIterator,
         pub stub_get_slice_iter: fn(&T, addr: i32) -> MockIterator,
+        pub stub_get_list_slice_item_iter:  fn(&T, addr: i32) -> MockIterator,
+        pub stub_get_concatenation_slice_iter: fn(&T, addr: i32) -> MockIterator,
         pub stub_add_unit: fn(&mut T) -> Result<i32, MockError>,
         pub stub_add_true: fn(&mut T) -> Result<i32, MockError>,
         pub stub_add_false: fn(&mut T) -> Result<i32, MockError>,
@@ -321,6 +323,8 @@ mod tests {
                 stub_get_list_item_iter: stub_fn_1,
                 stub_get_concatenation_iter: stub_fn_1,
                 stub_get_slice_iter: stub_fn_1,
+                stub_get_list_slice_item_iter: stub_fn_1,
+                stub_get_concatenation_slice_iter: stub_fn_1,
                 stub_add_unit: stub_fn_0_mut,
                 stub_add_true: stub_fn_0_mut,
                 stub_add_false: stub_fn_0_mut,
@@ -571,6 +575,14 @@ mod tests {
 
         fn get_slice_iter(&self, addr: Self::Size) -> Self::ListIndexIterator {
             (self.stub_get_slice_iter)(self.data(), addr)
+        }
+
+        fn get_list_slice_item_iter(&self, addr: Self::Size) -> Self::ListItemIterator {
+            (self.stub_get_list_slice_item_iter)(self.data(), addr)
+        }
+
+        fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
+            (self.stub_get_concatenation_slice_iter)(self.data(), addr)
         }
 
         fn add_unit(&mut self) -> Result<Self::Size, Self::Error> {
