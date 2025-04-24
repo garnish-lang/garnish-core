@@ -577,14 +577,12 @@ mod tests {
         let mut data = MockGarnishData::default_with_data(ListCompData {
             types: vec![
                 GarnishDataType::List,
-                GarnishDataType::List,
-                GarnishDataType::Range,
                 GarnishDataType::Range,
                 GarnishDataType::Slice,
                 GarnishDataType::Slice,
                 GarnishDataType::Number,
             ],
-            registers: vec![4, 5],
+            registers: vec![2, 3],
             lens: vec![2, 2],
             items: vec![vec![6, 6], vec![6, 6]],
         });
@@ -593,16 +591,16 @@ mod tests {
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
         data.stub_get_slice = |_, addr| {
-            if addr == 4 {
-                Ok((0, 2))
-            } else if addr == 5 {
-                Ok((1, 3))
+            if addr == 2 {
+                Ok((0, 1))
+            } else if addr == 3 {
+                Ok((0, 1))
             } else {
                 assert!(false);
                 Err(MockError {})
             }
         };
-        data.stub_get_list_slice_item_iter = |_, _| MockIterator::new_range(6, 7);
+        data.stub_get_list_slice_item_iter = |_, _| MockIterator::new_range(4, 5);
         data.stub_get_number = |_, _| Ok(10);
 
         data.stub_add_true = |_| Ok(999);
