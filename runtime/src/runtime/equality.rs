@@ -76,66 +76,54 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
         (GarnishDataType::Char, GarnishDataType::Char) => compare(this, left_addr, right_addr, Data::get_char)?,
         (GarnishDataType::Byte, GarnishDataType::Byte) => compare(this, left_addr, right_addr, Data::get_byte)?,
         (GarnishDataType::Number, GarnishDataType::Number) => compare(this, left_addr, right_addr, Data::get_number)?,
-        (GarnishDataType::Char, GarnishDataType::CharList) => {
-            if this.get_char_list_len(right_addr.clone())? == Data::Size::one() {
-                let c1 = this.get_char(left_addr)?;
-                let c2 = this.get_char_list_item(right_addr, Data::Number::zero())?;
-
-                c1 == c2
-            } else {
-                false
-            }
-        }
-        (GarnishDataType::CharList, GarnishDataType::Char) => {
-            if this.get_char_list_len(left_addr.clone())? == Data::Size::one() {
-                let c1 = this.get_char_list_item(left_addr, Data::Number::zero())?;
-                let c2 = this.get_char(right_addr)?;
-
-                c1 == c2
-            } else {
-                false
-            }
-        }
-        (GarnishDataType::Byte, GarnishDataType::ByteList) => {
-            if this.get_byte_list_len(right_addr.clone())? == Data::Size::one() {
-                let c1 = this.get_byte(left_addr)?;
-                let c2 = this.get_byte_list_item(right_addr, Data::Number::zero())?;
-
-                c1 == c2
-            } else {
-                false
-            }
-        }
-        (GarnishDataType::ByteList, GarnishDataType::Byte) => {
-            if this.get_byte_list_len(left_addr.clone())? == Data::Size::one() {
-                let c1 = this.get_byte_list_item(left_addr, Data::Number::zero())?;
-                let c2 = this.get_byte(right_addr)?;
-
-                c1 == c2
-            } else {
-                false
-            }
-        }
-        (GarnishDataType::CharList, GarnishDataType::CharList) => {
-            compare_index_iterator_values(
-                this,
-                this.get_char_list_iter(left_addr.clone()),
-                this.get_char_list_iter(right_addr.clone()),
-                left_addr,
-                right_addr,
-                Data::get_char_list_item,
-            )?
-        }
-        (GarnishDataType::ByteList, GarnishDataType::ByteList) => {
-            compare_index_iterator_values(
-                this,
-                this.get_byte_list_iter(left_addr.clone()),
-                this.get_byte_list_iter(right_addr.clone()),
-                left_addr,
-                right_addr,
-                Data::get_byte_list_item,
-            )?
-        }
+        (GarnishDataType::Char, GarnishDataType::CharList) => compare_list_to_primitive(
+            this,
+            right_addr,
+            left_addr,
+            Data::get_char_list_len,
+            Data::get_char_list_item,
+            Data::get_char,
+        )?,
+        (GarnishDataType::CharList, GarnishDataType::Char) => compare_list_to_primitive(
+            this,
+            left_addr,
+            right_addr,
+            Data::get_char_list_len,
+            Data::get_char_list_item,
+            Data::get_char,
+        )?,
+        (GarnishDataType::Byte, GarnishDataType::ByteList) => compare_list_to_primitive(
+            this,
+            right_addr,
+            left_addr,
+            Data::get_byte_list_len,
+            Data::get_byte_list_item,
+            Data::get_byte,
+        )?,
+        (GarnishDataType::ByteList, GarnishDataType::Byte) => compare_list_to_primitive(
+            this,
+            left_addr,
+            right_addr,
+            Data::get_byte_list_len,
+            Data::get_byte_list_item,
+            Data::get_byte,
+        )?,
+        (GarnishDataType::CharList, GarnishDataType::CharList) => compare_index_iterator_values(
+            this,
+            this.get_char_list_iter(left_addr.clone()),
+            this.get_char_list_iter(right_addr.clone()),
+            left_addr,
+            right_addr,
+            Data::get_char_list_item,
+        )?,
+        (GarnishDataType::ByteList, GarnishDataType::ByteList) => compare_index_iterator_values(
+            this,
+            this.get_byte_list_iter(left_addr.clone()),
+            this.get_byte_list_iter(right_addr.clone()),
+            left_addr,
+            right_addr,
+            Data::get_byte_list_item,
+        )?,
         (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => compare_index_iterator_values(
             this,
             this.get_symbol_list_iter(left_addr.clone()),
@@ -216,12 +204,20 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
                 (GarnishDataType::List, GarnishDataType::List) => {
                     compare_item_iterators(this, left_addr, right_addr, Data::get_list_slice_item_iter)?
                 }
-                (GarnishDataType::List, GarnishDataType::Concatenation) => {
-                    compare_item_iterators_2(this, left_addr, right_addr, Data::get_list_slice_item_iter, Data::get_concatenation_slice_iter)?
-                }
-                (GarnishDataType::Concatenation, GarnishDataType::List) => {
-                    compare_item_iterators_2(this, left_addr, right_addr, Data::get_concatenation_slice_iter, Data::get_list_slice_item_iter)?
-                }
+                (GarnishDataType::List, GarnishDataType::Concatenation) => compare_item_iterators_2(
+                    this,
+                    left_addr,
+                    right_addr,
+                    Data::get_list_slice_item_iter,
+                    Data::get_concatenation_slice_iter,
+                )?,
+                (GarnishDataType::Concatenation, GarnishDataType::List) => compare_item_iterators_2(
+                    this,
+                    left_addr,
+                    right_addr,
+                    Data::get_concatenation_slice_iter,
+                    Data::get_list_slice_item_iter,
+                )?,
                 (GarnishDataType::Concatenation, GarnishDataType::Concatenation) => {
                     compare_item_iterators(this, left_addr, right_addr, Data::get_concatenation_slice_iter)?
                 }
@@ -232,6 +228,31 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
     };
 
     Ok(equal)
+}
+
+fn compare_list_to_primitive<Data: GarnishData, LenFn, ItemFn, GetFn, T>(
+    this: &Data,
+    list_addr: Data::Size,
+    primitive_addr: Data::Size,
+    len_fn: LenFn,
+    item_fn: ItemFn,
+    get_fn: GetFn,
+) -> Result<bool, RuntimeError<Data::Error>>
+where
+    Data: GarnishData,
+    T: PartialEq,
+    LenFn: Fn(&Data, Data::Size) -> Result<Data::Size, Data::Error>,
+    ItemFn: Fn(&Data, Data::Size, Data::Number) -> Result<T, Data::Error>,
+    GetFn: Fn(&Data, Data::Size) -> Result<T, Data::Error>,
+{
+    Ok(if len_fn(this, list_addr.clone())? == Data::Size::one() {
+        let c1 = item_fn(this, list_addr, Data::Number::zero())?;
+        let c2 = get_fn(this, primitive_addr)?;
+
+        c1 == c2
+    } else {
+        false
+    })
 }
 
 fn compare_index_iterator_values<Data: GarnishData, R, GetFn>(
