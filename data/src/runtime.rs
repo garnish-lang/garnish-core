@@ -311,11 +311,9 @@ where
         match self.get_data().get(addr) {
             Some(SimpleData::Slice(_, range)) => match self.get_data().get(*range) {
                 Some(SimpleData::Range(start, end)) => match (self.get_data().get(*start), self.get_data().get(*end)) {
-                    (Some(SimpleData::Number(start)), Some(SimpleData::Number(end))) => {
-                        NumberIterator::new(start.clone(), end.clone())
-                    }
+                    (Some(SimpleData::Number(start)), Some(SimpleData::Number(end))) => NumberIterator::new(start.clone(), end.clone()),
                     _ => NumberIterator::new(0.into(), 0.into()),
-                }
+                },
                 _ => NumberIterator::new(0.into(), 0.into()),
             },
             _ => NumberIterator::new(0.into(), 0.into()),
