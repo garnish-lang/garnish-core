@@ -4,8 +4,10 @@ use std::hash::Hash;
 
 use garnish_lang_traits::GarnishData;
 
-use crate::data::{parse_byte_list, parse_char_list, parse_simple_number, NumberIterator, SimpleNumber, SizeIterator};
-use crate::{symbol_value, DataError, GarnishDataType, Instruction, SimpleInstruction, SimpleData, SimpleGarnishData, SimpleStackFrame, ListItemIterator};
+use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
+use crate::{
+    DataError, GarnishDataType, Instruction, ListItemIterator, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value,
+};
 
 impl<T> GarnishData for SimpleGarnishData<T>
 where
@@ -270,7 +272,10 @@ where
     }
 
     fn get_list_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator {
-        todo!()
+        match self.get_data().get(list_addr) {
+            Some(SimpleData::List(items, _)) => ListItemIterator::new(items.clone()),
+            _ => ListItemIterator::new(vec![]),
+        }
     }
 
     fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
@@ -368,7 +373,10 @@ where
                 self.data.push(SimpleData::SymbolList(new_list));
             }
             (Some(t1), Some(t2)) => Err(format!("Cannot create symbol list from types: {:?} {:?}", t1, t2))?,
-            (None, None) => Err(format!("Failed to create symbol list. No data at either operand indices, {}, {}", first, second))?,
+            (None, None) => Err(format!(
+                "Failed to create symbol list. No data at either operand indices, {}, {}",
+                first, second
+            ))?,
             (None, _) => Err(format!("Failed to create symbol list. No data at left operand index, {}", first))?,
             (_, None) => Err(format!("Failed to create symbol list. No data at right operand index, {}", second))?,
         }
@@ -501,9 +509,9 @@ where
                 None => Err(format!("Register address ({}) has no data", value))?,
                 Some(data) => match data {
                     SimpleData::StackFrame(_) => Err("Popped StackFrame from registers. Should only be done when popping jump path.".to_string())?,
-                    _ => Ok(Some(value))
-                }
-            }
+                    _ => Ok(Some(value)),
+                },
+            },
         }
     }
 
@@ -570,7 +578,7 @@ where
                 Some(data) => match data {
                     SimpleData::StackFrame(frame) => return Some(frame.return_addr()),
                     _ => (),
-                }
+                },
             }
         }
 
@@ -865,20 +873,20 @@ mod tests {
 #[cfg(test)]
 mod add_data {
     mod parsing {
-        use garnish_lang_traits::{GarnishData};
-        use crate::{SimpleDataRuntimeNC};
+        use crate::SimpleDataRuntimeNC;
+        use garnish_lang_traits::GarnishData;
 
         #[test]
         fn symbols_are_stripped_of_colon() {
             let s1 = SimpleDataRuntimeNC::parse_symbol(":my_symbol").unwrap();
             let s2 = SimpleDataRuntimeNC::parse_symbol("my_symbol").unwrap();
-            
+
             assert_eq!(s1, s2);
         }
     }
     mod symbol_list {
-        use garnish_lang_traits::{GarnishData, GarnishDataType};
         use crate::{SimpleDataRuntimeNC, SimpleGarnishData};
+        use garnish_lang_traits::{GarnishData, GarnishDataType};
 
         fn s1() -> u64 {
             SimpleDataRuntimeNC::parse_symbol("symbol_one").unwrap()
@@ -918,7 +926,7 @@ mod add_data {
             let sym3 = runtime.add_symbol(s3()).unwrap();
 
             let sym_list1 = runtime.merge_to_symbol_list(sym1, sym2).unwrap();
-            
+
             let sym_list2 = runtime.merge_to_symbol_list(sym_list1, sym3).unwrap();
 
             assert_eq!(runtime.get_data_type(sym_list2).unwrap(), GarnishDataType::SymbolList);
@@ -955,7 +963,7 @@ mod add_data {
             let sym_list1 = runtime.merge_to_symbol_list(sym1, sym2).unwrap();
 
             let sym_list2 = runtime.merge_to_symbol_list(sym3, sym4).unwrap();
-            
+
             let sym_list3 = runtime.merge_to_symbol_list(sym_list1, sym_list2).unwrap();
 
             assert_eq!(runtime.get_data_type(sym_list3).unwrap(), GarnishDataType::SymbolList);
@@ -1025,5 +1033,26 @@ mod add_data {
 
             assert!(sym_list.is_err());
         }
+    }
+}
+
+#[cfg(test)]
+mod iterators {
+    use crate::{SimpleData, SimpleGarnishData};
+    use garnish_lang_traits::GarnishData;
+
+    #[test]
+    fn list_item_iterator() {
+        let mut data = SimpleGarnishData::new();
+        let list_index = data.get_data().len();
+        data.get_data_mut().push(SimpleData::List(vec![100, 200, 300, 400, 500], vec![]));
+
+        let mut iter = data.get_list_item_iter(list_index);
+
+        assert_eq!(iter.next(), 100.into());
+        assert_eq!(iter.next(), 200.into());
+        assert_eq!(iter.next(), 300.into());
+        assert_eq!(iter.next(), 400.into());
+        assert_eq!(iter.next(), 500.into());
     }
 }
