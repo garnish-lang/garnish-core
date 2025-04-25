@@ -5,9 +5,7 @@ use std::hash::Hash;
 use garnish_lang_traits::GarnishData;
 
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
-use crate::{
-    DataError, GarnishDataType, Instruction, DataIndexIterator, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value,
-};
+use crate::{DataError, GarnishDataType, Instruction, DataIndexIterator, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value, UNIT_INDEX};
 
 impl<T> GarnishData for SimpleGarnishData<T>
 where
@@ -279,7 +277,26 @@ where
     }
 
     fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
-        todo!()
+        match self.get_data().get(addr) {
+            Some(SimpleData::Concatenation(left, right)) => {
+                let mut items = vec![];
+                let mut con_stack = vec![right.clone(), left.clone()];
+                
+                while let Some(item) = con_stack.pop() {
+                    match self.get_data().get(item) {
+                        None => items.push(UNIT_INDEX),
+                        Some(SimpleData::Concatenation(left, right)) => {
+                            con_stack.push(right.clone());
+                            con_stack.push(left.clone());
+                        }
+                        Some(_) => items.push(item),
+                    }
+                }
+                
+                DataIndexIterator::new(items)
+            }
+            _ => DataIndexIterator::new(vec![]),
+        }
     }
 
     fn get_slice_iter(&self, addr: Self::Size) -> Self::ListIndexIterator {
@@ -1054,5 +1071,20 @@ mod iterators {
         assert_eq!(iter.next(), 300.into());
         assert_eq!(iter.next(), 400.into());
         assert_eq!(iter.next(), 500.into());
+    }
+
+    #[test]
+    fn concatenation_item_iterator() {
+        let mut data = SimpleGarnishData::new();
+        let con1 = data.add_concatenation(1, 2).unwrap();
+        let con2 = data.add_concatenation(con1, 1).unwrap();
+        let con3 = data.add_concatenation(con2, 2).unwrap();
+
+        let mut iter = data.get_concatenation_iter(con3);
+
+        assert_eq!(iter.next(), 1.into());
+        assert_eq!(iter.next(), 2.into());
+        assert_eq!(iter.next(), 1.into());
+        assert_eq!(iter.next(), 2.into());
     }
 }

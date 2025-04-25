@@ -22,6 +22,8 @@ pub use display::*;
 
 pub type CustomDataDisplayHandler<T> = fn(&SimpleDataList<T>, &T) -> String;
 
+pub const UNIT_INDEX: usize = 0;
+
 /// List of [`SimpleData`] with maps to convert symbolic values to original string.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Clone, Eq, PartialEq)]
