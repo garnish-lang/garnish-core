@@ -1171,7 +1171,7 @@ mod iterators {
     #[test]
     fn slice_iterator_not_slice() {
         let mut data = SimpleGarnishData::new();
-        let s1 = data.get_data().len();
+
         data.get_data_mut().push(SimpleData::CharList("Iterators".to_string()));
         let num1 = data.add_number(2.into()).unwrap();
         let num2 = data.add_number(5.into()).unwrap();
@@ -1244,6 +1244,76 @@ mod iterators {
     }
 
     #[test]
+    fn list_slice_iterator_not_slice() {
+        let mut data = SimpleGarnishData::new();
+
+        let num1 = data.add_number(1.into()).unwrap();
+        let num2 = data.add_number(3.into()).unwrap();
+        let range = data.add_range(num1, num2).unwrap();
+
+        let mut iter = data.get_list_slice_item_iter(range);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn list_slice_iterator_no_range() {
+        let mut data = SimpleGarnishData::new();
+        let list_index = data.get_data().len();
+        data.get_data_mut().push(SimpleData::List(vec![100, 200, 300, 400, 500], vec![]));
+        let num2 = data.add_number(3.into()).unwrap();
+        let slice = data.add_slice(list_index, num2).unwrap();
+
+        let mut iter = data.get_list_slice_item_iter(slice);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn list_slice_iterator_no_list() {
+        let mut data = SimpleGarnishData::new();
+
+        let num1 = data.add_number(1.into()).unwrap();
+        let num2 = data.add_number(3.into()).unwrap();
+        let range = data.add_range(num1, num2).unwrap();
+        let slice = data.add_slice(num1, range).unwrap();
+
+        let mut iter = data.get_list_slice_item_iter(slice);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn list_slice_iterator_start_not_number() {
+        let mut data = SimpleGarnishData::new();
+        let list_index = data.get_data().len();
+        data.get_data_mut().push(SimpleData::List(vec![100, 200, 300, 400, 500], vec![]));
+        let num1 = data.add_byte(1.into()).unwrap();
+        let num2 = data.add_number(3.into()).unwrap();
+        let range = data.add_range(num1, num2).unwrap();
+        let slice = data.add_slice(list_index, range).unwrap();
+
+        let mut iter = data.get_list_slice_item_iter(slice);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn list_slice_iterator_end_not_number() {
+        let mut data = SimpleGarnishData::new();
+        let list_index = data.get_data().len();
+        data.get_data_mut().push(SimpleData::List(vec![100, 200, 300, 400, 500], vec![]));
+        let num1 = data.add_number(1.into()).unwrap();
+        let num2 = data.add_byte(3.into()).unwrap();
+        let range = data.add_range(num1, num2).unwrap();
+        let slice = data.add_slice(list_index, range).unwrap();
+
+        let mut iter = data.get_list_slice_item_iter(slice);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
     fn concatenation_slice_iterator() {
         let mut data = SimpleGarnishData::new();
 
@@ -1267,6 +1337,100 @@ mod iterators {
         assert_eq!(iter.next(), 2.into());
         assert_eq!(iter.next(), 1.into());
         assert_eq!(iter.next(), 2.into());
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn concatenation_slice_iterator_not_slice() {
+        let mut data = SimpleGarnishData::new();
+
+        let start = data.add_number(2.into()).unwrap();
+        let end = data.add_number(5.into()).unwrap();
+        let range = data.add_range(start, end).unwrap();
+
+        let mut iter = data.get_concatenation_slice_iter(range);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn concatenation_slice_iterator_no_range() {
+        let mut data = SimpleGarnishData::new();
+
+        let num1 = data.add_number(10.into()).unwrap();
+        let num2 = data.add_number(10.into()).unwrap();
+        let num3 = data.add_number(10.into()).unwrap();
+        let list_index = data.get_data().len();
+        data.get_data_mut().push(SimpleData::List(vec![num1, num2, num3], vec![]));
+        let con1 = data.add_concatenation(list_index, 2).unwrap();
+        let con2 = data.add_concatenation(con1, 1).unwrap();
+        let con3 = data.add_concatenation(con2, 2).unwrap();
+
+        let start = data.add_number(2.into()).unwrap();
+        let slice = data.add_slice(con3, start).unwrap();
+
+        let mut iter = data.get_concatenation_slice_iter(slice);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn concatenation_slice_iterator_no_concatenation() {
+        let mut data = SimpleGarnishData::new();
+
+        let start = data.add_number(2.into()).unwrap();
+        let end = data.add_number(5.into()).unwrap();
+        let range = data.add_range(start, end).unwrap();
+        let slice = data.add_slice(start, range).unwrap();
+
+        let mut iter = data.get_concatenation_slice_iter(slice);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn concatenation_slice_iterator_start_not_number() {
+        let mut data = SimpleGarnishData::new();
+
+        let num1 = data.add_number(10.into()).unwrap();
+        let num2 = data.add_number(10.into()).unwrap();
+        let num3 = data.add_number(10.into()).unwrap();
+        let list_index = data.get_data().len();
+        data.get_data_mut().push(SimpleData::List(vec![num1, num2, num3], vec![]));
+        let con1 = data.add_concatenation(list_index, 2).unwrap();
+        let con2 = data.add_concatenation(con1, 1).unwrap();
+        let con3 = data.add_concatenation(con2, 2).unwrap();
+
+        let start = data.add_byte(2.into()).unwrap();
+        let end = data.add_number(5.into()).unwrap();
+        let range = data.add_range(start, end).unwrap();
+        let slice = data.add_slice(con3, range).unwrap();
+
+        let mut iter = data.get_concatenation_slice_iter(slice);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn concatenation_slice_iterator_end_not_number() {
+        let mut data = SimpleGarnishData::new();
+
+        let num1 = data.add_number(10.into()).unwrap();
+        let num2 = data.add_number(10.into()).unwrap();
+        let num3 = data.add_number(10.into()).unwrap();
+        let list_index = data.get_data().len();
+        data.get_data_mut().push(SimpleData::List(vec![num1, num2, num3], vec![]));
+        let con1 = data.add_concatenation(list_index, 2).unwrap();
+        let con2 = data.add_concatenation(con1, 1).unwrap();
+        let con3 = data.add_concatenation(con2, 2).unwrap();
+
+        let start = data.add_number(2.into()).unwrap();
+        let end = data.add_byte(5.into()).unwrap();
+        let range = data.add_range(start, end).unwrap();
+        let slice = data.add_slice(con3, range).unwrap();
+
+        let mut iter = data.get_concatenation_slice_iter(slice);
+
         assert_eq!(iter.next(), None);
     }
 }
