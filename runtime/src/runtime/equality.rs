@@ -376,6 +376,118 @@ mod tests {
     }
 
     #[test]
+    fn byte_list_equal_to_byte() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![GarnishDataType::ByteList, GarnishDataType::Byte],
+            registers: vec![0, 1],
+            lens: vec![1],
+            items: vec![vec![10]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_byte_list_len = |_, _| Ok(1);
+        data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
+        data.stub_get_byte = |_, _| Ok(10);
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn byte_equal_to_byte_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![GarnishDataType::Byte, GarnishDataType::ByteList],
+            registers: vec![0, 1],
+            lens: vec![0, 1],
+            items: vec![vec![], vec![10]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_byte_list_len = |_, _| Ok(1);
+        data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
+        data.stub_get_byte = |_, _| Ok(10);
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn char_list_equal_to_char() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![GarnishDataType::CharList, GarnishDataType::Char],
+            registers: vec![0, 1],
+            lens: vec![1],
+            items: vec![vec!['a' as u32]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_char_list_len = |_, _| Ok(1);
+        data.stub_get_char_list_item = ListCompData::get_character_list_item;
+        data.stub_get_char = |_, _| Ok('a');
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn char_equal_to_char_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![GarnishDataType::Char, GarnishDataType::CharList],
+            registers: vec![0, 1],
+            lens: vec![0, 1],
+            items: vec![vec![], vec!['a' as u32]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_char_list_len = |_, _| Ok(1);
+        data.stub_get_char_list_item = ListCompData::get_character_list_item;
+        data.stub_get_char = |_, _| Ok('a');
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
     fn byte_list_equal_to_byte_list() {
         let mut data = MockGarnishData::default_with_data(ListCompData {
             types: vec![GarnishDataType::ByteList, GarnishDataType::ByteList],
