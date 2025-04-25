@@ -5,7 +5,10 @@ use std::hash::Hash;
 use garnish_lang_traits::GarnishData;
 
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
-use crate::{DataError, GarnishDataType, Instruction, DataIndexIterator, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value, UNIT_INDEX};
+use crate::{
+    DataError, DataIndexIterator, GarnishDataType, Instruction, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, UNIT_INDEX,
+    symbol_value,
+};
 
 impl<T> GarnishData for SimpleGarnishData<T>
 where
@@ -305,7 +308,18 @@ where
     }
 
     fn get_slice_iter(&self, addr: Self::Size) -> Self::ListIndexIterator {
-        todo!()
+        match self.get_data().get(addr) {
+            Some(SimpleData::Slice(_, range)) => match self.get_data().get(*range) {
+                Some(SimpleData::Range(start, end)) => match (self.get_data().get(*start), self.get_data().get(*end)) {
+                    (Some(SimpleData::Number(start)), Some(SimpleData::Number(end))) => {
+                        NumberIterator::new(start.clone(), end.clone())
+                    }
+                    _ => NumberIterator::new(0.into(), 0.into()),
+                }
+                _ => NumberIterator::new(0.into(), 0.into()),
+            },
+            _ => NumberIterator::new(0.into(), 0.into()),
+        }
     }
 
     fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator {
@@ -1098,5 +1112,22 @@ mod iterators {
         assert_eq!(iter.next(), 2.into());
         assert_eq!(iter.next(), 1.into());
         assert_eq!(iter.next(), 2.into());
+    }
+
+    #[test]
+    fn char_list_slice_iterator() {
+        let mut data = SimpleGarnishData::new();
+        let s1 = data.get_data().len();
+        data.get_data_mut().push(SimpleData::CharList("Iterators".to_string()));
+        let num1 = data.add_number(2.into()).unwrap();
+        let num2 = data.add_number(5.into()).unwrap();
+        let range = data.add_range(num1, num2).unwrap();
+        let slice = data.add_slice(s1, range).unwrap();
+
+        let mut iter = data.get_slice_iter(slice);
+
+        assert_eq!(iter.next(), Some(2.into()));
+        assert_eq!(iter.next(), Some(3.into()));
+        assert_eq!(iter.next(), Some(4.into()));
     }
 }
