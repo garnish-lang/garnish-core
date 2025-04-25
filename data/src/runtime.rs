@@ -6,7 +6,7 @@ use garnish_lang_traits::GarnishData;
 
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
 use crate::{
-    DataError, GarnishDataType, Instruction, ListItemIterator, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value,
+    DataError, GarnishDataType, Instruction, DataIndexIterator, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value,
 };
 
 impl<T> GarnishData for SimpleGarnishData<T>
@@ -28,8 +28,8 @@ where
     type JumpTableIndexIterator = SizeIterator;
     type JumpPathIndexIterator = SizeIterator;
     type ListIndexIterator = NumberIterator;
-    type ListItemIterator = ListItemIterator;
-    type ConcatenationItemIterator = ListItemIterator;
+    type ListItemIterator = DataIndexIterator;
+    type ConcatenationItemIterator = DataIndexIterator;
 
     fn get_data_len(&self) -> usize {
         self.data.len()
@@ -273,8 +273,8 @@ where
 
     fn get_list_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator {
         match self.get_data().get(list_addr) {
-            Some(SimpleData::List(items, _)) => ListItemIterator::new(items.clone()),
-            _ => ListItemIterator::new(vec![]),
+            Some(SimpleData::List(items, _)) => DataIndexIterator::new(items.clone()),
+            _ => DataIndexIterator::new(vec![]),
         }
     }
 

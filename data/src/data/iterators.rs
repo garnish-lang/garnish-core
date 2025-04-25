@@ -97,18 +97,18 @@ impl DoubleEndedIterator for NumberIterator {
     }
 }
 
-pub struct ListItemIterator {
+pub struct DataIndexIterator {
     items: Vec<usize>,
     current: usize,
 }
 
-impl ListItemIterator {
+impl DataIndexIterator {
     pub fn new(items: Vec<usize>) -> Self {
         Self { items, current: 0 }
     }
 }
 
-impl Iterator for ListItemIterator {
+impl Iterator for DataIndexIterator {
     type Item = usize;
     fn next(&mut self) -> Option<Self::Item> {
         if self.current >= self.items.len() {
@@ -123,7 +123,7 @@ impl Iterator for ListItemIterator {
 
 #[cfg(test)]
 mod tests {
-    use crate::ListItemIterator;
+    use crate::DataIndexIterator;
     use crate::data::SizeIterator;
 
     #[test]
@@ -201,7 +201,7 @@ mod tests {
 
     #[test]
     fn list_iterator() {
-        let mut iter = ListItemIterator::new(vec![1, 2, 3]);
+        let mut iter = DataIndexIterator::new(vec![1, 2, 3]);
 
         assert_eq!(iter.next(), Some(1));
         assert_eq!(iter.next(), Some(2));
