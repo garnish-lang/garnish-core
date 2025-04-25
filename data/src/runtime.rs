@@ -6,7 +6,7 @@ use garnish_lang_traits::GarnishData;
 
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
 use crate::{
-    DataError, DataIndexIterator, GarnishDataType, Instruction, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, UNIT_INDEX,
+    DataError, DataIndexIterator, GarnishDataType, Instruction, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame,
     symbol_value,
 };
 
@@ -281,28 +281,7 @@ where
 
     fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
         match self.get_data().get(addr) {
-            Some(SimpleData::Concatenation(left, right)) => {
-                let mut items = vec![];
-                let mut con_stack = vec![right.clone(), left.clone()];
-
-                while let Some(item) = con_stack.pop() {
-                    match self.get_data().get(item) {
-                        None => items.push(UNIT_INDEX),
-                        Some(SimpleData::Concatenation(left, right)) => {
-                            con_stack.push(right.clone());
-                            con_stack.push(left.clone());
-                        }
-                        Some(SimpleData::List(list_items, _)) => {
-                            for item in list_items {
-                                items.push(item.clone());
-                            }
-                        }
-                        Some(_) => items.push(item),
-                    }
-                }
-
-                DataIndexIterator::new(items)
-            }
+            Some(SimpleData::Concatenation(left, right)) => DataIndexIterator::new(self.collect_concatenation_indicies(*left, *right)),
             _ => DataIndexIterator::new(vec![]),
         }
     }
@@ -321,11 +300,51 @@ where
     }
 
     fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator {
-        todo!()
+        match self.get_data().get(list_addr) {
+            Some(SimpleData::Slice(list, range)) => match (self.get_data().get(*list), self.get_data().get(*range)) {
+                (Some(SimpleData::List(items, _)), Some(SimpleData::Range(start, end))) => {
+                    match (self.get_data().get(*start), self.get_data().get(*end)) {
+                        (Some(SimpleData::Number(SimpleNumber::Integer(start))), Some(SimpleData::Number(SimpleNumber::Integer(end)))) => {
+                            DataIndexIterator::new(
+                                items
+                                    .iter()
+                                    .skip(*start as usize)
+                                    .take((end - start) as usize + 1)
+                                    .map(usize::clone)
+                                    .collect::<Vec<_>>(),
+                            )
+                        }
+                        _ => DataIndexIterator::new(vec![]),
+                    }
+                }
+                _ => DataIndexIterator::new(vec![]),
+            },
+            _ => DataIndexIterator::new(vec![]),
+        }
     }
 
     fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
-        todo!()
+        match self.get_data().get(addr) {
+            Some(SimpleData::Slice(list, range)) => match (self.get_data().get(*list), self.get_data().get(*range)) {
+                (Some(SimpleData::Concatenation(left, right)), Some(SimpleData::Range(start, end))) => {
+                    match (self.get_data().get(*start), self.get_data().get(*end)) {
+                        (Some(SimpleData::Number(SimpleNumber::Integer(start))), Some(SimpleData::Number(SimpleNumber::Integer(end)))) => {
+                            DataIndexIterator::new(
+                                self.collect_concatenation_indicies(*left, *right)
+                                    .iter()
+                                    .skip(*start as usize)
+                                    .take((end - start) as usize + 1)
+                                    .map(usize::clone)
+                                    .collect::<Vec<_>>(),
+                            )
+                        }
+                        _ => DataIndexIterator::new(vec![]),
+                    }
+                }
+                _ => DataIndexIterator::new(vec![]),
+            },
+            _ => DataIndexIterator::new(vec![]),
+        }
     }
 
     fn add_unit(&mut self) -> Result<usize, Self::Error> {
@@ -1203,6 +1222,51 @@ mod iterators {
 
         let mut iter = data.get_slice_iter(slice);
 
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn list_slice_iterator() {
+        let mut data = SimpleGarnishData::new();
+        let list_index = data.get_data().len();
+        data.get_data_mut().push(SimpleData::List(vec![100, 200, 300, 400, 500], vec![]));
+        let num1 = data.add_number(1.into()).unwrap();
+        let num2 = data.add_number(3.into()).unwrap();
+        let range = data.add_range(num1, num2).unwrap();
+        let slice = data.add_slice(list_index, range).unwrap();
+
+        let mut iter = data.get_list_slice_item_iter(slice);
+
+        assert_eq!(iter.next(), Some(200));
+        assert_eq!(iter.next(), Some(300));
+        assert_eq!(iter.next(), Some(400));
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn concatenation_slice_iterator() {
+        let mut data = SimpleGarnishData::new();
+
+        let num1 = data.add_number(10.into()).unwrap();
+        let num2 = data.add_number(10.into()).unwrap();
+        let num3 = data.add_number(10.into()).unwrap();
+        let list_index = data.get_data().len();
+        data.get_data_mut().push(SimpleData::List(vec![num1, num2, num3], vec![]));
+        let con1 = data.add_concatenation(list_index, 2).unwrap();
+        let con2 = data.add_concatenation(con1, 1).unwrap();
+        let con3 = data.add_concatenation(con2, 2).unwrap();
+
+        let start = data.add_number(2.into()).unwrap();
+        let end = data.add_number(5.into()).unwrap();
+        let range = data.add_range(start, end).unwrap();
+        let slice = data.add_slice(con3, range).unwrap();
+
+        let mut iter = data.get_concatenation_slice_iter(slice);
+
+        assert_eq!(iter.next(), num3.into());
+        assert_eq!(iter.next(), 2.into());
+        assert_eq!(iter.next(), 1.into());
+        assert_eq!(iter.next(), 2.into());
         assert_eq!(iter.next(), None);
     }
 }

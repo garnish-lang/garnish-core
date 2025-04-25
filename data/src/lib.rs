@@ -178,6 +178,29 @@ where
     pub fn display_current_value(&self) -> String where T:Display + DisplayForCustomItem {
         self.values.last().and_then(|l| Some(self.data.display_for_item(*l))).unwrap_or("<NoData>".to_string())
     }
+    
+    pub fn collect_concatenation_indicies(&self, left: usize, right: usize) -> Vec<usize> {
+        let mut items = vec![];
+        let mut con_stack = vec![right, left];
+
+        while let Some(item) = con_stack.pop() {
+            match self.get_data().get(item) {
+                None => items.push(UNIT_INDEX),
+                Some(SimpleData::Concatenation(left, right)) => {
+                    con_stack.push(right.clone());
+                    con_stack.push(left.clone());
+                }
+                Some(SimpleData::List(list_items, _)) => {
+                    for item in list_items {
+                        items.push(item.clone());
+                    }
+                }
+                Some(_) => items.push(item),
+            }
+        }
+        
+        items
+    }
 
     fn cache_add(&mut self, value: SimpleData<T>) -> Result<usize, DataError> {
         let mut h = DefaultHasher::new();
