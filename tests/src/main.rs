@@ -184,22 +184,6 @@ fn execute_script(script_path: &String) -> TestResult {
                 Some(v) => TestResult::Error(format!("Got non-boolean result after comparison, got {:?}", v.display_simple())),
                 None => TestResult::Error(String::from("No current value after comparison")),
             }
-
-            // if left == right {
-            //     TestResult::Success
-            // } else {
-            //     TestResult::Failure(format!("[{} = {}]",
-            //                                 left.display_simple(),
-            //                                 right.display_simple()
-            //                                 // data.get_data().display_for_item(*left_index),
-            //                                 // data.get_data().display_for_item(*right_index)
-            //     ))
-            // }
-            //     match (runtime.get_data().get_data().get(*left_index), runtime.get_data().get_data().get(*right_index)) {
-            //         (Some(left), Some(right)) => (left, right),
-            //         (l, r) => return TestResult::Error(format!("invalid Pair value. left = {:?}, right = {:?}", l, r))
-            //     }
-            // }
         }
     }
 }
