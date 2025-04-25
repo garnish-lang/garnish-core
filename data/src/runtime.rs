@@ -5,7 +5,7 @@ use std::hash::Hash;
 use garnish_lang_traits::GarnishData;
 
 use crate::data::{parse_byte_list, parse_char_list, parse_simple_number, NumberIterator, SimpleNumber, SizeIterator};
-use crate::{symbol_value, DataError, GarnishDataType, Instruction, SimpleInstruction, SimpleData, SimpleGarnishData, SimpleStackFrame};
+use crate::{symbol_value, DataError, GarnishDataType, Instruction, SimpleInstruction, SimpleData, SimpleGarnishData, SimpleStackFrame, ListItemIterator};
 
 impl<T> GarnishData for SimpleGarnishData<T>
 where
@@ -26,8 +26,8 @@ where
     type JumpTableIndexIterator = SizeIterator;
     type JumpPathIndexIterator = SizeIterator;
     type ListIndexIterator = NumberIterator;
-    type ListItemIterator = SizeIterator;
-    type ConcatenationItemIterator = SizeIterator;
+    type ListItemIterator = ListItemIterator;
+    type ConcatenationItemIterator = ListItemIterator;
 
     fn get_data_len(&self) -> usize {
         self.data.len()

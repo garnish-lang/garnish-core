@@ -97,8 +97,33 @@ impl DoubleEndedIterator for NumberIterator {
     }
 }
 
+pub struct ListItemIterator {
+    items: Vec<usize>,
+    current: usize,
+}
+
+impl ListItemIterator {
+    pub fn new(items: Vec<usize>) -> Self {
+        Self { items, current: 0 }
+    }
+}
+
+impl Iterator for ListItemIterator {
+    type Item = usize;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current >= self.items.len() {
+            None
+        } else {
+            let item = Some(self.items[self.current]);
+            self.current += 1;
+            item
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::ListItemIterator;
     use crate::data::SizeIterator;
 
     #[test]
@@ -172,5 +197,15 @@ mod tests {
         assert_eq!(iter.next(), Some(1));
         assert_eq!(iter.next(), None);
         assert_eq!(iter.next_back(), None);
+    }
+
+    #[test]
+    fn list_iterator() {
+        let mut iter = ListItemIterator::new(vec![1, 2, 3]);
+
+        assert_eq!(iter.next(), Some(1));
+        assert_eq!(iter.next(), Some(2));
+        assert_eq!(iter.next(), Some(3));
+        assert_eq!(iter.next(), None);
     }
 }
