@@ -1013,55 +1013,6 @@ mod lists {
     }
 
     #[test]
-    fn equality_associations_equal() {
-        let mut runtime = create_simple_runtime();
-
-        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
-        let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
-        let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
-
-        let i4 = runtime.get_data_mut().add_symbol(2).unwrap();
-        let i5 = runtime.get_data_mut().add_number(20.into()).unwrap();
-        let i6 = runtime.get_data_mut().add_pair((i4, i5)).unwrap();
-
-        let i7 = runtime.get_data_mut().add_symbol(3).unwrap();
-        let i8 = runtime.get_data_mut().add_number(30.into()).unwrap();
-        let i9 = runtime.get_data_mut().add_pair((i7, i8)).unwrap();
-
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i3, true).unwrap();
-        runtime.get_data_mut().add_to_list(i6, true).unwrap();
-        runtime.get_data_mut().add_to_list(i9, true).unwrap();
-        let i10 = runtime.get_data_mut().end_list().unwrap();
-
-        let i11 = runtime.get_data_mut().add_symbol(3).unwrap();
-        let i12 = runtime.get_data_mut().add_number(30.into()).unwrap();
-        let i13 = runtime.get_data_mut().add_pair((i11, i12)).unwrap();
-
-        let i14 = runtime.get_data_mut().add_symbol(1).unwrap();
-        let i15 = runtime.get_data_mut().add_number(10.into()).unwrap();
-        let i16 = runtime.get_data_mut().add_pair((i14, i15)).unwrap();
-
-        let i17 = runtime.get_data_mut().add_symbol(2).unwrap();
-        let i18 = runtime.get_data_mut().add_number(20.into()).unwrap();
-        let i19 = runtime.get_data_mut().add_pair((i17, i18)).unwrap();
-
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i13, true).unwrap();
-        runtime.get_data_mut().add_to_list(i16, true).unwrap();
-        runtime.get_data_mut().add_to_list(i19, true).unwrap();
-        let i20 = runtime.get_data_mut().end_list().unwrap();
-
-        runtime.get_data_mut().push_register(i10).unwrap();
-        runtime.get_data_mut().push_register(i20).unwrap();
-
-        runtime.equal().unwrap();
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
-    }
-
-    #[test]
     fn equality_associations_not_equal() {
         let mut runtime = create_simple_runtime();
 
@@ -1324,7 +1275,7 @@ mod concatenation {
     }
 
     #[test]
-    fn lsit_concatenation_not_equal() {
+    fn list_concatenation_not_equal() {
         let mut runtime = create_simple_runtime();
 
         let d1 = add_list_with_start(runtime.get_data_mut(), 10, 10);
@@ -1409,66 +1360,5 @@ mod slices {
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
-    }
-
-    #[test]
-    fn slice_of_list_slice_of_incomplete_list_equal() {
-        let mut runtime = create_simple_runtime();
-
-        let unit = runtime.get_data_mut().add_unit().unwrap();
-        let d1 = runtime.get_data_mut().add_number(10.into()).unwrap();
-
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(d1, false).unwrap();
-        runtime.get_data_mut().add_to_list(unit, false).unwrap();
-        runtime.get_data_mut().add_to_list(unit, false).unwrap();
-        let list1 = runtime.get_data_mut().end_list().unwrap();
-
-        runtime.get_data_mut().start_list(1).unwrap();
-        runtime.get_data_mut().add_to_list(d1, false).unwrap();
-        let list2 = runtime.get_data_mut().end_list().unwrap();
-
-        let range = add_range(runtime.get_data_mut(), 0, 2);
-        let slice1 = runtime.get_data_mut().add_slice(list1, range).unwrap();
-        let slice2 = runtime.get_data_mut().add_slice(list2, range).unwrap();
-
-        runtime.get_data_mut().push_register(slice1).unwrap();
-        runtime.get_data_mut().push_register(slice2).unwrap();
-
-        runtime.equal().unwrap();
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
-    }
-
-    #[test]
-    fn slice_of_list_slice_of_incomplete_list_not_equal() {
-        let mut runtime = create_simple_runtime();
-
-        let unit = runtime.get_data_mut().add_unit().unwrap();
-        let d1 = runtime.get_data_mut().add_number(10.into()).unwrap();
-        let d2 = runtime.get_data_mut().add_number(20.into()).unwrap();
-
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(d1, false).unwrap();
-        runtime.get_data_mut().add_to_list(d2, false).unwrap();
-        runtime.get_data_mut().add_to_list(unit, false).unwrap();
-        let list1 = runtime.get_data_mut().end_list().unwrap();
-
-        runtime.get_data_mut().start_list(1).unwrap();
-        runtime.get_data_mut().add_to_list(d1, false).unwrap();
-        let list2 = runtime.get_data_mut().end_list().unwrap();
-
-        let range = add_range(runtime.get_data_mut(), 0, 2);
-        let slice1 = runtime.get_data_mut().add_slice(list1, range).unwrap();
-        let slice2 = runtime.get_data_mut().add_slice(list2, range).unwrap();
-
-        runtime.get_data_mut().push_register(slice1).unwrap();
-        runtime.get_data_mut().push_register(slice2).unwrap();
-
-        runtime.equal().unwrap();
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
     }
 }

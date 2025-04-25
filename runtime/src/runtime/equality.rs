@@ -257,8 +257,8 @@ where
 
 fn compare_index_iterator_values<Data: GarnishData, R, GetFn>(
     this: &mut Data,
-    iter1: Data::ListIndexIterator,
-    iter2: Data::ListIndexIterator,
+    mut iter1: Data::ListIndexIterator,
+    mut iter2: Data::ListIndexIterator,
     list_index_1: Data::Size,
     list_index_2: Data::Size,
     get_fn: GetFn,
@@ -267,17 +267,23 @@ where
     R: PartialEq,
     GetFn: Fn(&Data, Data::Size, Data::Number) -> Result<R, Data::Error>,
 {
-    let mut iter1 = iter1;
-    let mut iter2 = iter2;
-
-    while let (Some(index1), Some(index2)) = (iter1.next(), iter2.next()) {
-        let (item1, item2) = (get_fn(this, list_index_1.clone(), index1)?, get_fn(this, list_index_2.clone(), index2)?);
-        if item1 != item2 {
-            return Ok(false);
+    let mut index1: Option<Data::Number> = iter1.next();
+    let mut index2: Option<Data::Number> = iter2.next();
+    loop {
+        match (index1.clone(), index2.clone()) {
+            (Some(index1), Some(index2)) => {
+                let (item1, item2) = (get_fn(this, list_index_1.clone(), index1)?, get_fn(this, list_index_2.clone(), index2)?);
+                if item1 != item2 {
+                    return Ok(false);
+                }
+            }
+            _ => break,
         }
+        index1 = iter1.next();
+        index2 = iter2.next();
     }
 
-    check_last_iter_values::<Data, Data::ListIndexIterator, Data::ListIndexIterator>(iter1, iter2)
+    match_last_iter_values::<Data, Data::Number>(index1, index2)
 }
 
 fn compare_item_iterators<Data: GarnishData, Iter, GetFn>(
@@ -290,14 +296,8 @@ where
     Iter: Iterator<Item = Data::Size>,
     GetFn: Fn(&Data, Data::Size) -> Iter,
 {
-    let (mut iter1, mut iter2) = (get_iter(this, left_addr.clone()), get_iter(this, right_addr.clone()));
-
-    while let (Some(index1), Some(index2)) = (iter1.next(), iter2.next()) {
-        this.push_register(index1)?;
-        this.push_register(index2)?;
-    }
-
-    check_last_iter_values::<Data, Iter, Iter>(iter1, iter2)
+    let (iter1, iter2) = (get_iter(this, left_addr.clone()), get_iter(this, right_addr.clone()));
+    push_iterator_values(this, iter1, iter2)
 }
 
 fn compare_item_iterators_2<Data: GarnishData, Iter1, Iter2, GetFn1, GetFn2>(
@@ -313,24 +313,34 @@ where
     GetFn1: Fn(&Data, Data::Size) -> Iter1,
     GetFn2: Fn(&Data, Data::Size) -> Iter2,
 {
-    let (mut iter1, mut iter2) = (get_iter_left(this, left_addr.clone()), get_iter_right(this, right_addr.clone()));
+    let (iter1, iter2) = (get_iter_left(this, left_addr.clone()), get_iter_right(this, right_addr.clone()));
+    push_iterator_values(this, iter1, iter2)
+}
 
-    while let (Some(index1), Some(index2)) = (iter1.next(), iter2.next()) {
-        this.push_register(index1)?;
-        this.push_register(index2)?;
+fn push_iterator_values<Data, Iter1, Iter2>(this: &mut Data, mut iter1: Iter1, mut iter2: Iter2) -> Result<bool, RuntimeError<Data::Error>>
+where
+    Data: GarnishData,
+    Iter1: Iterator<Item = Data::Size>,
+    Iter2: Iterator<Item = Data::Size>,
+{
+    let mut index1: Option<Data::Size> = iter1.next();
+    let mut index2: Option<Data::Size> = iter2.next();
+    loop {
+        match (index1.clone(), index2.clone()) {
+            (Some(index1), Some(index2)) => {
+                this.push_register(index1)?;
+                this.push_register(index2)?;
+            }
+            _ => break,
+        }
+        index1 = iter1.next();
+        index2 = iter2.next();
     }
 
-    check_last_iter_values::<Data, Iter1, Iter2>(iter1, iter2)
+    match_last_iter_values::<Data, Data::Size>(index1, index2)
 }
 
-fn check_last_iter_values<Data: GarnishData, Iter1: Iterator, Iter2: Iterator>(
-    mut iter1: Iter1,
-    mut iter2: Iter2,
-) -> Result<bool, RuntimeError<Data::Error>> {
-    match_last_iter_values::<Data, Iter1::Item, Iter2::Item>(iter1.next(), iter2.next())
-}
-
-fn match_last_iter_values<Data: GarnishData, T1, T2>(value_1: Option<T1>, value_2: Option<T2>) -> Result<bool, RuntimeError<Data::Error>> {
+fn match_last_iter_values<Data: GarnishData, T>(value_1: Option<T>, value_2: Option<T>) -> Result<bool, RuntimeError<Data::Error>> {
     Ok(match (value_1, value_2) {
         (Some(_), Some(_)) => state_error("Both slice operand's have remaining values in iterators after comparison".to_string())?,
         (None, Some(_)) | (Some(_), None) => false, // one operand as more items, automatically not equal
@@ -524,6 +534,33 @@ mod tests {
         data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
 
         data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn byte_list_not_equal_to_larger_byte_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![GarnishDataType::ByteList, GarnishDataType::ByteList],
+            registers: vec![0, 1],
+            lens: vec![2, 3],
+            items: vec![vec![10, 20], vec![10, 20]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_byte_list_iter = |data, i| MockIterator::new(data.lens.get(i as usize).unwrap().clone());
+        data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
+
+        data.stub_add_false = |_| Ok(999);
         data.stub_push_register = |data, i| {
             data.registers.push(i);
             Ok(())
@@ -1018,6 +1055,38 @@ mod tests {
     }
 
     #[test]
+    fn larger_list_does_not_equal_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::List,
+                GarnishDataType::List,
+                GarnishDataType::Number,
+                GarnishDataType::Number,
+            ],
+            registers: vec![0, 1],
+            lens: vec![2, 3],
+            items: vec![],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_list_item_iter = |data, i| MockIterator::new_range(2, data.lens[i as usize]);
+        data.stub_get_number = |_, _| Ok(10);
+
+        data.stub_add_false = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
     fn list_equals_concatenation() {
         let mut data = MockGarnishData::default_with_data(ListCompData {
             types: vec![
@@ -1039,6 +1108,39 @@ mod tests {
         data.stub_get_number = |_, _| Ok(10);
 
         data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn list_not_equal_to_larger_concatenation() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::List,
+                GarnishDataType::Concatenation,
+                GarnishDataType::Number,
+                GarnishDataType::Number,
+            ],
+            registers: vec![0, 1],
+            lens: vec![2, 3],
+            items: vec![],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_list_item_iter = |data, i| MockIterator::new_range(2, data.lens[i as usize]);
+        data.stub_get_concatenation_iter = |data, i| MockIterator::new_range(2, data.lens[i as usize]);
+        data.stub_get_number = |_, _| Ok(10);
+
+        data.stub_add_false = |_| Ok(999);
         data.stub_push_register = |data, i| {
             data.registers.push(i);
             Ok(())
