@@ -1091,6 +1091,16 @@ mod iterators {
     }
 
     #[test]
+    fn list_item_iterator_not_list() {
+        let mut data = SimpleGarnishData::new();
+        let num1 = data.add_number(10.into()).unwrap();
+
+        let mut iter = data.get_list_item_iter(num1);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
     fn concatenation_item_iterator() {
         let mut data = SimpleGarnishData::new();
         let num1 = data.add_number(10.into()).unwrap();
@@ -1113,7 +1123,17 @@ mod iterators {
     }
 
     #[test]
-    fn char_list_slice_iterator() {
+    fn concatenation_item_iterator_not_concatenation() {
+        let mut data = SimpleGarnishData::new();
+        let num1 = data.add_number(10.into()).unwrap();
+
+        let mut iter = data.get_concatenation_iter(num1);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn slice_iterator() {
         let mut data = SimpleGarnishData::new();
         let s1 = data.get_data().len();
         data.get_data_mut().push(SimpleData::CharList("Iterators".to_string()));
@@ -1127,5 +1147,62 @@ mod iterators {
         assert_eq!(iter.next(), Some(2.into()));
         assert_eq!(iter.next(), Some(3.into()));
         assert_eq!(iter.next(), Some(4.into()));
+    }
+
+    #[test]
+    fn slice_iterator_not_slice() {
+        let mut data = SimpleGarnishData::new();
+        let s1 = data.get_data().len();
+        data.get_data_mut().push(SimpleData::CharList("Iterators".to_string()));
+        let num1 = data.add_number(2.into()).unwrap();
+        let num2 = data.add_number(5.into()).unwrap();
+        let range = data.add_range(num1, num2).unwrap();
+
+        let mut iter = data.get_slice_iter(range);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn slice_iterator_no_range_in_slice() {
+        let mut data = SimpleGarnishData::new();
+        let s1 = data.get_data().len();
+        data.get_data_mut().push(SimpleData::CharList("Iterators".to_string()));
+        let num1 = data.add_number(2.into()).unwrap();
+        let slice = data.add_slice(s1, num1).unwrap();
+
+        let mut iter = data.get_slice_iter(slice);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn slice_iterator_range_start_not_number() {
+        let mut data = SimpleGarnishData::new();
+        let s1 = data.get_data().len();
+        data.get_data_mut().push(SimpleData::CharList("Iterators".to_string()));
+        let num1 = data.add_byte(2).unwrap();
+        let num2 = data.add_number(5.into()).unwrap();
+        let range = data.add_range(num1, num2).unwrap();
+        let slice = data.add_slice(s1, range).unwrap();
+
+        let mut iter = data.get_slice_iter(slice);
+
+        assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn slice_iterator_range_end_not_number() {
+        let mut data = SimpleGarnishData::new();
+        let s1 = data.get_data().len();
+        data.get_data_mut().push(SimpleData::CharList("Iterators".to_string()));
+        let num1 = data.add_number(2.into()).unwrap();
+        let num2 = data.add_byte(5).unwrap();
+        let range = data.add_range(num1, num2).unwrap();
+        let slice = data.add_slice(s1, range).unwrap();
+
+        let mut iter = data.get_slice_iter(slice);
+
+        assert_eq!(iter.next(), None);
     }
 }
