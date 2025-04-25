@@ -26,6 +26,8 @@ where
     type JumpTableIndexIterator = SizeIterator;
     type JumpPathIndexIterator = SizeIterator;
     type ListIndexIterator = NumberIterator;
+    type ListItemIterator = SizeIterator;
+    type ConcatenationItemIterator = SizeIterator;
 
     fn get_data_len(&self) -> usize {
         self.data.len()
@@ -265,6 +267,26 @@ where
         self.get_symbol_list_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
             .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+    }
+
+    fn get_list_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator {
+        todo!()
+    }
+
+    fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
+        todo!()
+    }
+
+    fn get_slice_iter(&self, addr: Self::Size) -> Self::ListIndexIterator {
+        todo!()
+    }
+
+    fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator {
+        todo!()
+    }
+
+    fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
+        todo!()
     }
 
     fn add_unit(&mut self) -> Result<usize, Self::Error> {
