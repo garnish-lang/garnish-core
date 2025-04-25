@@ -281,7 +281,7 @@ where
             Some(SimpleData::Concatenation(left, right)) => {
                 let mut items = vec![];
                 let mut con_stack = vec![right.clone(), left.clone()];
-                
+
                 while let Some(item) = con_stack.pop() {
                     match self.get_data().get(item) {
                         None => items.push(UNIT_INDEX),
@@ -289,10 +289,15 @@ where
                             con_stack.push(right.clone());
                             con_stack.push(left.clone());
                         }
+                        Some(SimpleData::List(list_items, _)) => {
+                            for item in list_items {
+                                items.push(item.clone());
+                            }
+                        }
                         Some(_) => items.push(item),
                     }
                 }
-                
+
                 DataIndexIterator::new(items)
             }
             _ => DataIndexIterator::new(vec![]),
@@ -1076,13 +1081,20 @@ mod iterators {
     #[test]
     fn concatenation_item_iterator() {
         let mut data = SimpleGarnishData::new();
-        let con1 = data.add_concatenation(1, 2).unwrap();
+        let num1 = data.add_number(10.into()).unwrap();
+        let num2 = data.add_number(10.into()).unwrap();
+        let num3 = data.add_number(10.into()).unwrap();
+        let list_index = data.get_data().len();
+        data.get_data_mut().push(SimpleData::List(vec![num1, num2, num3], vec![]));
+        let con1 = data.add_concatenation(list_index, 2).unwrap();
         let con2 = data.add_concatenation(con1, 1).unwrap();
         let con3 = data.add_concatenation(con2, 2).unwrap();
 
         let mut iter = data.get_concatenation_iter(con3);
 
-        assert_eq!(iter.next(), 1.into());
+        assert_eq!(iter.next(), num1.into());
+        assert_eq!(iter.next(), num2.into());
+        assert_eq!(iter.next(), num3.into());
         assert_eq!(iter.next(), 2.into());
         assert_eq!(iter.next(), 1.into());
         assert_eq!(iter.next(), 2.into());
