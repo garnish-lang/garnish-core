@@ -172,6 +172,46 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
         (GarnishDataType::Concatenation, GarnishDataType::List) => {
             compare_item_iterators_2(this, left_addr, right_addr, Data::get_concatenation_iter, Data::get_list_item_iter)?
         }
+        (GarnishDataType::Slice, GarnishDataType::CharList) => {
+            compare_slice_index_iterator_values(
+                this,
+                right_addr.clone(),
+                left_addr.clone(),
+                GarnishDataType::CharList,
+                Data::get_char_list_iter,
+                Data::get_char_list_item
+            )?
+        }
+        (GarnishDataType::CharList, GarnishDataType::Slice) => {
+            compare_slice_index_iterator_values(
+                this,
+                left_addr.clone(),
+                right_addr.clone(),
+                GarnishDataType::CharList,
+                Data::get_char_list_iter,
+                Data::get_char_list_item
+            )?
+        }
+        (GarnishDataType::Slice, GarnishDataType::ByteList) => {
+            compare_slice_index_iterator_values(
+                this,
+                right_addr.clone(),
+                left_addr.clone(),
+                GarnishDataType::ByteList,
+                Data::get_byte_list_iter,
+                Data::get_byte_list_item
+            )?
+        }
+        (GarnishDataType::ByteList, GarnishDataType::Slice) => {
+            compare_slice_index_iterator_values(
+                this,
+                left_addr.clone(),
+                right_addr.clone(),
+                GarnishDataType::ByteList,
+                Data::get_byte_list_iter,
+                Data::get_byte_list_item
+            )?
+        }
         (GarnishDataType::Slice, GarnishDataType::SymbolList) => {
             compare_slice_index_iterator_values(
                 this,
@@ -776,6 +816,86 @@ mod tests {
     }
 
     #[test]
+    fn char_list_equals_slice_of_char_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::CharList,
+                GarnishDataType::Slice,
+                GarnishDataType::Range,
+            ],
+            registers: vec![0, 1],
+            lens: vec![2, 2],
+            items: vec![vec![10, 20], vec![10, 20]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_slice = |_, addr| {
+            if addr == 1 {
+                Ok((0, 1))
+            } else {
+                assert!(false);
+                Err(MockError {})
+            }
+        };
+        data.stub_get_slice_iter = |_, _| MockIterator::new(2);
+        data.stub_get_char_list_iter = |_, _| MockIterator::new(2);
+        data.stub_get_char_list_item = ListCompData::get_character_list_item;
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn slice_of_char_list_equals_char_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::CharList,
+                GarnishDataType::Slice,
+                GarnishDataType::Range,
+            ],
+            registers: vec![1, 0],
+            lens: vec![2, 2],
+            items: vec![vec![10, 20], vec![10, 20]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_slice = |_, addr| {
+            if addr == 1 {
+                Ok((0, 1))
+            } else {
+                assert!(false);
+                Err(MockError {})
+            }
+        };
+        data.stub_get_slice_iter = |_, _| MockIterator::new(2);
+        data.stub_get_char_list_iter = |_, _| MockIterator::new(2);
+        data.stub_get_char_list_item = ListCompData::get_character_list_item;
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
     fn slice_of_byte_list_equals_slice_of_byte_list() {
         let mut data = MockGarnishData::default_with_data(ListCompData {
             types: vec![
@@ -805,6 +925,86 @@ mod tests {
             }
         };
         data.stub_get_slice_iter = |_, _| MockIterator::new(2);
+        data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn byte_list_equals_slice_of_byte_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::ByteList,
+                GarnishDataType::Slice,
+                GarnishDataType::Range,
+            ],
+            registers: vec![0, 1],
+            lens: vec![2, 2],
+            items: vec![vec![10, 20], vec![10, 20]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_slice = |_, addr| {
+            if addr == 1 {
+                Ok((0, 2))
+            } else {
+                assert!(false);
+                Err(MockError {})
+            }
+        };
+        data.stub_get_slice_iter = |_, _| MockIterator::new(2);
+        data.stub_get_byte_list_iter = |_, _| MockIterator::new(2);
+        data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn slice_of_byte_list_equals_byte_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::ByteList,
+                GarnishDataType::Slice,
+                GarnishDataType::Range,
+            ],
+            registers: vec![1, 0],
+            lens: vec![2, 2],
+            items: vec![vec![10, 20], vec![10, 20]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_slice = |_, addr| {
+            if addr == 1 {
+                Ok((0, 2))
+            } else {
+                assert!(false);
+                Err(MockError {})
+            }
+        };
+        data.stub_get_slice_iter = |_, _| MockIterator::new(2);
+        data.stub_get_byte_list_iter = |_, _| MockIterator::new(2);
         data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
 
         data.stub_add_true = |_| Ok(999);
