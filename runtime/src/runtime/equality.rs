@@ -244,6 +244,15 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
                         Data::get_list_slice_item_iter,
                     )?
                 }
+                GarnishDataType::Concatenation => {
+                    compare_item_iterators_2(
+                        this,
+                        left_addr,
+                        right_addr,
+                        Data::get_list_item_iter,
+                        Data::get_concatenation_slice_iter,
+                    )?
+                }
                 _ => false
             }
         }
@@ -259,12 +268,30 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
                         Data::get_list_slice_item_iter,
                     )?
                 }
+                GarnishDataType::Concatenation => {
+                    compare_item_iterators_2(
+                        this,
+                        right_addr,
+                        left_addr,
+                        Data::get_list_item_iter,
+                        Data::get_concatenation_slice_iter,
+                    )?
+                }
                 _ => false
             }
         }
         (GarnishDataType::Concatenation, GarnishDataType::Slice) => {
             let (value2, _) = this.get_slice(right_addr.clone())?;
             match this.get_data_type(value2)? {
+                GarnishDataType::List => {
+                    compare_item_iterators_2(
+                        this,
+                        left_addr,
+                        right_addr,
+                        Data::get_concatenation_iter,
+                        Data::get_list_slice_item_iter,
+                    )?
+                }
                 GarnishDataType::Concatenation => {
                     compare_item_iterators_2(
                         this,
@@ -280,6 +307,15 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
         (GarnishDataType::Slice, GarnishDataType::Concatenation) => {
             let (value2, _) = this.get_slice(left_addr.clone())?;
             match this.get_data_type(value2)? {
+                GarnishDataType::List => {
+                    compare_item_iterators_2(
+                        this,
+                        right_addr,
+                        left_addr,
+                        Data::get_concatenation_iter,
+                        Data::get_list_slice_item_iter,
+                    )?
+                }
                 GarnishDataType::Concatenation => {
                     compare_item_iterators_2(
                         this,
@@ -1409,6 +1445,178 @@ mod tests {
         };
         data.stub_get_list_slice_item_iter = |_, _| MockIterator::new_range(4, 5);
         data.stub_get_concatenation_slice_iter = |_, _| MockIterator::new_range(4, 5);
+        data.stub_get_number = |_, _| Ok(10);
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn slice_of_concatenation_equals_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::Concatenation,
+                GarnishDataType::Range,
+                GarnishDataType::Slice,
+                GarnishDataType::List,
+                GarnishDataType::Number,
+                GarnishDataType::Number,
+            ],
+            registers: vec![2, 3],
+            lens: vec![2, 2],
+            items: vec![vec![6, 6], vec![6, 6]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_slice = |_, addr| {
+            if addr == 2 {
+                Ok((0, 1))
+            } else {
+                assert!(false);
+                Err(MockError {})
+            }
+        };
+        data.stub_get_list_item_iter = |_, _| MockIterator::new_range(4, 6);
+        data.stub_get_concatenation_slice_iter = |_, _| MockIterator::new_range(4, 6);
+        data.stub_get_number = |_, _| Ok(10);
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn concatenation_equals_slice_of_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::Concatenation,
+                GarnishDataType::Range,
+                GarnishDataType::Slice,
+                GarnishDataType::List,
+                GarnishDataType::Number,
+                GarnishDataType::Number,
+            ],
+            registers: vec![0, 2],
+            lens: vec![2, 2],
+            items: vec![vec![6, 6], vec![6, 6]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_slice = |_, addr| {
+            if addr == 2 {
+                Ok((3, 1))
+            } else {
+                assert!(false);
+                Err(MockError {})
+            }
+        };
+        data.stub_get_list_slice_item_iter = |_, _| MockIterator::new_range(4, 6);
+        data.stub_get_concatenation_iter = |_, _| MockIterator::new_range(4, 6);
+        data.stub_get_number = |_, _| Ok(10);
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn slice_of_list_equals_concatenation() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::Concatenation,
+                GarnishDataType::Range,
+                GarnishDataType::Slice,
+                GarnishDataType::List,
+                GarnishDataType::Number,
+                GarnishDataType::Number,
+            ],
+            registers: vec![2, 0],
+            lens: vec![2, 2],
+            items: vec![vec![6, 6], vec![6, 6]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_slice = |_, addr| {
+            if addr == 2 {
+                Ok((3, 1))
+            } else {
+                assert!(false);
+                Err(MockError {})
+            }
+        };
+        data.stub_get_list_slice_item_iter = |_, _| MockIterator::new_range(4, 6);
+        data.stub_get_concatenation_iter = |_, _| MockIterator::new_range(4, 6);
+        data.stub_get_number = |_, _| Ok(10);
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn list_equals_slice_of_concatenation() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![
+                GarnishDataType::Concatenation,
+                GarnishDataType::Range,
+                GarnishDataType::Slice,
+                GarnishDataType::List,
+                GarnishDataType::Number,
+                GarnishDataType::Number,
+            ],
+            registers: vec![3, 2],
+            lens: vec![2, 2],
+            items: vec![vec![6, 6], vec![6, 6]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_slice = |_, addr| {
+            if addr == 2 {
+                Ok((0, 1))
+            } else {
+                assert!(false);
+                Err(MockError {})
+            }
+        };
+        data.stub_get_list_item_iter = |_, _| MockIterator::new_range(4, 6);
+        data.stub_get_concatenation_slice_iter = |_, _| MockIterator::new_range(4, 6);
         data.stub_get_number = |_, _| Ok(10);
 
         data.stub_add_true = |_| Ok(999);
