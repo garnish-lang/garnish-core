@@ -333,7 +333,7 @@ where
     if this.get_data_type(value1.clone())? == expected_data_type {
         compare_index_iterator_values(
             this,
-            get_value_iter(this, value1.clone()),
+            get_value_iter(this, value_addr.clone()),
             this.get_slice_iter(slice_addr.clone()),
             value_addr,
             value1,

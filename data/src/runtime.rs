@@ -2,12 +2,11 @@ use std::convert::TryInto;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use garnish_lang_traits::GarnishData;
+use garnish_lang_traits::{GarnishData, GarnishNumber};
 
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
 use crate::{
-    DataError, DataIndexIterator, GarnishDataType, Instruction, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame,
-    symbol_value,
+    DataError, DataIndexIterator, GarnishDataType, Instruction, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value,
 };
 
 impl<T> GarnishData for SimpleGarnishData<T>
@@ -290,7 +289,11 @@ where
         match self.get_data().get(addr) {
             Some(SimpleData::Slice(_, range)) => match self.get_data().get(*range) {
                 Some(SimpleData::Range(start, end)) => match (self.get_data().get(*start), self.get_data().get(*end)) {
-                    (Some(SimpleData::Number(start)), Some(SimpleData::Number(end))) => NumberIterator::new(start.clone(), end.clone()),
+                    (Some(SimpleData::Number(start)), Some(SimpleData::Number(end))) => end
+                        .clone()
+                        .plus(SimpleNumber::Integer(1))
+                        .and_then(|end| Some(NumberIterator::new(start.clone(), end)))
+                        .unwrap_or(NumberIterator::new(0.into(), 0.into())),
                     _ => NumberIterator::new(0.into(), 0.into()),
                 },
                 _ => NumberIterator::new(0.into(), 0.into()),
@@ -1166,6 +1169,8 @@ mod iterators {
         assert_eq!(iter.next(), Some(2.into()));
         assert_eq!(iter.next(), Some(3.into()));
         assert_eq!(iter.next(), Some(4.into()));
+        assert_eq!(iter.next(), Some(5.into()));
+        assert_eq!(iter.next(), None);
     }
 
     #[test]

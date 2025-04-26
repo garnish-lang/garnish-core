@@ -49,9 +49,7 @@ fn main() {
     let mut messages = vec![];
 
     // future cli options
-    let manual_filter: [&str; 1] = [
-        "equality:slice_symbol_list"
-    ];
+    let manual_filter: Vec<&str> = vec![];
     let display_successes = false;
 
     for script_path in script_paths {
