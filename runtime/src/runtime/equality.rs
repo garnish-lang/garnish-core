@@ -172,6 +172,26 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
         (GarnishDataType::Concatenation, GarnishDataType::List) => {
             compare_item_iterators_2(this, left_addr, right_addr, Data::get_concatenation_iter, Data::get_list_item_iter)?
         }
+        (GarnishDataType::Slice, GarnishDataType::SymbolList) => {
+            compare_slice_index_iterator_values(
+                this,
+                right_addr.clone(),
+                left_addr.clone(),
+                GarnishDataType::SymbolList,
+                Data::get_symbol_list_iter,
+                Data::get_symbol_list_item
+            )?
+        }
+        (GarnishDataType::SymbolList, GarnishDataType::Slice) => {
+            compare_slice_index_iterator_values(
+                this,
+                left_addr.clone(),
+                right_addr.clone(),
+                GarnishDataType::SymbolList,
+                Data::get_symbol_list_iter,
+                Data::get_symbol_list_item
+            )?
+        }
         (GarnishDataType::Slice, GarnishDataType::Slice) => {
             let (value1, _) = this.get_slice(left_addr.clone())?;
             let (value2, _) = this.get_slice(right_addr.clone())?;
@@ -255,8 +275,37 @@ where
     })
 }
 
-fn compare_index_iterator_values<Data: GarnishData, R, GetFn>(
-    this: &mut Data,
+fn compare_slice_index_iterator_values<Data, GetValueIterFn, GetValueItemFn, Value>(
+    this: &Data,
+    value_addr: Data::Size,
+    slice_addr: Data::Size,
+    expected_data_type: GarnishDataType,
+    get_value_iter: GetValueIterFn,
+    get_value_item: GetValueItemFn,
+) -> Result<bool, RuntimeError<Data::Error>>
+where
+    Data: GarnishData,
+    GetValueIterFn: Fn(&Data, Data::Size) -> Data::ListIndexIterator,
+    GetValueItemFn: Fn(&Data, Data::Size, Data::Number) -> Result<Value, Data::Error>,
+    Value: PartialEq
+{
+    let (value1, _) = this.get_slice(slice_addr.clone())?;
+    if this.get_data_type(value1.clone())? == expected_data_type {
+        compare_index_iterator_values(
+            this,
+            get_value_iter(this, value1.clone()),
+            this.get_slice_iter(slice_addr.clone()),
+            value_addr,
+            value1,
+            get_value_item,
+        )
+    } else {
+        Ok(false)
+    }
+}
+
+fn compare_index_iterator_values<Data: GarnishData, Value, GetFn>(
+    this: &Data,
     mut iter1: Data::ListIndexIterator,
     mut iter2: Data::ListIndexIterator,
     list_index_1: Data::Size,
@@ -264,8 +313,8 @@ fn compare_index_iterator_values<Data: GarnishData, R, GetFn>(
     get_fn: GetFn,
 ) -> Result<bool, RuntimeError<Data::Error>>
 where
-    R: PartialEq,
-    GetFn: Fn(&Data, Data::Size, Data::Number) -> Result<R, Data::Error>,
+    Value: PartialEq,
+    GetFn: Fn(&Data, Data::Size, Data::Number) -> Result<Value, Data::Error>,
 {
     let mut index1: Option<Data::Number> = iter1.next();
     let mut index2: Option<Data::Number> = iter2.next();
@@ -976,6 +1025,78 @@ mod tests {
             }
         };
         data.stub_get_slice_iter = |_, _| MockIterator::new(2);
+        data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn symbol_list_equals_slice_of_symbol_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![GarnishDataType::SymbolList, GarnishDataType::Slice, GarnishDataType::Range],
+            registers: vec![0, 1],
+            lens: vec![2, 2],
+            items: vec![vec![10, 20], vec![10, 20]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_slice = |_, addr| {
+            if addr == 1 {
+                Ok((0, 2))
+            } else {
+                assert!(false);
+                Err(MockError {})
+            }
+        };
+        data.stub_get_slice_iter = |_, _| MockIterator::new(2);
+        data.stub_get_symbol_list_iter = |_, _| MockIterator::new(2);
+        data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
+
+        data.stub_add_true = |_| Ok(999);
+        data.stub_push_register = |data, i| {
+            data.registers.push(i);
+            Ok(())
+        };
+
+        let result = equal(&mut data);
+
+        assert_eq!(data.data.registers, vec![999]);
+        assert_eq!(result.unwrap(), None);
+    }
+
+    #[test]
+    fn slice_of_symbol_list_equals_symbol_list() {
+        let mut data = MockGarnishData::default_with_data(ListCompData {
+            types: vec![GarnishDataType::SymbolList, GarnishDataType::Slice, GarnishDataType::Range],
+            registers: vec![1, 0],
+            lens: vec![2, 2],
+            items: vec![vec![10, 20], vec![10, 20]],
+        });
+
+        data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
+        data.stub_pop_register = |data| Ok(data.registers.pop());
+        data.stub_get_register_len = |data| data.registers.len() as i32;
+        data.stub_get_slice = |_, addr| {
+            if addr == 1 {
+                Ok((0, 2))
+            } else {
+                assert!(false);
+                Err(MockError {})
+            }
+        };
+        data.stub_get_slice_iter = |_, _| MockIterator::new(2);
+        data.stub_get_symbol_list_iter = |_, _| MockIterator::new(2);
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_true = |_| Ok(999);
