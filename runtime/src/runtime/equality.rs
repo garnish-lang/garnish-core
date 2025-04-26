@@ -172,161 +172,65 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
         (GarnishDataType::Concatenation, GarnishDataType::List) => {
             compare_item_iterators_2(this, left_addr, right_addr, Data::get_concatenation_iter, Data::get_list_item_iter)?
         }
-        (GarnishDataType::Slice, GarnishDataType::CharList) => {
-            compare_slice_index_iterator_values(
-                this,
-                right_addr.clone(),
-                left_addr.clone(),
-                GarnishDataType::CharList,
-                Data::get_char_list_iter,
-                Data::get_char_list_item
-            )?
-        }
-        (GarnishDataType::CharList, GarnishDataType::Slice) => {
-            compare_slice_index_iterator_values(
-                this,
-                left_addr.clone(),
-                right_addr.clone(),
-                GarnishDataType::CharList,
-                Data::get_char_list_iter,
-                Data::get_char_list_item
-            )?
-        }
-        (GarnishDataType::Slice, GarnishDataType::ByteList) => {
-            compare_slice_index_iterator_values(
-                this,
-                right_addr.clone(),
-                left_addr.clone(),
-                GarnishDataType::ByteList,
-                Data::get_byte_list_iter,
-                Data::get_byte_list_item
-            )?
-        }
-        (GarnishDataType::ByteList, GarnishDataType::Slice) => {
-            compare_slice_index_iterator_values(
-                this,
-                left_addr.clone(),
-                right_addr.clone(),
-                GarnishDataType::ByteList,
-                Data::get_byte_list_iter,
-                Data::get_byte_list_item
-            )?
-        }
-        (GarnishDataType::Slice, GarnishDataType::SymbolList) => {
-            compare_slice_index_iterator_values(
-                this,
-                right_addr.clone(),
-                left_addr.clone(),
-                GarnishDataType::SymbolList,
-                Data::get_symbol_list_iter,
-                Data::get_symbol_list_item
-            )?
-        }
-        (GarnishDataType::SymbolList, GarnishDataType::Slice) => {
-            compare_slice_index_iterator_values(
-                this,
-                left_addr.clone(),
-                right_addr.clone(),
-                GarnishDataType::SymbolList,
-                Data::get_symbol_list_iter,
-                Data::get_symbol_list_item
-            )?
-        }
+        (GarnishDataType::Slice, GarnishDataType::CharList) => compare_slice_index_iterator_values(
+            this,
+            right_addr.clone(),
+            left_addr.clone(),
+            GarnishDataType::CharList,
+            Data::get_char_list_iter,
+            Data::get_char_list_item,
+        )?,
+        (GarnishDataType::CharList, GarnishDataType::Slice) => compare_slice_index_iterator_values(
+            this,
+            left_addr.clone(),
+            right_addr.clone(),
+            GarnishDataType::CharList,
+            Data::get_char_list_iter,
+            Data::get_char_list_item,
+        )?,
+        (GarnishDataType::Slice, GarnishDataType::ByteList) => compare_slice_index_iterator_values(
+            this,
+            right_addr.clone(),
+            left_addr.clone(),
+            GarnishDataType::ByteList,
+            Data::get_byte_list_iter,
+            Data::get_byte_list_item,
+        )?,
+        (GarnishDataType::ByteList, GarnishDataType::Slice) => compare_slice_index_iterator_values(
+            this,
+            left_addr.clone(),
+            right_addr.clone(),
+            GarnishDataType::ByteList,
+            Data::get_byte_list_iter,
+            Data::get_byte_list_item,
+        )?,
+        (GarnishDataType::Slice, GarnishDataType::SymbolList) => compare_slice_index_iterator_values(
+            this,
+            right_addr.clone(),
+            left_addr.clone(),
+            GarnishDataType::SymbolList,
+            Data::get_symbol_list_iter,
+            Data::get_symbol_list_item,
+        )?,
+        (GarnishDataType::SymbolList, GarnishDataType::Slice) => compare_slice_index_iterator_values(
+            this,
+            left_addr.clone(),
+            right_addr.clone(),
+            GarnishDataType::SymbolList,
+            Data::get_symbol_list_iter,
+            Data::get_symbol_list_item,
+        )?,
         (GarnishDataType::List, GarnishDataType::Slice) => {
-            let (value2, _) = this.get_slice(right_addr.clone())?;
-            match this.get_data_type(value2)? {
-                GarnishDataType::List => {
-                    compare_item_iterators_2(
-                        this,
-                        left_addr,
-                        right_addr,
-                        Data::get_list_item_iter,
-                        Data::get_list_slice_item_iter,
-                    )?
-                }
-                GarnishDataType::Concatenation => {
-                    compare_item_iterators_2(
-                        this,
-                        left_addr,
-                        right_addr,
-                        Data::get_list_item_iter,
-                        Data::get_concatenation_slice_iter,
-                    )?
-                }
-                _ => false
-            }
+            compare_slice_item_iterators_2(this, right_addr.clone(), left_addr.clone(), Data::get_list_item_iter)?
         }
         (GarnishDataType::Slice, GarnishDataType::List) => {
-            let (value2, _) = this.get_slice(left_addr.clone())?;
-            match this.get_data_type(value2)? {
-                GarnishDataType::List => {
-                    compare_item_iterators_2(
-                        this,
-                        right_addr,
-                        left_addr,
-                        Data::get_list_item_iter,
-                        Data::get_list_slice_item_iter,
-                    )?
-                }
-                GarnishDataType::Concatenation => {
-                    compare_item_iterators_2(
-                        this,
-                        right_addr,
-                        left_addr,
-                        Data::get_list_item_iter,
-                        Data::get_concatenation_slice_iter,
-                    )?
-                }
-                _ => false
-            }
+            compare_slice_item_iterators_2(this, left_addr.clone(), right_addr.clone(), Data::get_list_item_iter)?
         }
         (GarnishDataType::Concatenation, GarnishDataType::Slice) => {
-            let (value2, _) = this.get_slice(right_addr.clone())?;
-            match this.get_data_type(value2)? {
-                GarnishDataType::List => {
-                    compare_item_iterators_2(
-                        this,
-                        left_addr,
-                        right_addr,
-                        Data::get_concatenation_iter,
-                        Data::get_list_slice_item_iter,
-                    )?
-                }
-                GarnishDataType::Concatenation => {
-                    compare_item_iterators_2(
-                        this,
-                        left_addr,
-                        right_addr,
-                        Data::get_concatenation_iter,
-                        Data::get_concatenation_slice_iter,
-                    )?
-                }
-                _ => false
-            }
+            compare_slice_item_iterators_2(this, right_addr.clone(), left_addr.clone(), Data::get_concatenation_iter)?
         }
         (GarnishDataType::Slice, GarnishDataType::Concatenation) => {
-            let (value2, _) = this.get_slice(left_addr.clone())?;
-            match this.get_data_type(value2)? {
-                GarnishDataType::List => {
-                    compare_item_iterators_2(
-                        this,
-                        right_addr,
-                        left_addr,
-                        Data::get_concatenation_iter,
-                        Data::get_list_slice_item_iter,
-                    )?
-                }
-                GarnishDataType::Concatenation => {
-                    compare_item_iterators_2(
-                        this,
-                        right_addr,
-                        left_addr,
-                        Data::get_concatenation_iter,
-                        Data::get_concatenation_slice_iter,
-                    )?
-                }
-                _ => false
-            }
+            compare_slice_item_iterators_2(this, left_addr.clone(), right_addr.clone(), Data::get_concatenation_iter)?
         }
         (GarnishDataType::Slice, GarnishDataType::Slice) => {
             let (value1, _) = this.get_slice(left_addr.clone())?;
@@ -423,7 +327,7 @@ where
     Data: GarnishData,
     GetValueIterFn: Fn(&Data, Data::Size) -> Data::ListIndexIterator,
     GetValueItemFn: Fn(&Data, Data::Size, Data::Number) -> Result<Value, Data::Error>,
-    Value: PartialEq
+    Value: PartialEq,
 {
     let (value1, _) = this.get_slice(slice_addr.clone())?;
     if this.get_data_type(value1.clone())? == expected_data_type {
@@ -483,6 +387,25 @@ where
 {
     let (iter1, iter2) = (get_iter(this, left_addr.clone()), get_iter(this, right_addr.clone()));
     push_iterator_values(this, iter1, iter2)
+}
+
+fn compare_slice_item_iterators_2<Data, Iter, GetValueIterFn>(
+    this: &mut Data,
+    slice_addr: Data::Size,
+    list_addr: Data::Size,
+    get_value_iter: GetValueIterFn,
+) -> Result<bool, RuntimeError<Data::Error>>
+where
+    Data: GarnishData,
+    Iter: Iterator<Item = Data::Size>,
+    GetValueIterFn: Fn(&Data, Data::Size) -> Iter,
+{
+    let (value2, _) = this.get_slice(slice_addr.clone())?;
+    match this.get_data_type(value2)? {
+        GarnishDataType::List => compare_item_iterators_2(this, list_addr, slice_addr, get_value_iter, Data::get_list_slice_item_iter),
+        GarnishDataType::Concatenation => compare_item_iterators_2(this, list_addr, slice_addr, get_value_iter, Data::get_concatenation_slice_iter),
+        _ => Ok(false),
+    }
 }
 
 fn compare_item_iterators_2<Data: GarnishData, Iter1, Iter2, GetFn1, GetFn2>(
@@ -914,11 +837,7 @@ mod tests {
     #[test]
     fn char_list_equals_slice_of_char_list() {
         let mut data = MockGarnishData::default_with_data(ListCompData {
-            types: vec![
-                GarnishDataType::CharList,
-                GarnishDataType::Slice,
-                GarnishDataType::Range,
-            ],
+            types: vec![GarnishDataType::CharList, GarnishDataType::Slice, GarnishDataType::Range],
             registers: vec![0, 1],
             lens: vec![2, 2],
             items: vec![vec![10, 20], vec![10, 20]],
@@ -954,11 +873,7 @@ mod tests {
     #[test]
     fn slice_of_char_list_equals_char_list() {
         let mut data = MockGarnishData::default_with_data(ListCompData {
-            types: vec![
-                GarnishDataType::CharList,
-                GarnishDataType::Slice,
-                GarnishDataType::Range,
-            ],
+            types: vec![GarnishDataType::CharList, GarnishDataType::Slice, GarnishDataType::Range],
             registers: vec![1, 0],
             lens: vec![2, 2],
             items: vec![vec![10, 20], vec![10, 20]],
@@ -1038,11 +953,7 @@ mod tests {
     #[test]
     fn byte_list_equals_slice_of_byte_list() {
         let mut data = MockGarnishData::default_with_data(ListCompData {
-            types: vec![
-                GarnishDataType::ByteList,
-                GarnishDataType::Slice,
-                GarnishDataType::Range,
-            ],
+            types: vec![GarnishDataType::ByteList, GarnishDataType::Slice, GarnishDataType::Range],
             registers: vec![0, 1],
             lens: vec![2, 2],
             items: vec![vec![10, 20], vec![10, 20]],
@@ -1078,11 +989,7 @@ mod tests {
     #[test]
     fn slice_of_byte_list_equals_byte_list() {
         let mut data = MockGarnishData::default_with_data(ListCompData {
-            types: vec![
-                GarnishDataType::ByteList,
-                GarnishDataType::Slice,
-                GarnishDataType::Range,
-            ],
+            types: vec![GarnishDataType::ByteList, GarnishDataType::Slice, GarnishDataType::Range],
             registers: vec![1, 0],
             lens: vec![2, 2],
             items: vec![vec![10, 20], vec![10, 20]],
