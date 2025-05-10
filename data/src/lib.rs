@@ -1,4 +1,5 @@
 use std::{collections::HashMap, hash::Hasher};
+use std::cmp::min;
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
@@ -14,7 +15,7 @@ mod data;
 mod error;
 mod instruction;
 mod runtime;
-mod optimize;
+mod clone;
 
 pub use data::*;
 pub use instruction::SimpleInstruction;
@@ -159,8 +160,12 @@ where
     }
 
     pub fn set_end_of_constant(&mut self, addr: usize) -> Result<(), DataError> {
-        self.end_of_constant_data = addr;
-        Ok(())
+        if addr >= self.data.len() {
+            Err(DataError::from("Cannot set end of constant data to be over current data amount".to_string()))
+        } else {
+            self.end_of_constant_data = addr;
+            Ok(())
+        }
     }
 
     pub fn get_end_of_constant_data(&self) -> usize {
@@ -436,6 +441,27 @@ where
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod utilities {
+    use crate::SimpleGarnishData;
+
+    #[test]
+    fn set_end_of_constant_data_error_over_max_data() {
+        let mut data = SimpleGarnishData::new();
+        let result = data.set_end_of_constant(10);
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn set_end_of_constant_data_is_inclusive() {
+        let mut data = SimpleGarnishData::new();
+        data.set_end_of_constant(2).unwrap();
+
+        assert_eq!(data.end_of_constant_data, 2);
     }
 }
 

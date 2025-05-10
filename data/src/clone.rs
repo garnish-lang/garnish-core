@@ -1,4 +1,4 @@
-use crate::{DataError, SimpleGarnishData};
+use crate::{DataError, SimpleData, SimpleGarnishData};
 use garnish_lang_traits::helpers::clone_data;
 use std::fmt::Debug;
 use std::hash::Hash;
@@ -9,10 +9,15 @@ where
 {
     pub fn clone_with_retained_data(&mut self, retain_data: Vec<usize>) -> Result<SimpleGarnishData<T>, DataError> {
         let mut new_data = SimpleGarnishData::<T>::new_custom();
-
         new_data.instructions = self.instructions.clone();
         new_data.instruction_cursor = self.instruction_cursor.clone();
         new_data.expression_table = self.expression_table.clone();
+        new_data.end_of_constant_data = self.end_of_constant_data;
+
+        for i in new_data.data.len()..=new_data.end_of_constant_data {
+            let data = self.get(i)?;
+            new_data.data.push(data.clone());
+        }
 
         for data in retain_data {
             clone_data(data, self, &mut new_data)?;
@@ -47,6 +52,23 @@ mod tests {
         let new_data = data.clone_with_retained_data(vec![]).unwrap();
 
         assert_eq!(new_data.get_data().len(), 3);
+        assert_default_data(&new_data);
+    }
+
+    #[test]
+    fn retain_constant_data() {
+        let mut data = SimpleGarnishData::new();
+        data.add_number(SimpleNumber::Integer(100)).unwrap();
+        let num2 = data.add_number(SimpleNumber::Integer(200)).unwrap();
+        data.add_number(SimpleNumber::Integer(300)).unwrap();
+        data.set_end_of_constant(num2).unwrap();
+
+        let new_data = data.clone_with_retained_data(vec![]).unwrap();
+
+        assert_eq!(new_data.get_data().len(), 5);
+        assert_eq!(new_data.get_data().get(3).unwrap(), &SimpleData::Number(100.into()));
+        assert_eq!(new_data.get_data().get(4).unwrap(), &SimpleData::Number(200.into()));
+        assert_eq!(new_data.get_data().get(5), None);
         assert_default_data(&new_data);
     }
 
