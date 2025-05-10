@@ -1,7 +1,7 @@
 [package]
 name = "garnish_lang_runtime"
 description = "Runtime and execution library for Garnish Lang."
-version = "0.0.21-alpha"
+version = "0.0.22-alpha"
 authors = ["Chad Collins <chadrcollin91@gmail.com>"]
 edition = "2024"
 homepage = "https://github.com/garnish-lang/garnish-core"
@@ -14,7 +14,7 @@ readme = "../README.md"
 
 [dependencies]
 log = "0.4"
-garnish_lang_traits = { version = "0.0.21-alpha", path = "../traits" }
+garnish_lang_traits = { version = "0.0.22-alpha", path = "../traits" }
 serde = { version = "1.0.196", optional = true, features = ["derive"] }
 
 [features]
