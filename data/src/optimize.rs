@@ -8,7 +8,7 @@ impl<T> SimpleGarnishData<T>
 where
     T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
-    pub fn optimize(&mut self, retain_data: Vec<usize>) -> Result<(), DataError> {
+    fn optimize(&mut self, retain_data: Vec<usize>) -> Result<(), DataError> {
         let old_data = self.data.clone();
         self.data = SimpleDataList::<T>::default();
         self.cache = HashMap::new();
