@@ -11,7 +11,7 @@ pub trait GarnishContext<Data>
     ///
     /// Return Ok(false) to let the runtime fill a default value, probably [`GarnishDataType::Unit`].
     ///
-    fn resolve(&mut self, _symbol: Data::Symbol, _runtime: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
+    fn resolve(&mut self, _symbol: Data::Symbol, _data: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
         Ok(false)
     }
 
@@ -21,7 +21,7 @@ pub trait GarnishContext<Data>
     ///
     /// Return Ok(false) to tell the runtime this apply operation was not handled
     ///
-    fn apply(&mut self, _external_value: Data::Size, _input_addr: Data::Size, _runtime: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
+    fn apply(&mut self, _external_value: Data::Size, _input_addr: Data::Size, _data: &mut Data) -> Result<bool, RuntimeError<Data::Error>> {
         Ok(false)
     }
 
@@ -34,7 +34,7 @@ pub trait GarnishContext<Data>
     ///
     fn defer_op(
         &mut self,
-        _runtime: &mut Data,
+        _data: &mut Data,
         _operation: Instruction,
         _left: (GarnishDataType, Data::Size),
         _right: (GarnishDataType, Data::Size),
