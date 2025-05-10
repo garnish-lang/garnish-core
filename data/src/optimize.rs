@@ -1,46 +1,35 @@
-use std::collections::HashMap;
+use crate::{DataError, SimpleGarnishData};
+use garnish_lang_traits::helpers::clone_data;
 use std::fmt::Debug;
 use std::hash::Hash;
-use garnish_lang_traits::GarnishData;
-use crate::{DataError, SimpleData, SimpleDataList, SimpleGarnishData};
 
 impl<T> SimpleGarnishData<T>
 where
     T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
-    fn optimize(&mut self, retain_data: Vec<usize>) -> Result<(), DataError> {
-        let old_data = self.data.clone();
-        self.data = SimpleDataList::<T>::default();
-        self.cache = HashMap::new();
-        
+    pub fn clone_with_retained_data(&mut self, retain_data: Vec<usize>) -> Result<SimpleGarnishData<T>, DataError> {
+        let mut new_data = SimpleGarnishData::<T>::new_custom();
+
+        new_data.instructions = self.instructions.clone();
+        new_data.instruction_cursor = self.instruction_cursor.clone();
+        new_data.expression_table = self.expression_table.clone();
+
         for data in retain_data {
-            self.optimize_retain_item(data, &old_data)?;
+            clone_data(data, self, &mut new_data)?;
         }
 
-        Ok(())
+        Ok(new_data)
     }
-    
-    fn optimize_retain_item(&mut self, index: usize, reference_data: &SimpleDataList<T>) -> Result<usize, DataError> {
-        match reference_data.get(index) {
-            None => Err(DataError::from(format!("No data at {} while optimizing", index)))?,
-            Some(value) => match value {
-                SimpleData::Pair(left, right) => {
-                    let new_left = self.optimize_retain_item(left.clone(), reference_data)?;
-                    let new_right = self.optimize_retain_item(right.clone(), reference_data)?;
-                    self.add_pair((new_left, new_right))
-                }
-                d => {
-                    self.cache_add(d.clone())
-                }
-            }
-        }
+
+    pub fn clone_without_data(&mut self) -> Result<SimpleGarnishData<T>, DataError> {
+        self.clone_with_retained_data(vec![])
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_traits::GarnishData;
     use crate::{NoCustom, SimpleData, SimpleGarnishData, SimpleNumber};
+    use garnish_lang_traits::GarnishData;
 
     fn assert_default_data(data: &SimpleGarnishData) {
         assert_eq!(data.data.get(0).unwrap(), &SimpleData::Unit);
@@ -55,10 +44,10 @@ mod tests {
         data.add_number(SimpleNumber::Integer(200)).unwrap();
         data.add_number(SimpleNumber::Integer(300)).unwrap();
 
-        data.optimize(vec![]).unwrap();
+        let new_data = data.clone_with_retained_data(vec![]).unwrap();
 
-        assert_eq!(data.get_data().len(), 3);
-        assert_default_data(&data);
+        assert_eq!(new_data.get_data().len(), 3);
+        assert_default_data(&new_data);
     }
 
     #[test]
@@ -68,10 +57,10 @@ mod tests {
         data.add_number(SimpleNumber::Integer(200)).unwrap();
         data.add_number(SimpleNumber::Integer(300)).unwrap();
 
-        data.optimize(vec![5]).unwrap();
+        let new_data = data.clone_with_retained_data(vec![5]).unwrap();
 
-        assert_default_data(&data);
-        assert_eq!(data.get_data().get(3).unwrap(), &SimpleData::Number(300.into()));
+        assert_default_data(&new_data);
+        assert_eq!(new_data.get_data().get(3).unwrap(), &SimpleData::Number(300.into()));
     }
 
     #[test]
@@ -84,11 +73,11 @@ mod tests {
         let sym = data.add_symbol(sym_data).unwrap();
         let pair = data.add_pair((sym, num)).unwrap();
 
-        data.optimize(vec![pair]).unwrap();
+        let new_data = data.clone_with_retained_data(vec![pair]).unwrap();
 
-        assert_default_data(&data);
-        assert_eq!(data.get_data().get(3).unwrap(), &SimpleData::Symbol(sym_data));
-        assert_eq!(data.get_data().get(4).unwrap(), &SimpleData::Number(300.into()));
-        assert_eq!(data.get_data().get(5).unwrap(), &SimpleData::Pair(3, 4));
+        assert_default_data(&new_data);
+        assert_eq!(new_data.get_data().get(3).unwrap(), &SimpleData::Symbol(sym_data));
+        assert_eq!(new_data.get_data().get(4).unwrap(), &SimpleData::Number(300.into()));
+        assert_eq!(new_data.get_data().get(5).unwrap(), &SimpleData::Pair(3, 4));
     }
 }
