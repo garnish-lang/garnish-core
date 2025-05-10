@@ -14,6 +14,7 @@ mod data;
 mod error;
 mod instruction;
 mod runtime;
+mod optimize;
 
 pub use data::*;
 pub use instruction::SimpleInstruction;
