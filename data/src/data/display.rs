@@ -9,7 +9,7 @@ pub trait DisplayForCustomItem {
 
 impl<T> SimpleData<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash + Display + DisplayForCustomItem,
+    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash + Display,
 {
     pub fn display_simple(&self) -> String
     {
