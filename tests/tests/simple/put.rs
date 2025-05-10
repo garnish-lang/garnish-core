@@ -9,8 +9,7 @@ mod tests {
         let mut runtime = create_simple_runtime();
 
         runtime.get_data_mut().add_number(10.into()).unwrap();
-        let max = runtime.get_data_mut().get_data_len();
-        runtime.get_data_mut().set_end_of_constant(max).unwrap();
+        runtime.get_data_mut().get_data_len();
 
         runtime.put(1).unwrap();
 
