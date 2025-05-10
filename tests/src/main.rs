@@ -5,13 +5,14 @@ use colored::Colorize;
 use garnish_lang_compiler::build::build_with_data;
 use garnish_lang_compiler::lex::lex;
 use garnish_lang_compiler::parse::parse;
-use garnish_lang_runtime::{SimpleGarnishRuntime, SimpleRuntimeState};
+use garnish_lang_runtime::{SimpleRuntimeState};
 use garnish_lang_simple_data::{SimpleData, SimpleGarnishData};
 use garnish_lang_traits::{GarnishData, GarnishRuntime};
 use log::error;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 use std::{fs, path};
+use garnish_lang_runtime::runtime::SimpleGarnishRuntime;
 
 fn collect_scripts(path: String) -> Vec<String> {
     let mut dirs = vec![path];

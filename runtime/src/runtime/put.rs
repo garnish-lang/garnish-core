@@ -32,7 +32,7 @@ pub(crate) fn push_value<Data: GarnishData>(this: &mut Data) -> Result<Option<Da
     Ok(None)
 }
 
-pub(crate) fn upldate_value<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn update_value<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
     match this.get_current_value_mut() {
         None => state_error(format!("No inputs available to update for update value operation."))?,
