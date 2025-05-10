@@ -1,4 +1,5 @@
 mod concatenation;
-mod copy;
+mod clone;
 
 pub use concatenation::*;
+pub use clone::*;

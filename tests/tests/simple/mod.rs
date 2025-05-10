@@ -14,6 +14,7 @@ mod range;
 mod resolve;
 mod sideeffect;
 mod access;
+mod clone;
 
 #[cfg(test)]
 pub mod testing_utilities {
