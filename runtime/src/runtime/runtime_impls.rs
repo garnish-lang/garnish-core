@@ -28,19 +28,24 @@ use serde::{Deserialize, Serialize};
 /// Implementation of a [`GarnishRuntime`]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
+#[deprecated(since = "0.0.19-alpha", note = "Use execute::execute_current_instruction instead of SimpleGarnishData.")]
 pub struct SimpleGarnishRuntime<Data: GarnishData> {
     data: Data,
 }
 
+#[deprecated(since = "0.0.19-alpha", note = "Use execute::execute_current_instruction instead of SimpleGarnishData.")]
 impl<Data: GarnishData> SimpleGarnishRuntime<Data> {
+    #[deprecated(since = "0.0.19-alpha", note = "Use execute::execute_current_instruction instead of SimpleGarnishData.")]
     pub fn new(data: Data) -> SimpleGarnishRuntime<Data> {
         SimpleGarnishRuntime { data }
     }
 
+    #[deprecated(since = "0.0.19-alpha", note = "Use execute::execute_current_instruction instead of SimpleGarnishData.")]
     pub fn get_data_owned(self) -> Data {
         self.data
     }
 
+    #[deprecated(since = "0.0.19-alpha", note = "Use execute::execute_current_instruction instead of SimpleGarnishData.")]
     pub fn execute_current_instruction<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
