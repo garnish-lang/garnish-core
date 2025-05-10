@@ -179,7 +179,7 @@ where
         self.values.last().and_then(|l| Some(self.data.display_for_item(*l))).unwrap_or("<NoData>".to_string())
     }
     
-    pub fn collect_concatenation_indicies(&self, left: usize, right: usize) -> Vec<usize> {
+    pub fn collect_concatenation_indices(&self, left: usize, right: usize) -> Vec<usize> {
         let mut items = vec![];
         let mut con_stack = vec![right, left];
 

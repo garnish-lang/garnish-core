@@ -280,7 +280,7 @@ where
 
     fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
         match self.get_data().get(addr) {
-            Some(SimpleData::Concatenation(left, right)) => DataIndexIterator::new(self.collect_concatenation_indicies(*left, *right)),
+            Some(SimpleData::Concatenation(left, right)) => DataIndexIterator::new(self.collect_concatenation_indices(*left, *right)),
             _ => DataIndexIterator::new(vec![]),
         }
     }
@@ -333,7 +333,7 @@ where
                     match (self.get_data().get(*start), self.get_data().get(*end)) {
                         (Some(SimpleData::Number(SimpleNumber::Integer(start))), Some(SimpleData::Number(SimpleNumber::Integer(end)))) => {
                             DataIndexIterator::new(
-                                self.collect_concatenation_indicies(*left, *right)
+                                self.collect_concatenation_indices(*left, *right)
                                     .iter()
                                     .skip(*start as usize)
                                     .take((end - start) as usize + 1)
