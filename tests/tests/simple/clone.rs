@@ -207,17 +207,19 @@ mod tests {
     #[test]
     fn copy_symbol_list() {
         let mut from = SimpleGarnishData::new();
-        let addr = from.add_symbol(100).unwrap();
+        let sym1 = from.add_symbol(100).unwrap();
+        let sym2 = from.add_symbol(200).unwrap();
+        let sym_list = from.merge_to_symbol_list(sym1, sym2).unwrap();
 
         let mut to = SimpleGarnishData::new();
         to.add_number(SimpleNumber::Integer(10)).unwrap();
         to.add_number(SimpleNumber::Integer(20)).unwrap();
         to.add_number(SimpleNumber::Integer(30)).unwrap();
 
-        let new_addr = clone_data(addr, &from, &mut to).unwrap();
+        let new_addr = clone_data(sym_list, &from, &mut to).unwrap();
 
-        assert_eq!(new_addr, 6);
-        assert_eq!(to.get_data().get(6).unwrap().as_symbol().unwrap(), 100);
+        assert_eq!(new_addr, 8);
+        assert_eq!(to.get_data().get(8).unwrap().as_symbol_list().unwrap(), vec![100, 200]);
     }
 
     #[test]

@@ -106,7 +106,35 @@ fn clone_data_with_handlers_internal<Data: GarnishData>(
             to.end_byte_list()
         }
         GarnishDataType::Symbol => to.add_symbol(from.get_symbol(data_addr.clone())?),
-        GarnishDataType::SymbolList => unimplemented!(),
+        GarnishDataType::SymbolList => {
+            let mut iter = from.get_symbol_list_iter(data_addr.clone());
+
+            match iter.next() {
+                None => to.add_unit(),
+                Some(first) => {
+                    let sym = from.get_symbol_list_item(data_addr.clone(), first)?;
+                    let sym1_addr = to.add_symbol(sym)?;
+                    
+                    match iter.next() {
+                        None => Ok(sym1_addr),
+                        Some(second) => {
+                            let sym = from.get_symbol_list_item(data_addr.clone(), second)?;
+                            let sym2_addr = to.add_symbol(sym)?;
+                            let mut previous = to.merge_to_symbol_list(sym1_addr, sym2_addr)?;
+
+                            while let Some(addr) = iter.next() {
+                                let sym = from.get_symbol_list_item(data_addr.clone(), addr)?;
+                                let sym_addr = to.add_symbol(sym)?;
+                                let sym_list = to.merge_to_symbol_list(previous, sym_addr)?;
+                                previous = sym_list;
+                            }
+
+                            Ok(previous)
+                        }
+                    }
+                }
+            }
+        },
         GarnishDataType::Pair => from.get_pair(data_addr.clone()).and_then(|(left, right)| {
             let to_left = clone_data_with_handlers_internal(left, from, to, custom_handler, invalid_handler)?;
             let to_right = clone_data_with_handlers_internal(right, from, to, custom_handler, invalid_handler)?;
