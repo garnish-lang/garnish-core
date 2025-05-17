@@ -1,6 +1,6 @@
 use crate::error::{
-    append_token_details, composition_error, implementation_error, implementation_error_with_token, unclosed_grouping_error,
-    unmatched_grouping_error, CompilerError,
+    CompilerError, append_token_details, composition_error, implementation_error, implementation_error_with_token, unclosed_grouping_error,
+    unmatched_grouping_error,
 };
 use log::trace;
 use std::{collections::HashMap, hash::Hash, vec};
@@ -11,7 +11,7 @@ use crate::lex::*;
 use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash, )]
+#[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy, Hash)]
 pub enum Definition {
     Number,
     CharList,
@@ -95,7 +95,7 @@ impl Definition {
             || self == Definition::Value
             || self == Definition::True
             || self == Definition::False
-        || self == Definition::ExpressionTerminator
+            || self == Definition::ExpressionTerminator
     }
 
     pub fn is_group_like(self) -> bool {
@@ -341,7 +341,7 @@ impl ParseResult {
     pub fn replace_node(&mut self, index: usize, node: ParseNode) {
         match self.nodes.get_mut(index) {
             None => (),
-            Some(n) => *n = node
+            Some(n) => *n = node,
         }
     }
 }
@@ -486,18 +486,15 @@ fn parse_token(
 
                 trace!(
                     "Comparing priorities (current - {:?} {:?}) (left - {:?} {:?})",
-                    definition,
-                    my_priority,
-                    n.definition,
-                    their_priority
+                    definition, my_priority, n.definition, their_priority
                 );
 
                 trace!("Check group. Current group is {:?}. Current index is {:?}", under_group, left_index);
                 let is_our_group = n.definition.is_group_like()
                     && match under_group {
-                    None => false,
-                    Some(group_index) => group_index == left_index,
-                };
+                        None => false,
+                        Some(group_index) => group_index == left_index,
+                    };
 
                 let stop = my_priority < their_priority;
 
@@ -720,7 +717,7 @@ fn check_composition(
         | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Value)
         | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::Identifier)
         | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::StartGrouping)
-        | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::UnaryPrefix)=> composition_error(previous, current, &token),
+        | (SecondaryDefinition::UnarySuffix, SecondaryDefinition::UnaryPrefix) => composition_error(previous, current, &token),
         _ => Ok(()),
     }
 }
@@ -829,8 +826,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
 
         trace!(
             "Given preliminary definition of {:?} and secondary definition of {:?}",
-            definition,
-            secondary_definition
+            definition, secondary_definition
         );
 
         check_composition(previous_second_def, secondary_definition, check_for_list, token)?;
@@ -1005,8 +1001,8 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                 info
             }
             SecondaryDefinition::EndGrouping | SecondaryDefinition::EndSideEffect => {
-                // should always have a value after popping hear
-                // if not it means we didn't pass through start grouping and equal amount of times
+                // should always have a value after popping here
+                // if not it means we didn't pass through start grouping an equal amount of times
                 match group_stack.pop() {
                     None => unmatched_grouping_error(token)?,
                     Some((left, need_list_check)) => match nodes.get(left) {
@@ -1037,7 +1033,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                                     expected_token,
                                     token.get_token_type()
                                 ))
-                                    .append_token_details(&token))?;
+                                .append_token_details(&token))?;
                             }
                         }
                     },
@@ -1103,21 +1099,21 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                 (Definition::Drop, None, None, None)
             }
             SecondaryDefinition::Subexpression => {
-                let in_group = match current_group {
-                    None => false,
+                let (in_group, group_index) = match current_group {
+                    None => (Definition::Drop, 0),
                     Some(group) => match group_stack.get(group) {
                         None => implementation_error_with_token(format!("Current group set to non-existant group in stack."), token)?,
                         Some((group_index, _check_for_list)) => match nodes.get(*group_index) {
                             None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", group), token)?,
                             Some(group_node) => {
                                 trace!("Current group node definition is {:?}", group_node.definition);
-                                group_node.definition == Definition::Group
+                                (group_node.definition, *group_index)
                             }
                         },
                     },
                 };
 
-                if in_group {
+                if in_group == Definition::Group {
                     trace!("Inside of a group, treating as white space");
                     setup_space_list_check(last_left, under_group, &mut nodes, &mut check_for_list, &mut &mut next_last_left)?
                 } else {
@@ -1136,8 +1132,10 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                                     left_node.right = None;
                                 }
 
-                                left_node.secondary_definition == SecondaryDefinition::Subexpression
-                                    || left_node.definition == Definition::NestedExpression
+                                let left_is_expression_start = in_group == Definition::NestedExpression && group_index == left;
+
+                                left_node.secondary_definition == SecondaryDefinition::Subexpression || left_is_expression_start
+                                // || left_node.definition == Definition::NestedExpression
                             }
                         },
                     };
@@ -1166,10 +1164,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
 
         trace!(
             "Defined as {:?} with relationships parent {:?} left {:?} right {:?}",
-            definition,
-            parent,
-            left,
-            right
+            definition, parent, left, right
         );
 
         if definition != Definition::Drop {
@@ -1177,11 +1172,13 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
             match definition {
                 Definition::Identifier => match parent.and_then(|p| nodes.get(p)) {
                     None => (),
-                    Some(p) => if p.definition == Definition::Access {
-                        definition = Definition::Property;
+                    Some(p) => {
+                        if p.definition == Definition::Access {
+                            definition = Definition::Property;
+                        }
                     }
-                }
-                _ => ()
+                },
+                _ => (),
             }
 
             nodes.push(ParseNode::new(definition, secondary_definition, parent, left, right, token.clone()));
@@ -5041,8 +5038,8 @@ mod annotations {
 #[cfg(test)]
 mod complex_cases {
     use crate::lex::{LexerToken, TokenType};
-    use crate::parse::{Definition, parse};
     use crate::parse::parser::tests::assert_result;
+    use crate::parse::{Definition, parse};
 
     #[test]
     fn identifier_in_list_after_access() {
@@ -5065,6 +5062,34 @@ mod complex_cases {
                 (2, Definition::Property, Some(1), None, None),
                 (3, Definition::List, None, Some(1), Some(4)),
                 (4, Definition::Identifier, Some(3), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn sub_expression_after_nested_expression() {
+        let tokens = vec![
+            LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
+            LexerToken::new("value".to_string(), TokenType::Identifier, 0, 0),
+            LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
+            LexerToken::new("\n\n".to_string(), TokenType::Subexpression, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("=".to_string(), TokenType::Pair, 0, 0),
+            LexerToken::new("10".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(
+            &result,
+            2,
+            &[
+                (0, Definition::NestedExpression, Some(2), None, Some(1)),
+                (1, Definition::Identifier, Some(0), None, None),
+                (2, Definition::Subexpression, None, Some(0), Some(4)),
+                (3, Definition::Number, Some(4), None, None),
+                (4, Definition::Pair, Some(2), Some(3), Some(5)),
+                (5, Definition::Number, Some(4), None, None),
             ],
         );
     }
