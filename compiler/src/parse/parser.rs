@@ -1063,7 +1063,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                                 let l = left_node.get_left();
                                 let token = left_node.get_lex_token();
 
-                                // left should be the root of the nested e
+                                // left should be the root of the nested expression
                                 match l {
                                     None => (), // need to test and see if this is reachable
                                     Some(left) => match nodes.get_mut(left) {

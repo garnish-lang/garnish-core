@@ -92,6 +92,7 @@ pub(crate) fn end_expression<Data: GarnishData>(this: &mut Data) -> Result<Optio
         Some(jump_point) => {
             trace!("Setting cursor to {:?}", jump_point);
             this.pop_value_stack();
+            this.push_register(r)?;
 
             Ok(Some(jump_point))
         }
