@@ -217,8 +217,6 @@ pub fn build<Data: GarnishData>(
                             }
                         }
                         BuildNodeState::Initialized => {
-                            node.contributes_to_list = false;
-
                             let addr = data.parse_add_number(parse_node.text())?;
                             data.push_instruction(Instruction::Put, Some(addr))?;
                             instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
@@ -255,11 +253,11 @@ pub fn build<Data: GarnishData>(
                 }
                 Definition::EmptyApply => {
                     let node = nodes.get_mut_or_error(node_index)?;
-                    
+
                     match node.state {
                         BuildNodeState::Uninitialized => {
                             node.state = BuildNodeState::Initialized;
-                                
+
                             stack.push(node.parse_node_index);
                             let left = parse_node
                                 .get_left()
@@ -653,11 +651,13 @@ pub fn build<Data: GarnishData>(
                 _ => unimplemented!(),
             }
 
-            match nodes.get(node_index) {
+            match nodes.get_mut(node_index) {
                 Some(Some(node)) if node.contributes_to_list => match node.list_parent {
                     Some(parent) => {
-                        let node = nodes.get_mut_or_error(parent)?;
-                        node.child_count.next();
+                        node.contributes_to_list = false;
+
+                        let parent_node = nodes.get_mut_or_error(parent)?;
+                        parent_node.child_count.next();
                     }
                     None => {}
                 },
