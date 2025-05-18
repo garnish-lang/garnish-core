@@ -1,3 +1,7 @@
+mod build;
+
+pub use build::*;
+
 use log::trace;
 
 use garnish_lang_traits::{GarnishData, Instruction, TypeConstants};
