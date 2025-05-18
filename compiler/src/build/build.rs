@@ -9,6 +9,33 @@ pub struct BuildData {
     instruction_metadata: Vec<InstructionMetadata>,
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum BuildNodeState {
+    Uninitialized,
+    Initialized,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+struct BuildNode<'a> {
+    state: BuildNodeState,
+    parse_node_index: usize,
+    parse_node: &'a ParseNode,
+}
+
+impl<'a> BuildNode<'a> {
+    fn new(parse_node_index: usize, parse_node: &'a ParseNode) -> Self {
+        Self {
+            state: BuildNodeState::Uninitialized,
+            parse_node_index,
+            parse_node,
+        }
+    }
+
+    fn text(&self) -> String {
+        self.parse_node.get_lex_token().get_text().clone()
+    }
+}
+
 pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, data: &mut Data) -> Result<BuildData, CompilerError<Data::Error>> {
     if parse_tree.is_empty() {
         data.push_instruction(Instruction::EndExpression, None)?;
@@ -19,56 +46,88 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         });
     }
 
+    let mut nodes = parse_tree
+        .iter()
+        .enumerate()
+        .map(|(index, node)| BuildNode::new(index, node))
+        .collect::<Vec<BuildNode>>();
     let mut instruction_metadata = vec![];
 
-    let root_node = match parse_tree.get(parse_root) {
-        Some(node) => node,
-        None => Err(CompilerError::new_message(format!("No node at given parse root {}", parse_root)))?,
-    };
+    let mut stack = vec![parse_root];
 
-    match root_node.get_definition() {
-        Definition::Unit => {
-            let addr = data.add_unit()?;
-            data.push_instruction(Instruction::Put, Some(addr))?;
+    while let Some(node) = stack.pop().and_then(|i| nodes.get_mut(i)) {
+        match node.parse_node.get_definition() {
+            Definition::Unit => {
+                let addr = data.add_unit()?;
+                data.push_instruction(Instruction::Put, Some(addr))?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+            }
+            Definition::False => {
+                let addr = data.add_false()?;
+                data.push_instruction(Instruction::Put, Some(addr))?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+            }
+            Definition::True => {
+                let addr = data.add_true()?;
+                data.push_instruction(Instruction::Put, Some(addr))?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+            }
+            Definition::Number => {
+                let addr = data.parse_add_number(&node.text())?;
+                data.push_instruction(Instruction::Put, Some(addr))?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+            }
+            Definition::CharList => {
+                let addr = data.parse_add_char_list(&node.text())?;
+                data.push_instruction(Instruction::Put, Some(addr))?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+            }
+            Definition::ByteList => {
+                let addr = data.parse_add_byte_list(&node.text())?;
+                data.push_instruction(Instruction::Put, Some(addr))?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+            }
+            Definition::Symbol => {
+                let addr = data.parse_add_symbol(&node.text()[1..])?;
+                data.push_instruction(Instruction::Put, Some(addr))?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+            }
+            Definition::Value => {
+                data.push_instruction(Instruction::PutValue, None)?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+            }
+            Definition::Identifier => {
+                let addr = data.parse_add_symbol(&node.text())?;
+                data.push_instruction(Instruction::Resolve, Some(addr))?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+            }
+            Definition::ExpressionTerminator => {
+                data.push_instruction(Instruction::EndExpression, None)?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+            }
+            Definition::Addition => match node.state {
+                BuildNodeState::Uninitialized => {
+                    stack.push(node.parse_node_index);
+                    stack.push(
+                        node.parse_node
+                            .get_right()
+                            .ok_or(CompilerError::new_message("No right on Addition definition".to_string()))?,
+                    );
+                    stack.push(
+                        node.parse_node
+                            .get_left()
+                            .ok_or(CompilerError::new_message("No left on Addition definition".to_string()))?,
+                    );
+                    node.state = BuildNodeState::Initialized
+                }
+                BuildNodeState::Initialized => {
+                    data.push_instruction(Instruction::Add, None)?;
+                    instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+                }
+            },
+            _ => unimplemented!(),
         }
-        Definition::False => {
-            let addr = data.add_false()?;
-            data.push_instruction(Instruction::Put, Some(addr))?;
-        }
-        Definition::True => {
-            let addr = data.add_true()?;
-            data.push_instruction(Instruction::Put, Some(addr))?;
-        }
-        Definition::Number => {
-            let addr = data.parse_add_number(root_node.get_lex_token().get_text())?;
-            data.push_instruction(Instruction::Put, Some(addr))?;
-        }
-        Definition::CharList => {
-            let addr = data.parse_add_char_list(root_node.get_lex_token().get_text())?;
-            data.push_instruction(Instruction::Put, Some(addr))?;
-        }
-        Definition::ByteList => {
-            let addr = data.parse_add_byte_list(root_node.get_lex_token().get_text())?;
-            data.push_instruction(Instruction::Put, Some(addr))?;
-        }
-        Definition::Symbol => {
-            let addr = data.parse_add_symbol(&root_node.get_lex_token().get_text()[1..])?;
-            data.push_instruction(Instruction::Put, Some(addr))?;
-        }
-        Definition::Value => {
-            data.push_instruction(Instruction::PutValue, None)?;
-        }
-        Definition::Identifier => {
-            let addr = data.parse_add_symbol(&root_node.get_lex_token().get_text())?;
-            data.push_instruction(Instruction::Resolve, Some(addr))?;
-        }
-        Definition::ExpressionTerminator => {
-            data.push_instruction(Instruction::EndExpression, None)?;
-        }
-        _ => unimplemented!(),
     }
-
-    instruction_metadata.push(InstructionMetadata::new(Some(parse_root)));
 
     let last_instruction = data.get_instruction_iter().last();
     match last_instruction.and_then(|i| data.get_instruction(i)) {
@@ -294,5 +353,43 @@ mod put_values {
         );
         assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol("my_value"));
         assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
+    }
+}
+
+#[cfg(test)]
+mod binary_operations {
+    use crate::build::InstructionMetadata;
+    use crate::build::build::tests::build_input;
+    use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
+    use garnish_lang_traits::Instruction;
+
+    #[test]
+    fn build_addition() {
+        let (data, metadata) = build_input("5 + 10");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::Add, None),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into()))
+        );
+        assert_eq!(
+            metadata,
+            vec![
+                InstructionMetadata::new(Some(0)),
+                InstructionMetadata::new(Some(2)),
+                InstructionMetadata::new(Some(1)),
+                InstructionMetadata::new(None)
+            ]
+        )
     }
 }
