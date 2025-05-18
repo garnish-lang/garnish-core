@@ -62,7 +62,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         }
         _ => unimplemented!(),
     }
-    
+
     instruction_metadata.push(InstructionMetadata::new(Some(parse_root)));
 
     let last_instruction = data.get_instruction_iter().last();
@@ -70,6 +70,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         Some((Instruction::EndExpression, _)) => {}
         _ => {
             data.push_instruction(Instruction::EndExpression, None)?;
+            instruction_metadata.push(InstructionMetadata::new(None));
         }
     }
 
@@ -135,7 +136,7 @@ mod put_values {
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default());
-        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -151,7 +152,7 @@ mod put_values {
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default());
-        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -167,7 +168,7 @@ mod put_values {
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default());
-        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -183,7 +184,7 @@ mod put_values {
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())));
-        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -202,7 +203,7 @@ mod put_values {
             data.get_data(),
             &SimpleDataList::default().append(SimpleData::CharList("characters".into()))
         );
-        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -218,7 +219,7 @@ mod put_values {
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol("my_symbol"));
-        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -234,7 +235,7 @@ mod put_values {
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol(""));
-        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -253,7 +254,7 @@ mod put_values {
             data.get_data(),
             &SimpleDataList::default().append(SimpleData::ByteList(vec!['a' as u8, 'b' as u8, 'c' as u8]))
         );
-        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -268,6 +269,6 @@ mod put_values {
             ]
         );
         assert_eq!(data.get_data(), &SimpleDataList::default());
-        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 }
