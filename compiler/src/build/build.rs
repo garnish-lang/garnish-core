@@ -222,6 +222,22 @@ mod put_values {
     }
 
     #[test]
+    fn build_empty_symbol() {
+        let (data, metadata) = build_input(":");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+
+        assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol(""));
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
+    }
+
+    #[test]
     fn build_byte_list() {
         let (data, metadata) = build_input("'abc'");
 
