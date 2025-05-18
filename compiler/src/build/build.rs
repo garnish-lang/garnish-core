@@ -57,6 +57,10 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         Definition::Value => {
             data.push_instruction(Instruction::PutValue, None)?;
         }
+        Definition::Identifier => {
+            let addr = data.parse_add_symbol(&root_node.get_lex_token().get_text())?;
+            data.push_instruction(Instruction::Resolve, Some(addr))?;
+        }
         Definition::ExpressionTerminator => {
             data.push_instruction(Instruction::EndExpression, None)?;
         }
@@ -269,6 +273,21 @@ mod put_values {
             ]
         );
         assert_eq!(data.get_data(), &SimpleDataList::default());
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
+    }
+
+    #[test]
+    fn build_identifier() {
+        let (data, metadata) = build_input("my_value");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Resolve, Some(3)),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+        assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol("my_value"));
         assert_eq!(metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 }
