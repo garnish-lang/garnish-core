@@ -1,3 +1,4 @@
+use crate::build::InstructionMetadata;
 use crate::error::CompilerError;
 use crate::parse::{Definition, ParseNode};
 use garnish_lang_traits::{GarnishData, Instruction};
@@ -5,12 +6,19 @@ use garnish_lang_traits::{GarnishData, Instruction};
 pub struct BuildData {
     parse_root: usize,
     parse_tree: Vec<ParseNode>,
+    instruction_metadata: Vec<InstructionMetadata>,
 }
 
 pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, data: &mut Data) -> Result<BuildData, CompilerError<Data::Error>> {
     if parse_tree.is_empty() {
-        return Ok(BuildData { parse_root, parse_tree });
+        return Ok(BuildData {
+            parse_root,
+            parse_tree,
+            instruction_metadata: vec![],
+        });
     }
+
+    let mut instruction_metadata = vec![];
 
     let root_node = match parse_tree.get(parse_root) {
         Some(node) => node,
@@ -54,6 +62,8 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         }
         _ => unimplemented!(),
     }
+    
+    instruction_metadata.push(InstructionMetadata::new(Some(parse_root)));
 
     let last_instruction = data.get_instruction_iter().last();
     match last_instruction.and_then(|i| data.get_instruction(i)) {
@@ -63,22 +73,27 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         }
     }
 
-    Ok(BuildData { parse_root, parse_tree })
+    Ok(BuildData {
+        parse_root,
+        parse_tree,
+        instruction_metadata,
+    })
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::build::InstructionMetadata;
     use crate::build::build::build;
     use crate::lex::lex;
     use crate::parse::parse;
     use garnish_lang_simple_data::SimpleGarnishData;
 
-    pub fn build_input(input: &str) -> SimpleGarnishData {
+    pub fn build_input(input: &str) -> (SimpleGarnishData, Vec<InstructionMetadata>) {
         let tokens = lex(input).unwrap();
         let parsed = parse(&tokens).unwrap();
         let mut data = SimpleGarnishData::new();
-        build(parsed.get_root(), parsed.get_nodes_owned(), &mut data).unwrap();
-        data
+        let result = build(parsed.get_root(), parsed.get_nodes_owned(), &mut data).unwrap();
+        (data, result.instruction_metadata)
     }
 
     #[test]
@@ -92,27 +107,24 @@ mod tests {
 
 #[cfg(test)]
 mod put_values {
+    use crate::build::InstructionMetadata;
     use crate::build::build::tests::build_input;
     use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
     use garnish_lang_traits::Instruction;
 
     #[test]
     fn build_expression_terminator() {
-        let data = build_input(";;");
+        let (data, metadata) = build_input(";;");
 
-        assert_eq!(
-            data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
-        );
+        assert_eq!(data.get_instructions(), &vec![SimpleInstruction::new(Instruction::EndExpression, None)]);
 
         assert_eq!(data.get_data(), &SimpleDataList::default());
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
     }
 
     #[test]
     fn build_unit() {
-        let data = build_input("()");
+        let (data, metadata) = build_input("()");
 
         assert_eq!(
             data.get_instructions(),
@@ -123,11 +135,12 @@ mod put_values {
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default());
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
     }
 
     #[test]
     fn build_false() {
-        let data = build_input("$!");
+        let (data, metadata) = build_input("$!");
 
         assert_eq!(
             data.get_instructions(),
@@ -138,11 +151,12 @@ mod put_values {
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default());
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
     }
 
     #[test]
     fn build_true() {
-        let data = build_input("$?");
+        let (data, metadata) = build_input("$?");
 
         assert_eq!(
             data.get_instructions(),
@@ -153,11 +167,12 @@ mod put_values {
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default());
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
     }
 
     #[test]
     fn build_number() {
-        let data = build_input("5");
+        let (data, metadata) = build_input("5");
 
         assert_eq!(
             data.get_instructions(),
@@ -168,11 +183,12 @@ mod put_values {
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())));
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
     }
 
     #[test]
     fn build_character_list() {
-        let data = build_input("\"characters\"");
+        let (data, metadata) = build_input("\"characters\"");
 
         assert_eq!(
             data.get_instructions(),
@@ -186,11 +202,12 @@ mod put_values {
             data.get_data(),
             &SimpleDataList::default().append(SimpleData::CharList("characters".into()))
         );
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
     }
 
     #[test]
     fn build_symbol() {
-        let data = build_input(":my_symbol");
+        let (data, metadata) = build_input(":my_symbol");
 
         assert_eq!(
             data.get_instructions(),
@@ -201,11 +218,12 @@ mod put_values {
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol("my_symbol"));
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
     }
 
     #[test]
     fn build_byte_list() {
-        let data = build_input("'abc'");
+        let (data, metadata) = build_input("'abc'");
 
         assert_eq!(
             data.get_instructions(),
@@ -219,11 +237,12 @@ mod put_values {
             data.get_data(),
             &SimpleDataList::default().append(SimpleData::ByteList(vec!['a' as u8, 'b' as u8, 'c' as u8]))
         );
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
     }
 
     #[test]
     fn build_value() {
-        let data = build_input("$");
+        let (data, metadata) = build_input("$");
 
         assert_eq!(
             data.get_instructions(),
@@ -233,5 +252,6 @@ mod put_values {
             ]
         );
         assert_eq!(data.get_data(), &SimpleDataList::default());
+        assert_eq!(metadata, vec![InstructionMetadata::new(Some(0))])
     }
 }
