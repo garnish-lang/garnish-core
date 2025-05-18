@@ -11,10 +11,11 @@ pub struct BuildData {
 
 pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, data: &mut Data) -> Result<BuildData, CompilerError<Data::Error>> {
     if parse_tree.is_empty() {
+        data.push_instruction(Instruction::EndExpression, None)?;
         return Ok(BuildData {
             parse_root,
             parse_tree,
-            instruction_metadata: vec![],
+            instruction_metadata: vec![InstructionMetadata::new(None)],
         });
     }
 
@@ -91,7 +92,8 @@ mod tests {
     use crate::build::build::build;
     use crate::lex::lex;
     use crate::parse::parse;
-    use garnish_lang_simple_data::SimpleGarnishData;
+    use garnish_lang_simple_data::{SimpleDataList, SimpleGarnishData, SimpleInstruction};
+    use garnish_lang_traits::Instruction;
 
     pub fn build_input(input: &str) -> (SimpleGarnishData, Vec<InstructionMetadata>) {
         let tokens = lex(input).unwrap();
@@ -104,9 +106,12 @@ mod tests {
     #[test]
     fn build_empty() {
         let mut data = SimpleGarnishData::new();
-        build(0, vec![], &mut data).unwrap();
+        let result = build(0, vec![], &mut data).unwrap();
 
-        assert!(data.get_instructions().is_empty());
+        assert_eq!(data.get_instructions(), &vec![SimpleInstruction::new(Instruction::EndExpression, None)]);
+
+        assert_eq!(data.get_data(), &SimpleDataList::default());
+        assert_eq!(result.instruction_metadata, vec![InstructionMetadata::new(None)])
     }
 }
 

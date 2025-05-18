@@ -321,7 +321,7 @@ impl ParseResult {
     pub fn get_nodes(&self) -> &Vec<ParseNode> {
         &self.nodes
     }
-    
+
     pub fn get_nodes_owned(self) -> Vec<ParseNode> {
         self.nodes
     }
