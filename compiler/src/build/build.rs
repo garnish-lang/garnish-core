@@ -3,6 +3,19 @@ use crate::error::CompilerError;
 use crate::parse::{Definition, ParseNode};
 use garnish_lang_traits::{GarnishData, Instruction, TypeConstants};
 
+trait GetError<T, Data: GarnishData> {
+    fn get_mut_or_error(&mut self, index: usize) -> Result<&mut T, CompilerError<Data::Error>>;
+}
+
+impl<Data: GarnishData> GetError<BuildNode<Data>, Data> for Vec<Option<BuildNode<Data>>> {
+    fn get_mut_or_error(&mut self, index: usize) -> Result<&mut BuildNode<Data>, CompilerError<Data::Error>> {
+        match self.get_mut(index) {
+            Some(Some(node)) => Ok(node),
+            _ => Err(CompilerError::new_message(format!("No node at index {}", index)))?,
+        }
+    }
+}
+
 pub struct BuildData {
     parse_root: usize,
     parse_tree: Vec<ParseNode>,
@@ -56,11 +69,6 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         });
     }
 
-    // let mut nodes = parse_tree
-    //     .iter()
-    //     .enumerate()
-    //     .map(|(index, node)| BuildNode::new(index, node))
-    //     .collect::<Vec<BuildNode>>();
     let mut nodes: Vec<Option<BuildNode<Data>>> = Vec::with_capacity(parse_tree.len());
     for _ in 0..parse_tree.len() {
         nodes.push(None);
@@ -146,11 +154,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         nodes[right] = Some(BuildNode::new(right));
                         nodes[left] = Some(BuildNode::new(left));
 
-                        let node = nodes
-                            .get_mut(node_index)
-                            .ok_or(CompilerError::new_message(format!("No build node at index {}", node_index)))?
-                            .as_mut()
-                            .ok_or(CompilerError::new_message(format!("No build node at index {}", node_index)))?;
+                        let node = nodes.get_mut_or_error(node_index)?;
 
                         node.state = BuildNodeState::Initialized
                     }
@@ -191,22 +195,14 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                             }
                         }
 
-                        let node = nodes
-                            .get_mut(node_index)
-                            .ok_or(CompilerError::new_message(format!("No build node at index {}", node_index)))?
-                            .as_mut()
-                            .ok_or(CompilerError::new_message(format!("No build node at index {}", node_index)))?;
+                        let node = nodes.get_mut_or_error(node_index)?;
 
                         node.state = BuildNodeState::Initialized
                     }
                     BuildNodeState::Initialized => match node.list_parent {
                         Some(_) => {}
                         None => {
-                            let node = nodes
-                                .get_mut(node_index)
-                                .ok_or(CompilerError::new_message(format!("No build node at index {}", node_index)))?
-                                .as_mut()
-                                .ok_or(CompilerError::new_message(format!("No build node at index {}", node_index)))?;
+                            let node = nodes.get_mut_or_error(node_index)?;
 
                             let count = node
                                 .child_count
@@ -225,12 +221,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         match nodes.get(node_index) {
             Some(Some(node)) if node.contributes_to_list => match node.list_parent {
                 Some(parent) => {
-                    let node = nodes
-                        .get_mut(parent)
-                        .ok_or(CompilerError::new_message(format!("No build node at index {}", parent)))?
-                        .as_mut()
-                        .ok_or(CompilerError::new_message(format!("No build node at index {}", parent)))?;
-
+                    let node = nodes.get_mut_or_error(parent)?;
                     node.child_count.next();
                 }
                 None => {}
