@@ -402,18 +402,19 @@ pub fn build<Data: GarnishData>(
                             Some(_) => {}
                             None => {
                                 let mut new_items: Vec<(usize, BuildNode<Data>)> = vec![];
+
+                                let jump_to_index = data.get_jump_table_len();
+                                data.push_jump_point(data.get_instruction_len())?;
+                                
                                 for condition in &node.conditional_items {
                                     root_stack.push(condition.node_index);
-
-                                    let jump_to_index = data.get_jump_table_len();
-                                    data.push_jump_point(data.get_instruction_len())?;
 
                                     new_items.push((
                                         condition.node_index,
                                         BuildNode::new_with_jump_and_end(
                                             condition.node_index,
                                             condition.jump_index_to_update.clone(),
-                                            (Instruction::JumpTo, Some(jump_to_index)),
+                                            (Instruction::JumpTo, Some(jump_to_index.clone())),
                                         ),
                                     ));
                                 }
@@ -906,5 +907,38 @@ mod jumps {
                 InstructionMetadata::new(None),
             ]
         )
+    }
+
+    #[test]
+    fn triple_jump_if_true_with_else() {
+        let (data, build_data) = build_input("$? ?> 10 |> $? ?> 20 |> $? ?> 30");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(2)),
+                SimpleInstruction::new(Instruction::JumpIfTrue, Some(1)),
+                SimpleInstruction::new(Instruction::Put, Some(2)),
+                SimpleInstruction::new(Instruction::JumpIfTrue, Some(2)),
+                SimpleInstruction::new(Instruction::Put, Some(2)),
+                SimpleInstruction::new(Instruction::JumpIfTrue, Some(3)),
+                SimpleInstruction::new(Instruction::EndExpression, None),
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::JumpTo, Some(4)),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::JumpTo, Some(4)),
+                SimpleInstruction::new(Instruction::Put, Some(5)),
+                SimpleInstruction::new(Instruction::JumpTo, Some(4)),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0, 11, 9, 7, 6]);
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(30.into()))
+                .append(SimpleData::Number(20.into()))
+                .append(SimpleData::Number(10.into()))
+        );
     }
 }
