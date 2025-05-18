@@ -510,6 +510,35 @@ pub fn build<Data: GarnishData>(
                         }
                     }
                 }
+                Definition::Subexpression => {
+                    let node = match nodes.get_mut(node_index) {
+                        Some(Some(node)) => node,
+                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+                    };
+                    match node.state {
+                        BuildNodeState::Uninitialized => {
+                            node.state = BuildNodeState::Initialized;
+                            
+                            let right = parse_node
+                                .get_right()
+                                .ok_or(CompilerError::new_message("No right on Subexpression definition".to_string()))?;
+                            let left = parse_node
+                                .get_left()
+                                .ok_or(CompilerError::new_message("No left on Subexpression definition".to_string()))?;
+                            
+                            stack.push(right);
+                            stack.push(node_index);
+                            stack.push(left);
+
+                            nodes[right] = Some(BuildNode::new(right));
+                            nodes[left] = Some(BuildNode::new(left));
+                        }
+                        BuildNodeState::Initialized => {
+                            data.push_instruction(Instruction::UpdateValue, None)?;
+                            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+                        }
+                    }
+                }
                 _ => unimplemented!(),
             }
 
@@ -1087,5 +1116,35 @@ mod reapply {
         );
         assert_eq!(data.get_jump_points(), &vec![0, 4, 3]);
         assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(40.into())));
+    }
+}
+
+#[cfg(test)]
+mod subexpression {
+    use crate::build::build::tests::build_input;
+    use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
+    use garnish_lang_traits::Instruction;
+
+    #[test]
+    fn subexpression() {
+        let (data, build_data) = build_input("10\n\n20");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::UpdateValue, None),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::EndExpression, None),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0]);
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(10.into()))
+                .append(SimpleData::Number(20.into()))
+        );
     }
 }
