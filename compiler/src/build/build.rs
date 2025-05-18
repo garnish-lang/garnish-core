@@ -302,6 +302,15 @@ pub fn build<Data: GarnishData>(
                         },
                     }
                 }
+                Definition::Group => {
+                    let right = parse_node
+                        .get_right()
+                        .ok_or(CompilerError::new_message("No right on NestedExpression definition".to_string()))?;
+
+                    nodes[right] = Some(BuildNode::new(right));
+                    
+                    stack.push(right);
+                }
                 Definition::NestedExpression => {
                     let jump_index = data.get_jump_table_len();
                     data.push_jump_point(Data::Size::zero())?;
@@ -518,14 +527,14 @@ pub fn build<Data: GarnishData>(
                     match node.state {
                         BuildNodeState::Uninitialized => {
                             node.state = BuildNodeState::Initialized;
-                            
+
                             let right = parse_node
                                 .get_right()
                                 .ok_or(CompilerError::new_message("No right on Subexpression definition".to_string()))?;
                             let left = parse_node
                                 .get_left()
                                 .ok_or(CompilerError::new_message("No left on Subexpression definition".to_string()))?;
-                            
+
                             stack.push(right);
                             stack.push(node_index);
                             stack.push(left);
@@ -1144,6 +1153,39 @@ mod subexpression {
             data.get_data(),
             &SimpleDataList::default()
                 .append(SimpleData::Number(10.into()))
+                .append(SimpleData::Number(20.into()))
+        );
+    }
+}
+
+#[cfg(test)]
+mod groups {
+    use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
+    use garnish_lang_traits::Instruction;
+    use crate::build::build::tests::build_input;
+
+    #[test]
+    fn groups() {
+        let (data, build_data) = build_input("10 (5 + 20)");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::Put, Some(5)),
+                SimpleInstruction::new(Instruction::Add, None),
+                SimpleInstruction::new(Instruction::MakeList, Some(2)),
+                SimpleInstruction::new(Instruction::EndExpression, None),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0]);
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(10.into()))
+                .append(SimpleData::Number(5.into()))
                 .append(SimpleData::Number(20.into()))
         );
     }
