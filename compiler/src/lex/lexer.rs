@@ -350,9 +350,7 @@ impl<'a> Lexer<'a> {
 
         trace!(
             "Starting token with character {:?} token type '{:?}' state '{:?}'",
-            &c,
-            self.current_token_type,
-            self.state
+            &c, self.current_token_type, self.state
         );
     }
 
@@ -406,7 +404,7 @@ impl<'a> Lexer<'a> {
                         // which can also be start of an identifier
                         // if on this token and current character can be identifier
                         // switch to lexing identifier
-                        if self.current_characters.starts_with('_') && is_identifier_char(c) {
+                        if self.current_characters.starts_with('_') && is_identifier(&self.current_characters) {
                             trace!("Switching to lexing identifier after starting with an underscore.");
                             self.current_token_type = Some(TokenType::Identifier);
                             self.state = LexingState::Identifier;
@@ -928,6 +926,10 @@ fn is_identifier_char(c: char) -> bool {
     c.is_alphanumeric() || c == '_' || c == ':'
 }
 
+fn is_identifier(s: &str) -> bool {
+    s.chars().all(is_identifier_char)
+}
+
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone, Copy)]
 enum LexingState {
     NoToken,
@@ -1348,6 +1350,29 @@ mod tests {
                 column: 0,
                 row: 0
             }]
+        )
+    }
+
+    #[test]
+    fn access_left_internal_identifier() {
+        let result = lex(&"_.value".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                LexerToken {
+                    text: "_.".to_string(),
+                    token_type: TokenType::LeftInternal,
+                    column: 0,
+                    row: 0
+                },
+                LexerToken {
+                    text: "value".to_string(),
+                    token_type: TokenType::Identifier,
+                    column: 2,
+                    row: 0
+                }
+            ]
         )
     }
 
