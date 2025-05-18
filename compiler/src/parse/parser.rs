@@ -321,6 +321,10 @@ impl ParseResult {
     pub fn get_nodes(&self) -> &Vec<ParseNode> {
         &self.nodes
     }
+    
+    pub fn get_nodes_owned(self) -> Vec<ParseNode> {
+        self.nodes
+    }
 
     pub fn set_nodes(&mut self, nodes: Vec<ParseNode>) {
         self.nodes = nodes;
