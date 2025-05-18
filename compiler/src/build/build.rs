@@ -199,21 +199,21 @@ pub fn build<Data: GarnishData>(
                             node.state = BuildNodeState::Initialized;
 
                             match parse_node.get_right() {
-                                None => {},
+                                None => {}
                                 Some(right) => {
                                     stack.push(right);
                                     nodes[right] = Some(BuildNode::new(right));
-                                },
+                                }
                             }
 
                             stack.push(node_index);
 
                             match parse_node.get_left() {
-                                None => {},
+                                None => {}
                                 Some(left) => {
                                     stack.push(left);
                                     nodes[left] = Some(BuildNode::new(left));
-                                },
+                                }
                             }
                         }
                         BuildNodeState::Initialized => {
@@ -251,48 +251,96 @@ pub fn build<Data: GarnishData>(
                     data.push_instruction(Instruction::EndExpression, None)?;
                     instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
                 }
-                Definition::EmptyApply => {
-                    let node = nodes.get_mut_or_error(node_index)?;
-
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            node.state = BuildNodeState::Initialized;
-
-                            stack.push(node.parse_node_index);
-                            let left = parse_node
-                                .get_left()
-                                .ok_or(CompilerError::new_message("No left on EmptyApply definition".to_string()))?;
-                            stack.push(left);
-
-                            nodes[left] = Some(BuildNode::new(left));
-                        }
-                        BuildNodeState::Initialized => {
-                            data.push_instruction(Instruction::EmptyApply, None)?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
-                        }
-                    }
-                }
-                Definition::AbsoluteValue => {
-                    let node = nodes.get_mut_or_error(node_index)?;
-
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            node.state = BuildNodeState::Initialized;
-
-                            stack.push(node.parse_node_index);
-                            let right = parse_node
-                                .get_right()
-                                .ok_or(CompilerError::new_message("No left on AbsoluteValue definition".to_string()))?;
-                            stack.push(right);
-
-                            nodes[right] = Some(BuildNode::new(right));
-                        }
-                        BuildNodeState::Initialized => {
-                            data.push_instruction(Instruction::AbsoluteValue, None)?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
-                        }
-                    }
-                }
+                Definition::AbsoluteValue => handle_unary_prefix(
+                    Instruction::AbsoluteValue,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::Opposite => handle_unary_prefix(
+                    Instruction::Opposite,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::BitwiseNot => handle_unary_prefix(
+                    Instruction::BitwiseNot,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::Not => handle_unary_prefix(
+                    Instruction::Not,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::Tis => handle_unary_prefix(
+                    Instruction::Tis,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::TypeOf => handle_unary_prefix(
+                    Instruction::TypeOf,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::AccessLeftInternal => handle_unary_prefix(
+                    Instruction::AccessLeftInternal,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::EmptyApply => handle_unary_suffix(
+                    Instruction::EmptyApply,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::AccessRightInternal => handle_unary_suffix(
+                    Instruction::AccessRightInternal,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::AccessLengthInternal => handle_unary_suffix(
+                    Instruction::AccessLengthInternal,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
                 Definition::Addition => {
                     let node = match nodes.get(node_index) {
                         Some(Some(node)) => node,
@@ -693,6 +741,70 @@ pub fn build<Data: GarnishData>(
     })
 }
 
+fn handle_unary_suffix<Data: GarnishData>(
+    instruction: Instruction,
+    nodes: &mut Vec<Option<BuildNode<Data>>>,
+    node_index: usize,
+    stack: &mut Vec<usize>,
+    parse_node: &ParseNode,
+    data: &mut Data,
+    instruction_metadata: &mut Vec<InstructionMetadata>,
+) -> Result<(), CompilerError<Data::Error>> {
+    let node = nodes.get_mut_or_error(node_index)?;
+
+    match node.state {
+        BuildNodeState::Uninitialized => {
+            node.state = BuildNodeState::Initialized;
+
+            stack.push(node.parse_node_index);
+            let left = parse_node
+                .get_left()
+                .ok_or(CompilerError::new_message(format!("No left on {:?} definition", instruction)))?;
+            stack.push(left);
+
+            nodes[left] = Some(BuildNode::new(left));
+        }
+        BuildNodeState::Initialized => {
+            data.push_instruction(instruction, None)?;
+            instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+        }
+    }
+
+    Ok(())
+}
+
+fn handle_unary_prefix<Data: GarnishData>(
+    instruction: Instruction,
+    nodes: &mut Vec<Option<BuildNode<Data>>>,
+    node_index: usize,
+    stack: &mut Vec<usize>,
+    parse_node: &ParseNode,
+    data: &mut Data,
+    instruction_metadata: &mut Vec<InstructionMetadata>,
+) -> Result<(), CompilerError<Data::Error>> {
+    let node = nodes.get_mut_or_error(node_index)?;
+
+    match node.state {
+        BuildNodeState::Uninitialized => {
+            node.state = BuildNodeState::Initialized;
+
+            stack.push(node.parse_node_index);
+            let right = parse_node
+                .get_right()
+                .ok_or(CompilerError::new_message(format!("No right on {:?} definition", instruction)))?;
+            stack.push(right);
+
+            nodes[right] = Some(BuildNode::new(right));
+        }
+        BuildNodeState::Initialized => {
+            data.push_instruction(instruction, None)?;
+            instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use crate::build::build::build;
@@ -979,41 +1091,40 @@ mod unary_operations {
     use garnish_lang_traits::Instruction;
 
     #[test]
-    fn build_empty_apply() {
-        let (data, build_data) = build_input("5~~");
+    fn basic_unary() {
+        let inputs = vec![
+            ("++value", Instruction::AbsoluteValue),
+            ("--value", Instruction::Opposite),
+            ("!value", Instruction::BitwiseNot),
+            ("!!value", Instruction::Not),
+            ("??value", Instruction::Tis),
+            ("#value", Instruction::TypeOf),
+            ("_.value", Instruction::AccessLeftInternal),
+            ("value~~", Instruction::EmptyApply),
+            ("value._", Instruction::AccessRightInternal),
+            ("value.|", Instruction::AccessLengthInternal),
+        ];
 
-        assert_eq!(
-            data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Put, Some(3)),
-                SimpleInstruction::new(Instruction::EmptyApply, None),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
-        );
-        assert_eq!(
-            data.get_data(),
-            &SimpleDataList::default()
-                .append(SimpleData::Number(5.into()))
-        );
-    }
+        for (input, instruction) in inputs {
+            let (data, _build_data) = build_input(input);
 
-    #[test]
-    fn build_absolute_value() {
-        let (data, build_data) = build_input("++5");
-
-        assert_eq!(
-            data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Put, Some(3)),
-                SimpleInstruction::new(Instruction::AbsoluteValue, None),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
-        );
-        assert_eq!(
-            data.get_data(),
-            &SimpleDataList::default()
-                .append(SimpleData::Number(5.into()))
-        );
+            assert_eq!(
+                data.get_instructions(),
+                &vec![
+                    SimpleInstruction::new(Instruction::Resolve, Some(3)),
+                    SimpleInstruction::new(instruction, None),
+                    SimpleInstruction::new(Instruction::EndExpression, None)
+                ],
+                "Failed {:?} test",
+                instruction
+            );
+            assert_eq!(
+                data.get_data(),
+                &SimpleDataList::default().append_symbol("value"),
+                "Failed {:?}",
+                instruction
+            );
+        }
     }
 }
 
@@ -1307,9 +1418,9 @@ mod subexpression {
 
 #[cfg(test)]
 mod groups {
+    use crate::build::build::tests::build_input;
     use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
     use garnish_lang_traits::Instruction;
-    use crate::build::build::tests::build_input;
 
     #[test]
     fn groups() {
@@ -1340,9 +1451,9 @@ mod groups {
 
 #[cfg(test)]
 mod side_effects {
+    use crate::build::build::tests::build_input;
     use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
     use garnish_lang_traits::Instruction;
-    use crate::build::build::tests::build_input;
 
     #[test]
     fn side_effect() {
