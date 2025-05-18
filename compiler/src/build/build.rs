@@ -49,10 +49,19 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         Definition::Value => {
             data.push_instruction(Instruction::PutValue, None)?;
         }
+        Definition::ExpressionTerminator => {
+            data.push_instruction(Instruction::EndExpression, None)?;
+        }
         _ => unimplemented!(),
     }
-    
-    data.push_instruction(Instruction::EndExpression, None)?;
+
+    let last_instruction = data.get_instruction_iter().last();
+    match last_instruction.and_then(|i| data.get_instruction(i)) {
+        Some((Instruction::EndExpression, _)) => {}
+        _ => {
+            data.push_instruction(Instruction::EndExpression, None)?;
+        }
+    }
 
     Ok(BuildData { parse_root, parse_tree })
 }
@@ -83,9 +92,23 @@ mod tests {
 
 #[cfg(test)]
 mod put_values {
+    use crate::build::build::tests::build_input;
     use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
     use garnish_lang_traits::Instruction;
-    use crate::build::build::tests::build_input;
+
+    #[test]
+    fn build_expression_terminator() {
+        let data = build_input(";;");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+
+        assert_eq!(data.get_data(), &SimpleDataList::default());
+    }
 
     #[test]
     fn build_unit() {
