@@ -318,7 +318,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                             stack.push(node.parse_node_index);
                             let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on JumpIfTrue definition".to_string()))?;
                             stack.push(left);
-                            
+
                             nodes[left] = Some(BuildNode::new(left));
                         }
                         BuildNodeState::Initialized => {
@@ -885,36 +885,38 @@ mod unary_operations {
     use garnish_lang_simple_data::{SimpleDataList, SimpleInstruction};
     use garnish_lang_traits::Instruction;
 
-    #[test]
-    fn basic_unary() {
-        let inputs = vec![
-            ("++value", Instruction::AbsoluteValue),
-            ("--value", Instruction::Opposite),
-            ("!value", Instruction::BitwiseNot),
-            ("!!value", Instruction::Not),
-            ("??value", Instruction::Tis),
-            ("#value", Instruction::TypeOf),
-            ("_.value", Instruction::AccessLeftInternal),
-            ("value~~", Instruction::EmptyApply),
-            ("value._", Instruction::AccessRightInternal),
-            ("value.|", Instruction::AccessLengthInternal),
-        ];
+    macro_rules! unary_tests {
+        ($($name:ident: $input:expr, $instruction:expr,)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    let (data, _build_data) = build_input($input);
 
-        for (input, instruction) in inputs {
-            let (data, _build_data) = build_input(input);
+                    assert_eq!(
+                        data.get_instructions(),
+                        &vec![
+                            SimpleInstruction::new(Instruction::Resolve, Some(3)),
+                            SimpleInstruction::new($instruction, None),
+                            SimpleInstruction::new(Instruction::EndExpression, None)
+                        ],
+                    );
+                    assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol("value"));
+                }
+            )*
+        };
+    }
 
-            assert_eq!(
-                data.get_instructions(),
-                &vec![
-                    SimpleInstruction::new(Instruction::Resolve, Some(3)),
-                    SimpleInstruction::new(instruction, None),
-                    SimpleInstruction::new(Instruction::EndExpression, None)
-                ],
-                "Failed {:?} test",
-                instruction
-            );
-            assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol("value"), "Failed {:?}", instruction);
-        }
+    unary_tests! {
+        absolute_value: "++value", Instruction::AbsoluteValue,
+        opposite: "--value", Instruction::Opposite,
+        bitwise_not: "!value", Instruction::BitwiseNot,
+        not: "!!value", Instruction::Not,
+        tis: "??value", Instruction::Tis,
+        type_of: "#value", Instruction::TypeOf,
+        left_internal: "_.value", Instruction::AccessLeftInternal,
+        empty_apply: "value~~", Instruction::EmptyApply,
+        right_internal: "value._", Instruction::AccessRightInternal,
+        length_internal: "value.|", Instruction::AccessLengthInternal,
     }
 }
 
