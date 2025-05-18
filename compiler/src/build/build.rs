@@ -44,7 +44,7 @@ struct BuildNode<Data: GarnishData> {
     child_count: Data::SizeIterator,
     contributes_to_list: bool,
     jump_index_to_update: Option<Data::Size>,
-    root_end_instruction: Option<(Instruction, Option<Data::Size>)>,
+    root_end_instruction: Option<Vec<(Instruction, Option<Data::Size>)>>,
     conditional_parent: Option<usize>,
     conditional_items: Vec<ConditionItem<Data>>,
 }
@@ -106,7 +106,7 @@ impl<Data: GarnishData> BuildNode<Data> {
         }
     }
 
-    fn new_with_jump_and_end(parse_node_index: usize, jump_index: Data::Size, end_instruction: (Instruction, Option<Data::Size>)) -> Self {
+    fn new_with_jump_and_end(parse_node_index: usize, jump_index: Data::Size, end_instruction: Vec<(Instruction, Option<Data::Size>)>) -> Self {
         Self {
             state: BuildNodeState::Uninitialized,
             parse_node_index,
@@ -360,7 +360,7 @@ pub fn build<Data: GarnishData>(
                                     nodes[right] = Some(BuildNode::new_with_jump_and_end(
                                         right,
                                         jump_index.clone(),
-                                        (Instruction::JumpTo, Some(jump_to_index)),
+                                        vec![(Instruction::JumpTo, Some(jump_to_index))],
                                     ));
                                 }
                             }
@@ -405,7 +405,7 @@ pub fn build<Data: GarnishData>(
 
                                 let jump_to_index = data.get_jump_table_len();
                                 data.push_jump_point(data.get_instruction_len())?;
-                                
+
                                 for condition in &node.conditional_items {
                                     root_stack.push(condition.node_index);
 
@@ -414,16 +414,57 @@ pub fn build<Data: GarnishData>(
                                         BuildNode::new_with_jump_and_end(
                                             condition.node_index,
                                             condition.jump_index_to_update.clone(),
-                                            (Instruction::JumpTo, Some(jump_to_index.clone())),
+                                            vec![(Instruction::JumpTo, Some(jump_to_index.clone()))],
                                         ),
                                     ));
                                 }
-                                
+
                                 for (index, data) in new_items {
                                     nodes[index] = Some(data);
                                 }
                             }
                         },
+                    }
+                }
+                Definition::And => {
+                    let node = match nodes.get_mut(node_index) {
+                        Some(Some(node)) => node,
+                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+                    };
+
+                    match node.state {
+                        BuildNodeState::Uninitialized => {
+                            node.state = BuildNodeState::Initialized;
+
+                            stack.push(node.parse_node_index);
+                            let left = parse_node
+                                .get_left()
+                                .ok_or(CompilerError::new_message("No left on And definition".to_string()))?;
+                            stack.push(left);
+
+                            nodes[left] = Some(BuildNode::new_with_conditional(left, node_index));
+                        }
+                        BuildNodeState::Initialized => {
+                            let jump_index = data.get_jump_table_len();
+                            data.push_jump_point(Data::Size::zero())?;
+                            data.push_instruction(Instruction::And, Some(jump_index.clone()))?;
+                            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+
+                            let right = parse_node
+                                .get_right()
+                                .ok_or(CompilerError::new_message("No right on And definition".to_string()))?;
+
+                            root_stack.push(right);
+
+                            let jump_to_index = data.get_jump_table_len();
+                            data.push_jump_point(data.get_instruction_len())?;
+
+                            nodes[right] = Some(BuildNode::new_with_jump_and_end(
+                                right,
+                                jump_index.clone(),
+                                vec![(Instruction::Tis, None), (Instruction::JumpTo, Some(jump_to_index))],
+                            ));
+                        }
                     }
                 }
                 _ => unimplemented!(),
@@ -442,18 +483,21 @@ pub fn build<Data: GarnishData>(
         }
 
         let last_instruction = data.get_instruction_iter().last();
-        let end_instruction = match nodes.get(root_index) {
+        let end_instructions = match nodes.get(root_index) {
             Some(Some(node)) => match &node.root_end_instruction {
                 Some(end_instruction) => end_instruction.clone(),
-                None => (Instruction::EndExpression, None),
+                None => vec![(Instruction::EndExpression, None)],
             },
-            _ => (Instruction::EndExpression, None),
+            _ => vec![(Instruction::EndExpression, None)],
         };
-        match last_instruction.and_then(|i| data.get_instruction(i)) {
-            Some(instruction) if instruction == end_instruction => {}
-            _ => {
-                data.push_instruction(end_instruction.0, end_instruction.1)?;
-                instruction_metadata.push(InstructionMetadata::new(None));
+
+        for end_instruction in end_instructions {
+            match last_instruction.clone().and_then(|i| data.get_instruction(i)) {
+                Some(instruction) if instruction == end_instruction => {}
+                _ => {
+                    data.push_instruction(end_instruction.0, end_instruction.1)?;
+                    instruction_metadata.push(InstructionMetadata::new(None));
+                }
             }
         }
     }
@@ -938,6 +982,38 @@ mod jumps {
             &SimpleDataList::default()
                 .append(SimpleData::Number(30.into()))
                 .append(SimpleData::Number(20.into()))
+                .append(SimpleData::Number(10.into()))
+        );
+    }
+}
+
+#[cfg(test)]
+mod logical {
+    use crate::build::build::tests::build_input;
+    use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
+    use garnish_lang_traits::Instruction;
+
+    #[test]
+    fn and() {
+        let (data, build_data) = build_input("5 && 10");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::And, Some(1)),
+                SimpleInstruction::new(Instruction::EndExpression, None),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::Tis, None),
+                SimpleInstruction::new(Instruction::JumpTo, Some(2)),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0, 3, 2]);
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
                 .append(SimpleData::Number(10.into()))
         );
     }
