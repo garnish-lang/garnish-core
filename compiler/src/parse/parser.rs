@@ -296,6 +296,10 @@ impl ParseNode {
     pub fn set_lex_token(&mut self, token: LexerToken) {
         self.lex_token = token;
     }
+    
+    pub fn text(&self) -> &str {
+        self.lex_token.get_text()
+    }
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
