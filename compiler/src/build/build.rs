@@ -169,84 +169,16 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
             };
 
             match parse_node.get_definition() {
-                Definition::Unit => {
-                    let addr = data.add_unit()?;
-                    data.push_instruction(Instruction::Put, Some(addr))?;
-                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                }
-                Definition::False => {
-                    let addr = data.add_false()?;
-                    data.push_instruction(Instruction::Put, Some(addr))?;
-                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                }
-                Definition::True => {
-                    let addr = data.add_true()?;
-                    data.push_instruction(Instruction::Put, Some(addr))?;
-                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                }
-                Definition::Number => {
-                    let node = match nodes.get_mut(node_index) {
-                        Some(Some(node)) => node,
-                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
-                    };
-
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            node.state = BuildNodeState::Initialized;
-
-                            match parse_node.get_right() {
-                                None => {}
-                                Some(right) => {
-                                    stack.push(right);
-                                    nodes[right] = Some(BuildNode::new(right));
-                                }
-                            }
-
-                            stack.push(node_index);
-
-                            match parse_node.get_left() {
-                                None => {}
-                                Some(left) => {
-                                    stack.push(left);
-                                    nodes[left] = Some(BuildNode::new(left));
-                                }
-                            }
-                        }
-                        BuildNodeState::Initialized => {
-                            let addr = data.parse_add_number(parse_node.text())?;
-                            data.push_instruction(Instruction::Put, Some(addr))?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                        }
-                    }
-                }
-                Definition::CharList => {
-                    let addr = data.parse_add_char_list(parse_node.text())?;
-                    data.push_instruction(Instruction::Put, Some(addr))?;
-                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                }
-                Definition::ByteList => {
-                    let addr = data.parse_add_byte_list(parse_node.text())?;
-                    data.push_instruction(Instruction::Put, Some(addr))?;
-                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                }
-                Definition::Symbol => {
-                    let addr = data.parse_add_symbol(&parse_node.text()[1..])?;
-                    data.push_instruction(Instruction::Put, Some(addr))?;
-                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                }
-                Definition::Value => {
-                    data.push_instruction(Instruction::PutValue, None)?;
-                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                }
-                Definition::Identifier => {
-                    let addr = data.parse_add_symbol(parse_node.text())?;
-                    data.push_instruction(Instruction::Resolve, Some(addr))?;
-                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                }
-                Definition::ExpressionTerminator => {
-                    data.push_instruction(Instruction::EndExpression, None)?;
-                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                }
+                Definition::Unit => handle_value_primitive(|data, _| data.add_unit(), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::False => handle_value_primitive(|data, _| data.add_false(), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::True => handle_value_primitive(|data, _| data.add_true(), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Number => handle_value_primitive(|data, node| data.parse_add_number(node.text()), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::CharList => handle_value_primitive(|data, node| data.parse_add_char_list(node.text()), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::ByteList => handle_value_primitive(|data, node| data.parse_add_byte_list(node.text()), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Symbol => handle_value_primitive(|data, node| data.parse_add_symbol(&node.text()[1..]), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Value => handle_value_like(|_, _| Ok(None), Instruction::PutValue, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Identifier => handle_value_like(|data, node| Ok(Some(data.parse_add_symbol(node.text())?)), Instruction::Resolve, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::ExpressionTerminator => handle_value_like(|_, _| Ok(None), Instruction::EndExpression, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::AbsoluteValue => handle_unary_prefix(Instruction::AbsoluteValue, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::Opposite => handle_unary_prefix(Instruction::Opposite, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::BitwiseNot => handle_unary_prefix(Instruction::BitwiseNot, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
@@ -386,6 +318,8 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                             stack.push(node.parse_node_index);
                             let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on JumpIfTrue definition".to_string()))?;
                             stack.push(left);
+                            
+                            nodes[left] = Some(BuildNode::new(left));
                         }
                         BuildNodeState::Initialized => {
                             let jump_index = data.get_jump_table_len();
@@ -610,6 +544,71 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         instruction_metadata,
         jump_index: tree_root_jump,
     })
+}
+
+fn handle_value_primitive<Data: GarnishData, Fn>(
+    add_fn: Fn,
+    nodes: &mut Vec<Option<BuildNode<Data>>>,
+    node_index: usize,
+    stack: &mut Vec<usize>,
+    parse_node: &ParseNode,
+    data: &mut Data,
+    instruction_metadata: &mut Vec<InstructionMetadata>,
+) -> Result<(), CompilerError<Data::Error>>
+where
+    Fn: FnOnce(&mut Data, &ParseNode) -> Result<Data::Size, Data::Error>,
+{
+    handle_value_like(|data, node| Ok(Some(add_fn(data, node)?)), Instruction::Put, nodes, node_index, stack, parse_node, data, instruction_metadata)
+}
+
+fn handle_value_like<Data: GarnishData, Fn>(
+    add_fn: Fn,
+    instruction: Instruction,
+    nodes: &mut Vec<Option<BuildNode<Data>>>,
+    node_index: usize,
+    stack: &mut Vec<usize>,
+    parse_node: &ParseNode,
+    data: &mut Data,
+    instruction_metadata: &mut Vec<InstructionMetadata>,
+) -> Result<(), CompilerError<Data::Error>>
+where
+    Fn: FnOnce(&mut Data, &ParseNode) -> Result<Option<Data::Size>, Data::Error>,
+{
+    let node = match nodes.get_mut(node_index) {
+        Some(Some(node)) => node,
+        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+    };
+
+    match node.state {
+        BuildNodeState::Uninitialized => {
+            node.state = BuildNodeState::Initialized;
+
+            match parse_node.get_right() {
+                None => {}
+                Some(right) => {
+                    stack.push(right);
+                    nodes[right] = Some(BuildNode::new(right));
+                }
+            }
+
+            stack.push(node_index);
+
+            match parse_node.get_left() {
+                None => {}
+                Some(left) => {
+                    stack.push(left);
+                    nodes[left] = Some(BuildNode::new(left));
+                }
+            }
+        }
+        BuildNodeState::Initialized => {
+            let instruction_data = add_fn(data, parse_node)?;
+            data.push_instruction(instruction, instruction_data)?;
+            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+        }
+    }
+
+    Ok(())
 }
 
 fn handle_unary_suffix<Data: GarnishData>(
@@ -883,7 +882,7 @@ mod binary_operations {
 #[cfg(test)]
 mod unary_operations {
     use crate::build::build::tests::build_input;
-    use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
+    use garnish_lang_simple_data::{SimpleDataList, SimpleInstruction};
     use garnish_lang_traits::Instruction;
 
     #[test]
