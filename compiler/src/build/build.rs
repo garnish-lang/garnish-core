@@ -121,11 +121,7 @@ impl<Data: GarnishData> BuildNode<Data> {
     }
 }
 
-pub fn build<Data: GarnishData>(
-    parse_root: usize,
-    parse_tree: Vec<ParseNode>,
-    data: &mut Data,
-) -> Result<BuildData<Data>, CompilerError<Data::Error>> {
+pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, data: &mut Data) -> Result<BuildData<Data>, CompilerError<Data::Error>> {
     if parse_tree.is_empty() {
         data.push_instruction(Instruction::EndExpression, None)?;
         return Ok(BuildData {
@@ -251,96 +247,16 @@ pub fn build<Data: GarnishData>(
                     data.push_instruction(Instruction::EndExpression, None)?;
                     instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
                 }
-                Definition::AbsoluteValue => handle_unary_prefix(
-                    Instruction::AbsoluteValue,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::Opposite => handle_unary_prefix(
-                    Instruction::Opposite,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::BitwiseNot => handle_unary_prefix(
-                    Instruction::BitwiseNot,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::Not => handle_unary_prefix(
-                    Instruction::Not,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::Tis => handle_unary_prefix(
-                    Instruction::Tis,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::TypeOf => handle_unary_prefix(
-                    Instruction::TypeOf,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::AccessLeftInternal => handle_unary_prefix(
-                    Instruction::AccessLeftInternal,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::EmptyApply => handle_unary_suffix(
-                    Instruction::EmptyApply,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::AccessRightInternal => handle_unary_suffix(
-                    Instruction::AccessRightInternal,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::AccessLengthInternal => handle_unary_suffix(
-                    Instruction::AccessLengthInternal,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
+                Definition::AbsoluteValue => handle_unary_prefix(Instruction::AbsoluteValue, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Opposite => handle_unary_prefix(Instruction::Opposite, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::BitwiseNot => handle_unary_prefix(Instruction::BitwiseNot, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Not => handle_unary_prefix(Instruction::Not, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Tis => handle_unary_prefix(Instruction::Tis, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::TypeOf => handle_unary_prefix(Instruction::TypeOf, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::AccessLeftInternal => handle_unary_prefix(Instruction::AccessLeftInternal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::EmptyApply => handle_unary_suffix(Instruction::EmptyApply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::AccessRightInternal => handle_unary_suffix(Instruction::AccessRightInternal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::AccessLengthInternal => handle_unary_suffix(Instruction::AccessLengthInternal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::Addition => {
                     let node = match nodes.get(node_index) {
                         Some(Some(node)) => node,
@@ -349,12 +265,8 @@ pub fn build<Data: GarnishData>(
                     match node.state {
                         BuildNodeState::Uninitialized => {
                             stack.push(node.parse_node_index);
-                            let right = parse_node
-                                .get_right()
-                                .ok_or(CompilerError::new_message("No right on Addition definition".to_string()))?;
-                            let left = parse_node
-                                .get_left()
-                                .ok_or(CompilerError::new_message("No left on Addition definition".to_string()))?;
+                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on Addition definition".to_string()))?;
+                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on Addition definition".to_string()))?;
                             stack.push(right);
                             stack.push(left);
 
@@ -382,12 +294,8 @@ pub fn build<Data: GarnishData>(
                             node.contributes_to_list = false;
 
                             stack.push(node.parse_node_index);
-                            let right = parse_node
-                                .get_right()
-                                .ok_or(CompilerError::new_message("No right on Addition definition".to_string()))?;
-                            let left = parse_node
-                                .get_left()
-                                .ok_or(CompilerError::new_message("No left on Addition definition".to_string()))?;
+                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on Addition definition".to_string()))?;
+                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on Addition definition".to_string()))?;
                             stack.push(right);
                             stack.push(left);
 
@@ -411,10 +319,7 @@ pub fn build<Data: GarnishData>(
                             None => {
                                 let node = nodes.get_mut_or_error(node_index)?;
 
-                                let count = node
-                                    .child_count
-                                    .next()
-                                    .ok_or(CompilerError::new_message("Failed to increment child count for List".to_string()))?;
+                                let count = node.child_count.next().ok_or(CompilerError::new_message("Failed to increment child count for List".to_string()))?;
 
                                 data.push_instruction(Instruction::MakeList, Some(count))?;
                                 instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
@@ -423,9 +328,7 @@ pub fn build<Data: GarnishData>(
                     }
                 }
                 Definition::Group => {
-                    let right = parse_node
-                        .get_right()
-                        .ok_or(CompilerError::new_message("No right on NestedExpression definition".to_string()))?;
+                    let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on NestedExpression definition".to_string()))?;
 
                     nodes[right] = Some(BuildNode::new(right));
 
@@ -444,9 +347,7 @@ pub fn build<Data: GarnishData>(
                             data.push_instruction(Instruction::StartSideEffect, None)?;
                             instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
 
-                            let right = parse_node
-                                .get_right()
-                                .ok_or(CompilerError::new_message("No right on SideEffect definition".to_string()))?;
+                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on SideEffect definition".to_string()))?;
 
                             nodes[right] = Some(BuildNode::new(right));
 
@@ -466,9 +367,7 @@ pub fn build<Data: GarnishData>(
                     data.push_instruction(Instruction::Put, Some(addr))?;
                     instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
 
-                    let right = parse_node
-                        .get_right()
-                        .ok_or(CompilerError::new_message("No right on NestedExpression definition".to_string()))?;
+                    let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on NestedExpression definition".to_string()))?;
 
                     nodes[right] = Some(BuildNode::new_with_jump(right, jump_index));
 
@@ -485,9 +384,7 @@ pub fn build<Data: GarnishData>(
                             node.state = BuildNodeState::Initialized;
 
                             stack.push(node.parse_node_index);
-                            let left = parse_node
-                                .get_left()
-                                .ok_or(CompilerError::new_message("No left on JumpIfTrue definition".to_string()))?;
+                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on JumpIfTrue definition".to_string()))?;
                             stack.push(left);
                         }
                         BuildNodeState::Initialized => {
@@ -496,9 +393,7 @@ pub fn build<Data: GarnishData>(
                             data.push_instruction(Instruction::JumpIfTrue, Some(jump_index.clone()))?;
                             instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
 
-                            let right = parse_node
-                                .get_right()
-                                .ok_or(CompilerError::new_message("No right on JumpIfTrue definition".to_string()))?;
+                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on JumpIfTrue definition".to_string()))?;
                             match node.conditional_parent {
                                 Some(conditional_parent) => match nodes.get_mut(conditional_parent) {
                                     Some(Some(parent)) => parent.conditional_items.push(ConditionItem {
@@ -514,11 +409,7 @@ pub fn build<Data: GarnishData>(
                                     let jump_to_index = data.get_jump_table_len();
                                     data.push_jump_point(data.get_instruction_len())?;
 
-                                    nodes[right] = Some(BuildNode::new_with_jump_and_end(
-                                        right,
-                                        jump_index.clone(),
-                                        vec![(Instruction::JumpTo, Some(jump_to_index))],
-                                    ));
+                                    nodes[right] = Some(BuildNode::new_with_jump_and_end(right, jump_index.clone(), vec![(Instruction::JumpTo, Some(jump_to_index))]));
                                 }
                             }
                         }
@@ -535,12 +426,8 @@ pub fn build<Data: GarnishData>(
                             node.state = BuildNodeState::Initialized;
 
                             stack.push(node.parse_node_index);
-                            let right = parse_node
-                                .get_right()
-                                .ok_or(CompilerError::new_message("No right on ElseJump definition".to_string()))?;
-                            let left = parse_node
-                                .get_left()
-                                .ok_or(CompilerError::new_message("No left on ElseJump definition".to_string()))?;
+                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on ElseJump definition".to_string()))?;
+                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on ElseJump definition".to_string()))?;
                             stack.push(right);
                             stack.push(left);
 
@@ -568,11 +455,7 @@ pub fn build<Data: GarnishData>(
 
                                     new_items.push((
                                         condition.node_index,
-                                        BuildNode::new_with_jump_and_end(
-                                            condition.node_index,
-                                            condition.jump_index_to_update.clone(),
-                                            vec![(Instruction::JumpTo, Some(jump_to_index.clone()))],
-                                        ),
+                                        BuildNode::new_with_jump_and_end(condition.node_index, condition.jump_index_to_update.clone(), vec![(Instruction::JumpTo, Some(jump_to_index.clone()))]),
                                     ));
                                 }
 
@@ -594,9 +477,7 @@ pub fn build<Data: GarnishData>(
                             node.state = BuildNodeState::Initialized;
 
                             stack.push(node.parse_node_index);
-                            let left = parse_node
-                                .get_left()
-                                .ok_or(CompilerError::new_message("No left on And definition".to_string()))?;
+                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on And definition".to_string()))?;
                             stack.push(left);
 
                             nodes[left] = Some(BuildNode::new_with_conditional(left, node_index));
@@ -607,9 +488,7 @@ pub fn build<Data: GarnishData>(
                             data.push_instruction(Instruction::And, Some(jump_index.clone()))?;
                             instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
 
-                            let right = parse_node
-                                .get_right()
-                                .ok_or(CompilerError::new_message("No right on And definition".to_string()))?;
+                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on And definition".to_string()))?;
 
                             root_stack.push(right);
 
@@ -635,9 +514,7 @@ pub fn build<Data: GarnishData>(
                             node.state = BuildNodeState::Initialized;
 
                             stack.push(node.parse_node_index);
-                            let left = parse_node
-                                .get_left()
-                                .ok_or(CompilerError::new_message("No left on Reapply definition".to_string()))?;
+                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on Reapply definition".to_string()))?;
                             stack.push(left);
 
                             nodes[left] = Some(BuildNode::new_with_conditional(left, node_index));
@@ -650,9 +527,7 @@ pub fn build<Data: GarnishData>(
                             data.push_instruction(Instruction::PutValue, None)?;
                             instruction_metadata.push(InstructionMetadata::new(None));
 
-                            let right = parse_node
-                                .get_right()
-                                .ok_or(CompilerError::new_message("No right on Reapply definition".to_string()))?;
+                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on Reapply definition".to_string()))?;
 
                             root_stack.push(right);
 
@@ -676,12 +551,8 @@ pub fn build<Data: GarnishData>(
                         BuildNodeState::Uninitialized => {
                             node.state = BuildNodeState::Initialized;
 
-                            let right = parse_node
-                                .get_right()
-                                .ok_or(CompilerError::new_message("No right on Subexpression definition".to_string()))?;
-                            let left = parse_node
-                                .get_left()
-                                .ok_or(CompilerError::new_message("No left on Subexpression definition".to_string()))?;
+                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on Subexpression definition".to_string()))?;
+                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on Subexpression definition".to_string()))?;
 
                             stack.push(right);
                             stack.push(node_index);
@@ -757,9 +628,7 @@ fn handle_unary_suffix<Data: GarnishData>(
             node.state = BuildNodeState::Initialized;
 
             stack.push(node.parse_node_index);
-            let left = parse_node
-                .get_left()
-                .ok_or(CompilerError::new_message(format!("No left on {:?} definition", instruction)))?;
+            let left = parse_node.get_left().ok_or(CompilerError::new_message(format!("No left on {:?} definition", instruction)))?;
             stack.push(left);
 
             nodes[left] = Some(BuildNode::new(left));
@@ -789,9 +658,7 @@ fn handle_unary_prefix<Data: GarnishData>(
             node.state = BuildNodeState::Initialized;
 
             stack.push(node.parse_node_index);
-            let right = parse_node
-                .get_right()
-                .ok_or(CompilerError::new_message(format!("No right on {:?} definition", instruction)))?;
+            let right = parse_node.get_right().ok_or(CompilerError::new_message(format!("No right on {:?} definition", instruction)))?;
             stack.push(right);
 
             nodes[right] = Some(BuildNode::new(right));
@@ -857,17 +724,11 @@ mod put_values {
 
         assert_eq!(
             data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Put, Some(0)),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
+            &vec![SimpleInstruction::new(Instruction::Put, Some(0)), SimpleInstruction::new(Instruction::EndExpression, None)]
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default());
-        assert_eq!(
-            build_data.instruction_metadata,
-            vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)]
-        )
+        assert_eq!(build_data.instruction_metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -876,17 +737,11 @@ mod put_values {
 
         assert_eq!(
             data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Put, Some(1)),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
+            &vec![SimpleInstruction::new(Instruction::Put, Some(1)), SimpleInstruction::new(Instruction::EndExpression, None)]
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default());
-        assert_eq!(
-            build_data.instruction_metadata,
-            vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)]
-        )
+        assert_eq!(build_data.instruction_metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -895,17 +750,11 @@ mod put_values {
 
         assert_eq!(
             data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Put, Some(2)),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
+            &vec![SimpleInstruction::new(Instruction::Put, Some(2)), SimpleInstruction::new(Instruction::EndExpression, None)]
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default());
-        assert_eq!(
-            build_data.instruction_metadata,
-            vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)]
-        )
+        assert_eq!(build_data.instruction_metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -914,17 +763,11 @@ mod put_values {
 
         assert_eq!(
             data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Put, Some(3)),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
+            &vec![SimpleInstruction::new(Instruction::Put, Some(3)), SimpleInstruction::new(Instruction::EndExpression, None)]
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())));
-        assert_eq!(
-            build_data.instruction_metadata,
-            vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)]
-        )
+        assert_eq!(build_data.instruction_metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -933,20 +776,11 @@ mod put_values {
 
         assert_eq!(
             data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Put, Some(3)),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
+            &vec![SimpleInstruction::new(Instruction::Put, Some(3)), SimpleInstruction::new(Instruction::EndExpression, None)]
         );
 
-        assert_eq!(
-            data.get_data(),
-            &SimpleDataList::default().append(SimpleData::CharList("characters".into()))
-        );
-        assert_eq!(
-            build_data.instruction_metadata,
-            vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)]
-        )
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::CharList("characters".into())));
+        assert_eq!(build_data.instruction_metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -955,17 +789,11 @@ mod put_values {
 
         assert_eq!(
             data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Put, Some(3)),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
+            &vec![SimpleInstruction::new(Instruction::Put, Some(3)), SimpleInstruction::new(Instruction::EndExpression, None)]
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol("my_symbol"));
-        assert_eq!(
-            build_data.instruction_metadata,
-            vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)]
-        )
+        assert_eq!(build_data.instruction_metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -974,17 +802,11 @@ mod put_values {
 
         assert_eq!(
             data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Put, Some(3)),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
+            &vec![SimpleInstruction::new(Instruction::Put, Some(3)), SimpleInstruction::new(Instruction::EndExpression, None)]
         );
 
         assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol(""));
-        assert_eq!(
-            build_data.instruction_metadata,
-            vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)]
-        )
+        assert_eq!(build_data.instruction_metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -993,20 +815,11 @@ mod put_values {
 
         assert_eq!(
             data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Put, Some(3)),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
+            &vec![SimpleInstruction::new(Instruction::Put, Some(3)), SimpleInstruction::new(Instruction::EndExpression, None)]
         );
 
-        assert_eq!(
-            data.get_data(),
-            &SimpleDataList::default().append(SimpleData::ByteList(vec!['a' as u8, 'b' as u8, 'c' as u8]))
-        );
-        assert_eq!(
-            build_data.instruction_metadata,
-            vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)]
-        )
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::ByteList(vec!['a' as u8, 'b' as u8, 'c' as u8])));
+        assert_eq!(build_data.instruction_metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -1015,16 +828,10 @@ mod put_values {
 
         assert_eq!(
             data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::PutValue, None),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
+            &vec![SimpleInstruction::new(Instruction::PutValue, None), SimpleInstruction::new(Instruction::EndExpression, None)]
         );
         assert_eq!(data.get_data(), &SimpleDataList::default());
-        assert_eq!(
-            build_data.instruction_metadata,
-            vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)]
-        )
+        assert_eq!(build_data.instruction_metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 
     #[test]
@@ -1033,16 +840,10 @@ mod put_values {
 
         assert_eq!(
             data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Resolve, Some(3)),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
+            &vec![SimpleInstruction::new(Instruction::Resolve, Some(3)), SimpleInstruction::new(Instruction::EndExpression, None)]
         );
         assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol("my_value"));
-        assert_eq!(
-            build_data.instruction_metadata,
-            vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)]
-        )
+        assert_eq!(build_data.instruction_metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None)])
     }
 }
 
@@ -1066,12 +867,7 @@ mod binary_operations {
                 SimpleInstruction::new(Instruction::EndExpression, None)
             ]
         );
-        assert_eq!(
-            data.get_data(),
-            &SimpleDataList::default()
-                .append(SimpleData::Number(5.into()))
-                .append(SimpleData::Number(10.into()))
-        );
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())));
         assert_eq!(
             build_data.instruction_metadata,
             vec![
@@ -1118,12 +914,7 @@ mod unary_operations {
                 "Failed {:?} test",
                 instruction
             );
-            assert_eq!(
-                data.get_data(),
-                &SimpleDataList::default().append_symbol("value"),
-                "Failed {:?}",
-                instruction
-            );
+            assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol("value"), "Failed {:?}", instruction);
         }
     }
 }
@@ -1273,12 +1064,7 @@ mod jumps {
             ]
         );
         assert_eq!(data.get_jump_points(), &vec![0, 4, 3]);
-        assert_eq!(
-            data.get_data(),
-            &SimpleDataList::default()
-                .append(SimpleData::Number(20.into()))
-                .append(SimpleData::Number(10.into()))
-        );
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(20.into())).append(SimpleData::Number(10.into())));
         assert_eq!(
             build_data.instruction_metadata,
             vec![
@@ -1349,12 +1135,7 @@ mod logical {
             ]
         );
         assert_eq!(data.get_jump_points(), &vec![0, 3, 2]);
-        assert_eq!(
-            data.get_data(),
-            &SimpleDataList::default()
-                .append(SimpleData::Number(5.into()))
-                .append(SimpleData::Number(10.into()))
-        );
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())));
     }
 }
 
@@ -1407,12 +1188,7 @@ mod subexpression {
             ]
         );
         assert_eq!(data.get_jump_points(), &vec![0]);
-        assert_eq!(
-            data.get_data(),
-            &SimpleDataList::default()
-                .append(SimpleData::Number(10.into()))
-                .append(SimpleData::Number(20.into()))
-        );
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(10.into())).append(SimpleData::Number(20.into())));
     }
 }
 
