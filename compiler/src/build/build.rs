@@ -205,7 +205,7 @@ pub fn build<Data: GarnishData>(
                                     nodes[right] = Some(BuildNode::new(right));
                                 },
                             }
-                            
+
                             stack.push(node_index);
 
                             match parse_node.get_left() {
@@ -218,7 +218,7 @@ pub fn build<Data: GarnishData>(
                         }
                         BuildNodeState::Initialized => {
                             node.contributes_to_list = false;
-                            
+
                             let addr = data.parse_add_number(parse_node.text())?;
                             data.push_instruction(Instruction::Put, Some(addr))?;
                             instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
@@ -252,6 +252,48 @@ pub fn build<Data: GarnishData>(
                 Definition::ExpressionTerminator => {
                     data.push_instruction(Instruction::EndExpression, None)?;
                     instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+                }
+                Definition::EmptyApply => {
+                    let node = nodes.get_mut_or_error(node_index)?;
+                    
+                    match node.state {
+                        BuildNodeState::Uninitialized => {
+                            node.state = BuildNodeState::Initialized;
+                                
+                            stack.push(node.parse_node_index);
+                            let left = parse_node
+                                .get_left()
+                                .ok_or(CompilerError::new_message("No left on EmptyApply definition".to_string()))?;
+                            stack.push(left);
+
+                            nodes[left] = Some(BuildNode::new(left));
+                        }
+                        BuildNodeState::Initialized => {
+                            data.push_instruction(Instruction::EmptyApply, None)?;
+                            instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+                        }
+                    }
+                }
+                Definition::AbsoluteValue => {
+                    let node = nodes.get_mut_or_error(node_index)?;
+
+                    match node.state {
+                        BuildNodeState::Uninitialized => {
+                            node.state = BuildNodeState::Initialized;
+
+                            stack.push(node.parse_node_index);
+                            let right = parse_node
+                                .get_right()
+                                .ok_or(CompilerError::new_message("No left on AbsoluteValue definition".to_string()))?;
+                            stack.push(right);
+
+                            nodes[right] = Some(BuildNode::new(right));
+                        }
+                        BuildNodeState::Initialized => {
+                            data.push_instruction(Instruction::AbsoluteValue, None)?;
+                            instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+                        }
+                    }
                 }
                 Definition::Addition => {
                     let node = match nodes.get(node_index) {
@@ -927,6 +969,51 @@ mod binary_operations {
                 InstructionMetadata::new(None)
             ]
         )
+    }
+}
+
+#[cfg(test)]
+mod unary_operations {
+    use crate::build::build::tests::build_input;
+    use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
+    use garnish_lang_traits::Instruction;
+
+    #[test]
+    fn build_empty_apply() {
+        let (data, build_data) = build_input("5~~");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::EmptyApply, None),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+        );
+    }
+
+    #[test]
+    fn build_absolute_value() {
+        let (data, build_data) = build_input("++5");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::AbsoluteValue, None),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+        );
     }
 }
 
