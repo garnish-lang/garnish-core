@@ -1,6 +1,6 @@
+use std::error::Error;
 use crate::lex::LexerToken;
 use crate::parse::SecondaryDefinition;
-use std::error::Error;
 use std::fmt::{Debug, Display, Formatter};
 
 #[derive(Debug, Clone, Eq, PartialEq)]
@@ -12,17 +12,17 @@ impl Display for NoSource {
     }
 }
 
-impl std::error::Error for NoSource {}
+impl Error for NoSource {}
 
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub struct CompilerError<Source: 'static + std::error::Error = NoSource> {
+pub struct CompilerError<Source: 'static + Error = NoSource> {
     message: String,
     line: usize,
     column: usize,
     source: Option<Source>,
 }
 
-impl<Source: 'static + std::error::Error> CompilerError<Source> {
+impl<Source: 'static + Error> CompilerError<Source> {
     pub fn new<T: ToString>(message: T, line: usize, column: usize) -> Self {
         CompilerError {
             message: message.to_string(),
@@ -52,7 +52,7 @@ impl<Source: 'static + std::error::Error> CompilerError<Source> {
     }
 }
 
-impl<Source: 'static + std::error::Error> Default for CompilerError<Source> {
+impl<Source: 'static + Error> Default for CompilerError<Source> {
     fn default() -> Self {
         CompilerError {
             message: String::new(),
@@ -63,13 +63,13 @@ impl<Source: 'static + std::error::Error> Default for CompilerError<Source> {
     }
 }
 
-impl<Source: 'static + std::error::Error> Display for CompilerError<Source> {
+impl<Source: 'static + Error> Display for CompilerError<Source> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(format!("{:?}", self).as_str())
     }
 }
 
-impl<Source: 'static + std::error::Error> std::error::Error for CompilerError<Source> {
+impl<Source: 'static + Error> Error for CompilerError<Source> {
     fn source(&self) -> Option<&(dyn Error + 'static)> {
         match &self.source {
             None => None,
@@ -78,7 +78,7 @@ impl<Source: 'static + std::error::Error> std::error::Error for CompilerError<So
     }
 }
 
-impl<Source: 'static + std::error::Error> From<Source> for CompilerError<Source> {
+impl<Source: 'static + Error> From<Source> for CompilerError<Source> {
     fn from(source: Source) -> Self {
         let mut e = CompilerError::default();
         e.source = Some(source);
@@ -86,7 +86,7 @@ impl<Source: 'static + std::error::Error> From<Source> for CompilerError<Source>
     }
 }
 
-impl<Source: 'static + std::error::Error> From<CompilerError<Source>> for String {
+impl<Source: 'static + Error> From<CompilerError<Source>> for String {
     fn from(e: CompilerError<Source>) -> Self {
         match e.source {
             None => format!("{} at line {} col {}", e.message, e.line, e.column),
@@ -97,7 +97,7 @@ impl<Source: 'static + std::error::Error> From<CompilerError<Source>> for String
 
 // Creation utilities
 
-pub(crate) fn composition_error<T, S: std::error::Error + 'static>(
+pub(crate) fn composition_error<T, S: Error + 'static>(
     first: SecondaryDefinition,
     second: SecondaryDefinition,
     token: &LexerToken,
@@ -105,23 +105,23 @@ pub(crate) fn composition_error<T, S: std::error::Error + 'static>(
     Err(CompilerError::new_message(format!("Syntax Error: A {:?} token cannot follow a {:?} token", second, first)).append_token_details(token))
 }
 
-pub(crate) fn unmatched_grouping_error<T, S: std::error::Error + 'static>(token: &LexerToken) -> Result<T, CompilerError<S>> {
+pub(crate) fn unmatched_grouping_error<T, S: Error + 'static>(token: &LexerToken) -> Result<T, CompilerError<S>> {
     Err(CompilerError::new_message(format!("Syntax Error: Unmatched grouping token")).append_token_details(token))
 }
 
-pub(crate) fn unclosed_grouping_error<T, S: std::error::Error + 'static>(token: &LexerToken) -> Result<T, CompilerError<S>> {
+pub(crate) fn unclosed_grouping_error<T, S: Error + 'static>(token: &LexerToken) -> Result<T, CompilerError<S>> {
     Err(CompilerError::new_message(format!("Syntax Error: Unclosed grouping")).append_token_details(token))
 }
 
-pub(crate) fn implementation_error<T, S: std::error::Error + 'static>(message: String) -> Result<T, CompilerError<S>> {
+pub(crate) fn implementation_error<T, S: Error + 'static>(message: String) -> Result<T, CompilerError<S>> {
     Err(CompilerError::new_message(format!("Implementation Error: {}", message)))
 }
 
-pub(crate) fn implementation_error_with_token<T, S: std::error::Error + 'static>(message: String, token: &LexerToken) -> Result<T, CompilerError<S>> {
+pub(crate) fn implementation_error_with_token<T, S: Error + 'static>(message: String, token: &LexerToken) -> Result<T, CompilerError<S>> {
     append_token_details(Err(CompilerError::new_message(format!("Implementation Error: {}", message))), token)
 }
 
-pub(crate) fn append_token_details<T, S: std::error::Error + 'static>(
+pub(crate) fn append_token_details<T, S: Error + 'static>(
     result: Result<T, CompilerError<S>>,
     token: &LexerToken,
 ) -> Result<T, CompilerError<S>> {
