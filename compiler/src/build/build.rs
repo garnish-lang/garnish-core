@@ -146,7 +146,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
     let tree_root_jump = data.get_jump_table_len();
 
     while let Some(root_index) = root_stack.pop() {
-        match nodes.get(root_index) {
+        let current_root_jump = match nodes.get(root_index) {
             Some(Some(node)) => match &node.jump_index_to_update {
                 Some(index) => {
                     let jump_index = data.get_instruction_len();
@@ -154,13 +154,21 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         Some(item) => *item = jump_index,
                         None => Err(CompilerError::new_message(format!("No jump point at {} when pulling from root stack", index)))?,
                     }
+
+                    index.clone()
                 }
-                None => data.push_jump_point(data.get_instruction_len())?,
+                None => {
+                    let index = data.get_jump_table_len();
+                    data.push_jump_point(data.get_instruction_len())?;
+                    index
+                }
             },
             _ => {
+                let index = data.get_jump_table_len();
                 data.push_jump_point(data.get_instruction_len())?;
+                index
             }
-        }
+        };
         let mut stack = vec![root_index];
 
         while let Some(node_index) = stack.pop() {
@@ -362,7 +370,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                                         });
                                         data.push_instruction(Instruction::JumpIfTrue, Some(jump_index.clone()))?;
                                         instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                                    },
+                                    }
                                     _ => {}
                                 },
                                 None => {
@@ -510,7 +518,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                             nodes[right] = Some(BuildNode::new_with_jump_and_end(
                                 right,
                                 jump_index.clone(),
-                                vec![(Instruction::UpdateValue, None), (Instruction::JumpTo, Some(tree_root_jump.clone()))],
+                                vec![(Instruction::UpdateValue, None), (Instruction::JumpTo, Some(current_root_jump.clone()))],
                             ));
                         }
                     }
@@ -1702,6 +1710,38 @@ mod reapply {
         );
         assert_eq!(data.get_jump_points(), &vec![0, 4]);
         assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(50.into())).append(SimpleData::Number(40.into())));
+    }
+
+    #[test]
+    fn nested_reapply() {
+        let (data, build_data) = build_input("5 {$! ^~ 40 |> 50}");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::MakeList, Some(2)),
+                SimpleInstruction::new(Instruction::EndExpression, None),
+                SimpleInstruction::new(Instruction::Put, Some(1)),
+                SimpleInstruction::new(Instruction::JumpIfTrue, Some(2)),
+                SimpleInstruction::new(Instruction::Put, Some(5)),
+                SimpleInstruction::new(Instruction::EndExpression, None),
+                SimpleInstruction::new(Instruction::Put, Some(6)),
+                SimpleInstruction::new(Instruction::UpdateValue, None),
+                SimpleInstruction::new(Instruction::JumpTo, Some(1)),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0, 4, 8]);
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Expression(1))
+                .append(SimpleData::Number(50.into()))
+                .append(SimpleData::Number(40.into()))
+        );
     }
 }
 
