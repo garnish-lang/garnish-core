@@ -278,33 +278,9 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                 Definition::GreaterThanOrEqual => handle_binary_operation(Instruction::GreaterThanOrEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::Apply => handle_binary_operation(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::Concatenation => handle_binary_operation(Instruction::Concat, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::ApplyTo => {
-                    let node = match nodes.get(node_index) {
-                        Some(Some(node)) => node,
-                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
-                    };
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            stack.push(node.parse_node_index);
-                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on ApplyTo definition".to_string()))?;
-                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on ApplyTo definition".to_string()))?;
-
-                            stack.push(left);
-                            stack.push(right);
-
-                            nodes[right] = Some(BuildNode::new(right));
-                            nodes[left] = Some(BuildNode::new(left));
-
-                            let node = nodes.get_mut_or_error(node_index)?;
-
-                            node.state = BuildNodeState::Initialized
-                        }
-                        BuildNodeState::Initialized => {
-                            data.push_instruction(Instruction::Apply, None)?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
-                        }
-                    }
-                }
+                Definition::ApplyTo => handle_binary_operation_with_push(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata, |left, right| {
+                    (left, right)
+                })?,
                 Definition::List => {
                     let node = match nodes.get_mut(node_index) {
                         Some(Some(node)) => node,
@@ -779,6 +755,22 @@ fn handle_binary_operation<Data: GarnishData>(
     data: &mut Data,
     instruction_metadata: &mut Vec<InstructionMetadata>,
 ) -> Result<(), CompilerError<Data::Error>> {
+    handle_binary_operation_with_push(instruction, nodes, node_index, stack, parse_node, data, instruction_metadata, |left, right| (right, left))
+}
+
+fn handle_binary_operation_with_push<Data: GarnishData, Fn>(
+    instruction: Instruction,
+    nodes: &mut Vec<Option<BuildNode<Data>>>,
+    node_index: usize,
+    stack: &mut Vec<usize>,
+    parse_node: &ParseNode,
+    data: &mut Data,
+    instruction_metadata: &mut Vec<InstructionMetadata>,
+    order_fn: Fn,
+) -> Result<(), CompilerError<Data::Error>>
+where
+    Fn: FnOnce(usize, usize) -> (usize, usize),
+{
     let node = match nodes.get_mut(node_index) {
         Some(Some(node)) => node,
         _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
@@ -791,8 +783,10 @@ fn handle_binary_operation<Data: GarnishData>(
             stack.push(node.parse_node_index);
             let right = parse_node.get_right().ok_or(CompilerError::new_message(format!("No right on {:?} definition", instruction)))?;
             let left = parse_node.get_left().ok_or(CompilerError::new_message(format!("No left on {:?} definition", instruction)))?;
-            stack.push(right);
-            stack.push(left);
+
+            let (first, second) = order_fn(left, right);
+            stack.push(first);
+            stack.push(second);
 
             nodes[right] = Some(BuildNode::new(right));
             nodes[left] = Some(BuildNode::new(left));
@@ -984,11 +978,11 @@ mod put_values {
 
 #[cfg(test)]
 mod binary_operations {
+    use crate::build::InstructionMetadata;
     use crate::build::build::tests::build_input;
+    use crate::parse::Definition::Access;
     use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
     use garnish_lang_traits::Instruction;
-    use crate::build::InstructionMetadata;
-    use crate::parse::Definition::Access;
 
     macro_rules! binary_tests {
         ($($name:ident: $input:expr, $instruction:expr,)*) => {
