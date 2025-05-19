@@ -567,7 +567,14 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         }
                     }
                 }
-                t => unimplemented!("{:?}", t),
+                Definition::Or => {}
+                Definition::CommaList => {}
+                Definition::Drop => {}
+                Definition::ExpressionSeparator => {}
+                Definition::JumpIfFalse => {}
+                Definition::PrefixApply => {}
+                Definition::SuffixApply => {}
+                Definition::InfixApply => {}
             }
 
             match nodes.get_mut(node_index) {
@@ -833,7 +840,6 @@ mod tests {
 mod put_values {
     use crate::build::InstructionMetadata;
     use crate::build::build::tests::build_input;
-    use crate::parse::Definition::Access;
     use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
     use garnish_lang_traits::Instruction;
 
@@ -978,9 +984,7 @@ mod put_values {
 
 #[cfg(test)]
 mod binary_operations {
-    use crate::build::InstructionMetadata;
     use crate::build::build::tests::build_input;
-    use crate::parse::Definition::Access;
     use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
     use garnish_lang_traits::Instruction;
 
