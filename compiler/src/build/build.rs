@@ -282,51 +282,8 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                 Definition::ApplyTo => handle_binary_operation_with_push(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata, |left, right| {
                     (left, right)
                 })?,
-                Definition::CommaList => todo!(),
-                Definition::List => {
-                    let node = match nodes.get_mut(node_index) {
-                        Some(Some(node)) => node,
-                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
-                    };
-
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            node.contributes_to_list = false;
-
-                            stack.push(node.parse_node_index);
-                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on Addition definition".to_string()))?;
-                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on Addition definition".to_string()))?;
-                            stack.push(right);
-                            stack.push(left);
-
-                            match node.list_parent {
-                                Some(parent) => {
-                                    nodes[right] = Some(BuildNode::new_with_list(right, parent));
-                                    nodes[left] = Some(BuildNode::new_with_list(left, parent));
-                                }
-                                None => {
-                                    nodes[right] = Some(BuildNode::new_with_list(right, node_index));
-                                    nodes[left] = Some(BuildNode::new_with_list(left, node_index));
-                                }
-                            }
-
-                            let node = nodes.get_mut_or_error(node_index)?;
-
-                            node.state = BuildNodeState::Initialized
-                        }
-                        BuildNodeState::Initialized => match node.list_parent {
-                            Some(_) => {}
-                            None => {
-                                let node = nodes.get_mut_or_error(node_index)?;
-
-                                let count = node.child_count.next().ok_or(CompilerError::new_message("Failed to increment child count for List".to_string()))?;
-
-                                data.push_instruction(Instruction::MakeList, Some(count))?;
-                                instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
-                            }
-                        },
-                    }
-                }
+                Definition::CommaList => handle_list(Definition::CommaList, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::List => handle_list(Definition::List, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::Group => {
                     let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on NestedExpression definition".to_string()))?;
 
@@ -890,6 +847,58 @@ where
     Ok(())
 }
 
+fn handle_list<Data: GarnishData>(
+    definition: Definition,
+    nodes: &mut Vec<Option<BuildNode<Data>>>,
+    node_index: usize,
+    stack: &mut Vec<usize>,
+    parse_node: &ParseNode,
+    data: &mut Data,
+    instruction_metadata: &mut Vec<InstructionMetadata>,
+) -> Result<(), CompilerError<Data::Error>> {
+    let node = match nodes.get_mut(node_index) {
+        Some(Some(node)) => node,
+        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+    };
+
+    match node.state {
+        BuildNodeState::Uninitialized => {
+            node.state = BuildNodeState::Initialized;
+            node.contributes_to_list = false;
+
+            stack.push(node.parse_node_index);
+            let right = parse_node.get_right().ok_or(CompilerError::new_message(format!("No right on {:?} definition", definition)))?;
+            let left = parse_node.get_left().ok_or(CompilerError::new_message(format!("No left on {:?} definition", definition)))?;
+            stack.push(right);
+            stack.push(left);
+
+            match node.list_parent {
+                Some(parent) => {
+                    nodes[right] = Some(BuildNode::new_with_list(right, parent));
+                    nodes[left] = Some(BuildNode::new_with_list(left, parent));
+                }
+                None => {
+                    nodes[right] = Some(BuildNode::new_with_list(right, node_index));
+                    nodes[left] = Some(BuildNode::new_with_list(left, node_index));
+                }
+            }
+        }
+        BuildNodeState::Initialized => match node.list_parent {
+            Some(_) => {}
+            None => {
+                let node = nodes.get_mut_or_error(node_index)?;
+
+                let count = node.child_count.next().ok_or(CompilerError::new_message("Failed to increment child count for List".to_string()))?;
+
+                data.push_instruction(Instruction::MakeList, Some(count))?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+            }
+        }
+    }
+    
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use crate::build::build::build;
@@ -1264,6 +1273,45 @@ mod lists {
     #[test]
     fn build_list() {
         let (data, build_data) = build_input("5 10 15 20 25");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::Put, Some(5)),
+                SimpleInstruction::new(Instruction::Put, Some(6)),
+                SimpleInstruction::new(Instruction::Put, Some(7)),
+                SimpleInstruction::new(Instruction::MakeList, Some(5)),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into()))
+                .append(SimpleData::Number(15.into()))
+                .append(SimpleData::Number(20.into()))
+                .append(SimpleData::Number(25.into()))
+        );
+        assert_eq!(
+            build_data.instruction_metadata,
+            vec![
+                InstructionMetadata::new(Some(0)),
+                InstructionMetadata::new(Some(2)),
+                InstructionMetadata::new(Some(4)),
+                InstructionMetadata::new(Some(6)),
+                InstructionMetadata::new(Some(8)),
+                InstructionMetadata::new(Some(7)),
+                InstructionMetadata::new(None)
+            ]
+        )
+    }
+
+    #[test]
+    fn build_comma_list() {
+        let (data, build_data) = build_input("5, 10, 15, 20, 25");
 
         assert_eq!(
             data.get_instructions(),
