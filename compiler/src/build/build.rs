@@ -152,7 +152,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                     let jump_index = data.get_instruction_len();
                     match data.get_jump_point_mut(index.clone()) {
                         Some(item) => *item = jump_index,
-                        None => todo!(),
+                        None => Err(CompilerError::new_message(format!("No jump point at {} when pulling from root stack", index)))?,
                     }
                 }
                 None => data.push_jump_point(data.get_instruction_len())?,
@@ -614,7 +614,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         }
                     }
                 }
-                Definition::Drop => todo!(),
+                Definition::Drop => Err(CompilerError::new_message("Cannot build a Drop definition".to_string()))?
             }
 
             match nodes.get_mut(node_index) {
@@ -893,9 +893,9 @@ fn handle_list<Data: GarnishData>(
                 data.push_instruction(Instruction::MakeList, Some(count))?;
                 instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
             }
-        }
+        },
     }
-    
+
     Ok(())
 }
 
@@ -903,8 +903,8 @@ fn handle_list<Data: GarnishData>(
 mod tests {
     use crate::build::build::build;
     use crate::build::{BuildData, InstructionMetadata};
-    use crate::lex::lex;
-    use crate::parse::parse;
+    use crate::lex::{LexerToken, TokenType, lex};
+    use crate::parse::{Definition, ParseNode, SecondaryDefinition, parse};
     use garnish_lang_simple_data::{SimpleDataList, SimpleGarnishData, SimpleInstruction};
     use garnish_lang_traits::Instruction;
 
@@ -925,6 +925,25 @@ mod tests {
 
         assert_eq!(data.get_data(), &SimpleDataList::default());
         assert_eq!(result.instruction_metadata, vec![InstructionMetadata::new(None)])
+    }
+
+    #[test]
+    fn build_drop_is_error() {
+        let mut data = SimpleGarnishData::new();
+        let result = build(
+            0,
+            vec![ParseNode::new(
+                Definition::Drop,
+                SecondaryDefinition::None,
+                None,
+                None,
+                None,
+                LexerToken::new("".to_string(), TokenType::Unknown, 0, 0),
+            )],
+            &mut data,
+        );
+
+        assert!(result.is_err());
     }
 }
 
