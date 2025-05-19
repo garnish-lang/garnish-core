@@ -350,20 +350,27 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         BuildNodeState::Initialized => {
                             let jump_index = data.get_jump_table_len();
                             data.push_jump_point(Data::Size::zero())?;
-                            data.push_instruction(Instruction::JumpIfTrue, Some(jump_index.clone()))?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
 
                             let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on JumpIfTrue definition".to_string()))?;
                             match node.conditional_parent {
                                 Some(conditional_parent) => match nodes.get_mut(conditional_parent) {
-                                    Some(Some(parent)) => parent.conditional_items.push(ConditionItem {
-                                        node_index: right,
-                                        jump_index_to_update: jump_index,
-                                        root_end_instruction: (Instruction::Invalid, None),
-                                    }),
+                                    Some(Some(parent)) => {
+                                        parent.conditional_items.push(ConditionItem {
+                                            node_index: right,
+                                            jump_index_to_update: jump_index.clone(),
+                                            root_end_instruction: (Instruction::Invalid, None),
+                                        });
+                                        data.push_instruction(Instruction::JumpIfTrue, Some(jump_index.clone()))?;
+                                        instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+                                    },
                                     _ => {}
                                 },
                                 None => {
+                                    data.push_instruction(Instruction::JumpIfTrue, Some(jump_index.clone()))?;
+                                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+                                    data.push_instruction(Instruction::PutValue, None)?;
+                                    instruction_metadata.push(InstructionMetadata::new(None));
+                                    
                                     root_stack.push(right);
 
                                     let jump_to_index = data.get_jump_table_len();
@@ -1531,18 +1538,20 @@ mod jumps {
             &vec![
                 SimpleInstruction::new(Instruction::Put, Some(2)),
                 SimpleInstruction::new(Instruction::JumpIfTrue, Some(1)),
+                SimpleInstruction::new(Instruction::PutValue, None),
                 SimpleInstruction::new(Instruction::EndExpression, None),
                 SimpleInstruction::new(Instruction::Put, Some(3)),
                 SimpleInstruction::new(Instruction::JumpTo, Some(2)),
             ]
         );
-        assert_eq!(data.get_jump_points(), &vec![0, 3, 2]);
+        assert_eq!(data.get_jump_points(), &vec![0, 4, 3]);
         assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(10.into())));
         assert_eq!(
             build_data.instruction_metadata,
             vec![
                 InstructionMetadata::new(Some(0)),
                 InstructionMetadata::new(Some(1)),
+                InstructionMetadata::new(None),
                 InstructionMetadata::new(None),
                 InstructionMetadata::new(Some(2)),
                 InstructionMetadata::new(None),
