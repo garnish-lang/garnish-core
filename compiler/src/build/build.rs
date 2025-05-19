@@ -41,7 +41,7 @@ enum BuildNodeState {
 struct BuildNode<Data: GarnishData> {
     state: BuildNodeState,
     parse_node_index: usize,
-    list_parent: Option<usize>,
+    list_parent: Option<(usize, Definition)>,
     child_count: Data::SizeIterator,
     contributes_to_list: bool,
     jump_index_to_update: Option<Data::Size>,
@@ -65,11 +65,11 @@ impl<Data: GarnishData> BuildNode<Data> {
         }
     }
 
-    fn new_with_list(parse_node_index: usize, list_parent: usize) -> Self {
+    fn new_with_list(parse_node_index: usize, list_parent: usize, list_parent_definition: Definition) -> Self {
         Self {
             state: BuildNodeState::Uninitialized,
             parse_node_index,
-            list_parent: Some(list_parent),
+            list_parent: Some((list_parent, list_parent_definition)),
             child_count: Data::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
             contributes_to_list: true,
             jump_index_to_update: None,
@@ -614,12 +614,12 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         }
                     }
                 }
-                Definition::Drop => Err(CompilerError::new_message("Cannot build a Drop definition".to_string()))?
+                Definition::Drop => Err(CompilerError::new_message("Cannot build a Drop definition".to_string()))?,
             }
 
             match nodes.get_mut(node_index) {
                 Some(Some(node)) if node.contributes_to_list => match node.list_parent {
-                    Some(parent) => {
+                    Some((parent, _)) => {
                         node.contributes_to_list = false;
 
                         let parent_node = nodes.get_mut_or_error(parent)?;
@@ -864,7 +864,6 @@ fn handle_list<Data: GarnishData>(
     match node.state {
         BuildNodeState::Uninitialized => {
             node.state = BuildNodeState::Initialized;
-            node.contributes_to_list = false;
 
             stack.push(node.parse_node_index);
             let right = parse_node.get_right().ok_or(CompilerError::new_message(format!("No right on {:?} definition", definition)))?;
@@ -872,20 +871,18 @@ fn handle_list<Data: GarnishData>(
             stack.push(right);
             stack.push(left);
 
-            match node.list_parent {
-                Some(parent) => {
-                    nodes[right] = Some(BuildNode::new_with_list(right, parent));
-                    nodes[left] = Some(BuildNode::new_with_list(left, parent));
-                }
-                None => {
-                    nodes[right] = Some(BuildNode::new_with_list(right, node_index));
-                    nodes[left] = Some(BuildNode::new_with_list(left, node_index));
-                }
-            }
+            let (parent, definition, contributes_to_list) = match node.list_parent {
+                Some((parent, definition)) if definition == parse_node.get_definition() => (parent, definition, false),
+                _ => (node_index, parse_node.get_definition(), true),
+            };
+            node.contributes_to_list = contributes_to_list;
+
+            nodes[right] = Some(BuildNode::new_with_list(right, parent, definition));
+            nodes[left] = Some(BuildNode::new_with_list(left, parent, definition));
         }
         BuildNodeState::Initialized => match node.list_parent {
-            Some(_) => {}
-            None => {
+            Some((_parent, definition)) if definition == parse_node.get_definition() => {}
+            _ => {
                 let node = nodes.get_mut_or_error(node_index)?;
 
                 let count = node.child_count.next().ok_or(CompilerError::new_message("Failed to increment child count for List".to_string()))?;
@@ -1365,6 +1362,34 @@ mod lists {
                 InstructionMetadata::new(None)
             ]
         )
+    }
+
+    #[test]
+    fn nested_lists() {
+        let (data, _build_data) = build_input("5, 10 15 20, 25");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::Put, Some(5)),
+                SimpleInstruction::new(Instruction::Put, Some(6)),
+                SimpleInstruction::new(Instruction::MakeList, Some(3)),
+                SimpleInstruction::new(Instruction::Put, Some(7)),
+                SimpleInstruction::new(Instruction::MakeList, Some(3)),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into()))
+                .append(SimpleData::Number(15.into()))
+                .append(SimpleData::Number(20.into()))
+                .append(SimpleData::Number(25.into()))
+        );
     }
 }
 
