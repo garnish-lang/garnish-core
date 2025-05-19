@@ -443,44 +443,8 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         },
                     }
                 }
-                Definition::Or => todo!(),
-                Definition::And => {
-                    let node = match nodes.get_mut(node_index) {
-                        Some(Some(node)) => node,
-                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
-                    };
-
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            node.state = BuildNodeState::Initialized;
-
-                            stack.push(node.parse_node_index);
-                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on And definition".to_string()))?;
-                            stack.push(left);
-
-                            nodes[left] = Some(BuildNode::new_with_conditional(left, node_index));
-                        }
-                        BuildNodeState::Initialized => {
-                            let jump_index = data.get_jump_table_len();
-                            data.push_jump_point(Data::Size::zero())?;
-                            data.push_instruction(Instruction::And, Some(jump_index.clone()))?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-
-                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on And definition".to_string()))?;
-
-                            root_stack.push(right);
-
-                            let jump_to_index = data.get_jump_table_len();
-                            data.push_jump_point(data.get_instruction_len())?;
-
-                            nodes[right] = Some(BuildNode::new_with_jump_and_end(
-                                right,
-                                jump_index.clone(),
-                                vec![(Instruction::Tis, None), (Instruction::JumpTo, Some(jump_to_index))],
-                            ));
-                        }
-                    }
-                }
+                Definition::Or => handle_logical_binary(Instruction::Or, &mut nodes, node_index, &mut stack, &mut root_stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::And => handle_logical_binary(Instruction::And, &mut nodes, node_index, &mut stack, &mut root_stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::Reapply => {
                     let node = match nodes.get_mut(node_index) {
                         Some(Some(node)) => node,
@@ -677,6 +641,55 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         instruction_metadata,
         jump_index: tree_root_jump,
     })
+}
+
+fn handle_logical_binary<Data: GarnishData>(
+    instruction: Instruction,
+    nodes: &mut Vec<Option<BuildNode<Data>>>,
+    node_index: usize,
+    stack: &mut Vec<usize>,
+    root_stack: &mut Vec<usize>,
+    parse_node: &ParseNode,
+    data: &mut Data,
+    instruction_metadata: &mut Vec<InstructionMetadata>,
+) -> Result<(), CompilerError<Data::Error>> {
+    let node = match nodes.get_mut(node_index) {
+        Some(Some(node)) => node,
+        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+    };
+
+    match node.state {
+        BuildNodeState::Uninitialized => {
+            node.state = BuildNodeState::Initialized;
+
+            stack.push(node.parse_node_index);
+            let left = parse_node.get_left().ok_or(CompilerError::new_message(format!("No left on {:?} definition", instruction)))?;
+            stack.push(left);
+
+            nodes[left] = Some(BuildNode::new_with_conditional(left, node_index));
+        }
+        BuildNodeState::Initialized => {
+            let jump_index = data.get_jump_table_len();
+            data.push_jump_point(Data::Size::zero())?;
+            data.push_instruction(instruction, Some(jump_index.clone()))?;
+            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+
+            let right = parse_node.get_right().ok_or(CompilerError::new_message(format!("No right on {:?} definition", instruction)))?;
+
+            root_stack.push(right);
+
+            let jump_to_index = data.get_jump_table_len();
+            data.push_jump_point(data.get_instruction_len())?;
+
+            nodes[right] = Some(BuildNode::new_with_jump_and_end(
+                right,
+                jump_index.clone(),
+                vec![(Instruction::Tis, None), (Instruction::JumpTo, Some(jump_to_index))],
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 fn handle_value_primitive<Data: GarnishData, Fn>(
@@ -1673,9 +1686,9 @@ mod logical {
             &vec![
                 SimpleInstruction::new(Instruction::Put, Some(3)),
                 SimpleInstruction::new(Instruction::And, Some(1)),
-                SimpleInstruction::new(Instruction::And, Some(3)), // 2
+                SimpleInstruction::new(Instruction::And, Some(3)),        // 2
                 SimpleInstruction::new(Instruction::EndExpression, None), // 3
-                SimpleInstruction::new(Instruction::Put, Some(4)), // 4
+                SimpleInstruction::new(Instruction::Put, Some(4)),        // 4
                 SimpleInstruction::new(Instruction::Tis, None),
                 SimpleInstruction::new(Instruction::JumpTo, Some(4)),
                 SimpleInstruction::new(Instruction::Put, Some(5)), // 7
@@ -1684,7 +1697,63 @@ mod logical {
             ]
         );
         assert_eq!(data.get_jump_points(), &vec![0, 7, 2, 4, 3]);
-        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(20.into())).append(SimpleData::Number(10.into())));
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(20.into()))
+                .append(SimpleData::Number(10.into()))
+        );
+    }
+
+    #[test]
+    fn or() {
+        let (data, build_data) = build_input("5 || 10");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::Or, Some(1)),
+                SimpleInstruction::new(Instruction::EndExpression, None),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::Tis, None),
+                SimpleInstruction::new(Instruction::JumpTo, Some(2)),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0, 3, 2]);
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())));
+    }
+
+    #[test]
+    fn double_or() {
+        let (data, build_data) = build_input("5 || 10 || 20");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::Or, Some(1)),
+                SimpleInstruction::new(Instruction::Or, Some(3)),         // 2
+                SimpleInstruction::new(Instruction::EndExpression, None), // 3
+                SimpleInstruction::new(Instruction::Put, Some(4)),        // 4
+                SimpleInstruction::new(Instruction::Tis, None),
+                SimpleInstruction::new(Instruction::JumpTo, Some(4)),
+                SimpleInstruction::new(Instruction::Put, Some(5)), // 7
+                SimpleInstruction::new(Instruction::Tis, None),
+                SimpleInstruction::new(Instruction::JumpTo, Some(2)),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0, 7, 2, 4, 3]);
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(20.into()))
+                .append(SimpleData::Number(10.into()))
+        );
     }
 }
 
