@@ -866,10 +866,6 @@ fn handle_list<Data: GarnishData>(
             node.state = BuildNodeState::Initialized;
 
             stack.push(node.parse_node_index);
-            let right = parse_node.get_right().ok_or(CompilerError::new_message(format!("No right on {:?} definition", definition)))?;
-            let left = parse_node.get_left().ok_or(CompilerError::new_message(format!("No left on {:?} definition", definition)))?;
-            stack.push(right);
-            stack.push(left);
 
             let (parent, definition, contributes_to_list) = match node.list_parent {
                 Some((parent, definition)) if definition == parse_node.get_definition() => (parent, definition, false),
@@ -877,8 +873,20 @@ fn handle_list<Data: GarnishData>(
             };
             node.contributes_to_list = contributes_to_list;
 
-            nodes[right] = Some(BuildNode::new_with_list(right, parent, definition));
-            nodes[left] = Some(BuildNode::new_with_list(left, parent, definition));
+            match parse_node.get_right() {
+                None => {}
+                Some(right) => {
+                    stack.push(right);
+                    nodes[right] = Some(BuildNode::new_with_list(right, parent, definition));
+                }
+            }
+            match parse_node.get_left() {
+                None => {}
+                Some(left) => {
+                    stack.push(left);
+                    nodes[left] = Some(BuildNode::new_with_list(left, parent, definition));
+                }
+            }
         }
         BuildNodeState::Initialized => match node.list_parent {
             Some((_parent, definition)) if definition == parse_node.get_definition() => {}
@@ -1323,6 +1331,47 @@ mod lists {
                 InstructionMetadata::new(None)
             ]
         )
+    }
+
+    #[test]
+    fn empty_list() {
+        let (data, _build_data) = build_input("(,)");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![SimpleInstruction::new(Instruction::MakeList, Some(0)), SimpleInstruction::new(Instruction::EndExpression, None)]
+        );
+        assert_eq!(data.get_data(), &SimpleDataList::default());
+    }
+
+    #[test]
+    fn empty_left() {
+        let (data, _build_data) = build_input("(,5)");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::MakeList, Some(1)),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())));
+    }
+
+    #[test]
+    fn empty_right() {
+        let (data, _build_data) = build_input("(5,)");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::MakeList, Some(1)),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())));
     }
 
     #[test]
