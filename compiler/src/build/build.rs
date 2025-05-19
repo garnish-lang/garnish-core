@@ -546,7 +546,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         }
                     }
                 }
-                Definition::Subexpression => {
+                Definition::Subexpression | Definition::ExpressionSeparator => {
                     let node = match nodes.get_mut(node_index) {
                         Some(Some(node)) => node,
                         _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
@@ -571,7 +571,6 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         }
                     }
                 }
-                Definition::ExpressionSeparator => {}
                 Definition::SuffixApply => {
                     let node = match nodes.get_mut(node_index) {
                         Some(Some(node)) => node,
@@ -1512,6 +1511,24 @@ mod subexpression {
     #[test]
     fn subexpression() {
         let (data, build_data) = build_input("10\n\n20");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::UpdateValue, None),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::EndExpression, None),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0]);
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(10.into())).append(SimpleData::Number(20.into())));
+    }
+
+    #[test]
+    fn expression_separator() {
+        let (data, build_data) = build_input("10 ; 20");
 
         assert_eq!(build_data.jump_index, 0);
         assert_eq!(
