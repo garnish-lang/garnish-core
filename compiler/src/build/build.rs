@@ -1334,6 +1334,33 @@ mod lists {
     }
 
     #[test]
+    fn list_with_operations() {
+        let (data, _build_data) = build_input("5 + 10 20 / 30");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::Add, None),
+                SimpleInstruction::new(Instruction::Put, Some(5)),
+                SimpleInstruction::new(Instruction::Put, Some(6)),
+                SimpleInstruction::new(Instruction::Divide, None),
+                SimpleInstruction::new(Instruction::MakeList, Some(2)),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(5.into()))
+                .append(SimpleData::Number(10.into()))
+                .append(SimpleData::Number(20.into()))
+                .append(SimpleData::Number(30.into()))
+        );
+    }
+
+    #[test]
     fn empty_list() {
         let (data, _build_data) = build_input("(,)");
 
