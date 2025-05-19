@@ -172,13 +172,73 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                 Definition::Unit => handle_value_primitive(|data, _| data.add_unit(), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::False => handle_value_primitive(|data, _| data.add_false(), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::True => handle_value_primitive(|data, _| data.add_true(), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Number => handle_value_primitive(|data, node| data.parse_add_number(node.text()), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::CharList => handle_value_primitive(|data, node| data.parse_add_char_list(node.text()), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::ByteList => handle_value_primitive(|data, node| data.parse_add_byte_list(node.text()), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Symbol => handle_value_primitive(|data, node| data.parse_add_symbol(&node.text()[1..]), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Number => handle_value_primitive(
+                    |data, node| data.parse_add_number(node.text()),
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::CharList => handle_value_primitive(
+                    |data, node| data.parse_add_char_list(node.text()),
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::ByteList => handle_value_primitive(
+                    |data, node| data.parse_add_byte_list(node.text()),
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::Symbol => handle_value_primitive(
+                    |data, node| data.parse_add_symbol(&node.text()[1..]),
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
                 Definition::Value => handle_value_like(|_, _| Ok(None), Instruction::PutValue, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Identifier => handle_value_like(|data, node| Ok(Some(data.parse_add_symbol(node.text())?)), Instruction::Resolve, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::ExpressionTerminator => handle_value_like(|_, _| Ok(None), Instruction::EndExpression, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Identifier => handle_value_like(
+                    |data, node| Ok(Some(data.parse_add_symbol(node.text())?)),
+                    Instruction::Resolve,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::Property => handle_value_like(
+                    |data, node| Ok(Some(data.parse_add_symbol(node.text())?)),
+                    Instruction::Put,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
+                Definition::ExpressionTerminator => handle_value_like(
+                    |_, _| Ok(None),
+                    Instruction::EndExpression,
+                    &mut nodes,
+                    node_index,
+                    &mut stack,
+                    parse_node,
+                    data,
+                    &mut instruction_metadata,
+                )?,
                 Definition::AbsoluteValue => handle_unary_prefix(Instruction::AbsoluteValue, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::Opposite => handle_unary_prefix(Instruction::Opposite, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::BitwiseNot => handle_unary_prefix(Instruction::BitwiseNot, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
@@ -189,7 +249,36 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                 Definition::EmptyApply => handle_unary_suffix(Instruction::EmptyApply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::AccessRightInternal => handle_unary_suffix(Instruction::AccessRightInternal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::AccessLengthInternal => handle_unary_suffix(Instruction::AccessLengthInternal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Addition => {
+                Definition::Addition => handle_binary_operation(Instruction::Add, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Subtraction => handle_binary_operation(Instruction::Subtract, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::MultiplicationSign => handle_binary_operation(Instruction::Multiply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Division => handle_binary_operation(Instruction::Divide, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Access => handle_binary_operation(Instruction::Access, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Pair => handle_binary_operation(Instruction::MakePair, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Range => handle_binary_operation(Instruction::MakeRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::StartExclusiveRange => handle_binary_operation(Instruction::MakeStartExclusiveRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::EndExclusiveRange => handle_binary_operation(Instruction::MakeEndExclusiveRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::ExclusiveRange => handle_binary_operation(Instruction::MakeExclusiveRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::ExponentialSign => handle_binary_operation(Instruction::Power, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Remainder => handle_binary_operation(Instruction::Remainder, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::IntegerDivision => handle_binary_operation(Instruction::IntegerDivide, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::BitwiseAnd => handle_binary_operation(Instruction::BitwiseAnd, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::BitwiseOr => handle_binary_operation(Instruction::BitwiseOr, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::BitwiseXor => handle_binary_operation(Instruction::BitwiseXor, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::BitwiseRightShift => handle_binary_operation(Instruction::BitwiseShiftRight, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::BitwiseLeftShift => handle_binary_operation(Instruction::BitwiseShiftLeft, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Xor => handle_binary_operation(Instruction::Xor, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::TypeEqual => handle_binary_operation(Instruction::TypeEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::TypeCast => handle_binary_operation(Instruction::ApplyType, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Equality => handle_binary_operation(Instruction::Equal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Inequality => handle_binary_operation(Instruction::NotEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::LessThan => handle_binary_operation(Instruction::LessThan, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::LessThanOrEqual => handle_binary_operation(Instruction::LessThanOrEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::GreaterThan => handle_binary_operation(Instruction::GreaterThan, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::GreaterThanOrEqual => handle_binary_operation(Instruction::GreaterThanOrEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Apply => handle_binary_operation(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::Concatenation => handle_binary_operation(Instruction::Concat, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::ApplyTo => {
                     let node = match nodes.get(node_index) {
                         Some(Some(node)) => node,
                         _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
@@ -197,10 +286,11 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                     match node.state {
                         BuildNodeState::Uninitialized => {
                             stack.push(node.parse_node_index);
-                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on Addition definition".to_string()))?;
-                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on Addition definition".to_string()))?;
-                            stack.push(right);
+                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on ApplyTo definition".to_string()))?;
+                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on ApplyTo definition".to_string()))?;
+
                             stack.push(left);
+                            stack.push(right);
 
                             nodes[right] = Some(BuildNode::new(right));
                             nodes[left] = Some(BuildNode::new(left));
@@ -210,7 +300,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                             node.state = BuildNodeState::Initialized
                         }
                         BuildNodeState::Initialized => {
-                            data.push_instruction(Instruction::Add, None)?;
+                            data.push_instruction(Instruction::Apply, None)?;
                             instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
                         }
                     }
@@ -501,7 +591,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         }
                     }
                 }
-                _ => unimplemented!(),
+                t => unimplemented!("{:?}", t),
             }
 
             match nodes.get_mut(node_index) {
@@ -558,7 +648,16 @@ fn handle_value_primitive<Data: GarnishData, Fn>(
 where
     Fn: FnOnce(&mut Data, &ParseNode) -> Result<Data::Size, Data::Error>,
 {
-    handle_value_like(|data, node| Ok(Some(add_fn(data, node)?)), Instruction::Put, nodes, node_index, stack, parse_node, data, instruction_metadata)
+    handle_value_like(
+        |data, node| Ok(Some(add_fn(data, node)?)),
+        Instruction::Put,
+        nodes,
+        node_index,
+        stack,
+        parse_node,
+        data,
+        instruction_metadata,
+    )
 }
 
 fn handle_value_like<Data: GarnishData, Fn>(
@@ -671,6 +770,42 @@ fn handle_unary_prefix<Data: GarnishData>(
     Ok(())
 }
 
+fn handle_binary_operation<Data: GarnishData>(
+    instruction: Instruction,
+    nodes: &mut Vec<Option<BuildNode<Data>>>,
+    node_index: usize,
+    stack: &mut Vec<usize>,
+    parse_node: &ParseNode,
+    data: &mut Data,
+    instruction_metadata: &mut Vec<InstructionMetadata>,
+) -> Result<(), CompilerError<Data::Error>> {
+    let node = match nodes.get_mut(node_index) {
+        Some(Some(node)) => node,
+        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+    };
+
+    match node.state {
+        BuildNodeState::Uninitialized => {
+            node.state = BuildNodeState::Initialized;
+
+            stack.push(node.parse_node_index);
+            let right = parse_node.get_right().ok_or(CompilerError::new_message(format!("No right on {:?} definition", instruction)))?;
+            let left = parse_node.get_left().ok_or(CompilerError::new_message(format!("No left on {:?} definition", instruction)))?;
+            stack.push(right);
+            stack.push(left);
+
+            nodes[right] = Some(BuildNode::new(right));
+            nodes[left] = Some(BuildNode::new(left));
+        }
+        BuildNodeState::Initialized => {
+            data.push_instruction(instruction, None)?;
+            instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use crate::build::build::build;
@@ -704,6 +839,7 @@ mod tests {
 mod put_values {
     use crate::build::InstructionMetadata;
     use crate::build::build::tests::build_input;
+    use crate::parse::Definition::Access;
     use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
     use garnish_lang_traits::Instruction;
 
@@ -848,34 +984,95 @@ mod put_values {
 
 #[cfg(test)]
 mod binary_operations {
-    use crate::build::InstructionMetadata;
     use crate::build::build::tests::build_input;
     use garnish_lang_simple_data::{SimpleData, SimpleDataList, SimpleInstruction};
     use garnish_lang_traits::Instruction;
+    use crate::build::InstructionMetadata;
+    use crate::parse::Definition::Access;
+
+    macro_rules! binary_tests {
+        ($($name:ident: $input:expr, $instruction:expr,)*) => {
+            $(
+                #[test]
+                fn $name() {
+                    let (data, _build_data) = build_input($input);
+
+                    assert_eq!(
+                        data.get_instructions(),
+                        &vec![
+                            SimpleInstruction::new(Instruction::Resolve, Some(3)),
+                            SimpleInstruction::new(Instruction::Resolve, Some(4)),
+                            SimpleInstruction::new($instruction, None),
+                            SimpleInstruction::new(Instruction::EndExpression, None)
+                        ]
+                    );
+                    assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol("value1").append_symbol("value2"));
+                }
+            )*
+        }
+    }
+
+    binary_tests! {
+        addition: "value1 + value2", Instruction::Add,
+        subtraction: "value1 - value2", Instruction::Subtract,
+        multiplication: "value1 * value2", Instruction::Multiply,
+        division: "value1 / value2", Instruction::Divide,
+        pair: "value1 = value2", Instruction::MakePair,
+        range: "value1..value2", Instruction::MakeRange,
+        start_exclusive_range: "value1>..value2", Instruction::MakeStartExclusiveRange,
+        end_exclusive_range: "value1..<value2", Instruction::MakeEndExclusiveRange,
+        exclusive_range: "value1>..<value2", Instruction::MakeExclusiveRange,
+        exponential: "value1 ** value2", Instruction::Power,
+        remainder: "value1 % value2", Instruction::Remainder,
+        integer_division: "value1 // value2", Instruction::IntegerDivide,
+        bitwise_and: "value1 & value2", Instruction::BitwiseAnd,
+        bitwise_or: "value1 | value2", Instruction::BitwiseOr,
+        bitwise_xor: "value1 ^ value2", Instruction::BitwiseXor,
+        bitwise_shift_right: "value1 >> value2", Instruction::BitwiseShiftRight,
+        bitwise_shift_left: "value1 << value2", Instruction::BitwiseShiftLeft,
+        logical_xor: "value1 ^^ value2", Instruction::Xor,
+        type_cast: "value1 ~# value2", Instruction::ApplyType,
+        type_equal: "value1 #= value2", Instruction::TypeEqual,
+        equality: "value1 == value2", Instruction::Equal,
+        inequality: "value1 != value2", Instruction::NotEqual,
+        less_than: "value1 < value2", Instruction::LessThan,
+        less_than_or_equal: "value1 <= value2", Instruction::LessThanOrEqual,
+        greater_than: "value1 > value2", Instruction::GreaterThan,
+        greater_than_or_equal: "value1 >= value2", Instruction::GreaterThanOrEqual,
+        apply: "value1 ~ value2", Instruction::Apply,
+        concatenation: "value1 <> value2", Instruction::Concat,
+    }
 
     #[test]
-    fn build_addition() {
-        let (data, build_data) = build_input("5 + 10");
+    fn apply_to() {
+        let (data, _build_data) = build_input("5 ~> 10");
 
         assert_eq!(
             data.get_instructions(),
             &vec![
                 SimpleInstruction::new(Instruction::Put, Some(3)),
                 SimpleInstruction::new(Instruction::Put, Some(4)),
-                SimpleInstruction::new(Instruction::Add, None),
+                SimpleInstruction::new(Instruction::Apply, None),
                 SimpleInstruction::new(Instruction::EndExpression, None)
             ]
         );
-        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())));
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(10.into())).append(SimpleData::Number(5.into())));
+    }
+
+    #[test]
+    fn access() {
+        let (data, build_data) = build_input("my_value.my_property");
+
         assert_eq!(
-            build_data.instruction_metadata,
-            vec![
-                InstructionMetadata::new(Some(0)),
-                InstructionMetadata::new(Some(2)),
-                InstructionMetadata::new(Some(1)),
-                InstructionMetadata::new(None)
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Resolve, Some(3)),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::Access, None),
+                SimpleInstruction::new(Instruction::EndExpression, None)
             ]
-        )
+        );
+        assert_eq!(data.get_data(), &SimpleDataList::default().append_symbol("my_value").append_symbol("my_property"));
     }
 }
 
