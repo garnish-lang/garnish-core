@@ -370,7 +370,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                                     instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
                                     data.push_instruction(Instruction::PutValue, None)?;
                                     instruction_metadata.push(InstructionMetadata::new(None));
-                                    
+
                                     root_stack.push(right);
 
                                     let jump_to_index = data.get_jump_table_len();
@@ -412,22 +412,24 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         BuildNodeState::Initialized => match node.conditional_parent {
                             Some(_) => {}
                             None => {
-                                let mut new_items: Vec<(usize, BuildNode<Data>)> = vec![];
+                                if node.conditional_items.len() > 0 {
+                                    let mut new_items: Vec<(usize, BuildNode<Data>)> = vec![];
 
-                                let jump_to_index = data.get_jump_table_len();
-                                data.push_jump_point(data.get_instruction_len())?;
+                                    let jump_to_index = data.get_jump_table_len();
+                                    data.push_jump_point(data.get_instruction_len())?;
 
-                                for condition in &node.conditional_items {
-                                    root_stack.push(condition.node_index);
+                                    for condition in &node.conditional_items {
+                                        root_stack.push(condition.node_index);
 
-                                    new_items.push((
-                                        condition.node_index,
-                                        BuildNode::new_with_jump_and_end(condition.node_index, condition.jump_index_to_update.clone(), vec![(Instruction::JumpTo, Some(jump_to_index.clone()))]),
-                                    ));
-                                }
+                                        new_items.push((
+                                            condition.node_index,
+                                            BuildNode::new_with_jump_and_end(condition.node_index, condition.jump_index_to_update.clone(), vec![(Instruction::JumpTo, Some(jump_to_index.clone()))]),
+                                        ));
+                                    }
 
-                                for (index, data) in new_items {
-                                    nodes[index] = Some(data);
+                                    for (index, data) in new_items {
+                                        nodes[index] = Some(data);
+                                    }
                                 }
                             }
                         },
@@ -492,20 +494,23 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                             data.push_jump_point(Data::Size::zero())?;
                             data.push_instruction(Instruction::JumpIfTrue, Some(jump_index.clone()))?;
                             instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                            data.push_instruction(Instruction::PutValue, None)?;
-                            instruction_metadata.push(InstructionMetadata::new(None));
+
+                            match node.conditional_parent {
+                                Some(_) => {}
+                                None => {
+                                    data.push_instruction(Instruction::PutValue, None)?;
+                                    instruction_metadata.push(InstructionMetadata::new(None));
+                                }
+                            }
 
                             let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on Reapply definition".to_string()))?;
 
                             root_stack.push(right);
 
-                            let jump_to_index = data.get_jump_table_len();
-                            data.push_jump_point(data.get_instruction_len())?;
-
                             nodes[right] = Some(BuildNode::new_with_jump_and_end(
                                 right,
                                 jump_index.clone(),
-                                vec![(Instruction::UpdateValue, None), (Instruction::JumpTo, Some(jump_to_index))],
+                                vec![(Instruction::UpdateValue, None), (Instruction::JumpTo, Some(tree_root_jump.clone()))],
                             ));
                         }
                     }
@@ -1671,11 +1676,32 @@ mod reapply {
                 SimpleInstruction::new(Instruction::EndExpression, None),
                 SimpleInstruction::new(Instruction::Put, Some(3)),
                 SimpleInstruction::new(Instruction::UpdateValue, None),
-                SimpleInstruction::new(Instruction::JumpTo, Some(2)),
+                SimpleInstruction::new(Instruction::JumpTo, Some(0)),
             ]
         );
-        assert_eq!(data.get_jump_points(), &vec![0, 4, 3]);
+        assert_eq!(data.get_jump_points(), &vec![0, 4]);
         assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(40.into())));
+    }
+
+    #[test]
+    fn reapply_with_else() {
+        let (data, build_data) = build_input("$! ^~ 40 |> 50");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(1)),
+                SimpleInstruction::new(Instruction::JumpIfTrue, Some(1)),
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::EndExpression, None),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::UpdateValue, None),
+                SimpleInstruction::new(Instruction::JumpTo, Some(0)),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0, 4]);
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(50.into())).append(SimpleData::Number(40.into())));
     }
 }
 
