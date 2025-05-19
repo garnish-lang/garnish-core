@@ -282,7 +282,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                 Definition::ApplyTo => handle_binary_operation_with_push(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata, |left, right| {
                     (left, right)
                 })?,
-                Definition::CommaList => {}
+                Definition::CommaList => todo!(),
                 Definition::List => {
                     let node = match nodes.get_mut(node_index) {
                         Some(Some(node)) => node,
@@ -373,7 +373,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
 
                     root_stack.push(right);
                 }
-                Definition::JumpIfFalse => {}
+                Definition::JumpIfFalse => todo!(),
                 Definition::JumpIfTrue => {
                     let node = match nodes.get_mut(node_index) {
                         Some(Some(node)) => node,
@@ -469,7 +469,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         },
                     }
                 }
-                Definition::Or => {}
+                Definition::Or => todo!(),
                 Definition::And => {
                     let node = match nodes.get_mut(node_index) {
                         Some(Some(node)) => node,
@@ -585,7 +585,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                             data.push_instruction(Instruction::Resolve, Some(addr))?;
                             instruction_metadata.push(InstructionMetadata::new(None));
 
-                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on PrefixApply definition".to_string()))?;
+                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on SuffixApply definition".to_string()))?;
 
                             stack.push(node_index);
                             stack.push(left);
@@ -612,7 +612,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                             data.push_instruction(Instruction::Resolve, Some(addr))?;
                             instruction_metadata.push(InstructionMetadata::new(None));
 
-                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on SuffixApply definition".to_string()))?;
+                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on PrefixApply definition".to_string()))?;
 
                             stack.push(node_index);
                             stack.push(right);
@@ -1222,7 +1222,7 @@ mod unary_operations {
     }
 
     #[test]
-    fn prefix_apply() {
+    fn suffix_apply() {
         let (data, _build_data) = build_input("5`value");
 
         assert_eq!(
@@ -1238,7 +1238,7 @@ mod unary_operations {
     }
 
     #[test]
-    fn suffix_apply() {
+    fn prefix_apply() {
         let (data, _build_data) = build_input("value`5");
 
         assert_eq!(
