@@ -1662,6 +1662,30 @@ mod logical {
         assert_eq!(data.get_jump_points(), &vec![0, 3, 2]);
         assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())));
     }
+
+    #[test]
+    fn double_and() {
+        let (data, build_data) = build_input("5 && 10 && 20");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::And, Some(1)),
+                SimpleInstruction::new(Instruction::And, Some(3)), // 2
+                SimpleInstruction::new(Instruction::EndExpression, None), // 3
+                SimpleInstruction::new(Instruction::Put, Some(4)), // 4
+                SimpleInstruction::new(Instruction::Tis, None),
+                SimpleInstruction::new(Instruction::JumpTo, Some(4)),
+                SimpleInstruction::new(Instruction::Put, Some(5)), // 7
+                SimpleInstruction::new(Instruction::Tis, None),
+                SimpleInstruction::new(Instruction::JumpTo, Some(2)),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0, 7, 2, 4, 3]);
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(20.into())).append(SimpleData::Number(10.into())));
+    }
 }
 
 #[cfg(test)]
