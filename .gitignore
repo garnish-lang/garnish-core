@@ -3,6 +3,7 @@
 Cargo.lock
 book/
 tmp/
+*.profraw
 
 .idea
 
