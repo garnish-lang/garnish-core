@@ -479,60 +479,8 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                         }
                     }
                 }
-                Definition::SuffixApply => {
-                    let node = match nodes.get_mut(node_index) {
-                        Some(Some(node)) => node,
-                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
-                    };
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            node.state = BuildNodeState::Initialized;
-
-                            let addr = data.parse_add_symbol(parse_node.text().trim_matches('`'))?;
-
-                            data.push_instruction(Instruction::Resolve, Some(addr))?;
-                            instruction_metadata.push(InstructionMetadata::new(None));
-
-                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on SuffixApply definition".to_string()))?;
-
-                            stack.push(node_index);
-                            stack.push(left);
-
-                            nodes[left] = Some(BuildNode::new(left));
-                        }
-                        BuildNodeState::Initialized => {
-                            data.push_instruction(Instruction::Apply, None)?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                        }
-                    }
-                }
-                Definition::PrefixApply => {
-                    let node = match nodes.get_mut(node_index) {
-                        Some(Some(node)) => node,
-                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
-                    };
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            node.state = BuildNodeState::Initialized;
-
-                            let addr = data.parse_add_symbol(parse_node.text().trim_matches('`'))?;
-
-                            data.push_instruction(Instruction::Resolve, Some(addr))?;
-                            instruction_metadata.push(InstructionMetadata::new(None));
-
-                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on PrefixApply definition".to_string()))?;
-
-                            stack.push(node_index);
-                            stack.push(right);
-
-                            nodes[right] = Some(BuildNode::new(right));
-                        }
-                        BuildNodeState::Initialized => {
-                            data.push_instruction(Instruction::Apply, None)?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                        }
-                    }
-                }
+                Definition::SuffixApply => handle_unary_fix_apply(parse_node.get_left(), Definition::SuffixApply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+                Definition::PrefixApply => handle_unary_fix_apply(parse_node.get_right(), Definition::PrefixApply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
                 Definition::InfixApply => {
                     let node = match nodes.get_mut(node_index) {
                         Some(Some(node)) => node,
@@ -608,6 +556,47 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         instruction_metadata,
         jump_index: tree_root_jump,
     })
+}
+
+fn handle_unary_fix_apply<Data: GarnishData>(
+    child: Option<usize>,
+    definition: Definition,
+    nodes: &mut Vec<Option<BuildNode<Data>>>,
+    node_index: usize,
+    stack: &mut Vec<usize>,
+    parse_node: &ParseNode,
+    data: &mut Data,
+    instruction_metadata: &mut Vec<InstructionMetadata>,
+) -> Result<(), CompilerError<Data::Error>> {
+    {
+        let node = match nodes.get_mut(node_index) {
+            Some(Some(node)) => node,
+            _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+        };
+        match node.state {
+            BuildNodeState::Uninitialized => {
+                node.state = BuildNodeState::Initialized;
+
+                let addr = data.parse_add_symbol(parse_node.text().trim_matches('`'))?;
+
+                data.push_instruction(Instruction::Resolve, Some(addr))?;
+                instruction_metadata.push(InstructionMetadata::new(None));
+
+                let right = child.ok_or(CompilerError::new_message(format!("No right on {:?} definition", definition)))?;
+
+                stack.push(node_index);
+                stack.push(right);
+
+                nodes[right] = Some(BuildNode::new(right));
+            }
+            BuildNodeState::Initialized => {
+                data.push_instruction(Instruction::Apply, None)?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn handle_jump_if<Data: GarnishData>(
