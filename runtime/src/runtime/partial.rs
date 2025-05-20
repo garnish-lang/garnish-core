@@ -1,5 +1,5 @@
 use crate::runtime::utilities::next_two_raw_ref;
-use garnish_lang_traits::{GarnishContext, GarnishData, RuntimeError};
+use garnish_lang_traits::{GarnishData, RuntimeError};
 
 pub fn partial_apply<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
