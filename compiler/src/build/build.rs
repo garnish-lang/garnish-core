@@ -2,7 +2,6 @@ use crate::build::InstructionMetadata;
 use crate::error::CompilerError;
 use crate::parse::{Definition, ParseNode};
 use garnish_lang_traits::{GarnishData, Instruction, TypeConstants};
-use std::ops::Add;
 
 trait GetError<T, Data: GarnishData> {
     fn get_mut_or_error(&mut self, index: usize) -> Result<&mut T, CompilerError<Data::Error>>;
@@ -926,7 +925,10 @@ fn handle_list<Data: GarnishData>(
             _ => {
                 let node = nodes.get_mut_or_error(node_index)?;
 
-                let count = node.child_count.next().ok_or(CompilerError::new_message("Failed to increment child count for List".to_string()))?;
+                let count = node
+                    .child_count
+                    .next()
+                    .ok_or(CompilerError::new_message(format!("Failed to increment child count for {:?}", definition)))?;
 
                 data.push_instruction(Instruction::MakeList, Some(count))?;
                 instruction_metadata.push(InstructionMetadata::new(Some(node.parse_node_index)));
@@ -1208,7 +1210,7 @@ mod binary_operations {
 
     #[test]
     fn access() {
-        let (data, build_data) = build_input("my_value.my_property");
+        let (data, _build_data) = build_input("my_value.my_property");
 
         assert_eq!(
             data.get_instructions(),
