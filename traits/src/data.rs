@@ -22,6 +22,7 @@ pub enum GarnishDataType {
     Range,
     Concatenation,
     Slice,
+    Partial,
     List,
     Expression,
     External,
@@ -112,6 +113,7 @@ pub trait GarnishData {
     fn get_concatenation(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
     fn get_range(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
     fn get_slice(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
+    fn get_partial(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
 
     fn get_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error>;
@@ -154,6 +156,7 @@ pub trait GarnishData {
     fn add_concatenation(&mut self, left: Self::Size, right: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_range(&mut self, start: Self::Size, end: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error>;
+    fn add_partial(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error>;
 
     fn merge_to_symbol_list(&mut self, first: Self::Size, second: Self::Size) -> Result<Self::Size, Self::Error>;
 

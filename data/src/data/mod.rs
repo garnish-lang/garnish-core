@@ -141,6 +141,7 @@ where
     Pair(usize, usize),
     Range(usize, usize),
     Slice(usize, usize),
+    Partial(usize, usize),
     List(Vec<usize>, Vec<usize>),
     Concatenation(usize, usize),
     StackFrame(SimpleStackFrame),
@@ -170,6 +171,7 @@ where
             SimpleData::Concatenation(_, _) => GarnishDataType::Concatenation,
             SimpleData::Range(_, _) => GarnishDataType::Range,
             SimpleData::Slice(_, _) => GarnishDataType::Slice,
+            SimpleData::Partial(_, _) => GarnishDataType::Partial,
             SimpleData::List(_, _) => GarnishDataType::List,
             SimpleData::StackFrame(_)
             | SimpleData::Custom(_) => GarnishDataType::Custom,
@@ -285,6 +287,13 @@ where
         match self {
             SimpleData::Pair(l, r) => Ok((*l, *r)),
             _ => Err(DataError::from(format!("{:?} is not a Pair", self))),
+        }
+    }
+
+    pub fn as_partial(&self) -> DataCastResult<(usize, usize)> {
+        match self {
+            SimpleData::Partial(l, r) => Ok((*l, *r)),
+            _ => Err(DataError::from(format!("{:?} is not a Partial", self))),
         }
     }
 
@@ -503,6 +512,16 @@ mod tests {
     #[test]
     fn as_pair_not_pair() {
         assert!(SimpleDataNC::Unit.as_pair().is_err());
+    }
+
+    #[test]
+    fn as_partial() {
+        assert_eq!(SimpleDataNC::Partial(10, 20).as_partial().unwrap(), (10, 20));
+    }
+
+    #[test]
+    fn as_partial_not_partial() {
+        assert!(SimpleDataNC::Unit.as_partial().is_err());
     }
 
     #[test]

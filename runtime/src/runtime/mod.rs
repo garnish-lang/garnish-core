@@ -156,6 +156,7 @@ mod tests {
         pub stub_get_concatenation: fn(&T, addr: i32) -> Result<(i32, i32), MockError>,
         pub stub_get_range: fn(&T, addr: i32) -> Result<(i32, i32), MockError>,
         pub stub_get_slice: fn(&T, addr: i32) -> Result<(i32, i32), MockError>,
+        pub stub_get_partial: fn(&T, addr: i32) -> Result<(i32, i32), MockError>,
         pub stub_get_list_len: fn(&T, addr: i32) -> Result<i32, MockError>,
         pub stub_get_list_item: fn(&T, list_addr: i32, item_addr: i32) -> Result<i32, MockError>,
         pub stub_get_list_associations_len: fn(&T, addr: i32) -> Result<i32, MockError>,
@@ -191,6 +192,7 @@ mod tests {
         pub stub_add_concatenation: fn(&mut T, left: i32, right: i32) -> Result<i32, MockError>,
         pub stub_add_range: fn(&mut T, start: i32, end: i32) -> Result<i32, MockError>,
         pub stub_add_slice: fn(&mut T, list: i32, range: i32) -> Result<i32, MockError>,
+        pub stub_add_partial: fn(&mut T, list: i32, range: i32) -> Result<i32, MockError>,
         pub stub_merge_to_symbol_list: fn(&mut T, first: i32, second: i32) -> Result<i32, MockError>,
         pub stub_start_list: fn(&mut T, len: i32) -> Result<(), MockError>,
         pub stub_add_to_list: fn(&mut T, addr: i32, is_associative: bool) -> Result<(), MockError>,
@@ -304,6 +306,7 @@ mod tests {
                 stub_get_concatenation: stub_fn_1,
                 stub_get_range: stub_fn_1,
                 stub_get_slice: stub_fn_1,
+                stub_get_partial: stub_fn_1,
                 stub_get_list_len: stub_fn_1,
                 stub_get_list_item: stub_fn_2,
                 stub_get_list_associations_len: stub_fn_1,
@@ -339,6 +342,7 @@ mod tests {
                 stub_add_concatenation: stub_fn_2_mut,
                 stub_add_range: stub_fn_2_mut,
                 stub_add_slice: stub_fn_2_mut,
+                stub_add_partial: stub_fn_2_mut,
                 stub_merge_to_symbol_list: stub_fn_2_mut,
                 stub_start_list: stub_fn_1_mut,
                 stub_add_to_list: stub_fn_2_mut,
@@ -501,6 +505,10 @@ mod tests {
             (self.stub_get_slice)(self.data(), addr)
         }
 
+        fn get_partial(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
+            (self.stub_get_partial)(self.data(), addr)
+        }
+
         fn get_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
             (self.stub_get_list_len)(self.data(), addr)
         }
@@ -639,6 +647,10 @@ mod tests {
 
         fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
             (self.stub_add_slice)(self.data_mut(), list, range)
+        }
+
+        fn add_partial(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
+            (self.stub_add_partial)(self.data_mut(), list, range)
         }
 
         fn merge_to_symbol_list(&mut self, first: Self::Size, second: Self::Size) -> Result<Self::Size, Self::Error> {

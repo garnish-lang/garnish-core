@@ -30,6 +30,7 @@ where
             SimpleData::Pair(l, r) => format!("Pair({}, {})", l, r),
             SimpleData::Range(s, e) => format!("Range({}, {})", s, e),
             SimpleData::Slice(l, r) => format!("Slice({}, {})", l, r),
+            SimpleData::Partial(l, r) => format!("Partial({}, {})", l, r),
             SimpleData::List(i, h) => format!(
                 "List([{}], [{}])",
                 i.iter().map(|i| i.to_string()).collect::<Vec<String>>().join(", "),

@@ -122,6 +122,10 @@ where
         self.get(addr)?.as_slice()
     }
 
+    fn get_partial(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
+        self.get(addr)?.as_partial()
+    }
+
     fn get_list_len(&self, index: usize) -> Result<usize, Self::Error> {
         Ok(self.get(index)?.as_list()?.0.len())
     }
@@ -407,6 +411,11 @@ where
 
     fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
         self.data.push(SimpleData::Slice(list, range));
+        Ok(self.data.len() - 1)
+    }
+
+    fn add_partial(&mut self, left: Self::Size, right: Self::Size) -> Result<Self::Size, Self::Error> {
+        self.data.push(SimpleData::Partial(left, right));
         Ok(self.data.len() - 1)
     }
 
@@ -1164,13 +1173,13 @@ mod iterators {
         let con1 = data.add_concatenation(list_index, extra1).unwrap();
         let con2 = data.add_concatenation(con1, slice).unwrap();
         let con3 = data.add_concatenation(con2, extra2).unwrap();
-        
+
         let con4 = data.add_concatenation(list_index, num1).unwrap();
         let con5 = data.add_concatenation(con4, extra1).unwrap();
         let con6 = data.add_concatenation(con5, num2).unwrap();
-        
+
         let slice2 = data.add_slice(con6, range).unwrap();
-        
+
         let con7 = data.add_concatenation(con3, slice2).unwrap();
 
         let mut iter = data.get_concatenation_iter(con7);

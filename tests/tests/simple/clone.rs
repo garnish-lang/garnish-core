@@ -742,6 +742,10 @@ mod test_data_impl {
             unimplemented!()
         }
 
+        fn get_partial(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
+            unimplemented!()
+        }
+
         fn get_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
             unimplemented!()
         }
@@ -882,6 +886,10 @@ mod test_data_impl {
         }
 
         fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
+            unimplemented!()
+        }
+
+        fn add_partial(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
             unimplemented!()
         }
 

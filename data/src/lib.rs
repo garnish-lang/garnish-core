@@ -394,6 +394,20 @@ where
                     self.add_to_char_list(')')?;
                 }
             }
+            GarnishDataType::Partial => {
+                let (left, right) = self.get_pair(from)?;
+                if depth > 0 {
+                    self.add_to_char_list('(')?;
+                }
+                self.add_to_current_char_list(left, depth + 1)?;
+                self.add_to_char_list(' ')?;
+                self.add_to_char_list('~')?;
+                self.add_to_char_list(' ')?;
+                self.add_to_current_char_list(right, depth + 1)?;
+                if depth > 0 {
+                    self.add_to_char_list(')')?;
+                }
+            }
             GarnishDataType::Concatenation => {
                 let (left, right) = self.get_concatenation(from)?;
                 self.add_to_current_char_list(left, depth + 1)?;

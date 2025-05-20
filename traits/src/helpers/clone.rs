@@ -51,6 +51,7 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
             GarnishDataType::Range => self.clone_range(addr, from, to),
             GarnishDataType::Concatenation => self.clone_concatenation(addr, from, to),
             GarnishDataType::Slice => self.clone_slice(addr, from, to),
+            GarnishDataType::Partial => todo!(),
             GarnishDataType::List => self.clone_list(addr, from, to),
             GarnishDataType::Expression => self.clone_expression(addr, from, to),
             GarnishDataType::External => self.clone_external(addr, from, to),
