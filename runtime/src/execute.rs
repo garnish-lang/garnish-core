@@ -104,6 +104,7 @@ pub fn execute_current_instruction<Data: GarnishData, T: GarnishContext<Data>>(
         Instruction::Concat => concat(data)?,
         Instruction::EndExpression => end_expression(data)?,
         Instruction::Apply => apply(data, context)?,
+        Instruction::PartialApply => unimplemented!(),
         Instruction::EmptyApply => empty_apply(data, context)?,
         Instruction::And => match instruction_data {
             None => crate::runtime::error::instruction_error(instruction, data.get_instruction_cursor())?,

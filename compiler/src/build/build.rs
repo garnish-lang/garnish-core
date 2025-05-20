@@ -371,7 +371,7 @@ fn handle_parse_node<Data: GarnishData>(
         Definition::GreaterThan => handle_binary_operation(Instruction::GreaterThan, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::GreaterThanOrEqual => handle_binary_operation(Instruction::GreaterThanOrEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::Apply => handle_binary_operation(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-        Definition::PartialApply => unimplemented!(),
+        Definition::PartialApply => handle_binary_operation(Instruction::PartialApply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::Concatenation => handle_binary_operation(Instruction::Concat, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::ApplyTo => handle_binary_operation_with_push(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata, |left, right| {
             (left, right)
@@ -1267,6 +1267,7 @@ mod binary_operations {
         greater_than: "value1 > value2", Instruction::GreaterThan,
         greater_than_or_equal: "value1 >= value2", Instruction::GreaterThanOrEqual,
         apply: "value1 <~ value2", Instruction::Apply,
+        partial_apply: "value1 ~ value2", Instruction::PartialApply,
         concatenation: "value1 <> value2", Instruction::Concat,
     }
 
