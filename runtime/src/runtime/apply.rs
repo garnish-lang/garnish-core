@@ -4,10 +4,7 @@ use crate::runtime::utilities::*;
 use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, GarnishNumber, Instruction, RuntimeError, TypeConstants};
 use log::trace;
 
-pub(crate) fn apply<Data: GarnishData, T: GarnishContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut T>,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn apply<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     apply_internal(this, Instruction::Apply, context)
 }
 
@@ -34,19 +31,12 @@ pub(crate) fn reapply<Data: GarnishData>(this: &mut Data, index: Data::Size) -> 
     Ok(Some(next_instruction))
 }
 
-pub(crate) fn empty_apply<Data: GarnishData, T: GarnishContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut T>,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn empty_apply<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     push_unit(this)?;
     apply_internal(this, Instruction::EmptyApply, context)
 }
 
-fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(
-    this: &mut Data,
-    instruction: Instruction,
-    context: Option<&mut T>,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, instruction: Instruction, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let right_addr = next_ref(this)?;
     let left_addr = next_ref(this)?;
 
@@ -90,9 +80,26 @@ fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(
                 },
             };
         }
-        (GarnishDataType::Symbol, GarnishDataType::SymbolList)
-        | (GarnishDataType::SymbolList, GarnishDataType::Symbol)
-        | (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => {
+        (GarnishDataType::Partial, _) => {
+            let (expression, input) = this.get_partial(left_addr)?;
+            match this.get_data_type(expression.clone())? {
+                GarnishDataType::Expression => {
+                    let value = this.add_concatenation(input, right_addr)?;
+                    this.push_value_stack(value)?;
+                    
+                    let expression = this.get_expression(expression)?;
+                    let n = match this.get_jump_point(expression.clone()) {
+                        None => state_error(format!("No jump point at index {:?}", expression))?,
+                        Some(i) => i,
+                    };
+
+                    next_instruction = n;
+                    this.push_jump_path(this.get_instruction_cursor() + Data::Size::one())?;
+                }
+                _ => this.add_unit().and_then(|i| this.push_register(i))?,
+            }
+        }
+        (GarnishDataType::Symbol, GarnishDataType::SymbolList) | (GarnishDataType::SymbolList, GarnishDataType::Symbol) | (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => {
             this.merge_to_symbol_list(left_addr, right_addr).and_then(|i| this.push_register(i))?
         }
         (GarnishDataType::Range, GarnishDataType::Range) => {
@@ -106,8 +113,7 @@ fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(
             let addr = this.add_slice(value, range_addr)?;
             this.push_register(addr)?;
         }
-        (GarnishDataType::SymbolList, GarnishDataType::Number)
-        | (GarnishDataType::List, GarnishDataType::Number) => {
+        (GarnishDataType::SymbolList, GarnishDataType::Number) | (GarnishDataType::List, GarnishDataType::Number) => {
             let num = this.get_number(right_addr)?;
             match access_with_integer(this, num, left_addr)? {
                 None => push_unit(this)?,
@@ -160,19 +166,11 @@ fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(
     Ok(Some(next_instruction))
 }
 
-pub(crate) fn narrow_range<Data: GarnishData>(
-    this: &mut Data,
-    to_narrow: Data::Size,
-    by: Data::Size,
-) -> Result<Data::Size, RuntimeError<Data::Error>> {
+pub(crate) fn narrow_range<Data: GarnishData>(this: &mut Data, to_narrow: Data::Size, by: Data::Size) -> Result<Data::Size, RuntimeError<Data::Error>> {
     let (start, end) = this.get_range(by)?;
     let (old_start, _) = this.get_range(to_narrow)?;
 
-    match (
-        this.get_data_type(start.clone())?,
-        this.get_data_type(end.clone())?,
-        this.get_data_type(old_start.clone())?,
-    ) {
+    match (this.get_data_type(start.clone())?, this.get_data_type(end.clone())?, this.get_data_type(old_start.clone())?) {
         (GarnishDataType::Number, GarnishDataType::Number, GarnishDataType::Number) => {
             let (start_int, end_int, old_start_int) = (this.get_number(start)?, this.get_number(end)?, this.get_number(old_start)?);
 
@@ -365,13 +363,72 @@ mod tests {
 
         assert_eq!(result, Some(1));
     }
+
+    #[test]
+    fn apply_partial_non_expression() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Number, GarnishDataType::Partial]);
+
+        mock_data.stub_add_unit = |_| Ok(100);
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 100);
+            Ok(())
+        };
+
+        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+
+        assert_eq!(result, Some(1));
+    }
+
+    #[test]
+    fn apply_partial_expression() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Expression, GarnishDataType::Number, GarnishDataType::Partial, GarnishDataType::Number]);
+
+        mock_data.stub_get_partial = |_, i| {
+            assert_eq!(i, 2);
+            Ok((0, 1))
+        };
+        mock_data.stub_get_expression = |_, i| {
+            assert_eq!(i, 0);
+            Ok(200)
+        };
+        mock_data.stub_add_concatenation = |_, left, right| {
+            assert_eq!(1, left);
+            assert_eq!(3, right);
+            Ok(100)
+        };
+        mock_data.stub_get_jump_point = |_, index| {
+            assert_eq!(index, 200);
+            Some(3000)
+        };
+        mock_data.stub_push_value_stack = |_, i| {
+            assert_eq!(i, 100);
+            Ok(())
+        };
+        mock_data.stub_set_instruction_cursor = |_, addr| {
+            assert_eq!(addr, 300);
+            Ok(())
+        };
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 100);
+            Ok(())
+        };
+        mock_data.stub_get_instruction_cursor = |_| 123;
+        mock_data.stub_push_jump_path = |_, i| {
+            assert_eq!(i, 124);
+            Ok(())
+        };
+
+        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+
+        assert_eq!(result, Some(3000));
+    }
 }
 
 #[cfg(test)]
 mod slice {
-    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
     use crate::runtime::apply::apply;
     use crate::runtime::tests::MockGarnishData;
+    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
 
     #[test]
     fn symbol_list() {
