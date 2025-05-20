@@ -1145,6 +1145,48 @@ mod iterators {
     }
 
     #[test]
+    fn concatenation_item_iterator_with_slices() {
+        let mut data = SimpleGarnishData::new();
+        let num1 = data.add_number(10.into()).unwrap();
+        let num2 = data.add_number(20.into()).unwrap();
+        let num3 = data.add_number(30.into()).unwrap();
+        let list_index = data.get_data().len();
+        data.get_data_mut().push(SimpleData::List(vec![num1, num2, num3], vec![]));
+
+        let start = data.add_number(1.into()).unwrap();
+        let end = data.add_number(2.into()).unwrap();
+        let range = data.add_range(start, end).unwrap();
+
+        let slice = data.add_slice(list_index, range).unwrap();
+        let extra1 = data.add_number(100.into()).unwrap();
+        let extra2 = data.add_number(200.into()).unwrap();
+
+        let con1 = data.add_concatenation(list_index, extra1).unwrap();
+        let con2 = data.add_concatenation(con1, slice).unwrap();
+        let con3 = data.add_concatenation(con2, extra2).unwrap();
+        
+        let con4 = data.add_concatenation(list_index, num1).unwrap();
+        let con5 = data.add_concatenation(con4, extra1).unwrap();
+        let con6 = data.add_concatenation(con5, num2).unwrap();
+        
+        let slice2 = data.add_slice(con6, range).unwrap();
+        
+        let con7 = data.add_concatenation(con3, slice2).unwrap();
+
+        let mut iter = data.get_concatenation_iter(con7);
+
+        assert_eq!(iter.next(), num1.into());
+        assert_eq!(iter.next(), num2.into());
+        assert_eq!(iter.next(), num3.into());
+        assert_eq!(iter.next(), extra1.into());
+        assert_eq!(iter.next(), num2.into());
+        assert_eq!(iter.next(), num3.into());
+        assert_eq!(iter.next(), extra2.into());
+        assert_eq!(iter.next(), num1.into());
+        assert_eq!(iter.next(), extra1.into());
+    }
+
+    #[test]
     fn concatenation_item_iterator_not_concatenation() {
         let mut data = SimpleGarnishData::new();
         let num1 = data.add_number(10.into()).unwrap();

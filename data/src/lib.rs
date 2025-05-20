@@ -1,20 +1,20 @@
-use std::{collections::HashMap, hash::Hasher};
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
+use std::{collections::HashMap, hash::Hasher};
 
 pub use error::DataError;
-use garnish_lang_traits::{GarnishDataType, GarnishData, Instruction};
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
+use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+mod clone;
 mod data;
 mod error;
 mod instruction;
 mod runtime;
-mod clone;
 
 pub use data::*;
 pub use instruction::SimpleInstruction;
@@ -180,10 +180,13 @@ where
         Ok(())
     }
 
-    pub fn display_current_value(&self) -> String where T:Display + DisplayForCustomItem {
+    pub fn display_current_value(&self) -> String
+    where
+        T: Display + DisplayForCustomItem,
+    {
         self.values.last().and_then(|l| Some(self.data.display_for_item(*l))).unwrap_or("<NoData>".to_string())
     }
-    
+
     pub fn collect_concatenation_indices(&self, left: usize, right: usize) -> Vec<usize> {
         let mut items = vec![];
         let mut con_stack = vec![right, left];
@@ -200,10 +203,45 @@ where
                         items.push(item.clone());
                     }
                 }
+                Some(SimpleData::Slice(list, range)) => match (self.get_data().get(*list), self.get_data().get(*range)) {
+                    (Some(SimpleData::List(_, _)), Some(SimpleData::Range(_, _))) => {
+                        let iter = self.get_list_slice_item_iter(item);
+
+                        for item in iter {
+                            items.push(item.clone());
+                        }
+                    }
+                    (Some(SimpleData::Concatenation(left, right)), Some(SimpleData::Range(start, end))) => match (self.get_data().get(*start), self.get_data().get(*end)) {
+                        (Some(SimpleData::Number(SimpleNumber::Integer(start))), Some(SimpleData::Number(SimpleNumber::Integer(end)))) => {
+                            let mut nested_con_stack = vec![*right, *left];
+                            let mut top_level_con_items = vec![];
+
+                            while let Some(item) = nested_con_stack.pop() {
+                                match self.get_data().get(item) {
+                                    None => items.push(UNIT_INDEX),
+                                    Some(SimpleData::Concatenation(left, right)) => {
+                                        nested_con_stack.push(right.clone());
+                                        nested_con_stack.push(left.clone());
+                                    }
+                                    _ => top_level_con_items.push(item.clone()),
+                                }
+                            }
+
+                            top_level_con_items
+                                .iter()
+                                .skip(*start as usize)
+                                .take((end - start) as usize + 1)
+                                .map(usize::clone)
+                                .for_each(|i| items.push(i));
+                        }
+                        _ => items.push(UNIT_INDEX),
+                    },
+                    _ => items.push(UNIT_INDEX),
+                },
                 Some(_) => items.push(item),
             }
         }
-        
+
         items
     }
 
@@ -334,9 +372,7 @@ where
                 }
             }
             GarnishDataType::Range => {
-                let (start, end) = self
-                    .get_range(from)
-                    .and_then(|(start, end)| Ok((self.get_number(start)?, self.get_number(end)?)))?;
+                let (start, end) = self.get_range(from).and_then(|(start, end)| Ok((self.get_number(start)?, self.get_number(end)?)))?;
 
                 let s = format!("{}..{}", start, end);
 
@@ -387,10 +423,7 @@ where
             GarnishDataType::Slice => {
                 let (value, range) = self.get_slice(from)?;
                 let (start, end) = self.get_range(range)?;
-                let (start, end) = (
-                    self.get_number(start)?.to_integer().as_integer()?,
-                    self.get_number(end)?.to_integer().as_integer()?
-                );
+                let (start, end) = (self.get_number(start)?.to_integer().as_integer()?, self.get_number(end)?.to_integer().as_integer()?);
 
                 match self.get_data_type(value)? {
                     GarnishDataType::CharList => {
@@ -426,7 +459,8 @@ where
                             }
 
                             Ok(None)
-                        }).or_else(|err| Err(DataError::from(format!("{:?}", err))))?;
+                        })
+                        .or_else(|err| Err(DataError::from(format!("{:?}", err))))?;
                     }
                     _ => {
                         self.add_to_current_char_list(value, depth + 1)?;
@@ -628,7 +662,7 @@ mod to_byte_list {
 
 #[cfg(test)]
 mod to_char_list {
-    use crate::{GarnishDataType, GarnishData, NoCustom, SimpleGarnishData};
+    use crate::{GarnishData, GarnishDataType, NoCustom, SimpleGarnishData};
 
     fn assert_to_char_list<Func>(expected: &str, setup: Func)
     where
@@ -718,11 +752,7 @@ mod to_char_list {
     #[test]
     fn symbol() {
         let s = SimpleGarnishData::<NoCustom>::parse_symbol("my_symbol").unwrap().to_string();
-        assert_to_char_list(s.as_str(), |runtime| {
-            runtime
-                .add_symbol(SimpleGarnishData::<NoCustom>::parse_symbol("my_symbol").unwrap())
-                .unwrap()
-        })
+        assert_to_char_list(s.as_str(), |runtime| runtime.add_symbol(SimpleGarnishData::<NoCustom>::parse_symbol("my_symbol").unwrap()).unwrap())
     }
 
     #[test]
@@ -730,9 +760,7 @@ mod to_char_list {
         assert_to_char_list("symbol_one, symbol_two", |runtime| {
             let sym1 = runtime.parse_add_symbol("symbol_one").unwrap();
             let sym2 = runtime.parse_add_symbol("symbol_two").unwrap();
-            runtime
-                .merge_to_symbol_list(sym1, sym2)
-                .unwrap()
+            runtime.merge_to_symbol_list(sym1, sym2).unwrap()
         })
     }
 
