@@ -1,5 +1,4 @@
 use std::{collections::HashMap, hash::Hasher};
-use std::cmp::min;
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;

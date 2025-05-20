@@ -1,4 +1,4 @@
-use crate::{DataError, SimpleData, SimpleGarnishData};
+use crate::{DataError, SimpleGarnishData};
 use garnish_lang_traits::helpers::clone_data;
 use std::fmt::Debug;
 use std::hash::Hash;

@@ -16,18 +16,46 @@ impl<Data: GarnishData> GetError<BuildNode<Data>, Data> for Vec<Option<BuildNode
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-struct ConditionItem<Data: GarnishData> {
-    node_index: usize,
-    jump_index_to_update: Data::Size,
-    root_end_instruction: (Instruction, Option<Data::Size>),
-}
-
+#[derive(Debug, Clone)]
 pub struct BuildData<Data: GarnishData> {
     parse_root: usize,
     parse_tree: Vec<ParseNode>,
     instruction_metadata: Vec<InstructionMetadata>,
     jump_index: Data::Size,
+}
+
+impl<Data: GarnishData> BuildData<Data> {
+    pub fn new(parse_root: usize, parse_tree: Vec<ParseNode>, jump_index: Data::Size, instruction_metadata: Vec<InstructionMetadata>) -> Self {
+        Self {
+            parse_root,
+            parse_tree,
+            instruction_metadata,
+            jump_index,
+        }
+    }
+    
+    pub fn parse_root(&self) -> usize {
+        self.parse_root
+    }
+    
+    pub fn parse_tree(&self) -> &Vec<ParseNode> {
+        &self.parse_tree
+    }
+    
+    pub fn instruction_metadata(&self) -> &Vec<InstructionMetadata> {
+        &self.instruction_metadata
+    }
+    
+    pub fn jump_index(&self) -> &Data::Size {
+        &self.jump_index
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct ConditionItem<Data: GarnishData> {
+    node_index: usize,
+    jump_index_to_update: Data::Size,
+    root_end_instruction: (Instruction, Option<Data::Size>),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -221,12 +249,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         }
     }
 
-    Ok(BuildData {
-        parse_root,
-        parse_tree,
-        instruction_metadata,
-        jump_index: tree_root_jump,
-    })
+    Ok(BuildData::new(parse_root, parse_tree, tree_root_jump, instruction_metadata))
 }
 
 fn handle_parse_node<Data: GarnishData>(
