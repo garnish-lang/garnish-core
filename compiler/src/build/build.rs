@@ -176,345 +176,16 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                 None => Err(CompilerError::new_message(format!("No parse node at index {}", node_index)))?,
             };
 
-            match parse_node.get_definition() {
-                Definition::Unit => handle_value_primitive(|data, _| data.add_unit(), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::False => handle_value_primitive(|data, _| data.add_false(), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::True => handle_value_primitive(|data, _| data.add_true(), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Number => handle_value_primitive(
-                    |data, node| data.parse_add_number(node.text()),
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::CharList => handle_value_primitive(
-                    |data, node| data.parse_add_char_list(node.text()),
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::ByteList => handle_value_primitive(
-                    |data, node| data.parse_add_byte_list(node.text()),
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::Symbol => handle_value_primitive(
-                    |data, node| data.parse_add_symbol(&node.text()[1..]),
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::Value => handle_value_like(|_, _| Ok(None), Instruction::PutValue, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Identifier => handle_value_like(
-                    |data, node| Ok(Some(data.parse_add_symbol(node.text())?)),
-                    Instruction::Resolve,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::Property => handle_value_like(
-                    |data, node| Ok(Some(data.parse_add_symbol(node.text())?)),
-                    Instruction::Put,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::ExpressionTerminator => handle_value_like(
-                    |_, _| Ok(None),
-                    Instruction::EndExpression,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::AbsoluteValue => handle_unary_prefix(Instruction::AbsoluteValue, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Opposite => handle_unary_prefix(Instruction::Opposite, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::BitwiseNot => handle_unary_prefix(Instruction::BitwiseNot, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Not => handle_unary_prefix(Instruction::Not, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Tis => handle_unary_prefix(Instruction::Tis, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::TypeOf => handle_unary_prefix(Instruction::TypeOf, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::AccessLeftInternal => handle_unary_prefix(Instruction::AccessLeftInternal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::EmptyApply => handle_unary_suffix(Instruction::EmptyApply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::AccessRightInternal => handle_unary_suffix(Instruction::AccessRightInternal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::AccessLengthInternal => handle_unary_suffix(Instruction::AccessLengthInternal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Addition => handle_binary_operation(Instruction::Add, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Subtraction => handle_binary_operation(Instruction::Subtract, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::MultiplicationSign => handle_binary_operation(Instruction::Multiply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Division => handle_binary_operation(Instruction::Divide, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Access => handle_binary_operation(Instruction::Access, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Pair => handle_binary_operation(Instruction::MakePair, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Range => handle_binary_operation(Instruction::MakeRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::StartExclusiveRange => handle_binary_operation(Instruction::MakeStartExclusiveRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::EndExclusiveRange => handle_binary_operation(Instruction::MakeEndExclusiveRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::ExclusiveRange => handle_binary_operation(Instruction::MakeExclusiveRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::ExponentialSign => handle_binary_operation(Instruction::Power, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Remainder => handle_binary_operation(Instruction::Remainder, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::IntegerDivision => handle_binary_operation(Instruction::IntegerDivide, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::BitwiseAnd => handle_binary_operation(Instruction::BitwiseAnd, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::BitwiseOr => handle_binary_operation(Instruction::BitwiseOr, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::BitwiseXor => handle_binary_operation(Instruction::BitwiseXor, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::BitwiseRightShift => handle_binary_operation(Instruction::BitwiseShiftRight, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::BitwiseLeftShift => handle_binary_operation(Instruction::BitwiseShiftLeft, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Xor => handle_binary_operation(Instruction::Xor, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::TypeEqual => handle_binary_operation(Instruction::TypeEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::TypeCast => handle_binary_operation(Instruction::ApplyType, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Equality => handle_binary_operation(Instruction::Equal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Inequality => handle_binary_operation(Instruction::NotEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::LessThan => handle_binary_operation(Instruction::LessThan, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::LessThanOrEqual => handle_binary_operation(Instruction::LessThanOrEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::GreaterThan => handle_binary_operation(Instruction::GreaterThan, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::GreaterThanOrEqual => handle_binary_operation(Instruction::GreaterThanOrEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Apply => handle_binary_operation(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Concatenation => handle_binary_operation(Instruction::Concat, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::ApplyTo => handle_binary_operation_with_push(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata, |left, right| {
-                    (left, right)
-                })?,
-                Definition::CommaList => handle_list(Definition::CommaList, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::List => handle_list(Definition::List, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Or => handle_logical_binary(Instruction::Or, &mut nodes, node_index, &mut stack, &mut root_stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::And => handle_logical_binary(Instruction::And, &mut nodes, node_index, &mut stack, &mut root_stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::Group => {
-                    let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on NestedExpression definition".to_string()))?;
-
-                    nodes[right] = Some(BuildNode::new(right));
-
-                    stack.push(right);
-                }
-                Definition::SideEffect => {
-                    let node = match nodes.get_mut(node_index) {
-                        Some(Some(node)) => node,
-                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
-                    };
-
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            node.state = BuildNodeState::Initialized;
-
-                            data.push_instruction(Instruction::StartSideEffect, None)?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-
-                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on SideEffect definition".to_string()))?;
-
-                            nodes[right] = Some(BuildNode::new(right));
-
-                            stack.push(node_index);
-                            stack.push(right);
-                        }
-                        BuildNodeState::Initialized => {
-                            data.push_instruction(Instruction::EndSideEffect, None)?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                        }
-                    }
-                }
-                Definition::NestedExpression => {
-                    let jump_index = data.get_jump_table_len();
-                    data.push_jump_point(Data::Size::zero())?;
-                    let addr = data.add_expression(jump_index.clone())?;
-                    data.push_instruction(Instruction::Put, Some(addr))?;
-                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-
-                    let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on NestedExpression definition".to_string()))?;
-
-                    nodes[right] = Some(BuildNode::new_with_jump(right, jump_index));
-
-                    root_stack.push(right);
-                }
-                Definition::JumpIfFalse => handle_jump_if(
-                    Instruction::JumpIfFalse,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    &mut root_stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::JumpIfTrue => handle_jump_if(
-                    Instruction::JumpIfTrue,
-                    &mut nodes,
-                    node_index,
-                    &mut stack,
-                    &mut root_stack,
-                    parse_node,
-                    data,
-                    &mut instruction_metadata,
-                )?,
-                Definition::ElseJump => {
-                    let node = match nodes.get_mut(node_index) {
-                        Some(Some(node)) => node,
-                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
-                    };
-
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            node.state = BuildNodeState::Initialized;
-
-                            stack.push(node.parse_node_index);
-                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on ElseJump definition".to_string()))?;
-                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on ElseJump definition".to_string()))?;
-                            stack.push(right);
-                            stack.push(left);
-
-                            match node.conditional_parent {
-                                Some(parent) => {
-                                    nodes[right] = Some(BuildNode::new_with_conditional(right, parent));
-                                    nodes[left] = Some(BuildNode::new_with_conditional(left, parent));
-                                }
-                                None => {
-                                    nodes[right] = Some(BuildNode::new_with_conditional(right, node_index));
-                                    nodes[left] = Some(BuildNode::new_with_conditional(left, node_index));
-                                }
-                            }
-                        }
-                        BuildNodeState::Initialized => match node.conditional_parent {
-                            Some(_) => {}
-                            None => {
-                                if node.conditional_items.len() > 0 {
-                                    let mut new_items: Vec<(usize, BuildNode<Data>)> = vec![];
-
-                                    let jump_to_index = data.get_jump_table_len();
-                                    data.push_jump_point(data.get_instruction_len())?;
-
-                                    for condition in &node.conditional_items {
-                                        root_stack.push(condition.node_index);
-
-                                        new_items.push((
-                                            condition.node_index,
-                                            BuildNode::new_with_jump_and_end(condition.node_index, condition.jump_index_to_update.clone(), vec![(Instruction::JumpTo, Some(jump_to_index.clone()))]),
-                                        ));
-                                    }
-
-                                    for (index, data) in new_items {
-                                        nodes[index] = Some(data);
-                                    }
-                                }
-                            }
-                        },
-                    }
-                }
-                Definition::Reapply => {
-                    let node = match nodes.get_mut(node_index) {
-                        Some(Some(node)) => node,
-                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
-                    };
-
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            node.state = BuildNodeState::Initialized;
-
-                            stack.push(node.parse_node_index);
-                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on Reapply definition".to_string()))?;
-                            stack.push(left);
-
-                            nodes[left] = Some(BuildNode::new_with_conditional(left, node_index));
-                        }
-                        BuildNodeState::Initialized => {
-                            let jump_index = data.get_jump_table_len();
-                            data.push_jump_point(Data::Size::zero())?;
-                            data.push_instruction(Instruction::JumpIfTrue, Some(jump_index.clone()))?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-
-                            match node.conditional_parent {
-                                Some(_) => {}
-                                None => {
-                                    data.push_instruction(Instruction::PutValue, None)?;
-                                    instruction_metadata.push(InstructionMetadata::new(None));
-                                }
-                            }
-
-                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on Reapply definition".to_string()))?;
-
-                            root_stack.push(right);
-
-                            nodes[right] = Some(BuildNode::new_with_jump_and_end(
-                                right,
-                                jump_index.clone(),
-                                vec![(Instruction::UpdateValue, None), (Instruction::JumpTo, Some(current_root_jump.clone()))],
-                            ));
-                        }
-                    }
-                }
-                Definition::Subexpression | Definition::ExpressionSeparator => {
-                    let node = match nodes.get_mut(node_index) {
-                        Some(Some(node)) => node,
-                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
-                    };
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            node.state = BuildNodeState::Initialized;
-
-                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on Subexpression definition".to_string()))?;
-                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on Subexpression definition".to_string()))?;
-
-                            stack.push(right);
-                            stack.push(node_index);
-                            stack.push(left);
-
-                            nodes[right] = Some(BuildNode::new(right));
-                            nodes[left] = Some(BuildNode::new(left));
-                        }
-                        BuildNodeState::Initialized => {
-                            data.push_instruction(Instruction::UpdateValue, None)?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                        }
-                    }
-                }
-                Definition::SuffixApply => handle_unary_fix_apply(parse_node.get_left(), Definition::SuffixApply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::PrefixApply => handle_unary_fix_apply(parse_node.get_right(), Definition::PrefixApply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-                Definition::InfixApply => {
-                    let node = match nodes.get_mut(node_index) {
-                        Some(Some(node)) => node,
-                        _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
-                    };
-                    match node.state {
-                        BuildNodeState::Uninitialized => {
-                            node.state = BuildNodeState::Initialized;
-
-                            let addr = data.parse_add_symbol(parse_node.text().trim_matches('`'))?;
-
-                            data.push_instruction(Instruction::Resolve, Some(addr))?;
-                            instruction_metadata.push(InstructionMetadata::new(None));
-
-                            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on InfixApply definition".to_string()))?;
-                            let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on InfixApply definition".to_string()))?;
-
-                            stack.push(node_index);
-                            stack.push(right);
-                            stack.push(left);
-
-                            nodes[right] = Some(BuildNode::new(right));
-                            nodes[left] = Some(BuildNode::new(left));
-                        }
-                        BuildNodeState::Initialized => {
-                            data.push_instruction(Instruction::MakeList, Some(Data::Size::one() + Data::Size::one()))?;
-                            instruction_metadata.push(InstructionMetadata::new(None));
-                            data.push_instruction(Instruction::Apply, None)?;
-                            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                        }
-                    }
-                }
-                Definition::Drop => Err(CompilerError::new_message("Cannot build a Drop definition".to_string()))?,
-            }
+            handle_parse_node(
+                data,
+                &mut nodes,
+                &mut instruction_metadata,
+                &mut root_stack,
+                current_root_jump.clone(),
+                &mut stack,
+                node_index,
+                parse_node,
+            )?;
 
             match nodes.get_mut(node_index) {
                 Some(Some(node)) if node.contributes_to_list => match node.list_parent {
@@ -556,6 +227,376 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
         instruction_metadata,
         jump_index: tree_root_jump,
     })
+}
+
+fn handle_parse_node<Data: GarnishData>(
+    data: &mut Data,
+    mut nodes: &mut Vec<Option<BuildNode<Data>>>,
+    mut instruction_metadata: &mut Vec<InstructionMetadata>,
+    mut root_stack: &mut Vec<usize>,
+    current_root_jump: <Data as GarnishData>::Size,
+    mut stack: &mut Vec<usize>,
+    node_index: usize,
+    parse_node: &ParseNode,
+) -> Result<(), CompilerError<<Data as GarnishData>::Error>> {
+    match parse_node.get_definition() {
+        Definition::Unit => handle_value_primitive(|data, _| data.add_unit(), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::False => handle_value_primitive(|data, _| data.add_false(), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::True => handle_value_primitive(|data, _| data.add_true(), &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Number => handle_value_primitive(
+            |data, node| data.parse_add_number(node.text()),
+            &mut nodes,
+            node_index,
+            &mut stack,
+            parse_node,
+            data,
+            &mut instruction_metadata,
+        )?,
+        Definition::CharList => handle_value_primitive(
+            |data, node| data.parse_add_char_list(node.text()),
+            &mut nodes,
+            node_index,
+            &mut stack,
+            parse_node,
+            data,
+            &mut instruction_metadata,
+        )?,
+        Definition::ByteList => handle_value_primitive(
+            |data, node| data.parse_add_byte_list(node.text()),
+            &mut nodes,
+            node_index,
+            &mut stack,
+            parse_node,
+            data,
+            &mut instruction_metadata,
+        )?,
+        Definition::Symbol => handle_value_primitive(
+            |data, node| data.parse_add_symbol(&node.text()[1..]),
+            &mut nodes,
+            node_index,
+            &mut stack,
+            parse_node,
+            data,
+            &mut instruction_metadata,
+        )?,
+        Definition::Value => handle_value_like(|_, _| Ok(None), Instruction::PutValue, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Identifier => handle_value_like(
+            |data, node| Ok(Some(data.parse_add_symbol(node.text())?)),
+            Instruction::Resolve,
+            &mut nodes,
+            node_index,
+            &mut stack,
+            parse_node,
+            data,
+            &mut instruction_metadata,
+        )?,
+        Definition::Property => handle_value_like(
+            |data, node| Ok(Some(data.parse_add_symbol(node.text())?)),
+            Instruction::Put,
+            &mut nodes,
+            node_index,
+            &mut stack,
+            parse_node,
+            data,
+            &mut instruction_metadata,
+        )?,
+        Definition::ExpressionTerminator => handle_value_like(
+            |_, _| Ok(None),
+            Instruction::EndExpression,
+            &mut nodes,
+            node_index,
+            &mut stack,
+            parse_node,
+            data,
+            &mut instruction_metadata,
+        )?,
+        Definition::AbsoluteValue => handle_unary_prefix(Instruction::AbsoluteValue, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Opposite => handle_unary_prefix(Instruction::Opposite, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::BitwiseNot => handle_unary_prefix(Instruction::BitwiseNot, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Not => handle_unary_prefix(Instruction::Not, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Tis => handle_unary_prefix(Instruction::Tis, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::TypeOf => handle_unary_prefix(Instruction::TypeOf, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::AccessLeftInternal => handle_unary_prefix(Instruction::AccessLeftInternal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::EmptyApply => handle_unary_suffix(Instruction::EmptyApply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::AccessRightInternal => handle_unary_suffix(Instruction::AccessRightInternal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::AccessLengthInternal => handle_unary_suffix(Instruction::AccessLengthInternal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Addition => handle_binary_operation(Instruction::Add, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Subtraction => handle_binary_operation(Instruction::Subtract, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::MultiplicationSign => handle_binary_operation(Instruction::Multiply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Division => handle_binary_operation(Instruction::Divide, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Access => handle_binary_operation(Instruction::Access, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Pair => handle_binary_operation(Instruction::MakePair, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Range => handle_binary_operation(Instruction::MakeRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::StartExclusiveRange => handle_binary_operation(Instruction::MakeStartExclusiveRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::EndExclusiveRange => handle_binary_operation(Instruction::MakeEndExclusiveRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::ExclusiveRange => handle_binary_operation(Instruction::MakeExclusiveRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::ExponentialSign => handle_binary_operation(Instruction::Power, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Remainder => handle_binary_operation(Instruction::Remainder, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::IntegerDivision => handle_binary_operation(Instruction::IntegerDivide, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::BitwiseAnd => handle_binary_operation(Instruction::BitwiseAnd, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::BitwiseOr => handle_binary_operation(Instruction::BitwiseOr, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::BitwiseXor => handle_binary_operation(Instruction::BitwiseXor, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::BitwiseRightShift => handle_binary_operation(Instruction::BitwiseShiftRight, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::BitwiseLeftShift => handle_binary_operation(Instruction::BitwiseShiftLeft, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Xor => handle_binary_operation(Instruction::Xor, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::TypeEqual => handle_binary_operation(Instruction::TypeEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::TypeCast => handle_binary_operation(Instruction::ApplyType, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Equality => handle_binary_operation(Instruction::Equal, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Inequality => handle_binary_operation(Instruction::NotEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::LessThan => handle_binary_operation(Instruction::LessThan, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::LessThanOrEqual => handle_binary_operation(Instruction::LessThanOrEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::GreaterThan => handle_binary_operation(Instruction::GreaterThan, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::GreaterThanOrEqual => handle_binary_operation(Instruction::GreaterThanOrEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Apply => handle_binary_operation(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Concatenation => handle_binary_operation(Instruction::Concat, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::ApplyTo => handle_binary_operation_with_push(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata, |left, right| {
+            (left, right)
+        })?,
+        Definition::CommaList => handle_list(Definition::CommaList, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::List => handle_list(Definition::List, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Or => handle_logical_binary(Instruction::Or, &mut nodes, node_index, &mut stack, &mut root_stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::And => handle_logical_binary(Instruction::And, &mut nodes, node_index, &mut stack, &mut root_stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Group => {
+            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on NestedExpression definition".to_string()))?;
+
+            nodes[right] = Some(BuildNode::new(right));
+
+            stack.push(right);
+        }
+        Definition::SideEffect => {
+            let node = match nodes.get_mut(node_index) {
+                Some(Some(node)) => node,
+                _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+            };
+
+            match node.state {
+                BuildNodeState::Uninitialized => {
+                    node.state = BuildNodeState::Initialized;
+
+                    data.push_instruction(Instruction::StartSideEffect, None)?;
+                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+
+                    let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on SideEffect definition".to_string()))?;
+
+                    nodes[right] = Some(BuildNode::new(right));
+
+                    stack.push(node_index);
+                    stack.push(right);
+                }
+                BuildNodeState::Initialized => {
+                    data.push_instruction(Instruction::EndSideEffect, None)?;
+                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+                }
+            }
+        }
+        Definition::NestedExpression => {
+            let jump_index = data.get_jump_table_len();
+            data.push_jump_point(Data::Size::zero())?;
+            let addr = data.add_expression(jump_index.clone())?;
+            data.push_instruction(Instruction::Put, Some(addr))?;
+            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+
+            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on NestedExpression definition".to_string()))?;
+
+            nodes[right] = Some(BuildNode::new_with_jump(right, jump_index));
+
+            root_stack.push(right);
+        }
+        Definition::JumpIfFalse => handle_jump_if(
+            Instruction::JumpIfFalse,
+            &mut nodes,
+            node_index,
+            &mut stack,
+            &mut root_stack,
+            parse_node,
+            data,
+            &mut instruction_metadata,
+        )?,
+        Definition::JumpIfTrue => handle_jump_if(
+            Instruction::JumpIfTrue,
+            &mut nodes,
+            node_index,
+            &mut stack,
+            &mut root_stack,
+            parse_node,
+            data,
+            &mut instruction_metadata,
+        )?,
+        Definition::ElseJump => {
+            let node = match nodes.get_mut(node_index) {
+                Some(Some(node)) => node,
+                _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+            };
+
+            match node.state {
+                BuildNodeState::Uninitialized => {
+                    node.state = BuildNodeState::Initialized;
+
+                    stack.push(node.parse_node_index);
+                    let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on ElseJump definition".to_string()))?;
+                    let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on ElseJump definition".to_string()))?;
+                    stack.push(right);
+                    stack.push(left);
+
+                    match node.conditional_parent {
+                        Some(parent) => {
+                            nodes[right] = Some(BuildNode::new_with_conditional(right, parent));
+                            nodes[left] = Some(BuildNode::new_with_conditional(left, parent));
+                        }
+                        None => {
+                            nodes[right] = Some(BuildNode::new_with_conditional(right, node_index));
+                            nodes[left] = Some(BuildNode::new_with_conditional(left, node_index));
+                        }
+                    }
+                }
+                BuildNodeState::Initialized => match node.conditional_parent {
+                    Some(_) => {}
+                    None => {
+                        if node.conditional_items.len() > 0 {
+                            let mut new_items: Vec<(usize, BuildNode<Data>)> = vec![];
+
+                            let jump_to_index = data.get_jump_table_len();
+                            data.push_jump_point(data.get_instruction_len())?;
+
+                            for condition in &node.conditional_items {
+                                root_stack.push(condition.node_index);
+
+                                new_items.push((
+                                    condition.node_index,
+                                    BuildNode::new_with_jump_and_end(condition.node_index, condition.jump_index_to_update.clone(), vec![(Instruction::JumpTo, Some(jump_to_index.clone()))]),
+                                ));
+                            }
+
+                            for (index, data) in new_items {
+                                nodes[index] = Some(data);
+                            }
+                        }
+                    }
+                },
+            }
+        }
+        Definition::Reapply => {
+            let node = match nodes.get_mut(node_index) {
+                Some(Some(node)) => node,
+                _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+            };
+
+            match node.state {
+                BuildNodeState::Uninitialized => {
+                    node.state = BuildNodeState::Initialized;
+
+                    stack.push(node.parse_node_index);
+                    let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on Reapply definition".to_string()))?;
+                    stack.push(left);
+
+                    nodes[left] = Some(BuildNode::new_with_conditional(left, node_index));
+                }
+                BuildNodeState::Initialized => {
+                    let jump_index = data.get_jump_table_len();
+                    data.push_jump_point(Data::Size::zero())?;
+                    data.push_instruction(Instruction::JumpIfTrue, Some(jump_index.clone()))?;
+                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+
+                    match node.conditional_parent {
+                        Some(_) => {}
+                        None => {
+                            data.push_instruction(Instruction::PutValue, None)?;
+                            instruction_metadata.push(InstructionMetadata::new(None));
+                        }
+                    }
+
+                    let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on Reapply definition".to_string()))?;
+
+                    root_stack.push(right);
+
+                    nodes[right] = Some(BuildNode::new_with_jump_and_end(
+                        right,
+                        jump_index.clone(),
+                        vec![(Instruction::UpdateValue, None), (Instruction::JumpTo, Some(current_root_jump.clone()))],
+                    ));
+                }
+            }
+        }
+        Definition::Subexpression | Definition::ExpressionSeparator => {
+            let node = match nodes.get_mut(node_index) {
+                Some(Some(node)) => node,
+                _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+            };
+            match node.state {
+                BuildNodeState::Uninitialized => {
+                    node.state = BuildNodeState::Initialized;
+
+                    let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on Subexpression definition".to_string()))?;
+                    let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on Subexpression definition".to_string()))?;
+
+                    stack.push(right);
+                    stack.push(node_index);
+                    stack.push(left);
+
+                    nodes[right] = Some(BuildNode::new(right));
+                    nodes[left] = Some(BuildNode::new(left));
+                }
+                BuildNodeState::Initialized => {
+                    data.push_instruction(Instruction::UpdateValue, None)?;
+                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+                }
+            }
+        }
+        Definition::SuffixApply => handle_unary_fix_apply(
+            parse_node.get_left(),
+            Definition::SuffixApply,
+            &mut nodes,
+            node_index,
+            &mut stack,
+            parse_node,
+            data,
+            &mut instruction_metadata,
+        )?,
+        Definition::PrefixApply => handle_unary_fix_apply(
+            parse_node.get_right(),
+            Definition::PrefixApply,
+            &mut nodes,
+            node_index,
+            &mut stack,
+            parse_node,
+            data,
+            &mut instruction_metadata,
+        )?,
+        Definition::InfixApply => {
+            let node = match nodes.get_mut(node_index) {
+                Some(Some(node)) => node,
+                _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+            };
+            match node.state {
+                BuildNodeState::Uninitialized => {
+                    node.state = BuildNodeState::Initialized;
+
+                    let addr = data.parse_add_symbol(parse_node.text().trim_matches('`'))?;
+
+                    data.push_instruction(Instruction::Resolve, Some(addr))?;
+                    instruction_metadata.push(InstructionMetadata::new(None));
+
+                    let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on InfixApply definition".to_string()))?;
+                    let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on InfixApply definition".to_string()))?;
+
+                    stack.push(node_index);
+                    stack.push(right);
+                    stack.push(left);
+
+                    nodes[right] = Some(BuildNode::new(right));
+                    nodes[left] = Some(BuildNode::new(left));
+                }
+                BuildNodeState::Initialized => {
+                    data.push_instruction(Instruction::MakeList, Some(Data::Size::one() + Data::Size::one()))?;
+                    instruction_metadata.push(InstructionMetadata::new(None));
+                    data.push_instruction(Instruction::Apply, None)?;
+                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+                }
+            }
+        }
+        Definition::Drop => Err(CompilerError::new_message("Cannot build a Drop definition".to_string()))?,
+    }
+    Ok(())
 }
 
 fn handle_unary_fix_apply<Data: GarnishData>(
