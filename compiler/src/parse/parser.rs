@@ -200,6 +200,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::GreaterThanOrEqual => (Definition::GreaterThanOrEqual, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Apply => (Definition::Apply, SecondaryDefinition::BinaryLeftToRight),
         TokenType::ApplyTo => (Definition::ApplyTo, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::PartialApply => unimplemented!(), // (Definition::ApplyTo, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Concatenation => (Definition::Concatenation, SecondaryDefinition::BinaryLeftToRight),
         TokenType::LeftInternal => (Definition::AccessLeftInternal, SecondaryDefinition::UnaryPrefix),
         TokenType::RightInternal => (Definition::AccessRightInternal, SecondaryDefinition::UnarySuffix),

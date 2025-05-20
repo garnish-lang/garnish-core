@@ -430,7 +430,7 @@ fn handle_parse_node<Data: GarnishData>(
                     let addr = data.add_expression(jump_index.clone())?;
                     data.push_instruction(Instruction::Put, Some(addr))?;
                     instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                    
+
                     nodes[right] = Some(BuildNode::new_with_jump(right, jump_index));
                     root_stack.push(right);
                 }
@@ -1283,7 +1283,7 @@ mod binary_operations {
         less_than_or_equal: "value1 <= value2", Instruction::LessThanOrEqual,
         greater_than: "value1 > value2", Instruction::GreaterThan,
         greater_than_or_equal: "value1 >= value2", Instruction::GreaterThanOrEqual,
-        apply: "value1 ~ value2", Instruction::Apply,
+        apply: "value1 <~ value2", Instruction::Apply,
         concatenation: "value1 <> value2", Instruction::Concat,
     }
 

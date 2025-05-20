@@ -51,12 +51,13 @@ pub enum TokenType {
     ExpressionSeparator,
     Annotation,
     LineAnnotation,
-    Apply,
     JumpIfFalse,
     JumpIfTrue,
     ElseJump,
     TypeOf,
+    Apply,
     ApplyTo,
+    PartialApply,
     Reapply,
     EmptyApply,
     TypeCast,
@@ -206,11 +207,12 @@ impl<'a> Lexer<'a> {
             ("$?", TokenType::True),
             ("$!", TokenType::False),
             (",", TokenType::Comma),
-            ("~", TokenType::Apply),
             ("!>", TokenType::JumpIfFalse),
             ("?>", TokenType::JumpIfTrue),
             ("|>", TokenType::ElseJump),
+            ("<~", TokenType::Apply),
             ("~>", TokenType::ApplyTo),
+            ("~", TokenType::PartialApply),
             ("^~", TokenType::Reapply),
             ("~~", TokenType::EmptyApply),
             ("#", TokenType::TypeOf),
@@ -1708,13 +1710,28 @@ mod tests {
 
     #[test]
     fn apply_symbol() {
+        let result = lex(&"<~".to_string()).unwrap();
+
+        assert_eq!(
+            result,
+            vec![LexerToken {
+                text: "<~".to_string(),
+                token_type: TokenType::Apply,
+                column: 0,
+                row: 0
+            }]
+        )
+    }
+
+    #[test]
+    fn partial_apply() {
         let result = lex(&"~".to_string()).unwrap();
 
         assert_eq!(
             result,
             vec![LexerToken {
                 text: "~".to_string(),
-                token_type: TokenType::Apply,
+                token_type: TokenType::PartialApply,
                 column: 0,
                 row: 0
             }]
@@ -3066,7 +3083,7 @@ mod chars_and_bytes {
 
     #[test]
     fn character_list_followed_by_operations() {
-        let result = lex(&"\"Hello World!\" ~ 10".to_string()).unwrap();
+        let result = lex(&"\"Hello World!\" <~ 10".to_string()).unwrap();
 
         assert_eq!(
             result,
@@ -3084,7 +3101,7 @@ mod chars_and_bytes {
                     row: 0
                 },
                 LexerToken {
-                    text: "~".to_string(),
+                    text: "<~".to_string(),
                     token_type: TokenType::Apply,
                     column: 15,
                     row: 0
@@ -3092,13 +3109,13 @@ mod chars_and_bytes {
                 LexerToken {
                     text: " ".to_string(),
                     token_type: TokenType::Whitespace,
-                    column: 16,
+                    column: 17,
                     row: 0
                 },
                 LexerToken {
                     text: "10".to_string(),
                     token_type: TokenType::Number,
-                    column: 17,
+                    column: 18,
                     row: 0
                 }
             ]
@@ -3137,7 +3154,7 @@ mod chars_and_bytes {
 
     #[test]
     fn byte_list_followed_by_operations() {
-        let result = lex(&"'Hello World!' ~ 10".to_string()).unwrap();
+        let result = lex(&"'Hello World!' <~ 10".to_string()).unwrap();
 
         assert_eq!(
             result,
@@ -3155,7 +3172,7 @@ mod chars_and_bytes {
                     row: 0
                 },
                 LexerToken {
-                    text: "~".to_string(),
+                    text: "<~".to_string(),
                     token_type: TokenType::Apply,
                     column: 15,
                     row: 0
@@ -3163,13 +3180,13 @@ mod chars_and_bytes {
                 LexerToken {
                     text: " ".to_string(),
                     token_type: TokenType::Whitespace,
-                    column: 16,
+                    column: 17,
                     row: 0
                 },
                 LexerToken {
                     text: "10".to_string(),
                     token_type: TokenType::Number,
-                    column: 17,
+                    column: 18,
                     row: 0
                 }
             ]
