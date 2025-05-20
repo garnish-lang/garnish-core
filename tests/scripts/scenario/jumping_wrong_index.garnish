@@ -1,0 +1,5 @@
+:first_item = { $? ?> 987 |> 100 }
+:circle1 = { 10 + 5 }
+:circle2 = { 15 - 5 }
+
+($.first_item~~) = 987

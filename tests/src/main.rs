@@ -2,17 +2,17 @@ mod context;
 
 use crate::context::TestingContext;
 use colored::Colorize;
-use garnish_lang_compiler::build::build_with_data;
+use garnish_lang_compiler::build::build;
 use garnish_lang_compiler::lex::lex;
-use garnish_lang_compiler::parse::parse;
-use garnish_lang_runtime::{SimpleRuntimeState};
+use garnish_lang_compiler::parse::{ParseNode, parse};
+use garnish_lang_runtime::SimpleRuntimeState;
+use garnish_lang_runtime::runtime::SimpleGarnishRuntime;
 use garnish_lang_simple_data::{SimpleData, SimpleGarnishData};
 use garnish_lang_traits::{GarnishData, GarnishRuntime};
 use log::error;
 use std::fs::read_to_string;
 use std::path::PathBuf;
 use std::{fs, path};
-use garnish_lang_runtime::runtime::SimpleGarnishRuntime;
 
 fn collect_scripts(path: String) -> Vec<String> {
     let mut dirs = vec![path];
@@ -52,6 +52,7 @@ fn main() {
     // future cli options
     let manual_filter: Vec<&str> = vec![];
     let display_successes = false;
+    let create_dump_files = false;
 
     for script_path in script_paths {
         let mut path = PathBuf::from(&script_path);
@@ -68,7 +69,7 @@ fn main() {
             continue;
         }
 
-        let result = execute_script(&script_path);
+        let result = execute_script(&script_path, create_dump_files);
 
         match result {
             TestResult::Success => {
@@ -89,11 +90,7 @@ fn main() {
         };
     }
 
-    println!(
-        "{} | {}",
-        format!("{} successes", successes).green(),
-        format!("{} failures", failures).red()
-    );
+    println!("{} | {}", format!("{} successes", successes).green(), format!("{} failures", failures).red());
     for m in messages {
         println!("{}", m);
     }
@@ -105,21 +102,77 @@ enum TestResult {
     Error(String),
 }
 
-fn execute_script(script_path: &String) -> TestResult {
+fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
     let mut data = SimpleGarnishData::new();
-    match read_to_string(PathBuf::from(&script_path))
-        .or_else(|e| Err(format!("{}", e)))
-        .and_then(|file| {
-            lex(&file)
-                .or_else(|e| Err(format!("{}", e)))
-                .and_then(|tokens| parse(&tokens).or_else(|e| Err(format!("{}", e))))
-                .and_then(|parse_result| {
-                    build_with_data(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).or_else(|e| Err(format!("{}", e)))
-                })
-                .or_else(|e| Err(format!("{}", e)))
-        }) {
+    let mut dump_path = PathBuf::from("./tmp").join(script_path);
+    dump_path.set_extension("");
+    match fs::create_dir_all(&dump_path) {
+        Ok(_) => {}
+        Err(e) => error!("failed to create dump directories: {}", e),
+    }
+    match read_to_string(PathBuf::from(&script_path)).or_else(|e| Err(format!("{}", e))).and_then(|file| {
+        lex(&file)
+            .or_else(|e| Err(format!("{}", e)))
+            .and_then(|tokens| {
+                if create_dump_files {
+                    let output = tokens
+                        .iter()
+                        .map(|t| format!("{:?} - \"{}\"", t.get_token_type(), escape_invisible_chars(t.get_text())))
+                        .collect::<Vec<String>>()
+                        .join("\n");
+                    let output_path = dump_path.join("tokens.txt");
+                    match fs::write(output_path, output).or_else(|e| Err(format!("{}", e))) {
+                        Ok(_) => {}
+                        Err(e) => println!("error writing token dump: {}", e),
+                    }
+                }
+                parse(&tokens).or_else(|e| Err(format!("{}", e)))
+            })
+            .and_then(|parse_result| {
+                match parse_result.get_node(parse_result.get_root()) {
+                    None => println!("Could not dump parse tree"),
+                    Some(root) => {
+                        if create_dump_files {
+                            let dump = dump_parse_tree(root, parse_result.get_nodes());
+                            let output_path = dump_path.join("tree.txt");
+                            match fs::write(output_path, dump).or_else(|e| Err(format!("{}", e))) {
+                                Ok(_) => {}
+                                Err(e) => println!("error writing parse tree dump: {}", e),
+                            }
+                        }
+                    }
+                }
+
+                build(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).or_else(|e| Err(format!("{}", e)))
+            })
+            .or_else(|e| Err(format!("{}", e)))
+    }) {
         Err(e) => TestResult::Error(format!("({}): {}", &script_path, e)),
         Ok(_) => {
+            if create_dump_files {
+                let instruction_output = data
+                    .get_instructions()
+                    .iter()
+                    .map(|instruction| {
+                        format!(
+                            "{:?} - {}",
+                            instruction.instruction,
+                            match instruction.data {
+                                Some(index) => data.get_data().display_for_item(index),
+                                None => "".to_string(),
+                            }
+                        )
+                    })
+                    .collect::<Vec<String>>()
+                    .join("\n");
+
+                let output_path = dump_path.join("instructions.txt");
+                match fs::write(output_path, instruction_output).or_else(|e| Err(format!("{}", e))) {
+                    Ok(_) => {}
+                    Err(e) => println!("error writing parse tree dump: {}", e),
+                }
+            }
+
             let start = match data.get_jump_points().get(0) {
                 Some(jump_points) => *jump_points,
                 None => {
@@ -177,14 +230,59 @@ fn execute_script(script_path: &String) -> TestResult {
 
             match data.get_current_value().and_then(|i| data.get_data().get(i)) {
                 Some(SimpleData::True) => TestResult::Success,
-                Some(SimpleData::False) => TestResult::Failure(format!(
-                    "[{} = {}]",
-                    data.get_data().display_for_item(left),
-                    data.get_data().display_for_item(right)
-                )),
+                Some(SimpleData::False) => TestResult::Failure(format!("[{} = {}]", data.get_data().display_for_item(left), data.get_data().display_for_item(right))),
                 Some(v) => TestResult::Error(format!("Got non-boolean result after comparison, got {:?}", v.display_simple())),
                 None => TestResult::Error(String::from("No current value after comparison")),
             }
         }
     }
+}
+
+fn dump_parse_tree(tree: &ParseNode, nodes: &Vec<ParseNode>) -> String {
+    let mut stack = vec![(0, tree)];
+    let mut lines = vec![];
+
+    while let Some((nesting, node)) = stack.pop() {
+        lines.push(format!(
+            "{}{:?} {}",
+            "\t".repeat(nesting),
+            node.get_definition(),
+            escape_invisible_chars(node.get_lex_token().get_text())
+        ));
+
+        match node.get_left().and_then(|index| nodes.get(index)) {
+            None => (),
+            Some(node) => {
+                stack.push((nesting + 1, node));
+            }
+        }
+
+        match node.get_right().and_then(|index| nodes.get(index)) {
+            None => (),
+            Some(node) => {
+                stack.push((nesting + 1, node));
+            }
+        }
+    }
+
+    lines.join("\n")
+}
+
+fn escape_invisible_chars(input: &str) -> String {
+    let mut output = String::new();
+    for c in input.chars() {
+        match c {
+            '\n' => output.push_str("\\n"),
+            '\r' => output.push_str("\\r"),
+            '\t' => output.push_str("\\t"),
+            '\\' => output.push_str("\\\\"), // Escape backslashes themselves
+            '"' => output.push_str("\\\""),  // Escape double quotes (if needed for string literals)
+            '\x00'..='\x1F' => {
+                // Control characters (ASCII 0-31)
+                output.push_str(&format!("\\x{:02x}", c as u8));
+            }
+            _ => output.push(c),
+        }
+    }
+    output
 }
