@@ -33,19 +33,19 @@ impl<Data: GarnishData> BuildData<Data> {
             jump_index,
         }
     }
-    
+
     pub fn parse_root(&self) -> usize {
         self.parse_root
     }
-    
+
     pub fn parse_tree(&self) -> &Vec<ParseNode> {
         &self.parse_tree
     }
-    
+
     pub fn instruction_metadata(&self) -> &Vec<InstructionMetadata> {
         &self.instruction_metadata
     }
-    
+
     pub fn jump_index(&self) -> &Data::Size {
         &self.jump_index
     }
@@ -380,11 +380,13 @@ fn handle_parse_node<Data: GarnishData>(
         Definition::Or => handle_logical_binary(Instruction::Or, &mut nodes, node_index, &mut stack, &mut root_stack, parse_node, data, &mut instruction_metadata)?,
         Definition::And => handle_logical_binary(Instruction::And, &mut nodes, node_index, &mut stack, &mut root_stack, parse_node, data, &mut instruction_metadata)?,
         Definition::Group => {
-            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on NestedExpression definition".to_string()))?;
-
-            nodes[right] = Some(BuildNode::new(right));
-
-            stack.push(right);
+            match parse_node.get_right() {
+                None => {}
+                Some(right) => {
+                    nodes[right] = Some(BuildNode::new(right));
+                    stack.push(right);
+                }
+            }
         }
         Definition::SideEffect => {
             let node = match nodes.get_mut(node_index) {
@@ -399,12 +401,15 @@ fn handle_parse_node<Data: GarnishData>(
                     data.push_instruction(Instruction::StartSideEffect, None)?;
                     instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
 
-                    let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on SideEffect definition".to_string()))?;
-
-                    nodes[right] = Some(BuildNode::new(right));
-
                     stack.push(node_index);
-                    stack.push(right);
+
+                    match parse_node.get_right() {
+                        None => {}
+                        Some(right) => {
+                            nodes[right] = Some(BuildNode::new(right));
+                            stack.push(right);
+                        }
+                    }
                 }
                 BuildNodeState::Initialized => {
                     data.push_instruction(Instruction::EndSideEffect, None)?;
@@ -413,17 +418,23 @@ fn handle_parse_node<Data: GarnishData>(
             }
         }
         Definition::NestedExpression => {
-            let jump_index = data.get_jump_table_len();
-            data.push_jump_point(Data::Size::zero())?;
-            let addr = data.add_expression(jump_index.clone())?;
-            data.push_instruction(Instruction::Put, Some(addr))?;
-            instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-
-            let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on NestedExpression definition".to_string()))?;
-
-            nodes[right] = Some(BuildNode::new_with_jump(right, jump_index));
-
-            root_stack.push(right);
+            match parse_node.get_right() {
+                None => {
+                    let addr = data.add_expression(current_root_jump.clone())?;
+                    data.push_instruction(Instruction::Put, Some(addr))?;
+                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+                }
+                Some(right) => {
+                    let jump_index = data.get_jump_table_len();
+                    data.push_jump_point(Data::Size::zero())?;
+                    let addr = data.add_expression(jump_index.clone())?;
+                    data.push_instruction(Instruction::Put, Some(addr))?;
+                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+                    
+                    nodes[right] = Some(BuildNode::new_with_jump(right, jump_index));
+                    root_stack.push(right);
+                }
+            }
         }
         Definition::JumpIfFalse => handle_jump_if(
             Instruction::JumpIfFalse,
@@ -1596,6 +1607,32 @@ mod expressions {
     use garnish_lang_traits::Instruction;
 
     #[test]
+    fn empty() {
+        let (data, build_data) = build_input("{}");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0]);
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default().append(SimpleData::Expression(0))
+        );
+        assert_eq!(
+            build_data.instruction_metadata,
+            vec![
+                InstructionMetadata::new(Some(0)),
+                InstructionMetadata::new(None),
+            ]
+        )
+    }
+
+    #[test]
     fn build_expression() {
         let (data, build_data) = build_input("{ 5 + 10 }");
 
@@ -2093,6 +2130,24 @@ mod groups {
                 .append(SimpleData::Number(20.into()))
         );
     }
+
+    #[test]
+    fn empty_group() {
+        let (data, build_data) = build_input("( )");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::EndExpression, None),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0]);
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+        );
+    }
 }
 
 #[cfg(test)]
@@ -2128,6 +2183,26 @@ mod side_effects {
                 .append(SimpleData::Number(5.into()))
                 .append(SimpleData::Number(15.into()))
                 .append(SimpleData::Number(20.into()))
+        );
+    }
+
+    #[test]
+    fn empty_side_effect() {
+        let (data, build_data) = build_input("[]");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::StartSideEffect, None),
+                SimpleInstruction::new(Instruction::EndSideEffect, None),
+                SimpleInstruction::new(Instruction::EndExpression, None),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0]);
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
         );
     }
 }
