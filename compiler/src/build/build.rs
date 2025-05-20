@@ -521,34 +521,16 @@ fn handle_parse_node<Data: GarnishData>(
                     node.state = BuildNodeState::Initialized;
 
                     stack.push(node.parse_node_index);
-                    let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on Reapply definition".to_string()))?;
-                    stack.push(left);
+                    let right = parse_node.get_right().ok_or(CompilerError::new_message("No left on Reapply definition".to_string()))?;
+                    stack.push(right);
 
-                    nodes[left] = Some(BuildNode::new_with_conditional(left, node_index));
+                    nodes[right] = Some(BuildNode::new(right));
                 }
                 BuildNodeState::Initialized => {
-                    let jump_index = data.get_jump_table_len();
-                    data.push_jump_point(Data::Size::zero())?;
-                    data.push_instruction(Instruction::JumpIfTrue, Some(jump_index.clone()))?;
+                    data.push_instruction(Instruction::UpdateValue, None)?;
                     instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-
-                    match node.conditional_parent {
-                        Some(_) => {}
-                        None => {
-                            data.push_instruction(Instruction::PutValue, None)?;
-                            instruction_metadata.push(InstructionMetadata::new(None));
-                        }
-                    }
-
-                    let right = parse_node.get_right().ok_or(CompilerError::new_message("No right on Reapply definition".to_string()))?;
-
-                    root_stack.push(right);
-
-                    nodes[right] = Some(BuildNode::new_with_jump_and_end(
-                        right,
-                        jump_index.clone(),
-                        vec![(Instruction::UpdateValue, None), (Instruction::JumpTo, Some(current_root_jump.clone()))],
-                    ));
+                    data.push_instruction(Instruction::JumpTo, Some(current_root_jump.clone()))?;
+                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
                 }
             }
         }
@@ -1984,49 +1966,25 @@ mod reapply {
 
     #[test]
     fn reapply() {
-        let (data, build_data) = build_input("$! ^~ 40");
+        let (data, build_data) = build_input("^~ 40");
 
         assert_eq!(build_data.jump_index, 0);
         assert_eq!(
             data.get_instructions(),
             &vec![
-                SimpleInstruction::new(Instruction::Put, Some(1)),
-                SimpleInstruction::new(Instruction::JumpIfTrue, Some(1)),
-                SimpleInstruction::new(Instruction::PutValue, None),
-                SimpleInstruction::new(Instruction::EndExpression, None),
                 SimpleInstruction::new(Instruction::Put, Some(3)),
                 SimpleInstruction::new(Instruction::UpdateValue, None),
                 SimpleInstruction::new(Instruction::JumpTo, Some(0)),
+                SimpleInstruction::new(Instruction::EndExpression, None),
             ]
         );
-        assert_eq!(data.get_jump_points(), &vec![0, 4]);
+        assert_eq!(data.get_jump_points(), &vec![0]);
         assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(40.into())));
     }
 
     #[test]
-    fn reapply_with_else() {
-        let (data, build_data) = build_input("$! ^~ 40 |> 50");
-
-        assert_eq!(build_data.jump_index, 0);
-        assert_eq!(
-            data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Put, Some(1)),
-                SimpleInstruction::new(Instruction::JumpIfTrue, Some(1)),
-                SimpleInstruction::new(Instruction::Put, Some(3)),
-                SimpleInstruction::new(Instruction::EndExpression, None),
-                SimpleInstruction::new(Instruction::Put, Some(4)),
-                SimpleInstruction::new(Instruction::UpdateValue, None),
-                SimpleInstruction::new(Instruction::JumpTo, Some(0)),
-            ]
-        );
-        assert_eq!(data.get_jump_points(), &vec![0, 4]);
-        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(50.into())).append(SimpleData::Number(40.into())));
-    }
-
-    #[test]
     fn nested_reapply() {
-        let (data, build_data) = build_input("5 {$! ^~ 40 |> 50}");
+        let (data, build_data) = build_input("5 { ^~ 40 }");
 
         assert_eq!(build_data.jump_index, 0);
         assert_eq!(
@@ -2036,22 +1994,18 @@ mod reapply {
                 SimpleInstruction::new(Instruction::Put, Some(4)),
                 SimpleInstruction::new(Instruction::MakeList, Some(2)),
                 SimpleInstruction::new(Instruction::EndExpression, None),
-                SimpleInstruction::new(Instruction::Put, Some(1)),
-                SimpleInstruction::new(Instruction::JumpIfTrue, Some(2)),
                 SimpleInstruction::new(Instruction::Put, Some(5)),
-                SimpleInstruction::new(Instruction::EndExpression, None),
-                SimpleInstruction::new(Instruction::Put, Some(6)),
                 SimpleInstruction::new(Instruction::UpdateValue, None),
                 SimpleInstruction::new(Instruction::JumpTo, Some(1)),
+                SimpleInstruction::new(Instruction::EndExpression, None),
             ]
         );
-        assert_eq!(data.get_jump_points(), &vec![0, 4, 8]);
+        assert_eq!(data.get_jump_points(), &vec![0, 4]);
         assert_eq!(
             data.get_data(),
             &SimpleDataList::default()
                 .append(SimpleData::Number(5.into()))
                 .append(SimpleData::Expression(1))
-                .append(SimpleData::Number(50.into()))
                 .append(SimpleData::Number(40.into()))
         );
     }
