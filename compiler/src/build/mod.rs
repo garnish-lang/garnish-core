@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, PartialOrd, Eq, PartialEq, Clone)]
+#[deprecated]
 pub struct InstructionMetadata {
     parse_node_index: Option<usize>,
 }
@@ -56,6 +57,7 @@ type DefinitionResolveInfo = (bool, Option<usize>);
 
 fn get_resolve_info(node: &ParseNode, nodes: &Vec<ParseNode>) -> (DefinitionResolveInfo, DefinitionResolveInfo) {
     match node.get_definition() {
+        Definition::PartialApply => unimplemented!(),
         Definition::Number
         | Definition::CharList
         | Definition::ByteList
@@ -151,6 +153,7 @@ fn resolve_node<Data: GarnishData>(
 ) -> Result<(bool, Option<Data::Size>), CompilerError<Data::Error>> {
     let mut slot = None;
     match node.get_definition() {
+        Definition::PartialApply => unimplemented!(),
         Definition::Unit => {
             // all unit literals will use unit used in the zero element slot of data
             let addr = data.add_unit()?;
@@ -428,6 +431,7 @@ fn resolve_node<Data: GarnishData>(
     Ok((true, slot))
 }
 
+#[deprecated]
 pub fn build_with_data<Data: GarnishData>(
     root: usize,
     nodes: Vec<ParseNode>,

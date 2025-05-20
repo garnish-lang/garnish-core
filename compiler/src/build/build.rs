@@ -371,6 +371,7 @@ fn handle_parse_node<Data: GarnishData>(
         Definition::GreaterThan => handle_binary_operation(Instruction::GreaterThan, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::GreaterThanOrEqual => handle_binary_operation(Instruction::GreaterThanOrEqual, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::Apply => handle_binary_operation(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::PartialApply => unimplemented!(),
         Definition::Concatenation => handle_binary_operation(Instruction::Concat, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::ApplyTo => handle_binary_operation_with_push(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata, |left, right| {
             (left, right)

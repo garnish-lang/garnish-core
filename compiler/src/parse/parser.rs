@@ -72,6 +72,7 @@ pub enum Definition {
     SideEffect,
     Apply,
     ApplyTo,
+    PartialApply,
     Reapply,
     JumpIfTrue,
     JumpIfFalse,
@@ -200,7 +201,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::GreaterThanOrEqual => (Definition::GreaterThanOrEqual, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Apply => (Definition::Apply, SecondaryDefinition::BinaryLeftToRight),
         TokenType::ApplyTo => (Definition::ApplyTo, SecondaryDefinition::BinaryLeftToRight),
-        TokenType::PartialApply => unimplemented!(), // (Definition::ApplyTo, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::PartialApply => (Definition::PartialApply, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Concatenation => (Definition::Concatenation, SecondaryDefinition::BinaryLeftToRight),
         TokenType::LeftInternal => (Definition::AccessLeftInternal, SecondaryDefinition::UnaryPrefix),
         TokenType::RightInternal => (Definition::AccessRightInternal, SecondaryDefinition::UnarySuffix),
@@ -297,7 +298,7 @@ impl ParseNode {
     pub fn set_lex_token(&mut self, token: LexerToken) {
         self.lex_token = token;
     }
-    
+
     pub fn text(&self) -> &str {
         self.lex_token.get_text()
     }
@@ -418,7 +419,9 @@ fn make_priority_map() -> HashMap<Definition, usize> {
 
     map.insert(Definition::Pair, 210);
 
-    map.insert(Definition::List, 229);
+    map.insert(Definition::List, 220);
+
+    map.insert(Definition::PartialApply, 230);
 
     map.insert(Definition::Concatenation, 240);
 
@@ -1061,7 +1064,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                             if left_node.definition.is_optional() {
                                 left_node.right = None;
                             }
-                            
+
                             // if last left is matching start grouping
                             // we're empty grouping, unset last left's right
                             if match (token.get_token_type(), left_node.definition) {
@@ -3018,7 +3021,7 @@ mod tests {
     fn apply() {
         let tokens = vec![
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
-            LexerToken::new("~".to_string(), TokenType::Apply, 0, 0),
+            LexerToken::new("<~".to_string(), TokenType::Apply, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
         ];
 
@@ -3030,6 +3033,27 @@ mod tests {
             &[
                 (0, Definition::Number, Some(1), None, None),
                 (1, Definition::Apply, None, Some(0), Some(2)),
+                (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn partial() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("~".to_string(), TokenType::PartialApply, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::PartialApply, None, Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
             ],
         );
