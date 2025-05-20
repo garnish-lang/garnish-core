@@ -18,6 +18,7 @@ pub mod resolve;
 pub mod runtime_impls;
 pub mod sideeffect;
 pub mod utilities;
+pub mod partial;
 
 pub use runtime_impls::{SimpleGarnishRuntime};
 
@@ -90,8 +91,8 @@ mod tests {
 
     #[derive(Default)]
     pub struct BasicData {
-        type_stack: Vec<GarnishDataType>,
-        registers: Vec<i32>
+        pub(crate) type_stack: Vec<GarnishDataType>,
+        pub(crate) registers: Vec<i32>
     }
 
     impl BasicData {

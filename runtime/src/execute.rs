@@ -13,6 +13,7 @@ use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
 use crate::runtime::list::make_list;
 use crate::runtime::logical::{and, not, or, tis, xor};
 use crate::runtime::pair::make_pair;
+use crate::runtime::partial::partial_apply;
 use crate::runtime::put::{push_value, put, put_value, update_value};
 use crate::runtime::range::{make_end_exclusive_range, make_exclusive_range, make_range, make_start_exclusive_range};
 use crate::runtime::resolve::resolve;
@@ -104,7 +105,7 @@ pub fn execute_current_instruction<Data: GarnishData, T: GarnishContext<Data>>(
         Instruction::Concat => concat(data)?,
         Instruction::EndExpression => end_expression(data)?,
         Instruction::Apply => apply(data, context)?,
-        Instruction::PartialApply => unimplemented!(),
+        Instruction::PartialApply => partial_apply(data)?,
         Instruction::EmptyApply => empty_apply(data, context)?,
         Instruction::And => match instruction_data {
             None => crate::runtime::error::instruction_error(instruction, data.get_instruction_cursor())?,
