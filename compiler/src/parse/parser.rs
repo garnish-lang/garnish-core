@@ -699,14 +699,12 @@ fn check_composition(
         | (SecondaryDefinition::Identifier, SecondaryDefinition::StartGrouping)
         | (SecondaryDefinition::Identifier, SecondaryDefinition::UnaryPrefix)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::None)
-        | (SecondaryDefinition::StartGrouping, SecondaryDefinition::EndGrouping)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::StartGrouping, SecondaryDefinition::UnarySuffix)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Value)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::Identifier)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::StartGrouping)
         | (SecondaryDefinition::EndGrouping, SecondaryDefinition::UnaryPrefix)
-        | (SecondaryDefinition::StartSideEffect, SecondaryDefinition::EndSideEffect)
         | (SecondaryDefinition::StartSideEffect, SecondaryDefinition::BinaryLeftToRight)
         | (SecondaryDefinition::StartSideEffect, SecondaryDefinition::UnarySuffix)
         | (SecondaryDefinition::BinaryLeftToRight, SecondaryDefinition::None)
@@ -1060,6 +1058,17 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                         None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", left), token)?,
                         Some(left_node) => {
                             if left_node.definition.is_optional() {
+                                left_node.right = None;
+                            }
+                            
+                            // if last left is matching start grouping
+                            // we're empty grouping, unset last left's right
+                            if match (token.get_token_type(), left_node.definition) {
+                                (TokenType::EndGroup, Definition::Group) => true,
+                                (TokenType::EndExpression, Definition::NestedExpression) => true,
+                                (TokenType::EndSideEffect, Definition::SideEffect) => true,
+                                _ => false
+                            } {
                                 left_node.right = None;
                             }
 
@@ -1542,18 +1551,6 @@ mod composition_errors {
     }
 
     #[test]
-    fn empty_group() {
-        let tokens = vec![
-            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
-            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
-        ];
-
-        let result = parse(&tokens);
-
-        assert!(result.is_err());
-    }
-
-    #[test]
     fn mismatched_group() {
         let tokens = vec![
             LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
@@ -1567,34 +1564,10 @@ mod composition_errors {
     }
 
     #[test]
-    fn empty_expression() {
-        let tokens = vec![
-            LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
-            LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
-        ];
-
-        let result = parse(&tokens);
-
-        assert!(result.is_err());
-    }
-
-    #[test]
     fn mismatched_expression() {
         let tokens = vec![
             LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
             LexerToken::new("5".to_string(), TokenType::Value, 0, 0),
-            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
-        ];
-
-        let result = parse(&tokens);
-
-        assert!(result.is_err());
-    }
-
-    #[test]
-    fn empty_side_effect() {
-        let tokens = vec![
-            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
             LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
         ];
 
@@ -2080,12 +2053,87 @@ mod tests {
     }
 
     #[test]
-    fn empty_expression() {
+    fn single_white_space_token() {
         let tokens = vec![LexerToken::new("".to_string(), TokenType::Whitespace, 0, 0)];
 
         let result = parse(&tokens).unwrap();
 
         assert_result(&result, 0, &[]);
+    }
+
+    #[test]
+    fn empty_side_effect() {
+        let tokens = vec![
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::SideEffect, None, None, None)]);
+    }
+
+    #[test]
+    fn empty_side_effect_with_space() {
+        let tokens = vec![
+            LexerToken::new("[".to_string(), TokenType::StartSideEffect, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("]".to_string(), TokenType::EndSideEffect, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::SideEffect, None, None, None)]);
+    }
+
+    #[test]
+    fn empty_group() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::Group, None, None, None)]);
+    }
+
+    #[test]
+    fn empty_group_with_space() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::Group, None, None, None)]);
+    }
+
+    #[test]
+    fn empty_expression() {
+        let tokens = vec![
+            LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
+            LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::NestedExpression, None, None, None)]);
+    }
+
+    #[test]
+    fn empty_expression_with_space() {
+        let tokens = vec![
+            LexerToken::new("{".to_string(), TokenType::StartExpression, 0, 0),
+            LexerToken::new(" ".to_string(), TokenType::Whitespace, 0, 0),
+            LexerToken::new("}".to_string(), TokenType::EndExpression, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(&result, 0, &[(0, Definition::NestedExpression, None, None, None)]);
     }
 
     #[test]
