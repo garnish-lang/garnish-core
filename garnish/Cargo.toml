@@ -1,14 +1,15 @@
 [package]
-name = "garnish_lang"
+name = "garnish_lang_docs"
 description = "Single library for re-exporting and documenting all Garnish core libraries."
-version = "0.0.23-alpha"
-authors = ["Chad Collins <chadrcollin91@gmail.com>"]
-edition = "2024"
-homepage = "https://github.com/garnish-lang/garnish-core"
-documentation = "https://docs.rs/garnish_lang/latest/garnish_lang/"
-repository = "https://github.com/garnish-lang/garnish-core"
-license-file = "../LICENSE"
-readme = "../README.md"
+publish = false
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+homepage.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license-file.workspace = true
+readme.workspace = true
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

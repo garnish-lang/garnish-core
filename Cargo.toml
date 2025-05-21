@@ -8,3 +8,14 @@ members = [
     "tests",
     "garnish",
 ]
+
+[workspace.package]
+description = "Data implementation for garnish runtimes using simple list of variants"
+version = "0.0.24-alpha"
+authors = ["Chad Collins <chadrcollin91@gmail.com>"]
+edition = "2024"
+homepage = "https://github.com/garnish-lang/garnish-core"
+documentation = "https://docs.rs/garnish_lang_simple_data/latest/garnish_lang_simple_data/"
+repository = "https://github.com/garnish-lang/garnish-core"
+license-file = "LICENSE"
+readme = "README.md"
