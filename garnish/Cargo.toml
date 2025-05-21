@@ -1,5 +1,5 @@
 [package]
-name = "garnish_lang_docs"
+name = "garnish_lang"
 description = "Single library for re-exporting and documenting all Garnish core libraries."
 publish = false
 version.workspace = true
