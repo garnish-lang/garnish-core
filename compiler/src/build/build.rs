@@ -435,11 +435,6 @@ fn handle_parse_node<Data: GarnishData>(
                 instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
             }
             Some(right) => {
-                let node = match nodes.get_mut(node_index) {
-                    Some(Some(node)) => node,
-                    _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
-                };
-
                 let jump_index = data.get_jump_table_len();
                 data.push_jump_point(Data::Size::zero())?;
                 let addr = data.add_expression(jump_index.clone())?;
