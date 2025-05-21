@@ -4,7 +4,7 @@ use crate::runtime::error::state_error;
 use crate::runtime::utilities::next_ref;
 use garnish_lang_traits::{GarnishDataType, GarnishData, RuntimeError};
 
-pub(crate) fn jump<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn jump<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_jump_point(index.clone()) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => {
@@ -16,7 +16,7 @@ pub(crate) fn jump<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Res
     Ok(None)
 }
 
-pub(crate) fn jump_if_true<Data: GarnishData>(
+pub fn jump_if_true<Data: GarnishData>(
     this: &mut Data,
     index: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -40,7 +40,7 @@ pub(crate) fn jump_if_true<Data: GarnishData>(
     }
 }
 
-pub(crate) fn jump_if_false<Data: GarnishData>(
+pub fn jump_if_false<Data: GarnishData>(
     this: &mut Data,
     index: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -68,7 +68,7 @@ pub(crate) fn jump_if_false<Data: GarnishData>(
     }
 }
 
-pub(crate) fn end_expression<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn end_expression<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     // store return value
     let r = next_ref(this)?;
 

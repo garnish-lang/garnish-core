@@ -2,19 +2,19 @@ use garnish_lang_traits::{RuntimeError, GarnishDataType, GarnishData, GarnishNum
 use crate::runtime::utilities::{next_two_raw_ref, push_unit};
 use crate::runtime::error::OrNumberError;
 
-pub(crate) fn make_range<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn make_range<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     make_range_internal(this, false, false)
 }
 
-pub(crate) fn make_start_exclusive_range<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn make_start_exclusive_range<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     make_range_internal(this, true, false)
 }
 
-pub(crate) fn make_end_exclusive_range<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn make_end_exclusive_range<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     make_range_internal(this, false, true)
 }
 
-pub(crate) fn make_exclusive_range<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn make_exclusive_range<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     make_range_internal(this, true, true)
 }
 

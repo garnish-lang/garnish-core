@@ -1,23 +1,12 @@
-use log::trace;
+use crate::error::instruction_error;
+use crate::ops::{
+    absolute_value, access, access_left_internal, access_length_internal, access_right_internal, add, and, apply, bitwise_and, bitwise_left_shift, bitwise_not, bitwise_or, bitwise_right_shift,
+    bitwise_xor, concat, divide, empty_apply, end_expression, end_side_effect, equal, greater_than, greater_than_or_equal, integer_divide, jump, jump_if_false, jump_if_true, less_than,
+    less_than_or_equal, make_end_exclusive_range, make_exclusive_range, make_list, make_pair, make_range, make_start_exclusive_range, multiply, not, not_equal, opposite, or, partial_apply, power,
+    push_value, put, put_value, reapply, remainder, resolve, start_side_effect, subtract, tis, type_cast, type_equal, type_of, update_value, xor,
+};
 use garnish_lang_traits::{GarnishContext, GarnishData, Instruction, RuntimeError, TypeConstants};
-use crate::runtime::access::access;
-use crate::runtime::apply::{apply, empty_apply, reapply};
-use crate::runtime::arithmetic::{absolute_value, add, divide, integer_divide, multiply, opposite, power, remainder, subtract};
-use crate::runtime::bitwise::{bitwise_and, bitwise_left_shift, bitwise_not, bitwise_or, bitwise_right_shift, bitwise_xor};
-use crate::runtime::casting::{type_cast, type_of};
-use crate::runtime::comparison::{greater_than, greater_than_or_equal, less_than, less_than_or_equal};
-use crate::runtime::concat::concat;
-use crate::runtime::equality::{equal, not_equal, type_equal};
-use crate::runtime::internals::{access_left_internal, access_length_internal, access_right_internal};
-use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
-use crate::runtime::list::make_list;
-use crate::runtime::logical::{and, not, or, tis, xor};
-use crate::runtime::pair::make_pair;
-use crate::runtime::partial::partial_apply;
-use crate::runtime::put::{push_value, put, put_value, update_value};
-use crate::runtime::range::{make_end_exclusive_range, make_exclusive_range, make_range, make_start_exclusive_range};
-use crate::runtime::resolve::resolve;
-use crate::runtime::sideeffect::{end_side_effect, start_side_effect};
+use log::trace;
 
 /// State that the runtime is currently in.
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -43,21 +32,13 @@ impl SimpleRuntimeInfo {
     }
 }
 
-pub fn execute_current_instruction<Data: GarnishData, T: GarnishContext<Data>>(
-    data: &mut Data,
-    context: Option<&mut T>,
-) -> Result<SimpleRuntimeInfo, RuntimeError<Data::Error>> {
+pub fn execute_current_instruction<Data: GarnishData, T: GarnishContext<Data>>(data: &mut Data, context: Option<&mut T>) -> Result<SimpleRuntimeInfo, RuntimeError<Data::Error>> {
     let (instruction, instruction_data) = match data.get_instruction(data.get_instruction_cursor()) {
         None => return Ok(SimpleRuntimeInfo::new(SimpleRuntimeState::End)),
         Some(v) => v,
     };
 
-    trace!(
-            "Executing instruction {:?} at {:?} with data {:?}",
-            instruction,
-            data.get_instruction_cursor(),
-            instruction_data
-        );
+    trace!("Executing instruction {:?} at {:?} with data {:?}", instruction, data.get_instruction_cursor(), instruction_data);
 
     let next_instruction = match instruction {
         Instruction::Invalid => None,
@@ -108,39 +89,39 @@ pub fn execute_current_instruction<Data: GarnishData, T: GarnishContext<Data>>(
         Instruction::PartialApply => partial_apply(data)?,
         Instruction::EmptyApply => empty_apply(data, context)?,
         Instruction::And => match instruction_data {
-            None => crate::runtime::error::instruction_error(instruction, data.get_instruction_cursor())?,
+            None => instruction_error(instruction, data.get_instruction_cursor())?,
             Some(i) => and(data, i)?,
         },
         Instruction::Or => match instruction_data {
-            None => crate::runtime::error::instruction_error(instruction, data.get_instruction_cursor())?,
+            None => instruction_error(instruction, data.get_instruction_cursor())?,
             Some(i) => or(data, i)?,
         },
         Instruction::Put => match instruction_data {
-            None => crate::runtime::error::instruction_error(instruction, data.get_instruction_cursor())?,
+            None => instruction_error(instruction, data.get_instruction_cursor())?,
             Some(i) => put(data, i)?,
         },
         Instruction::MakeList => match instruction_data {
-            None => crate::runtime::error::instruction_error(instruction, data.get_instruction_cursor())?,
+            None => instruction_error(instruction, data.get_instruction_cursor())?,
             Some(i) => make_list(data, i)?,
         },
         Instruction::Resolve => match instruction_data {
-            None => crate::runtime::error::instruction_error(instruction, data.get_instruction_cursor())?,
+            None => instruction_error(instruction, data.get_instruction_cursor())?,
             Some(i) => resolve(data, i, context)?,
         },
         Instruction::Reapply => match instruction_data {
-            None => crate::runtime::error::instruction_error(instruction, data.get_instruction_cursor())?,
+            None => instruction_error(instruction, data.get_instruction_cursor())?,
             Some(i) => reapply(data, i)?,
         },
         Instruction::JumpIfTrue => match instruction_data {
-            None => crate::runtime::error::instruction_error(instruction, data.get_instruction_cursor())?,
+            None => instruction_error(instruction, data.get_instruction_cursor())?,
             Some(i) => jump_if_true(data, i)?,
         },
         Instruction::JumpIfFalse => match instruction_data {
-            None => crate::runtime::error::instruction_error(instruction, data.get_instruction_cursor())?,
+            None => instruction_error(instruction, data.get_instruction_cursor())?,
             Some(i) => jump_if_false(data, i)?,
         },
         Instruction::JumpTo => match instruction_data {
-            None => crate::runtime::error::instruction_error(instruction, data.get_instruction_cursor())?,
+            None => instruction_error(instruction, data.get_instruction_cursor())?,
             Some(i) => jump(data, i)?,
         },
     };

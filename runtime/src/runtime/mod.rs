@@ -1,26 +1,47 @@
-pub mod access;
-pub mod apply;
-pub mod arithmetic;
-pub mod bitwise;
-pub mod casting;
-pub mod comparison;
-pub mod concat;
-pub mod equality;
+mod access;
+mod apply;
+mod arithmetic;
+mod bitwise;
+mod casting;
+mod comparison;
+mod concat;
+mod equality;
 pub mod error;
-pub mod internals;
-pub mod jumps;
-pub mod list;
-pub mod logical;
-pub mod pair;
-pub mod put;
-pub mod range;
-pub mod resolve;
-pub mod runtime_impls;
-pub mod sideeffect;
-pub mod utilities;
-pub mod partial;
+mod internals;
+mod jumps;
+mod list;
+mod logical;
+mod pair;
+mod put;
+mod range;
+mod resolve;
+mod runtime_impls;
+mod sideeffect;
+mod utilities;
+mod partial;
 
 pub use runtime_impls::{SimpleGarnishRuntime};
+
+pub mod ops {
+    pub use super::access::*;
+    pub use super::apply::*;
+    pub use super::arithmetic::*;
+    pub use super::bitwise::*;
+    pub use super::casting::*;
+    pub use super::comparison::*;
+    pub use super::concat::*;
+    pub use super::equality::*;
+    pub use super::internals::*;
+    pub use super::jumps::*;
+    pub use super::list::*;
+    pub use super::logical::*;
+    pub use super::pair::*;
+    pub use super::put::*;
+    pub use super::range::*;
+    pub use super::resolve::*;
+    pub use super::sideeffect::*;
+    pub use super::partial::*;
+}
 
 #[cfg(test)]
 mod tests {

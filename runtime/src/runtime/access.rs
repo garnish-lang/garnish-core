@@ -2,7 +2,7 @@ use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::{next_ref, push_unit};
 use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, Instruction, RuntimeError};
 
-pub(crate) fn access<Data: GarnishData, T: GarnishContext<Data>>(
+pub fn access<Data: GarnishData, T: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut T>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {

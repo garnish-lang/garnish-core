@@ -12,7 +12,7 @@ impl<T, Source: 'static + std::error::Error> OrNumberError<T, Source> for Option
     }
 }
 
-// Creation utilites
+// Creation utilities
 
 pub(crate) fn instruction_error<T, E: std::error::Error + 'static, I: Debug>(instruction: Instruction, index: I) -> Result<T, RuntimeError<E>> {
     Err(RuntimeError::new_message(format!(

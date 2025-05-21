@@ -1,7 +1,7 @@
 use crate::runtime::error::state_error;
 use garnish_lang_traits::{GarnishData, RuntimeError};
 
-pub(crate) fn start_side_effect<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn start_side_effect<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_current_value() {
         None => {
             let r = this.add_unit()?;
@@ -13,7 +13,7 @@ pub(crate) fn start_side_effect<Data: GarnishData>(this: &mut Data) -> Result<Op
     Ok(None)
 }
 
-pub(crate) fn end_side_effect<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn end_side_effect<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.pop_value_stack() {
         Some(_) => (),
         None => state_error("Could not pop value at end of side effect.".to_string())?,

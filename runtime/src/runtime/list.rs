@@ -5,7 +5,7 @@ use crate::runtime::utilities::get_range;
 use garnish_lang_traits::helpers::{iterate_concatenation_mut, iterate_rev_concatenation_mut};
 use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
 
-pub(crate) fn make_list<Data: GarnishData>(this: &mut Data, len: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn make_list<Data: GarnishData>(this: &mut Data, len: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     if len > this.get_register_len() {
         state_error(format!("Not enough register values to make list of length {:?}", len))?
     }

@@ -6,7 +6,7 @@ use crate::runtime::error::state_error;
 use crate::runtime::utilities::{next_two_raw_ref, push_boolean};
 use garnish_lang_traits::{GarnishData, GarnishDataType, RuntimeError, TypeConstants};
 
-pub(crate) fn equal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn equal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let equal = perform_equality_check(this)?;
     push_boolean(this, equal)?;
 

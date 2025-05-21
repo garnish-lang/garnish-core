@@ -2,7 +2,7 @@ use crate::runtime::error::state_error;
 use crate::runtime::utilities::{next_ref, next_two_raw_ref, push_boolean};
 use garnish_lang_traits::{GarnishData, GarnishDataType, RuntimeError};
 
-pub(crate) fn and<Data: GarnishData>(this: &mut Data, data: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn and<Data: GarnishData>(this: &mut Data, data: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let value = next_ref(this)?;
 
     match is_true_value(this, value)? {
@@ -45,7 +45,7 @@ pub fn xor<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, Run
     Ok(None)
 }
 
-pub(crate) fn not<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn not<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let addr = next_ref(this)?;
     let result = is_true_value(this, addr)?;
     push_boolean(this, !result)?;
@@ -53,7 +53,7 @@ pub(crate) fn not<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Siz
     Ok(None)
 }
 
-pub(crate) fn tis<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn tis<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let addr = next_ref(this)?;
     let result = is_true_value(this, addr)?;
     push_boolean(this, result)?;

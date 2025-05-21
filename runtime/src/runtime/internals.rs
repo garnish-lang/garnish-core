@@ -5,7 +5,7 @@ use garnish_lang_traits::helpers::iterate_concatenation_mut;
 use garnish_lang_traits::Instruction;
 use garnish_lang_traits::{GarnishDataType, GarnishContext, GarnishData, RuntimeError, TypeConstants};
 
-pub(crate) fn access_left_internal<Data: GarnishData, Context: GarnishContext<Data>>(
+pub fn access_left_internal<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -50,7 +50,7 @@ pub(crate) fn access_left_internal<Data: GarnishData, Context: GarnishContext<Da
     Ok(None)
 }
 
-pub(crate) fn access_right_internal<Data: GarnishData, Context: GarnishContext<Data>>(
+pub fn access_right_internal<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -95,7 +95,7 @@ pub(crate) fn access_right_internal<Data: GarnishData, Context: GarnishContext<D
     Ok(None)
 }
 
-pub(crate) fn access_length_internal<Data: GarnishData, Context: GarnishContext<Data>>(
+pub fn access_length_internal<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {

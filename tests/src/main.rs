@@ -5,10 +5,9 @@ use colored::Colorize;
 use garnish_lang_compiler::build::build;
 use garnish_lang_compiler::lex::lex;
 use garnish_lang_compiler::parse::{ParseNode, parse};
-use garnish_lang_runtime::SimpleRuntimeState;
-use garnish_lang_runtime::runtime::SimpleGarnishRuntime;
+use garnish_lang_runtime::{execute_current_instruction, ops, SimpleRuntimeState};
 use garnish_lang_simple_data::{SimpleData, SimpleGarnishData};
-use garnish_lang_traits::{GarnishData, GarnishRuntime, Instruction};
+use garnish_lang_traits::{GarnishData, Instruction};
 use log::error;
 use std::fs::read_to_string;
 use std::path::PathBuf;
@@ -208,12 +207,11 @@ fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
             }
 
             let mut context = TestingContext::default();
-            let mut runtime = SimpleGarnishRuntime::new(data);
 
             let mut instruction_count = 0;
 
             loop {
-                match runtime.execute_current_instruction(Some(&mut context)) {
+                match execute_current_instruction(&mut data, Some(&mut context)) {
                     Err(e) => {
                         return TestResult::Error(format!("({}): {}", &script_path, e));
                     }
@@ -229,7 +227,7 @@ fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
                 }
             }
 
-            let result = match runtime.get_data().get_current_value().and_then(|i| runtime.get_data().get_data().get(i)) {
+            let result = match data.get_current_value().and_then(|i| data.get_data().get(i)) {
                 Some(value) => value,
                 None => {
                     return TestResult::Error(format!("({}) No current value after execution", &script_path));
@@ -241,12 +239,10 @@ fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
                 t => return TestResult::Error(format!("expected a Pair value, got {:?}", t)),
             };
 
-            runtime.put(left).unwrap();
-            runtime.put(right).unwrap();
-            runtime.equal().unwrap();
-            runtime.push_value().unwrap();
-
-            let data = runtime.get_data_owned();
+            ops::put(&mut data, left).unwrap();
+            ops::put(&mut data, right).unwrap();
+            ops::equal(&mut data).unwrap();
+            ops::push_value(&mut data).unwrap();
 
             match data.get_current_value().and_then(|i| data.get_data().get(i)) {
                 Some(SimpleData::True) => TestResult::Success,

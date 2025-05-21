@@ -34,7 +34,7 @@ mod general {
 
 #[cfg(test)]
 mod less_than {
-    use garnish_lang_runtime::runtime::SimpleGarnishRuntime;
+    use garnish_lang_runtime::SimpleGarnishRuntime;
     use crate::simple::testing_utilities::{add_byte_list, add_char_list, create_simple_runtime, slice_of_byte_list, slice_of_char_list};
     use garnish_lang_simple_data::{DataError, SimpleGarnishData};
     use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, RuntimeError};

@@ -4,11 +4,11 @@ use crate::runtime::utilities::*;
 use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, GarnishNumber, Instruction, RuntimeError, TypeConstants};
 use log::trace;
 
-pub(crate) fn apply<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn apply<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     apply_internal(this, Instruction::Apply, context, true)
 }
 
-pub(crate) fn reapply<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn reapply<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let value_addr = next_ref(this)?;
 
     let next_instruction = match this.get_jump_point(index.clone()) {
@@ -31,7 +31,7 @@ pub(crate) fn reapply<Data: GarnishData>(this: &mut Data, index: Data::Size) -> 
     Ok(Some(next_instruction))
 }
 
-pub(crate) fn empty_apply<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn empty_apply<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     push_unit(this)?;
     apply_internal(this, Instruction::EmptyApply, context, false)
 }

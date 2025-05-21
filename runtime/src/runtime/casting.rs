@@ -7,7 +7,7 @@ use crate::runtime::list::is_value_association;
 use crate::runtime::utilities::{get_range, next_ref, next_two_raw_ref, push_unit};
 use garnish_lang_traits::{GarnishDataType, GarnishContext, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
 
-pub(crate) fn type_of<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn type_of<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let a = next_ref(this)?;
     let t = this.get_data_type(a)?;
     this.add_type(t).and_then(|r| this.push_register(r))?;
@@ -15,7 +15,7 @@ pub(crate) fn type_of<Data: GarnishData>(this: &mut Data) -> Result<Option<Data:
     Ok(None)
 }
 
-pub(crate) fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
+pub fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
     this: &mut Data,
     context: Option<&mut Context>,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
