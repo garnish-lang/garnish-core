@@ -8,7 +8,7 @@ use garnish_lang_compiler::parse::{ParseNode, parse};
 use garnish_lang_runtime::SimpleRuntimeState;
 use garnish_lang_runtime::runtime::SimpleGarnishRuntime;
 use garnish_lang_simple_data::{SimpleData, SimpleGarnishData};
-use garnish_lang_traits::{GarnishData, GarnishRuntime};
+use garnish_lang_traits::{GarnishData, GarnishRuntime, Instruction};
 use log::error;
 use std::fs::read_to_string;
 use std::path::PathBuf;
@@ -104,11 +104,14 @@ enum TestResult {
 
 fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
     let mut data = SimpleGarnishData::new();
+
     let mut dump_path = PathBuf::from("./tmp").join(script_path);
-    dump_path.set_extension("");
-    match fs::create_dir_all(&dump_path) {
-        Ok(_) => {}
-        Err(e) => error!("failed to create dump directories: {}", e),
+    if create_dump_files {
+        dump_path.set_extension("");
+        match fs::create_dir_all(&dump_path) {
+            Ok(_) => {}
+            Err(e) => error!("failed to create dump directories: {}", e),
+        }
     }
     match read_to_string(PathBuf::from(&script_path)).or_else(|e| Err(format!("{}", e))).and_then(|file| {
         lex(&file)
@@ -153,12 +156,22 @@ fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
                 let instruction_output = data
                     .get_instructions()
                     .iter()
-                    .map(|instruction| {
+                    .enumerate()
+                    .map(|(instruction_addr, instruction)| {
+                        let jump_index = data.get_jump_points().iter().enumerate().find(|(_, i)| **i == instruction_addr);
                         format!(
-                            "{:?} - {}",
+                            "{:03} | {} | {:?} - {}",
+                            instruction_addr,
+                            match jump_index {
+                                Some((index, _)) => format!("{:03}", index),
+                                None => "   ".to_string(),
+                            },
                             instruction.instruction,
                             match instruction.data {
-                                Some(index) => data.get_data().display_for_item(index),
+                                Some(index) => match instruction.instruction {
+                                    Instruction::Put =>  data.get_data().display_for_item(index),
+                                    _ => format!("{:?}", index),
+                                }
                                 None => "".to_string(),
                             }
                         )
@@ -197,6 +210,8 @@ fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
             let mut context = TestingContext::default();
             let mut runtime = SimpleGarnishRuntime::new(data);
 
+            let mut instruction_count = 0;
+
             loop {
                 match runtime.execute_current_instruction(Some(&mut context)) {
                     Err(e) => {
@@ -206,6 +221,11 @@ fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
                         SimpleRuntimeState::Running => (),
                         SimpleRuntimeState::End => break,
                     },
+                }
+
+                instruction_count += 1;
+                if instruction_count > 100000 {
+                    return TestResult::Error(String::from("Reached executed instruction limit."));
                 }
             }
 

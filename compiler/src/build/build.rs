@@ -68,6 +68,7 @@ enum BuildNodeState {
 struct BuildNode<Data: GarnishData> {
     state: BuildNodeState,
     parse_node_index: usize,
+    containing_expression_jump: Data::Size,
     list_parent: Option<(usize, Definition)>,
     child_count: Data::SizeIterator,
     contributes_to_list: bool,
@@ -78,10 +79,11 @@ struct BuildNode<Data: GarnishData> {
 }
 
 impl<Data: GarnishData> BuildNode<Data> {
-    fn new(parse_node_index: usize) -> Self {
+    fn new(parse_node_index: usize, containing_expression_jump: Data::Size) -> Self {
         Self {
             state: BuildNodeState::Uninitialized,
             parse_node_index,
+            containing_expression_jump,
             list_parent: None,
             child_count: Data::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
             contributes_to_list: true,
@@ -92,10 +94,11 @@ impl<Data: GarnishData> BuildNode<Data> {
         }
     }
 
-    fn new_with_list(parse_node_index: usize, list_parent: usize, list_parent_definition: Definition) -> Self {
+    fn new_with_list(parse_node_index: usize, containing_expression_jump: Data::Size, list_parent: usize, list_parent_definition: Definition) -> Self {
         Self {
             state: BuildNodeState::Uninitialized,
             parse_node_index,
+            containing_expression_jump,
             list_parent: Some((list_parent, list_parent_definition)),
             child_count: Data::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
             contributes_to_list: true,
@@ -106,10 +109,11 @@ impl<Data: GarnishData> BuildNode<Data> {
         }
     }
 
-    fn new_with_conditional(parse_node_index: usize, conditional_parent: usize) -> Self {
+    fn new_with_conditional(parse_node_index: usize, containing_expression_jump: Data::Size, conditional_parent: usize) -> Self {
         Self {
             state: BuildNodeState::Uninitialized,
             parse_node_index,
+            containing_expression_jump,
             list_parent: None,
             child_count: Data::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
             contributes_to_list: true,
@@ -120,10 +124,11 @@ impl<Data: GarnishData> BuildNode<Data> {
         }
     }
 
-    fn new_with_jump(parse_node_index: usize, jump_index: Data::Size) -> Self {
+    fn new_with_jump(parse_node_index: usize, containing_expression_jump: Data::Size, jump_index: Data::Size) -> Self {
         Self {
             state: BuildNodeState::Uninitialized,
             parse_node_index,
+            containing_expression_jump,
             list_parent: None,
             child_count: Data::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
             contributes_to_list: true,
@@ -134,10 +139,11 @@ impl<Data: GarnishData> BuildNode<Data> {
         }
     }
 
-    fn new_with_jump_and_end(parse_node_index: usize, jump_index: Data::Size, end_instruction: Vec<(Instruction, Option<Data::Size>)>) -> Self {
+    fn new_with_jump_and_end(parse_node_index: usize, containing_expression_jump: Data::Size, jump_index: Data::Size, end_instruction: Vec<(Instruction, Option<Data::Size>)>) -> Self {
         Self {
             state: BuildNodeState::Uninitialized,
             parse_node_index,
+            containing_expression_jump,
             list_parent: None,
             child_count: Data::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
             contributes_to_list: true,
@@ -164,13 +170,14 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
     for _ in 0..parse_tree.len() {
         nodes.push(None);
     }
-    nodes[parse_root] = Some(BuildNode::new(parse_root));
+    // same as root jump index but this one needs to be returned
+    let tree_root_jump = data.get_jump_table_len();
+
+    nodes[parse_root] = Some(BuildNode::new(parse_root, tree_root_jump.clone()));
 
     let mut instruction_metadata = vec![];
 
     let mut root_stack = vec![parse_root];
-    // same as root jump index but this one needs to be returned
-    let tree_root_jump = data.get_jump_table_len();
 
     while let Some(root_index) = root_stack.pop() {
         let current_root_jump = match nodes.get(root_index) {
@@ -380,15 +387,18 @@ fn handle_parse_node<Data: GarnishData>(
         Definition::List => handle_list(Definition::List, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::Or => handle_logical_binary(Instruction::Or, &mut nodes, node_index, &mut stack, &mut root_stack, parse_node, data, &mut instruction_metadata)?,
         Definition::And => handle_logical_binary(Instruction::And, &mut nodes, node_index, &mut stack, &mut root_stack, parse_node, data, &mut instruction_metadata)?,
-        Definition::Group => {
-            match parse_node.get_right() {
-                None => {}
-                Some(right) => {
-                    nodes[right] = Some(BuildNode::new(right));
-                    stack.push(right);
-                }
+        Definition::Group => match parse_node.get_right() {
+            None => {}
+            Some(right) => {
+                let node = match nodes.get_mut(node_index) {
+                    Some(Some(node)) => node,
+                    _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+                };
+
+                nodes[right] = Some(BuildNode::new(right, node.containing_expression_jump.clone()));
+                stack.push(right);
             }
-        }
+        },
         Definition::SideEffect => {
             let node = match nodes.get_mut(node_index) {
                 Some(Some(node)) => node,
@@ -407,7 +417,7 @@ fn handle_parse_node<Data: GarnishData>(
                     match parse_node.get_right() {
                         None => {}
                         Some(right) => {
-                            nodes[right] = Some(BuildNode::new(right));
+                            nodes[right] = Some(BuildNode::new(right, node.containing_expression_jump.clone()));
                             stack.push(right);
                         }
                     }
@@ -418,25 +428,28 @@ fn handle_parse_node<Data: GarnishData>(
                 }
             }
         }
-        Definition::NestedExpression => {
-            match parse_node.get_right() {
-                None => {
-                    let addr = data.add_expression(current_root_jump.clone())?;
-                    data.push_instruction(Instruction::Put, Some(addr))?;
-                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                }
-                Some(right) => {
-                    let jump_index = data.get_jump_table_len();
-                    data.push_jump_point(Data::Size::zero())?;
-                    let addr = data.add_expression(jump_index.clone())?;
-                    data.push_instruction(Instruction::Put, Some(addr))?;
-                    instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-
-                    nodes[right] = Some(BuildNode::new_with_jump(right, jump_index));
-                    root_stack.push(right);
-                }
+        Definition::NestedExpression => match parse_node.get_right() {
+            None => {
+                let addr = data.add_expression(current_root_jump.clone())?;
+                data.push_instruction(Instruction::Put, Some(addr))?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
             }
-        }
+            Some(right) => {
+                let node = match nodes.get_mut(node_index) {
+                    Some(Some(node)) => node,
+                    _ => Err(CompilerError::new_message(format!("No build node at index {}", node_index)))?,
+                };
+
+                let jump_index = data.get_jump_table_len();
+                data.push_jump_point(Data::Size::zero())?;
+                let addr = data.add_expression(jump_index.clone())?;
+                data.push_instruction(Instruction::Put, Some(addr))?;
+                instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
+
+                nodes[right] = Some(BuildNode::new_with_jump(right, jump_index.clone(), jump_index));
+                root_stack.push(right);
+            }
+        },
         Definition::JumpIfFalse => handle_jump_if(
             Instruction::JumpIfFalse,
             &mut nodes,
@@ -472,15 +485,17 @@ fn handle_parse_node<Data: GarnishData>(
                     let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on ElseJump definition".to_string()))?;
                     stack.push(right);
                     stack.push(left);
+                    
+                    let containing = node.containing_expression_jump.clone();
 
                     match node.conditional_parent {
                         Some(parent) => {
-                            nodes[right] = Some(BuildNode::new_with_conditional(right, parent));
-                            nodes[left] = Some(BuildNode::new_with_conditional(left, parent));
+                            nodes[right] = Some(BuildNode::new_with_conditional(right, containing.clone(), parent));
+                            nodes[left] = Some(BuildNode::new_with_conditional(left, containing.clone(), parent));
                         }
                         None => {
-                            nodes[right] = Some(BuildNode::new_with_conditional(right, node_index));
-                            nodes[left] = Some(BuildNode::new_with_conditional(left, node_index));
+                            nodes[right] = Some(BuildNode::new_with_conditional(right, containing.clone(), node_index));
+                            nodes[left] = Some(BuildNode::new_with_conditional(left, containing.clone(), node_index));
                         }
                     }
                 }
@@ -498,7 +513,7 @@ fn handle_parse_node<Data: GarnishData>(
 
                                 new_items.push((
                                     condition.node_index,
-                                    BuildNode::new_with_jump_and_end(condition.node_index, condition.jump_index_to_update.clone(), vec![(Instruction::JumpTo, Some(jump_to_index.clone()))]),
+                                    BuildNode::new_with_jump_and_end(condition.node_index, node.containing_expression_jump.clone(), condition.jump_index_to_update.clone(), vec![(Instruction::JumpTo, Some(jump_to_index.clone()))]),
                                 ));
                             }
 
@@ -524,12 +539,12 @@ fn handle_parse_node<Data: GarnishData>(
                     let right = parse_node.get_right().ok_or(CompilerError::new_message("No left on Reapply definition".to_string()))?;
                     stack.push(right);
 
-                    nodes[right] = Some(BuildNode::new(right));
+                    nodes[right] = Some(BuildNode::new(right, node.containing_expression_jump.clone()));
                 }
                 BuildNodeState::Initialized => {
                     data.push_instruction(Instruction::UpdateValue, None)?;
                     instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
-                    data.push_instruction(Instruction::JumpTo, Some(current_root_jump.clone()))?;
+                    data.push_instruction(Instruction::JumpTo, Some(node.containing_expression_jump.clone()))?;
                     instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
                 }
             }
@@ -549,9 +564,11 @@ fn handle_parse_node<Data: GarnishData>(
                     stack.push(right);
                     stack.push(node_index);
                     stack.push(left);
+                    
+                    let containing = node.containing_expression_jump.clone();
 
-                    nodes[right] = Some(BuildNode::new(right));
-                    nodes[left] = Some(BuildNode::new(left));
+                    nodes[right] = Some(BuildNode::new(right, containing.clone()));
+                    nodes[left] = Some(BuildNode::new(left, containing.clone()));
                 }
                 BuildNodeState::Initialized => {
                     data.push_instruction(Instruction::UpdateValue, None)?;
@@ -599,9 +616,11 @@ fn handle_parse_node<Data: GarnishData>(
                     stack.push(node_index);
                     stack.push(right);
                     stack.push(left);
+                    
+                    let containing = node.containing_expression_jump.clone();
 
-                    nodes[right] = Some(BuildNode::new(right));
-                    nodes[left] = Some(BuildNode::new(left));
+                    nodes[right] = Some(BuildNode::new(right, containing.clone()));
+                    nodes[left] = Some(BuildNode::new(left, containing.clone()));
                 }
                 BuildNodeState::Initialized => {
                     data.push_instruction(Instruction::MakeList, Some(Data::Size::one() + Data::Size::one()))?;
@@ -645,7 +664,7 @@ fn handle_unary_fix_apply<Data: GarnishData>(
                 stack.push(node_index);
                 stack.push(right);
 
-                nodes[right] = Some(BuildNode::new(right));
+                nodes[right] = Some(BuildNode::new(right, node.containing_expression_jump.clone()));
             }
             BuildNodeState::Initialized => {
                 data.push_instruction(Instruction::Apply, None)?;
@@ -680,7 +699,7 @@ fn handle_jump_if<Data: GarnishData>(
             let left = parse_node.get_left().ok_or(CompilerError::new_message(format!("No left on {:?} definition", instruction)))?;
             stack.push(left);
 
-            nodes[left] = Some(BuildNode::new(left));
+            nodes[left] = Some(BuildNode::new(left, node.containing_expression_jump.clone()));
         }
         BuildNodeState::Initialized => {
             let jump_index = data.get_jump_table_len();
@@ -711,7 +730,7 @@ fn handle_jump_if<Data: GarnishData>(
                     let jump_to_index = data.get_jump_table_len();
                     data.push_jump_point(data.get_instruction_len())?;
 
-                    nodes[right] = Some(BuildNode::new_with_jump_and_end(right, jump_index.clone(), vec![(Instruction::JumpTo, Some(jump_to_index))]));
+                    nodes[right] = Some(BuildNode::new_with_jump_and_end(right, node.containing_expression_jump.clone(), jump_index.clone(), vec![(Instruction::JumpTo, Some(jump_to_index))]));
                 }
             }
         }
@@ -743,7 +762,7 @@ fn handle_logical_binary<Data: GarnishData>(
             let left = parse_node.get_left().ok_or(CompilerError::new_message(format!("No left on {:?} definition", instruction)))?;
             stack.push(left);
 
-            nodes[left] = Some(BuildNode::new_with_conditional(left, node_index));
+            nodes[left] = Some(BuildNode::new_with_conditional(left, node.containing_expression_jump.clone(), node_index));
         }
         BuildNodeState::Initialized => {
             let jump_index = data.get_jump_table_len();
@@ -760,6 +779,7 @@ fn handle_logical_binary<Data: GarnishData>(
 
             nodes[right] = Some(BuildNode::new_with_jump_and_end(
                 right,
+                node.containing_expression_jump.clone(),
                 jump_index.clone(),
                 vec![(Instruction::Tis, None), (Instruction::JumpTo, Some(jump_to_index))],
             ));
@@ -815,11 +835,13 @@ where
         BuildNodeState::Uninitialized => {
             node.state = BuildNodeState::Initialized;
 
+            let containing = node.containing_expression_jump.clone();
+
             match parse_node.get_right() {
                 None => {}
                 Some(right) => {
                     stack.push(right);
-                    nodes[right] = Some(BuildNode::new(right));
+                    nodes[right] = Some(BuildNode::new(right, containing.clone()));
                 }
             }
 
@@ -829,7 +851,7 @@ where
                 None => {}
                 Some(left) => {
                     stack.push(left);
-                    nodes[left] = Some(BuildNode::new(left));
+                    nodes[left] = Some(BuildNode::new(left, containing.clone()));
                 }
             }
         }
@@ -862,7 +884,7 @@ fn handle_unary_suffix<Data: GarnishData>(
             let left = parse_node.get_left().ok_or(CompilerError::new_message(format!("No left on {:?} definition", instruction)))?;
             stack.push(left);
 
-            nodes[left] = Some(BuildNode::new(left));
+            nodes[left] = Some(BuildNode::new(left, node.containing_expression_jump.clone()));
         }
         BuildNodeState::Initialized => {
             data.push_instruction(instruction, None)?;
@@ -892,7 +914,7 @@ fn handle_unary_prefix<Data: GarnishData>(
             let right = parse_node.get_right().ok_or(CompilerError::new_message(format!("No right on {:?} definition", instruction)))?;
             stack.push(right);
 
-            nodes[right] = Some(BuildNode::new(right));
+            nodes[right] = Some(BuildNode::new(right, node.containing_expression_jump.clone()));
         }
         BuildNodeState::Initialized => {
             data.push_instruction(instruction, None)?;
@@ -945,8 +967,10 @@ where
             stack.push(first);
             stack.push(second);
 
-            nodes[right] = Some(BuildNode::new(right));
-            nodes[left] = Some(BuildNode::new(left));
+            let containing = node.containing_expression_jump.clone();
+
+            nodes[right] = Some(BuildNode::new(right, containing.clone()));
+            nodes[left] = Some(BuildNode::new(left, containing.clone()));
         }
         BuildNodeState::Initialized => {
             data.push_instruction(instruction, None)?;
@@ -982,19 +1006,21 @@ fn handle_list<Data: GarnishData>(
                 _ => (node_index, parse_node.get_definition(), true),
             };
             node.contributes_to_list = contributes_to_list;
+            
+            let containing = node.containing_expression_jump.clone();
 
             match parse_node.get_right() {
                 None => {}
                 Some(right) => {
                     stack.push(right);
-                    nodes[right] = Some(BuildNode::new_with_list(right, parent, definition));
+                    nodes[right] = Some(BuildNode::new_with_list(right, containing.clone(), parent, definition));
                 }
             }
             match parse_node.get_left() {
                 None => {}
                 Some(left) => {
                     stack.push(left);
-                    nodes[left] = Some(BuildNode::new_with_list(left, parent, definition));
+                    nodes[left] = Some(BuildNode::new_with_list(left, containing, parent, definition));
                 }
             }
         }
@@ -1597,23 +1623,11 @@ mod expressions {
         assert_eq!(build_data.jump_index, 0);
         assert_eq!(
             data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::Put, Some(3)),
-                SimpleInstruction::new(Instruction::EndExpression, None)
-            ]
+            &vec![SimpleInstruction::new(Instruction::Put, Some(3)), SimpleInstruction::new(Instruction::EndExpression, None)]
         );
         assert_eq!(data.get_jump_points(), &vec![0]);
-        assert_eq!(
-            data.get_data(),
-            &SimpleDataList::default().append(SimpleData::Expression(0))
-        );
-        assert_eq!(
-            build_data.instruction_metadata,
-            vec![
-                InstructionMetadata::new(Some(0)),
-                InstructionMetadata::new(None),
-            ]
-        )
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Expression(0)));
+        assert_eq!(build_data.instruction_metadata, vec![InstructionMetadata::new(Some(0)), InstructionMetadata::new(None),])
     }
 
     #[test]
@@ -2010,6 +2024,28 @@ mod reapply {
                 .append(SimpleData::Number(40.into()))
         );
     }
+
+    #[test]
+    fn conditional_reapply() {
+        let (data, build_data) = build_input("5 ?> ^~ 10");
+
+        assert_eq!(build_data.jump_index, 0);
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::JumpIfTrue, Some(1)),
+                SimpleInstruction::new(Instruction::PutValue, None),
+                SimpleInstruction::new(Instruction::EndExpression, None),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::UpdateValue, None),
+                SimpleInstruction::new(Instruction::JumpTo, Some(0)),
+                SimpleInstruction::new(Instruction::JumpTo, Some(2)),
+            ]
+        );
+        assert_eq!(data.get_jump_points(), &vec![0, 4, 3]);
+        assert_eq!(data.get_data(), &SimpleDataList::default().append(SimpleData::Number(5.into())).append(SimpleData::Number(10.into())));
+    }
 }
 
 #[cfg(test)]
@@ -2092,17 +2128,9 @@ mod groups {
         let (data, build_data) = build_input("( )");
 
         assert_eq!(build_data.jump_index, 0);
-        assert_eq!(
-            data.get_instructions(),
-            &vec![
-                SimpleInstruction::new(Instruction::EndExpression, None),
-            ]
-        );
+        assert_eq!(data.get_instructions(), &vec![SimpleInstruction::new(Instruction::EndExpression, None),]);
         assert_eq!(data.get_jump_points(), &vec![0]);
-        assert_eq!(
-            data.get_data(),
-            &SimpleDataList::default()
-        );
+        assert_eq!(data.get_data(), &SimpleDataList::default());
     }
 }
 
@@ -2156,9 +2184,6 @@ mod side_effects {
             ]
         );
         assert_eq!(data.get_jump_points(), &vec![0]);
-        assert_eq!(
-            data.get_data(),
-            &SimpleDataList::default()
-        );
+        assert_eq!(data.get_data(), &SimpleDataList::default());
     }
 }

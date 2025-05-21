@@ -1,0 +1,5 @@
+{ 
+    $.count < 3 ?> ^~ :count = $.count + 1 :result = $.result * 2
+} <~ :count = 0 :result = 1
+
+$.result = 8
