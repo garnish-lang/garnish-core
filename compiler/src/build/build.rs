@@ -355,7 +355,6 @@ fn handle_parse_node<Data: GarnishData>(
         Definition::MultiplicationSign => handle_binary_operation(Instruction::Multiply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::Division => handle_binary_operation(Instruction::Divide, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::Access => handle_binary_operation(Instruction::Access, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
-        Definition::Pair => handle_binary_operation(Instruction::MakePair, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::Range => handle_binary_operation(Instruction::MakeRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::StartExclusiveRange => handle_binary_operation(Instruction::MakeStartExclusiveRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::EndExclusiveRange => handle_binary_operation(Instruction::MakeEndExclusiveRange, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
@@ -380,6 +379,9 @@ fn handle_parse_node<Data: GarnishData>(
         Definition::Apply => handle_binary_operation(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::PartialApply => handle_binary_operation(Instruction::PartialApply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
         Definition::Concatenation => handle_binary_operation(Instruction::Concat, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata)?,
+        Definition::Pair => handle_binary_operation_with_push(Instruction::MakePair, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata, |left, right| {
+            (left, right)
+        })?,
         Definition::ApplyTo => handle_binary_operation_with_push(Instruction::Apply, &mut nodes, node_index, &mut stack, parse_node, data, &mut instruction_metadata, |left, right| {
             (left, right)
         })?,
@@ -480,7 +482,7 @@ fn handle_parse_node<Data: GarnishData>(
                     let left = parse_node.get_left().ok_or(CompilerError::new_message("No left on ElseJump definition".to_string()))?;
                     stack.push(right);
                     stack.push(left);
-                    
+
                     let containing = node.containing_expression_jump.clone();
 
                     match node.conditional_parent {
@@ -559,7 +561,7 @@ fn handle_parse_node<Data: GarnishData>(
                     stack.push(right);
                     stack.push(node_index);
                     stack.push(left);
-                    
+
                     let containing = node.containing_expression_jump.clone();
 
                     nodes[right] = Some(BuildNode::new(right, containing.clone()));
@@ -611,7 +613,7 @@ fn handle_parse_node<Data: GarnishData>(
                     stack.push(node_index);
                     stack.push(right);
                     stack.push(left);
-                    
+
                     let containing = node.containing_expression_jump.clone();
 
                     nodes[right] = Some(BuildNode::new(right, containing.clone()));
@@ -1001,7 +1003,7 @@ fn handle_list<Data: GarnishData>(
                 _ => (node_index, parse_node.get_definition(), true),
             };
             node.contributes_to_list = contributes_to_list;
-            
+
             let containing = node.containing_expression_jump.clone();
 
             match parse_node.get_right() {
@@ -1265,7 +1267,6 @@ mod binary_operations {
         subtraction: "value1 - value2", Instruction::Subtract,
         multiplication: "value1 * value2", Instruction::Multiply,
         division: "value1 / value2", Instruction::Divide,
-        pair: "value1 = value2", Instruction::MakePair,
         range: "value1..value2", Instruction::MakeRange,
         start_exclusive_range: "value1>..value2", Instruction::MakeStartExclusiveRange,
         end_exclusive_range: "value1..<value2", Instruction::MakeEndExclusiveRange,
@@ -1345,6 +1346,51 @@ mod binary_operations {
                 .append_symbol("value")
                 .append(SimpleData::Number(5.into()))
                 .append(SimpleData::Number(10.into()))
+        );
+    }
+
+    #[test]
+    fn pair() {
+        let (data, _build_data) = build_input("5 = 15");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::MakePair, None),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(15.into()))
+                .append(SimpleData::Number(5.into()))
+        );
+    }
+
+    #[test]
+    fn double_pair() {
+        let (data, _build_data) = build_input("5 = 15 = 25");
+
+        assert_eq!(
+            data.get_instructions(),
+            &vec![
+                SimpleInstruction::new(Instruction::Put, Some(3)),
+                SimpleInstruction::new(Instruction::Put, Some(4)),
+                SimpleInstruction::new(Instruction::MakePair, None),
+                SimpleInstruction::new(Instruction::Put, Some(5)),
+                SimpleInstruction::new(Instruction::MakePair, None),
+                SimpleInstruction::new(Instruction::EndExpression, None)
+            ]
+        );
+        assert_eq!(
+            data.get_data(),
+            &SimpleDataList::default()
+                .append(SimpleData::Number(25.into()))
+                .append(SimpleData::Number(15.into()))
+                .append(SimpleData::Number(5.into()))
         );
     }
 }

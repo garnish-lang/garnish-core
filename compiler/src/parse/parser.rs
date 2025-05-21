@@ -169,7 +169,7 @@ fn get_definition(token_type: TokenType) -> (Definition, SecondaryDefinition) {
         TokenType::PlusSign => (Definition::Addition, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Equality => (Definition::Equality, SecondaryDefinition::BinaryLeftToRight),
         TokenType::Period => (Definition::Access, SecondaryDefinition::BinaryLeftToRight),
-        TokenType::Pair => (Definition::Pair, SecondaryDefinition::BinaryLeftToRight),
+        TokenType::Pair => (Definition::Pair, SecondaryDefinition::BinaryRightToLeft),
         TokenType::Range => (Definition::Range, SecondaryDefinition::BinaryLeftToRight),
         TokenType::StartExclusiveRange => (Definition::StartExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
         TokenType::EndExclusiveRange => (Definition::EndExclusiveRange, SecondaryDefinition::BinaryLeftToRight),
@@ -300,6 +300,10 @@ impl ParseNode {
 
     pub fn text(&self) -> &str {
         self.lex_token.get_text()
+    }
+    
+    pub fn has_children(&self) -> bool {
+        self.left.is_some() && self.right.is_some()
     }
 }
 
@@ -468,6 +472,7 @@ fn parse_token(
     priority_map: &HashMap<Definition, usize>,
     check_for_list: &mut bool,
     under_group: Option<usize>,
+    right_to_left: bool,
 ) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), CompilerError> {
     let my_priority = match priority_map.get(&definition) {
         None => implementation_error(format!("Definition '{:?}' not registered in priority map.", definition))?,
@@ -503,11 +508,11 @@ fn parse_token(
                 trace!("Check group. Current group is {:?}. Current index is {:?}", under_group, left_index);
                 let is_our_group = n.definition.is_group_like()
                     && match under_group {
-                        None => false,
-                        Some(group_index) => group_index == left_index,
-                    };
+                    None => false,
+                    Some(group_index) => group_index == left_index,
+                };
 
-                let stop = my_priority < their_priority;
+                let stop = my_priority < their_priority || my_priority == their_priority && right_to_left;
 
                 // need to find node with higher priority and stop before it
                 if stop || is_our_group {
@@ -590,6 +595,32 @@ fn parse_token(
     Ok((definition, parent, true_left, right))
 }
 
+fn parse_token_left_to_right(
+    id: usize,
+    definition: Definition,
+    left: Option<usize>,
+    right: Option<usize>,
+    nodes: &mut Vec<ParseNode>,
+    priority_map: &HashMap<Definition, usize>,
+    check_for_list: &mut bool,
+    under_group: Option<usize>,
+) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), CompilerError> {
+    parse_token(id, definition, left, right, nodes, priority_map, check_for_list, under_group, false)
+}
+
+fn parse_token_right_to_left(
+    id: usize,
+    definition: Definition,
+    left: Option<usize>,
+    right: Option<usize>,
+    nodes: &mut Vec<ParseNode>,
+    priority_map: &HashMap<Definition, usize>,
+    check_for_list: &mut bool,
+    under_group: Option<usize>,
+) -> Result<(Definition, Option<usize>, Option<usize>, Option<usize>), CompilerError> {
+    parse_token(id, definition, left, right, nodes, priority_map, check_for_list, under_group, true)
+}
+
 fn parse_value_like(
     id: usize,
     definition: Definition,
@@ -608,7 +639,7 @@ fn parse_value_like(
         trace!("List flag is set, creating list node before current node.");
         our_id = id + 1;
         // use current id for list token
-        let list_info = parse_token(
+        let list_info = parse_token_left_to_right(
             id,
             Definition::List,
             last_left,
@@ -634,7 +665,7 @@ fn parse_value_like(
         *next_last_left = Some(nodes.len());
     }
 
-    parse_token(our_id, definition, our_left, None, nodes, priority_map, check_for_list, under_group)
+    parse_token_left_to_right(our_id, definition, our_left, None, nodes, priority_map, check_for_list, under_group)
 }
 
 fn setup_space_list_check(
@@ -866,9 +897,22 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                 ),
                 token,
             )?,
-            SecondaryDefinition::BinaryLeftToRight | SecondaryDefinition::OptionalBinaryLeftToRight | SecondaryDefinition::BinaryRightToLeft => {
+            SecondaryDefinition::BinaryRightToLeft => {
                 next_parent = Some(current_id);
-                parse_token(
+                parse_token_right_to_left(
+                    current_id,
+                    definition,
+                    last_left,
+                    assumed_right,
+                    &mut nodes,
+                    &priority_map,
+                    &mut check_for_list,
+                    under_group,
+                )?
+            }
+            SecondaryDefinition::BinaryLeftToRight | SecondaryDefinition::OptionalBinaryLeftToRight => {
+                next_parent = Some(current_id);
+                parse_token_left_to_right(
                     current_id,
                     definition,
                     last_left,
@@ -893,7 +937,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                     right = Some(our_id + 1);
 
                     // use current id for list token
-                    let list_info = parse_token(
+                    let list_info = parse_token_left_to_right(
                         current_id,
                         Definition::List,
                         last_left,
@@ -922,7 +966,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
             }
             SecondaryDefinition::UnarySuffix => {
                 next_parent = Some(current_id);
-                parse_token(
+                parse_token_left_to_right(
                     current_id,
                     definition,
                     last_left,
@@ -951,7 +995,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                     our_id += 1;
 
                     // use current id for list token
-                    let list_info = parse_token(
+                    let list_info = parse_token_left_to_right(
                         current_id,
                         Definition::List,
                         last_left,
@@ -992,7 +1036,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                 // but group stack should be pushed to after, store data now
                 let group_info = (current_id, check_for_list);
 
-                let info = parse_token(
+                let info = parse_token_left_to_right(
                     current_id,
                     definition,
                     last_left,
@@ -1012,7 +1056,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
             SecondaryDefinition::EndGrouping | SecondaryDefinition::EndSideEffect => {
                 // should always have a value after popping here
                 // if not it means we didn't pass through start grouping an equal amount of times
-                match group_stack.pop() {
+                let ended_group = match group_stack.pop() {
                     None => unmatched_grouping_error(token)?,
                     Some((left, need_list_check)) => match nodes.get(left) {
                         None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", left), token)?,
@@ -1044,9 +1088,11 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                                 ))
                                 .append_token_details(&token))?;
                             }
+                            
+                            left
                         }
                     },
-                }
+                };
 
                 current_group = match group_stack.is_empty() {
                     true => None,
@@ -1060,18 +1106,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                     Some(left) => match nodes.get_mut(left) {
                         None => implementation_error_with_token(format!("Index assigned to node has no value in node list. {:?}", left), token)?,
                         Some(left_node) => {
-                            if left_node.definition.is_optional() {
-                                left_node.right = None;
-                            }
-
-                            // if last left is matching start grouping
-                            // we're empty grouping, unset last left's right
-                            if match (token.get_token_type(), left_node.definition) {
-                                (TokenType::EndGroup, Definition::Group) => true,
-                                (TokenType::EndExpression, Definition::NestedExpression) => true,
-                                (TokenType::EndSideEffect, Definition::SideEffect) => true,
-                                _ => false
-                            } {
+                            if left_node.definition.is_optional() || left == ended_group {
                                 left_node.right = None;
                             }
 
@@ -1167,7 +1202,7 @@ pub fn parse(lex_tokens: &Vec<LexerToken>) -> Result<ParseResult, CompilerError>
                         (Definition::Drop, None, None, None)
                     } else {
                         next_parent = Some(current_id);
-                        parse_token(
+                        parse_token_left_to_right(
                             current_id,
                             definition,
                             last_left,
@@ -3136,6 +3171,31 @@ mod tests {
                 (0, Definition::Number, Some(1), None, None),
                 (1, Definition::Pair, None, Some(0), Some(2)),
                 (2, Definition::Number, Some(1), None, None),
+            ],
+        );
+    }
+
+    #[test]
+    fn double_pair() {
+        let tokens = vec![
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("=".to_string(), TokenType::Pair, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("=".to_string(), TokenType::Pair, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(
+            &result,
+            1,
+            &[
+                (0, Definition::Number, Some(1), None, None),
+                (1, Definition::Pair, None, Some(0), Some(3)),
+                (2, Definition::Number, Some(3), None, None),
+                (3, Definition::Pair, Some(1), Some(2), Some(4)),
+                (4, Definition::Number, Some(3), None, None),
             ],
         );
     }
@@ -5143,6 +5203,37 @@ mod complex_cases {
                 (3, Definition::Number, Some(4), None, None),
                 (4, Definition::Pair, Some(2), Some(3), Some(5)),
                 (5, Definition::Number, Some(4), None, None),
+            ],
+        );
+    }
+    
+    #[test]
+    fn pair_nested_group() {
+        let tokens = vec![
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("=".to_string(), TokenType::Pair, 0, 0),
+            LexerToken::new("(".to_string(), TokenType::StartGroup, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new("=".to_string(), TokenType::Pair, 0, 0),
+            LexerToken::new("5".to_string(), TokenType::Number, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+            LexerToken::new(")".to_string(), TokenType::EndGroup, 0, 0),
+        ];
+
+        let result = parse(&tokens).unwrap();
+
+        assert_result(
+            &result,
+            0,
+            &[
+                (0, Definition::Group, None, None, Some(2)),
+                (1, Definition::Number, Some(2), None, None),
+                (2, Definition::Pair, Some(0), Some(1), Some(3)),
+                (3, Definition::Group, Some(2), None, Some(5)),
+                (4, Definition::Number, Some(5), None, None),
+                (5, Definition::Pair, Some(3), Some(4), Some(6)),
+                (6, Definition::Number, Some(5), None, None),
             ],
         );
     }

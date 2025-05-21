@@ -20,7 +20,7 @@ mod tests {
         runtime.make_pair().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_data_type(start).unwrap(), GarnishDataType::Pair);
-        assert_eq!(runtime.get_data_mut().get_pair(start).unwrap(), (i1, i2));
+        assert_eq!(runtime.get_data_mut().get_pair(start).unwrap(), (i2, i1));
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), start);
     }
