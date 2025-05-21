@@ -13,7 +13,7 @@ readme.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-garnish_lang_traits = { version = "0.0.23-alpha", path = "../traits" }
+garnish_lang_traits = { workspace = true }
 serde = { version = "1.0.196", optional = true, features = ["derive"] }
 
 [features]
