@@ -1,1 +1,1 @@
-:nested.more_nested.value = (:object.nested.more_nested.value.sub_value ~ 1..3)
+:nested.more_nested.value = (:object.nested.more_nested.value.sub_value <~ 1..3)

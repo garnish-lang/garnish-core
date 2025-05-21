@@ -1,4 +1,4 @@
-:object.nested.more_nested ~ :value,
-:object ~ :nested.more_nested.value
+:object.nested.more_nested <~ :value,
+:object <~ :nested.more_nested.value
 
 $ = (:object.nested.more_nested.value :object.nested.more_nested.value)

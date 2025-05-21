@@ -6,6 +6,6 @@
             ),
         ),
     ),
-) ~ :nested.still_nested.more_nesting.value
+) <~ :nested.still_nested.more_nesting.value
 
 $ = 5
