@@ -5,7 +5,7 @@ use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, GarnishN
 use log::trace;
 
 pub(crate) fn apply<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    apply_internal(this, Instruction::Apply, context)
+    apply_internal(this, Instruction::Apply, context, true)
 }
 
 pub(crate) fn reapply<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -33,10 +33,10 @@ pub(crate) fn reapply<Data: GarnishData>(this: &mut Data, index: Data::Size) -> 
 
 pub(crate) fn empty_apply<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     push_unit(this)?;
-    apply_internal(this, Instruction::EmptyApply, context)
+    apply_internal(this, Instruction::EmptyApply, context, false)
 }
 
-fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, instruction: Instruction, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, instruction: Instruction, context: Option<&mut T>, use_right: bool) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let right_addr = next_ref(this)?;
     let left_addr = next_ref(this)?;
 
@@ -84,9 +84,13 @@ fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, i
             let (expression, input) = this.get_partial(left_addr)?;
             match this.get_data_type(expression.clone())? {
                 GarnishDataType::Expression => {
-                    let value = this.add_concatenation(input, right_addr)?;
+                    let value = if use_right {
+                        this.add_concatenation(input, right_addr)?
+                    } else {
+                        input
+                    };
                     this.push_value_stack(value)?;
-                    
+
                     let expression = this.get_expression(expression)?;
                     let n = match this.get_jump_point(expression.clone()) {
                         None => state_error(format!("No jump point at index {:?}", expression))?,
@@ -201,7 +205,7 @@ pub(crate) fn narrow_range<Data: GarnishData>(this: &mut Data, to_narrow: Data::
 
 #[cfg(test)]
 mod tests {
-    use crate::runtime::apply::apply;
+    use crate::runtime::apply::{apply, empty_apply};
     use crate::runtime::tests::{MockGarnishData, MockIterator};
     use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
 
@@ -419,6 +423,46 @@ mod tests {
         };
 
         let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+
+        assert_eq!(result, Some(3000));
+    }
+
+    #[test]
+    fn empty_apply_partial_expression() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Expression, GarnishDataType::Number, GarnishDataType::Partial, GarnishDataType::Unit]);
+
+        mock_data.stub_add_unit = |_| Ok(100);
+        mock_data.stub_get_partial = |_, i| {
+            assert_eq!(i, 2);
+            Ok((0, 1))
+        };
+        mock_data.stub_get_expression = |_, i| {
+            assert_eq!(i, 0);
+            Ok(200)
+        };
+        mock_data.stub_get_jump_point = |_, index| {
+            assert_eq!(index, 200);
+            Some(3000)
+        };
+        mock_data.stub_push_value_stack = |_, i| {
+            assert_eq!(i, 1);
+            Ok(())
+        };
+        mock_data.stub_set_instruction_cursor = |_, addr| {
+            assert_eq!(addr, 300);
+            Ok(())
+        };
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 100);
+            Ok(())
+        };
+        mock_data.stub_get_instruction_cursor = |_| 123;
+        mock_data.stub_push_jump_path = |_, i| {
+            assert_eq!(i, 124);
+            Ok(())
+        };
+
+        let result = empty_apply(&mut mock_data, NO_CONTEXT).unwrap();
 
         assert_eq!(result, Some(3000));
     }
