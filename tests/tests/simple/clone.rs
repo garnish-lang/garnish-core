@@ -1,10 +1,9 @@
-
 #[cfg(test)]
 mod tests {
-    use garnish_lang_simple_data::{SimpleData, SimpleGarnishData, SimpleNumber};
-    use garnish_lang_traits::{GarnishData, GarnishDataType};
-    use garnish_lang_traits::helpers::{clone_data, clone_data_with_custom_handler, clone_data_with_handlers, clone_data_with_invalid_handler};
     use crate::simple::clone::test_data_impl::TestData;
+    use garnish_lang::helpers::{clone_data, clone_data_with_custom_handler, clone_data_with_handlers, clone_data_with_invalid_handler};
+    use garnish_lang::simple::{SimpleData, SimpleGarnishData, SimpleNumber};
+    use garnish_lang::{GarnishData, GarnishDataType};
 
     #[test]
     fn copy_number() {
@@ -19,10 +18,7 @@ mod tests {
         let new_addr = clone_data(addr, &from, &mut to).unwrap();
 
         assert_eq!(new_addr, 6);
-        assert_eq!(
-            to.get_data().get(6).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(40)
-        );
+        assert_eq!(to.get_data().get(6).unwrap().as_number().unwrap(), SimpleNumber::Integer(40));
     }
 
     #[test]
@@ -86,10 +82,7 @@ mod tests {
         let new_addr = clone_data(addr, &from, &mut to).unwrap();
 
         assert_eq!(new_addr, 6);
-        assert_eq!(
-            to.get_data().get(6).unwrap().as_type().unwrap(),
-            GarnishDataType::Byte
-        );
+        assert_eq!(to.get_data().get(6).unwrap().as_type().unwrap(), GarnishDataType::Byte);
     }
 
     #[test]
@@ -121,10 +114,7 @@ mod tests {
         let new_addr = clone_data(addr, &from, &mut to).unwrap();
 
         assert_eq!(new_addr, 6);
-        assert_eq!(
-            to.get_data().get(6).unwrap().as_char_list().unwrap(),
-            "stuff"
-        );
+        assert_eq!(to.get_data().get(6).unwrap().as_char_list().unwrap(), "stuff");
     }
 
     #[test]
@@ -156,10 +146,7 @@ mod tests {
         let new_addr = clone_data(addr, &from, &mut to).unwrap();
 
         assert_eq!(new_addr, 6);
-        assert_eq!(
-            to.get_data().get(6).unwrap().as_byte_list().unwrap(),
-            vec![100, 150, 200]
-        );
+        assert_eq!(to.get_data().get(6).unwrap().as_byte_list().unwrap(), vec![100, 150, 200]);
     }
 
     #[test]
@@ -178,14 +165,8 @@ mod tests {
 
         assert_eq!(new_addr, 8);
         assert_eq!(to.get_data().get(8).unwrap().as_range().unwrap(), (6, 7));
-        assert_eq!(
-            to.get_data().get(6).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(1)
-        );
-        assert_eq!(
-            to.get_data().get(7).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(5)
-        );
+        assert_eq!(to.get_data().get(6).unwrap().as_number().unwrap(), SimpleNumber::Integer(1));
+        assert_eq!(to.get_data().get(7).unwrap().as_number().unwrap(), SimpleNumber::Integer(5));
     }
 
     #[test]
@@ -254,7 +235,6 @@ mod tests {
         assert_eq!(to.get_data().get(6).unwrap().as_external().unwrap(), 100);
     }
 
-
     #[derive(Copy, Clone, PartialOrd, PartialEq, Eq, Debug, Hash)]
     struct CustomData {
         num: usize,
@@ -286,11 +266,7 @@ mod tests {
         to.add_number(SimpleNumber::Integer(20)).unwrap();
         to.add_number(SimpleNumber::Integer(30)).unwrap();
 
-        let new_addr = clone_data_with_custom_handler(
-            addr, &from, &mut to,
-            |_addr, _from, to| {
-                to.add_number(SimpleNumber::Integer(12345))
-            }).unwrap();
+        let new_addr = clone_data_with_custom_handler(addr, &from, &mut to, |_addr, _from, to| to.add_number(SimpleNumber::Integer(12345))).unwrap();
 
         assert_eq!(new_addr, 6);
         assert_eq!(to.get_data().get(6).unwrap().as_number().unwrap(), SimpleNumber::Integer(12345));
@@ -312,11 +288,7 @@ mod tests {
         let from = TestData::new();
         let mut to = TestData::new();
 
-        clone_data_with_invalid_handler(
-            0, &from, &mut to,
-            | _, _, to| {
-                to.add_number(SimpleNumber::Integer(10))
-            }).unwrap();
+        clone_data_with_invalid_handler(0, &from, &mut to, |_, _, to| to.add_number(SimpleNumber::Integer(10))).unwrap();
 
         assert!(!to.unit_added);
         assert!(to.number_added);
@@ -327,23 +299,11 @@ mod tests {
         let from = TestData::new();
         let mut to = TestData::new();
 
-        clone_data_with_handlers(
-            0, &from, &mut to,
-            | _, _, to| {
-                to.add_number(SimpleNumber::Integer(10))
-            }, |_, _, to| {
-                to.add_char(0)
-            }).unwrap();
+        clone_data_with_handlers(0, &from, &mut to, |_, _, to| to.add_number(SimpleNumber::Integer(10)), |_, _, to| to.add_char(0)).unwrap();
 
         assert!(to.char_added);
 
-        clone_data_with_handlers(
-            1, &from, &mut to,
-            | _, _, to| {
-                to.add_number(SimpleNumber::Integer(10))
-            }, |_, _, to| {
-                to.add_char(0)
-            }).unwrap();
+        clone_data_with_handlers(1, &from, &mut to, |_, _, to| to.add_number(SimpleNumber::Integer(10)), |_, _, to| to.add_char(0)).unwrap();
 
         assert!(to.number_added);
 
@@ -367,10 +327,7 @@ mod tests {
         assert_eq!(new_addr, 8);
         assert_eq!(to.get_data().get(8).unwrap().as_pair().unwrap(), (6, 7));
         assert_eq!(to.get_data().get(6).unwrap().as_symbol().unwrap(), 100);
-        assert_eq!(
-            to.get_data().get(7).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(200)
-        );
+        assert_eq!(to.get_data().get(7).unwrap().as_number().unwrap(), SimpleNumber::Integer(200));
     }
 
     #[test]
@@ -388,30 +345,18 @@ mod tests {
         let new_addr = clone_data(d3, &from, &mut to).unwrap();
 
         assert_eq!(new_addr, 8);
-        assert_eq!(
-            to.get_data().get(8).unwrap().as_concatenation().unwrap(),
-            (6, 7)
-        );
+        assert_eq!(to.get_data().get(8).unwrap().as_concatenation().unwrap(), (6, 7));
         assert_eq!(to.get_data().get(6).unwrap().as_symbol().unwrap(), 100);
-        assert_eq!(
-            to.get_data().get(7).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(200)
-        );
+        assert_eq!(to.get_data().get(7).unwrap().as_number().unwrap(), SimpleNumber::Integer(200));
     }
 
     #[test]
     fn copy_list() {
         let mut from = SimpleGarnishData::new();
         from.start_list(3).unwrap();
-        from.add_number(SimpleNumber::Integer(100))
-            .and_then(|i| from.add_to_list(i, false))
-            .unwrap();
-        from.add_number(SimpleNumber::Integer(200))
-            .and_then(|i| from.add_to_list(i, false))
-            .unwrap();
-        from.add_number(SimpleNumber::Integer(300))
-            .and_then(|i| from.add_to_list(i, false))
-            .unwrap();
+        from.add_number(SimpleNumber::Integer(100)).and_then(|i| from.add_to_list(i, false)).unwrap();
+        from.add_number(SimpleNumber::Integer(200)).and_then(|i| from.add_to_list(i, false)).unwrap();
+        from.add_number(SimpleNumber::Integer(300)).and_then(|i| from.add_to_list(i, false)).unwrap();
         let d4 = from.end_list().unwrap();
 
         let mut to = SimpleGarnishData::new();
@@ -422,22 +367,10 @@ mod tests {
         let new_addr = clone_data(d4, &from, &mut to).unwrap();
 
         assert_eq!(new_addr, 9);
-        assert_eq!(
-            to.get_data().get(9).unwrap().as_list().unwrap(),
-            (vec![6, 7, 8], vec![])
-        );
-        assert_eq!(
-            to.get_data().get(6).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(100)
-        );
-        assert_eq!(
-            to.get_data().get(7).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(200)
-        );
-        assert_eq!(
-            to.get_data().get(8).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(300)
-        );
+        assert_eq!(to.get_data().get(9).unwrap().as_list().unwrap(), (vec![6, 7, 8], vec![]));
+        assert_eq!(to.get_data().get(6).unwrap().as_number().unwrap(), SimpleNumber::Integer(100));
+        assert_eq!(to.get_data().get(7).unwrap().as_number().unwrap(), SimpleNumber::Integer(200));
+        assert_eq!(to.get_data().get(8).unwrap().as_number().unwrap(), SimpleNumber::Integer(300));
     }
 
     #[test]
@@ -480,42 +413,15 @@ mod tests {
         let new_addr = clone_data(d6, &from, &mut to).unwrap();
 
         assert_eq!(new_addr, 14);
-        assert_eq!(
-            to.get_data().get(new_addr).unwrap().as_list().unwrap(),
-            (vec![9, 13], vec![])
-        );
-        assert_eq!(
-            to.get_data().get(9).unwrap().as_list().unwrap(),
-            (vec![6, 7, 8], vec![])
-        );
-        assert_eq!(
-            to.get_data().get(13).unwrap().as_list().unwrap(),
-            (vec![10, 11, 12], vec![])
-        );
-        assert_eq!(
-            to.get_data().get(6).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(100)
-        );
-        assert_eq!(
-            to.get_data().get(7).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(200)
-        );
-        assert_eq!(
-            to.get_data().get(8).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(300)
-        );
-        assert_eq!(
-            to.get_data().get(10).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(400)
-        );
-        assert_eq!(
-            to.get_data().get(11).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(500)
-        );
-        assert_eq!(
-            to.get_data().get(12).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(600)
-        );
+        assert_eq!(to.get_data().get(new_addr).unwrap().as_list().unwrap(), (vec![9, 13], vec![]));
+        assert_eq!(to.get_data().get(9).unwrap().as_list().unwrap(), (vec![6, 7, 8], vec![]));
+        assert_eq!(to.get_data().get(13).unwrap().as_list().unwrap(), (vec![10, 11, 12], vec![]));
+        assert_eq!(to.get_data().get(6).unwrap().as_number().unwrap(), SimpleNumber::Integer(100));
+        assert_eq!(to.get_data().get(7).unwrap().as_number().unwrap(), SimpleNumber::Integer(200));
+        assert_eq!(to.get_data().get(8).unwrap().as_number().unwrap(), SimpleNumber::Integer(300));
+        assert_eq!(to.get_data().get(10).unwrap().as_number().unwrap(), SimpleNumber::Integer(400));
+        assert_eq!(to.get_data().get(11).unwrap().as_number().unwrap(), SimpleNumber::Integer(500));
+        assert_eq!(to.get_data().get(12).unwrap().as_number().unwrap(), SimpleNumber::Integer(600));
     }
 
     #[test]
@@ -525,9 +431,7 @@ mod tests {
 
         let left = from.add_symbol(200).unwrap();
         let right = from.add_number(SimpleNumber::Integer(100)).unwrap();
-        from.add_pair((left, right))
-            .and_then(|i| from.add_to_list(i, false))
-            .unwrap();
+        from.add_pair((left, right)).and_then(|i| from.add_to_list(i, false)).unwrap();
         let d4 = from.end_list().unwrap();
 
         let mut to = SimpleGarnishData::new();
@@ -538,18 +442,9 @@ mod tests {
         let new_addr = clone_data(d4, &from, &mut to).unwrap();
 
         assert_eq!(new_addr, 9);
-        assert_eq!(
-            to.get_data().get(9).unwrap().as_list().unwrap(),
-            (vec![8], vec![8])
-        );
-        assert_eq!(
-            to.get_data().get(7).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(100)
-        );
-        assert_eq!(
-            to.get_data().get(6).unwrap().as_symbol().unwrap(),
-            200
-        );
+        assert_eq!(to.get_data().get(9).unwrap().as_list().unwrap(), (vec![8], vec![8]));
+        assert_eq!(to.get_data().get(7).unwrap().as_number().unwrap(), SimpleNumber::Integer(100));
+        assert_eq!(to.get_data().get(6).unwrap().as_symbol().unwrap(), 200);
     }
 
     #[test]
@@ -559,15 +454,9 @@ mod tests {
         let d2 = from.add_number(SimpleNumber::Integer(3)).unwrap();
         let d3 = from.add_range(d1, d2).unwrap();
         from.start_list(3).unwrap();
-        from.add_number(SimpleNumber::Integer(100))
-            .and_then(|i| from.add_to_list(i, false))
-            .unwrap();
-        from.add_number(SimpleNumber::Integer(200))
-            .and_then(|i| from.add_to_list(i, false))
-            .unwrap();
-        from.add_number(SimpleNumber::Integer(300))
-            .and_then(|i| from.add_to_list(i, false))
-            .unwrap();
+        from.add_number(SimpleNumber::Integer(100)).and_then(|i| from.add_to_list(i, false)).unwrap();
+        from.add_number(SimpleNumber::Integer(200)).and_then(|i| from.add_to_list(i, false)).unwrap();
+        from.add_number(SimpleNumber::Integer(300)).and_then(|i| from.add_to_list(i, false)).unwrap();
         let d4 = from.end_list().unwrap();
         let d5 = from.add_slice(d4, d3).unwrap();
 
@@ -581,44 +470,25 @@ mod tests {
         assert_eq!(new_addr, 13);
         assert_eq!(to.get_data().get(13).unwrap().as_slice().unwrap(), (9, 12));
         assert_eq!(to.get_data().get(12).unwrap().as_range().unwrap(), (10, 11));
-        assert_eq!(
-            to.get_data().get(10).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(1)
-        );
-        assert_eq!(
-            to.get_data().get(11).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(3)
-        );
-        assert_eq!(
-            to.get_data().get(9).unwrap().as_list().unwrap(),
-            (vec![6, 7, 8], vec![])
-        );
-        assert_eq!(
-            to.get_data().get(6).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(100)
-        );
-        assert_eq!(
-            to.get_data().get(7).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(200)
-        );
-        assert_eq!(
-            to.get_data().get(8).unwrap().as_number().unwrap(),
-            SimpleNumber::Integer(300)
-        );
+        assert_eq!(to.get_data().get(10).unwrap().as_number().unwrap(), SimpleNumber::Integer(1));
+        assert_eq!(to.get_data().get(11).unwrap().as_number().unwrap(), SimpleNumber::Integer(3));
+        assert_eq!(to.get_data().get(9).unwrap().as_list().unwrap(), (vec![6, 7, 8], vec![]));
+        assert_eq!(to.get_data().get(6).unwrap().as_number().unwrap(), SimpleNumber::Integer(100));
+        assert_eq!(to.get_data().get(7).unwrap().as_number().unwrap(), SimpleNumber::Integer(200));
+        assert_eq!(to.get_data().get(8).unwrap().as_number().unwrap(), SimpleNumber::Integer(300));
     }
 }
 
 #[cfg(test)]
 #[allow(unused)]
 mod test_data_impl {
-    use std::collections::hash_map::Iter;
-    use garnish_lang_simple_data::{DataError, NumberIterator, SimpleGarnishData, SimpleNumber, SizeIterator};
-    use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
+    use garnish_lang::simple::{DataError, NumberIterator, SimpleNumber, SizeIterator};
+    use garnish_lang::{GarnishData, GarnishDataType, Instruction};
 
     pub struct TestData {
         pub unit_added: bool,
         pub number_added: bool,
-        pub char_added: bool
+        pub char_added: bool,
     }
 
     impl TestData {
@@ -626,7 +496,7 @@ mod test_data_impl {
             Self {
                 unit_added: false,
                 number_added: false,
-                char_added: false
+                char_added: false,
             }
         }
     }
@@ -691,11 +561,7 @@ mod test_data_impl {
         }
 
         fn get_data_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
-            if addr == 1 {
-                Ok(GarnishDataType::Custom)
-            } else {
-                Ok(GarnishDataType::Invalid)
-            }
+            if addr == 1 { Ok(GarnishDataType::Custom) } else { Ok(GarnishDataType::Invalid) }
         }
 
         fn get_number(&self, addr: Self::Size) -> Result<Self::Number, Self::Error> {

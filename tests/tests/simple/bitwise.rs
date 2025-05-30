@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod deferring {
     use crate::simple::testing_utilities::{deferred_op, deferred_unary_op};
-    use garnish_lang_traits::GarnishRuntime;
+    use garnish_lang::GarnishRuntime;
 
     #[test]
     fn bitwise_not() {
@@ -49,7 +49,7 @@ mod deferring {
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::{GarnishData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn bitwise_not() {

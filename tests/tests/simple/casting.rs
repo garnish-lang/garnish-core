@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod deferring {
     use crate::simple::testing_utilities::deferred_op;
-    use garnish_lang_traits::GarnishRuntime;
+    use garnish_lang::GarnishRuntime;
 
     #[test]
     fn type_cast() {
@@ -13,9 +13,8 @@ mod deferring {
 
 #[cfg(test)]
 mod type_of {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn type_of_number() {
@@ -34,9 +33,8 @@ mod type_of {
 
 #[cfg(test)]
 mod simple {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn no_op_cast_expression() {
@@ -186,8 +184,8 @@ mod simple {
 #[cfg(test)]
 mod primitive {
     use crate::simple::testing_utilities::{add_char_list, create_simple_runtime};
-    use garnish_lang_simple_data::SimpleDataRuntimeNC;
-    use garnish_lang_traits::{GarnishData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::simple::SimpleDataRuntimeNC;
+    use garnish_lang::{GarnishData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn integer_to_char() {
@@ -348,12 +346,9 @@ mod primitive {
 
 #[cfg(test)]
 mod lists {
-    use garnish_lang_simple_data::{symbol_value, SimpleDataRuntimeNC};
-
-    use crate::simple::testing_utilities::{
-        add_byte_list, add_char_list, add_list_with_start, add_range, create_simple_runtime,
-    };
-    use garnish_lang_traits::{GarnishData, GarnishRuntime, NO_CONTEXT};
+    use crate::simple::testing_utilities::{add_byte_list, add_char_list, add_list_with_start, add_range, create_simple_runtime};
+    use garnish_lang::simple::{SimpleDataRuntimeNC, symbol_value};
+    use garnish_lang::{GarnishData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn range_to_list() {
@@ -476,13 +471,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
-        let expected: Vec<char> = SimpleDataRuntimeNC::parse_char_list(input)
-            .unwrap()
-            .iter()
-            .skip(2)
-            .take(6)
-            .map(|c| *c)
-            .collect();
+        let expected: Vec<char> = SimpleDataRuntimeNC::parse_char_list(input).unwrap().iter().skip(2).take(6).map(|c| *c).collect();
         let mut result = vec![];
 
         for i in 0..expected.len() {
@@ -510,13 +499,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
-        let expected: Vec<u8> = SimpleDataRuntimeNC::parse_byte_list(input)
-            .unwrap()
-            .iter()
-            .skip(2)
-            .take(6)
-            .map(|c| *c)
-            .collect();
+        let expected: Vec<u8> = SimpleDataRuntimeNC::parse_byte_list(input).unwrap().iter().skip(2).take(6).map(|c| *c).collect();
         let mut result = vec![];
 
         for i in 0..expected.len() {
@@ -531,10 +514,9 @@ mod lists {
 
 #[cfg(test)]
 mod concatenation {
-    use garnish_lang_simple_data::symbol_value;
-
     use crate::simple::testing_utilities::{add_concatenation_with_start, add_list_with_start, add_range, create_simple_runtime};
-    use garnish_lang_traits::{GarnishData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::simple::symbol_value;
+    use garnish_lang::{GarnishData, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn concatenation_to_list() {
@@ -665,10 +647,9 @@ mod concatenation {
 
 #[cfg(test)]
 mod deferred {
-    use garnish_lang_simple_data::SimpleDataRuntimeNC;
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::simple::SimpleDataRuntimeNC;
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn char_list() {
@@ -722,10 +703,7 @@ mod deferred {
 
         let d1 = runtime.get_data_mut().add_unit().unwrap();
 
-        let s = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("sym").unwrap())
-            .unwrap();
+        let s = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("sym").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(s).unwrap();

@@ -1,13 +1,13 @@
 mod context;
+mod derive;
 
 use crate::context::TestingContext;
 use colored::Colorize;
-use garnish_lang_compiler::build::build;
-use garnish_lang_compiler::lex::lex;
-use garnish_lang_compiler::parse::{ParseNode, parse};
-use garnish_lang_runtime::{execute_current_instruction, ops, SimpleRuntimeState};
-use garnish_lang_simple_data::{SimpleData, SimpleGarnishData};
-use garnish_lang_traits::{GarnishData, Instruction};
+use garnish_lang::compiler::build::build;
+use garnish_lang::compiler::lex::lex;
+use garnish_lang::compiler::parse::{ParseNode, parse};
+use garnish_lang::simple::{SimpleData, SimpleGarnishData, SimpleRuntimeState, execute_current_instruction, ops};
+use garnish_lang::{GarnishData, Instruction};
 use log::error;
 use std::fs::read_to_string;
 use std::path::PathBuf;
@@ -168,9 +168,9 @@ fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
                             instruction.instruction,
                             match instruction.data {
                                 Some(index) => match instruction.instruction {
-                                    Instruction::Put =>  data.get_data().display_for_item(index),
+                                    Instruction::Put => data.get_data().display_for_item(index),
                                     _ => format!("{:?}", index),
-                                }
+                                },
                                 None => "".to_string(),
                             }
                         )

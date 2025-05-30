@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod general {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn equality_no_references_is_err() {
@@ -114,9 +113,8 @@ mod general {
 
 #[cfg(test)]
 mod simple_types {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn equality_units_equal() {
@@ -201,9 +199,8 @@ mod simple_types {
 
 #[cfg(test)]
 mod numbers {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn equality_integers_equal() {
@@ -240,9 +237,8 @@ mod numbers {
 
 #[cfg(test)]
 mod chars {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn equality_chars_equal() {
@@ -407,9 +403,8 @@ mod chars {
 
 #[cfg(test)]
 mod bytes {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn equality_bytes_equal() {
@@ -574,9 +569,8 @@ mod bytes {
 
 #[cfg(test)]
 mod symbols {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction};
 
     #[test]
     fn equality_equal() {
@@ -615,9 +609,8 @@ mod symbols {
 
 #[cfg(test)]
 mod expression {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction};
 
     #[test]
     fn equality_equal() {
@@ -656,9 +649,8 @@ mod expression {
 
 #[cfg(test)]
 mod external {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction};
 
     #[test]
     fn equality_equal() {
@@ -697,9 +689,8 @@ mod external {
 
 #[cfg(test)]
 mod pairs {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction};
 
     #[test]
     fn equality_equal() {
@@ -748,9 +739,8 @@ mod pairs {
 
 #[cfg(test)]
 mod ranges {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn equality_equal() {
@@ -944,9 +934,8 @@ mod ranges {
 
 #[cfg(test)]
 mod lists {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction};
 
     #[test]
     fn equality_only_items_equal() {
@@ -1154,9 +1143,8 @@ mod lists {
 
 #[cfg(test)]
 mod concatenation {
-
     use crate::simple::testing_utilities::{add_concatenation_with_start, add_list_with_start, create_simple_runtime};
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn concatenation_concatenation_equal() {
@@ -1293,11 +1281,8 @@ mod concatenation {
 
 #[cfg(test)]
 mod slices {
-
-    use crate::simple::testing_utilities::{
-        add_byte_list, add_char_list, add_list_with_start, add_range, create_simple_runtime,
-    };
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use crate::simple::testing_utilities::{add_byte_list, add_char_list, add_list_with_start, add_range, create_simple_runtime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn slice_of_list_slice_of_list() {

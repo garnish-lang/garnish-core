@@ -1,5 +1,5 @@
-use garnish_lang_simple_data::SimpleGarnishData;
-use garnish_lang_traits::GarnishContext;
+use garnish_lang::GarnishContext;
+use garnish_lang::simple::SimpleGarnishData;
 
 pub struct TestingContext {
 

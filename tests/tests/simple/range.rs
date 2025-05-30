@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishData, GarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishRuntime};
 
     #[test]
     fn range() {

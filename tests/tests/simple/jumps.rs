@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishData, GarnishRuntime, Instruction};
+    use garnish_lang::{GarnishData, GarnishRuntime, Instruction};
 
     #[test]
     fn end_expression_no_existing_value_no_path() {
@@ -46,10 +45,7 @@ mod tests {
         assert_eq!(runtime.get_data().get_value_stack_len(), 1);
 
         let i = runtime.get_data_mut().get_current_value().unwrap();
-        assert_eq!(
-            next.unwrap(),
-            runtime.get_data_mut().get_instruction_len()
-        );
+        assert_eq!(next.unwrap(), runtime.get_data_mut().get_instruction_len());
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 20.into());
     }
 

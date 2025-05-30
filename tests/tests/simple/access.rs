@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod deferring {
-    use crate::simple::testing_utilities::{create_simple_runtime, DeferOpTestContext, DEFERRED_VALUE};
-    use garnish_lang_traits::{GarnishData, GarnishRuntime};
+    use crate::simple::testing_utilities::{DEFERRED_VALUE, DeferOpTestContext, create_simple_runtime};
+    use garnish_lang::{GarnishData, GarnishRuntime};
 
     #[test]
     fn apply() {
@@ -24,9 +24,9 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_simple_data::SimpleDataRuntimeNC;
-    use garnish_lang_traits::{EmptyContext, GarnishData, GarnishRuntime, Instruction};
     use crate::simple::testing_utilities::create_simple_runtime;
+    use garnish_lang::simple::SimpleDataRuntimeNC;
+    use garnish_lang::{EmptyContext, GarnishData, GarnishRuntime, Instruction};
 
     #[test]
     fn access_integer_to_list() {
@@ -126,24 +126,15 @@ mod tests {
     fn access_symbol_to_list() {
         let mut runtime = create_simple_runtime();
 
-        let i1 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val1").unwrap())
-            .unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val1").unwrap()).unwrap();
         let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
 
-        let i4 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap())
-            .unwrap();
+        let i4 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap();
         let i5 = runtime.get_data_mut().add_number(20.into()).unwrap();
         let i6 = runtime.get_data_mut().add_pair((i4, i5)).unwrap();
 
-        let i7 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val3").unwrap())
-            .unwrap();
+        let i7 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val3").unwrap()).unwrap();
         let i8 = runtime.get_data_mut().add_number(30.into()).unwrap();
         let i9 = runtime.get_data_mut().add_pair((i7, i8)).unwrap();
 
@@ -153,10 +144,7 @@ mod tests {
         runtime.get_data_mut().add_to_list(i9, true).unwrap();
         let i10 = runtime.get_data_mut().end_list().unwrap();
 
-        let i11 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap())
-            .unwrap();
+        let i11 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(i10).unwrap();
         runtime.get_data_mut().push_register(i11).unwrap();

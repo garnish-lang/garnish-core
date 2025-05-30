@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod deferring {
     use crate::simple::testing_utilities::{deferred_op, deferred_unary_op};
-    use garnish_lang_traits::GarnishRuntime;
+    use garnish_lang::GarnishRuntime;
 
     #[test]
     fn add() {
@@ -70,9 +70,8 @@ mod deferring {
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_simple_data::SimpleNumber;
-    use garnish_lang_simple_data::SimpleDataRuntimeNC;
-    use garnish_lang_traits::{EmptyContext, GarnishDataType, GarnishData, GarnishRuntime};
+    use garnish_lang::simple::{SimpleDataRuntimeNC, SimpleNumber};
+    use garnish_lang::{EmptyContext, GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn add() {
@@ -106,14 +105,8 @@ mod tests {
     fn add_with_non_numbers() {
         let mut runtime = create_simple_runtime();
 
-        runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("sym1").unwrap())
-            .unwrap();
-        runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("sym2").unwrap())
-            .unwrap();
+        runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("sym1").unwrap()).unwrap();
+        runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("sym2").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(1).unwrap();
         runtime.get_data_mut().push_register(2).unwrap();

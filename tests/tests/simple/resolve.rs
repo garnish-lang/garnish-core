@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod deferring {
-
-    use crate::simple::testing_utilities::{create_simple_runtime, DeferOpTestContext};
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use crate::simple::testing_utilities::{DeferOpTestContext, create_simple_runtime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn resolve() {
@@ -22,12 +21,9 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_simple_data::{DataError, SimpleGarnishData};
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{
-        EmptyContext, GarnishDataType, GarnishContext, GarnishData, GarnishRuntime, Instruction, RuntimeError, EMPTY_CONTEXT,
-    };
+    use garnish_lang::simple::{DataError, SimpleGarnishData};
+    use garnish_lang::{EMPTY_CONTEXT, EmptyContext, GarnishContext, GarnishData, GarnishDataType, GarnishRuntime, Instruction, RuntimeError};
 
     #[allow(const_item_mutation)]
     #[test]

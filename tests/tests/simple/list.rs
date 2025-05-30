@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_simple_data::SimpleNumber;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction, NO_CONTEXT};
+    use garnish_lang::simple::SimpleNumber;
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction, NO_CONTEXT};
 
     #[test]
     fn make_list() {
@@ -300,9 +300,8 @@ mod tests {
 
 #[cfg(test)]
 mod ranges {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction, NO_CONTEXT};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction, NO_CONTEXT};
 
     #[test]
     fn access_with_integer() {
@@ -348,8 +347,8 @@ mod ranges {
 #[cfg(test)]
 mod slice {
     use crate::simple::testing_utilities::{add_integer_list, add_list, add_pair, add_range, create_simple_runtime};
-    use garnish_lang_simple_data::SimpleDataRuntimeNC;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::simple::SimpleDataRuntimeNC;
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn index_slice_of_list() {
@@ -430,10 +429,7 @@ mod slice {
         let d3 = runtime.get_data_mut().add_number(4.into()).unwrap();
         let d4 = runtime.get_data_mut().add_range(d2, d3).unwrap();
         let d5 = runtime.get_data_mut().add_slice(d1, d4).unwrap();
-        let d6 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val4").unwrap())
-            .unwrap();
+        let d6 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val4").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
@@ -463,10 +459,7 @@ mod slice {
         let d3 = runtime.get_data_mut().add_number(11.into()).unwrap();
         let d4 = runtime.get_data_mut().add_range(d2, d3).unwrap();
         let d5 = runtime.get_data_mut().add_slice(d1, d4).unwrap();
-        let d6 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val5").unwrap())
-            .unwrap();
+        let d6 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val5").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
@@ -520,12 +513,10 @@ mod slice {
 
 #[cfg(test)]
 mod concatenation {
-    use garnish_lang_simple_data::SimpleNumber::Integer;
-    use crate::simple::testing_utilities::{
-        add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range, create_simple_runtime,
-    };
-    use garnish_lang_simple_data::SimpleDataRuntimeNC;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, NO_CONTEXT};
+    use crate::simple::testing_utilities::{add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range, create_simple_runtime};
+    use garnish_lang::simple::SimpleDataRuntimeNC;
+    use garnish_lang::simple::SimpleNumber::Integer;
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn index_concat_of_items_with_number() {
@@ -549,10 +540,7 @@ mod concatenation {
         let mut runtime = create_simple_runtime();
 
         let d1 = add_concatenation_with_start(runtime.get_data_mut(), 10, 20);
-        let d2 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap())
-            .unwrap();
+        let d2 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
@@ -588,10 +576,7 @@ mod concatenation {
         let d1 = add_list_with_start(runtime.get_data_mut(), 10, 20);
         let d2 = add_list_with_start(runtime.get_data_mut(), 10, 40);
         let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
-        let d4 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val43").unwrap())
-            .unwrap();
+        let d4 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val43").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(d4).unwrap();
@@ -607,16 +592,11 @@ mod concatenation {
         let mut runtime = create_simple_runtime();
 
         let d1 = add_list_with_start(runtime.get_data_mut(), 10, 20);
-        let k1 = runtime.get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val25").unwrap())
-            .unwrap();
+        let k1 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val25").unwrap()).unwrap();
         let v1 = runtime.get_data_mut().add_number(Integer(123)).unwrap();
         let d2 = runtime.get_data_mut().add_pair((k1, v1)).unwrap();
         let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
-        let d4 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val25").unwrap())
-            .unwrap();
+        let d4 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val25").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(d4).unwrap();
@@ -653,10 +633,7 @@ mod concatenation {
         let d1 = add_concatenation_with_start(runtime.get_data_mut(), 10, 20);
         let d2 = add_range(runtime.get_data_mut(), 2, 5);
         let d3 = runtime.get_data_mut().add_slice(d1, d2).unwrap();
-        let d4 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap())
-            .unwrap();
+        let d4 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(d4).unwrap();
@@ -672,10 +649,7 @@ mod concatenation {
         let mut runtime = create_simple_runtime();
 
         let d1 = add_concatenation_with_start(runtime.get_data_mut(), 10, 20);
-        let d2 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val25").unwrap())
-            .unwrap();
+        let d2 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val25").unwrap()).unwrap();
         let d3 = runtime.get_data_mut().add_number(Integer(123)).unwrap();
         let d4 = runtime.get_data_mut().add_pair((d2, d3)).unwrap();
 
@@ -683,10 +657,7 @@ mod concatenation {
         let d6 = add_range(runtime.get_data_mut(), 2, 11);
         let d7 = runtime.get_data_mut().add_slice(d5, d6).unwrap();
 
-        let d8 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val25").unwrap())
-            .unwrap();
+        let d8 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val25").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d7).unwrap();
         runtime.get_data_mut().push_register(d8).unwrap();
@@ -726,10 +697,7 @@ mod concatenation {
         let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
         let d4 = add_range(runtime.get_data_mut(), 12, 15);
         let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
-        let d6 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val43").unwrap())
-            .unwrap();
+        let d6 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val43").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
@@ -749,10 +717,7 @@ mod concatenation {
         let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
         let d4 = add_range(runtime.get_data_mut(), 8, 12);
         let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
-        let d6 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val40").unwrap())
-            .unwrap();
+        let d6 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val40").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
@@ -772,10 +737,7 @@ mod concatenation {
         let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
         let d4 = add_range(runtime.get_data_mut(), 12, 15);
         let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
-        let d6 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap())
-            .unwrap();
+        let d6 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val23").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
@@ -795,10 +757,7 @@ mod concatenation {
         let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
         let d4 = add_range(runtime.get_data_mut(), 12, 15);
         let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
-        let d6 = runtime
-            .get_data_mut()
-            .add_symbol(SimpleDataRuntimeNC::parse_symbol("val48").unwrap())
-            .unwrap();
+        let d6 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val48").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();

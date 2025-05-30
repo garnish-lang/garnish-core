@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod deferring {
-    use crate::simple::testing_utilities::{create_simple_runtime, DeferOpTestContext, DEFERRED_VALUE};
-    use garnish_lang_traits::{GarnishData, GarnishRuntime};
+    use crate::simple::testing_utilities::{DEFERRED_VALUE, DeferOpTestContext, create_simple_runtime};
+    use garnish_lang::{GarnishData, GarnishRuntime};
 
     #[test]
     fn apply() {
@@ -40,11 +40,9 @@ mod deferring {
 
 #[cfg(test)]
 mod tests {
-    use crate::simple::testing_utilities::{create_simple_runtime, DeferOpTestContext, DEFERRED_VALUE};
-    use garnish_lang_simple_data::{DataError, SimpleGarnishData};
-    use garnish_lang_traits::{
-        EmptyContext, GarnishDataType, GarnishContext, GarnishData, GarnishRuntime, Instruction, RuntimeError,
-    };
+    use crate::simple::testing_utilities::{DEFERRED_VALUE, DeferOpTestContext, create_simple_runtime};
+    use garnish_lang::simple::{DataError, SimpleGarnishData};
+    use garnish_lang::{EmptyContext, GarnishContext, GarnishData, GarnishDataType, GarnishRuntime, Instruction, RuntimeError};
 
     #[test]
     fn deferred() {
@@ -243,7 +241,7 @@ mod tests {
 #[cfg(test)]
 mod slices {
     use crate::simple::testing_utilities::{add_concatenation_with_start, add_list, add_range, create_simple_runtime};
-    use garnish_lang_traits::{EmptyContext, GarnishData, GarnishRuntime};
+    use garnish_lang::{EmptyContext, GarnishData, GarnishRuntime};
 
     #[test]
     fn create_with_list() {

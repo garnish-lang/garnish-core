@@ -17,7 +17,4 @@ log = "0.4"
 env_logger = "0.11.7"
 colored = "3.0.0"
 
-garnish_lang_runtime = { path = "../runtime"}
-garnish_lang_compiler = { path = "../compiler"}
-garnish_lang_simple_data = { path = "../data" }
-garnish_lang_traits = { path = "../traits" }
+garnish_lang = { path = "../garnish", features = ["derive"] }

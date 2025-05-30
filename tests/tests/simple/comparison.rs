@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod general {
-
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn less_than_no_references_is_err() {
@@ -34,10 +33,9 @@ mod general {
 
 #[cfg(test)]
 mod less_than {
-    use garnish_lang_runtime::SimpleGarnishRuntime;
     use crate::simple::testing_utilities::{add_byte_list, add_char_list, create_simple_runtime, slice_of_byte_list, slice_of_char_list};
-    use garnish_lang_simple_data::{DataError, SimpleGarnishData};
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, RuntimeError};
+    use garnish_lang::simple::{DataError, SimpleGarnishData, SimpleGarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, RuntimeError};
 
     fn perform_compare<Setup, Op>(expected: bool, op_name: &str, op: Op, setup: Setup)
     where
@@ -70,12 +68,7 @@ mod less_than {
         perform_compare(less_than, "less than", SimpleGarnishRuntime::less_than, setup);
         perform_compare(less_than_equal, "less than or equal", SimpleGarnishRuntime::less_than_or_equal, setup);
         perform_compare(greater_than, "greater than", SimpleGarnishRuntime::greater_than, setup);
-        perform_compare(
-            greater_than_equal,
-            "greater than or equal",
-            SimpleGarnishRuntime::greater_than_or_equal,
-            setup,
-        );
+        perform_compare(greater_than_equal, "greater than or equal", SimpleGarnishRuntime::greater_than_or_equal, setup);
     }
 
     #[test]
@@ -95,44 +88,32 @@ mod less_than {
 
     #[test]
     fn numbers_less_than() {
-        perform_all_compare(true, true, false, false, |data| {
-            (data.add_number(10.into()).unwrap(), data.add_number(20.into()).unwrap())
-        });
+        perform_all_compare(true, true, false, false, |data| (data.add_number(10.into()).unwrap(), data.add_number(20.into()).unwrap()));
     }
 
     #[test]
     fn numbers_equal() {
-        perform_all_compare(false, true, false, true, |data| {
-            (data.add_number(20.into()).unwrap(), data.add_number(20.into()).unwrap())
-        });
+        perform_all_compare(false, true, false, true, |data| (data.add_number(20.into()).unwrap(), data.add_number(20.into()).unwrap()));
     }
 
     #[test]
     fn numbers_greater_than() {
-        perform_all_compare(false, false, true, true, |data| {
-            (data.add_number(20.into()).unwrap(), data.add_number(10.into()).unwrap())
-        });
+        perform_all_compare(false, false, true, true, |data| (data.add_number(20.into()).unwrap(), data.add_number(10.into()).unwrap()));
     }
 
     #[test]
     fn chars_less_than() {
-        perform_all_compare(true, true, false, false, |data| {
-            (data.add_char('d').unwrap(), data.add_char('f').unwrap())
-        });
+        perform_all_compare(true, true, false, false, |data| (data.add_char('d').unwrap(), data.add_char('f').unwrap()));
     }
 
     #[test]
     fn chars_equal() {
-        perform_all_compare(false, true, false, true, |data| {
-            (data.add_char('d').unwrap(), data.add_char('d').unwrap())
-        });
+        perform_all_compare(false, true, false, true, |data| (data.add_char('d').unwrap(), data.add_char('d').unwrap()));
     }
 
     #[test]
     fn chars_greater_than() {
-        perform_all_compare(false, false, true, true, |data| {
-            (data.add_char('d').unwrap(), data.add_char('b').unwrap())
-        });
+        perform_all_compare(false, false, true, true, |data| (data.add_char('d').unwrap(), data.add_char('b').unwrap()));
     }
 
     #[test]
@@ -157,9 +138,7 @@ mod less_than {
 
     #[test]
     fn char_list_less_than_dif_len() {
-        perform_all_compare(true, true, false, false, |data| {
-            (add_char_list(data, "aaa"), add_char_list(data, "aaaaa"))
-        });
+        perform_all_compare(true, true, false, false, |data| (add_char_list(data, "aaa"), add_char_list(data, "aaaaa")));
     }
 
     #[test]
@@ -174,9 +153,7 @@ mod less_than {
 
     #[test]
     fn char_list_greater_than_dif_len() {
-        perform_all_compare(false, false, true, true, |data| {
-            (add_char_list(data, "aaaaa"), add_char_list(data, "aaa"))
-        });
+        perform_all_compare(false, false, true, true, |data| (add_char_list(data, "aaaaa"), add_char_list(data, "aaa")));
     }
 
     #[test]
@@ -186,9 +163,7 @@ mod less_than {
 
     #[test]
     fn byte_list_less_than_dif_len() {
-        perform_all_compare(true, true, false, false, |data| {
-            (add_byte_list(data, "aaa"), add_byte_list(data, "aaaaa"))
-        });
+        perform_all_compare(true, true, false, false, |data| (add_byte_list(data, "aaa"), add_byte_list(data, "aaaaa")));
     }
 
     #[test]
@@ -203,78 +178,56 @@ mod less_than {
 
     #[test]
     fn byte_list_greater_than_dif_len() {
-        perform_all_compare(false, false, true, true, |data| {
-            (add_byte_list(data, "aaaaa"), add_byte_list(data, "aaa"))
-        });
+        perform_all_compare(false, false, true, true, |data| (add_byte_list(data, "aaaaa"), add_byte_list(data, "aaa")));
     }
 
     #[test]
     fn slice_of_char_list_less_than() {
-        perform_all_compare(true, true, false, false, |data| {
-            (slice_of_char_list(data, "aaaaaa", 0, 3), slice_of_char_list(data, "bbbbbb", 1, 4))
-        });
+        perform_all_compare(true, true, false, false, |data| (slice_of_char_list(data, "aaaaaa", 0, 3), slice_of_char_list(data, "bbbbbb", 1, 4)));
     }
 
     #[test]
     fn slice_of_char_list_less_than_dif_len() {
-        perform_all_compare(true, true, false, false, |data| {
-            (slice_of_char_list(data, "aaaaaa", 1, 4), slice_of_char_list(data, "aaaaaaaaa", 1, 6))
-        });
+        perform_all_compare(true, true, false, false, |data| (slice_of_char_list(data, "aaaaaa", 1, 4), slice_of_char_list(data, "aaaaaaaaa", 1, 6)));
     }
 
     #[test]
     fn slice_of_char_list_equal() {
-        perform_all_compare(false, true, false, true, |data| {
-            (slice_of_char_list(data, "aaaaaa", 0, 3), slice_of_char_list(data, "aaaaaa", 1, 4))
-        });
+        perform_all_compare(false, true, false, true, |data| (slice_of_char_list(data, "aaaaaa", 0, 3), slice_of_char_list(data, "aaaaaa", 1, 4)));
     }
 
     #[test]
     fn slice_of_char_list_greater_than() {
-        perform_all_compare(false, false, true, true, |data| {
-            (slice_of_char_list(data, "bbbbbb", 0, 3), slice_of_char_list(data, "aaaaaa", 1, 4))
-        });
+        perform_all_compare(false, false, true, true, |data| (slice_of_char_list(data, "bbbbbb", 0, 3), slice_of_char_list(data, "aaaaaa", 1, 4)));
     }
 
     #[test]
     fn slice_of_char_list_greater_than_dif_len() {
-        perform_all_compare(false, false, true, true, |data| {
-            (slice_of_char_list(data, "aaaaaaaaa", 2, 7), slice_of_char_list(data, "aaaaaa", 1, 4))
-        });
+        perform_all_compare(false, false, true, true, |data| (slice_of_char_list(data, "aaaaaaaaa", 2, 7), slice_of_char_list(data, "aaaaaa", 1, 4)));
     }
 
     #[test]
     fn slice_of_byte_list_less_than() {
-        perform_all_compare(true, true, false, false, |data| {
-            (slice_of_byte_list(data, "aaaaaa", 0, 3), slice_of_byte_list(data, "bbbbbb", 1, 4))
-        });
+        perform_all_compare(true, true, false, false, |data| (slice_of_byte_list(data, "aaaaaa", 0, 3), slice_of_byte_list(data, "bbbbbb", 1, 4)));
     }
 
     #[test]
     fn slice_of_byte_list_less_than_dif_len() {
-        perform_all_compare(true, true, false, false, |data| {
-            (slice_of_byte_list(data, "aaaaaa", 1, 4), slice_of_byte_list(data, "aaaaaaaaa", 1, 6))
-        });
+        perform_all_compare(true, true, false, false, |data| (slice_of_byte_list(data, "aaaaaa", 1, 4), slice_of_byte_list(data, "aaaaaaaaa", 1, 6)));
     }
 
     #[test]
     fn slice_of_byte_list_equal() {
-        perform_all_compare(false, true, false, true, |data| {
-            (slice_of_byte_list(data, "aaaaaa", 0, 3), slice_of_byte_list(data, "aaaaaa", 1, 4))
-        });
+        perform_all_compare(false, true, false, true, |data| (slice_of_byte_list(data, "aaaaaa", 0, 3), slice_of_byte_list(data, "aaaaaa", 1, 4)));
     }
 
     #[test]
     fn slice_of_byte_list_greater_than() {
-        perform_all_compare(false, false, true, true, |data| {
-            (slice_of_byte_list(data, "bbbbbb", 0, 3), slice_of_byte_list(data, "aaaaaa", 1, 4))
-        });
+        perform_all_compare(false, false, true, true, |data| (slice_of_byte_list(data, "bbbbbb", 0, 3), slice_of_byte_list(data, "aaaaaa", 1, 4)));
     }
 
     #[test]
     fn slice_of_byte_list_greater_than_dif_len() {
-        perform_all_compare(false, false, true, true, |data| {
-            (slice_of_byte_list(data, "aaaaaaaaa", 2, 7), slice_of_byte_list(data, "aaaaaa", 1, 4))
-        });
+        perform_all_compare(false, false, true, true, |data| (slice_of_byte_list(data, "aaaaaaaaa", 2, 7), slice_of_byte_list(data, "aaaaaa", 1, 4)));
     }
 }

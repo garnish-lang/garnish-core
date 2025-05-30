@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod and {
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
-
     use crate::simple::testing_utilities::create_simple_runtime;
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction};
 
     #[test]
     fn with_true() {
@@ -77,9 +76,8 @@ mod and {
 
 #[cfg(test)]
 mod or {
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime, Instruction};
-
     use crate::simple::testing_utilities::create_simple_runtime;
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction};
 
     #[test]
     fn with_true() {
@@ -154,9 +152,8 @@ mod or {
 
 #[cfg(test)]
 mod xor {
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
-
     use crate::simple::testing_utilities::create_simple_runtime;
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn xor_true_booleans() {
@@ -241,9 +238,8 @@ mod xor {
 
 #[cfg(test)]
 mod not {
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
-
     use crate::simple::testing_utilities::create_simple_runtime;
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn not_true_is_false() {
@@ -304,9 +300,8 @@ mod not {
 
 #[cfg(test)]
 mod tis {
-    use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishRuntime};
-
     use crate::simple::testing_utilities::create_simple_runtime;
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn tis_false_is_false() {
