@@ -398,6 +398,24 @@ fn create_garnish_data_impl(for_type: &Ident, delegate_field: proc_macro2::Token
             fn parse_byte_list(from: &str) -> Result<Vec<Self::Byte>, Self::Error> {
                 <#delegate_field_type as GarnishData>::parse_byte_list(from)
             }
+            fn parse_add_number(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+                self.#delegate_field.parse_add_number(from)
+            }
+            fn parse_add_symbol(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+                self.#delegate_field.parse_add_symbol(from)
+            }
+            fn parse_add_char(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+                self.#delegate_field.parse_add_char(from)
+            }
+            fn parse_add_byte(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+                self.#delegate_field.parse_add_byte(from)
+            }
+            fn parse_add_char_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+                self.#delegate_field.parse_add_char_list(from)
+            }
+            fn parse_add_byte_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+                self.#delegate_field.parse_add_byte_list(from)
+            }
             fn make_size_iterator_range(min: Self::Size, max: Self::Size) -> Self::SizeIterator {
                 <#delegate_field_type as GarnishData>::make_size_iterator_range(min, max)
             }
