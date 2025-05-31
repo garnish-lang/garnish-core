@@ -258,6 +258,47 @@ pub trait GarnishData {
     // iterator factories
     fn make_size_iterator_range(min: Self::Size, max: Self::Size) -> Self::SizeIterator;
     fn make_number_iterator_range(min: Self::Number, max: Self::Number) -> Self::NumberIterator;
+
+    // Execution checks
+
+    /// Called during a [`Instruction::Resolve`], to convert a [`GarnishDataType::Symbol`] to a value.
+    ///
+    /// Return Ok(true) to tell the runtime that the symbol was resolved
+    ///
+    /// Return Ok(false) to let the runtime fill a default value, probably [`GarnishDataType::Unit`].
+    ///
+    #[allow(unused)]
+    fn resolve(&mut self, symbol: Self::Symbol) -> Result<bool, Self::Error> {
+        Ok(false)
+    }
+
+    /// Called when an [`GarnishDataType::External`] is on the left side of an [`Instruction::Apply`] operation.
+    ///
+    /// Return Ok(true) to tell the runtime this apply operation was handled
+    ///
+    /// Return Ok(false) to tell the runtime this apply operation was not handled
+    ///
+    #[allow(unused)]
+    fn apply(&mut self, external_value: Self::Size, input_addr: Self::Size) -> Result<bool, Self::Error> {
+        Ok(false)
+    }
+
+    /// Called during any operation where the types given don't have defined functionality.
+    /// Such as a [`GarnishDataType::List`] and a [`GarnishDataType::Number`] in an [`Instruction::Add`] operation
+    ///
+    /// Return Ok(true) to tell the runtime this operation was handled
+    ///
+    /// Return Ok(false) to tell the runtime this operation was not handled
+    ///
+    #[allow(unused)]
+    fn defer_op(
+        &mut self,
+        operation: Instruction,
+        left: (GarnishDataType, Self::Size),
+        right: (GarnishDataType, Self::Size),
+    ) -> Result<bool, Self::Error> {
+        Ok(false)
+    }
 }
 
 impl GarnishNumber for i32 {

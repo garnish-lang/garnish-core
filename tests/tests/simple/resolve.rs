@@ -78,36 +78,4 @@ mod tests {
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
     }
-
-    #[test]
-    fn resolve_from_context() {
-        let mut runtime = create_simple_runtime();
-
-        let i1 = runtime.get_data_mut().add_symbol(1).unwrap();
-        let start = runtime.get_data_mut().get_data_len();
-
-        runtime.get_data_mut().push_instruction(Instruction::Resolve, None).unwrap();
-
-        struct MyContext {}
-
-        impl GarnishContext<SimpleGarnishData> for MyContext {
-            fn resolve(&mut self, sym_val: u64, runtime: &mut SimpleGarnishData) -> Result<bool, RuntimeError<DataError>> {
-                assert_eq!(sym_val, 1);
-
-                let addr = runtime.add_number(100.into())?;
-                runtime.push_register(addr)?;
-                Ok(true)
-            }
-
-            fn apply(&mut self, _: usize, _: usize, _: &mut SimpleGarnishData) -> Result<bool, RuntimeError<DataError>> {
-                Ok(false)
-            }
-        }
-
-        let mut context = MyContext {};
-
-        runtime.resolve(i1, Some(&mut context)).unwrap();
-
-        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), start);
-    }
 }

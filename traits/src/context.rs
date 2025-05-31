@@ -1,6 +1,7 @@
 use crate::{GarnishDataType, GarnishData, Instruction, RuntimeError};
 
 /// Functionality required by Garnish contexts.
+#[deprecated(since = "0.0.25-alpha", note = "Implement matching methods on GarnishData trait.")]
 pub trait GarnishContext<Data>
     where
         Data: GarnishData,
@@ -44,11 +45,14 @@ pub trait GarnishContext<Data>
 }
 
 /// Concrete object for when a runtime requires no context functionality. Can use constants [`EMPTY_CONTEXT`] and [`NO_CONTEXT`] if needed as type parameters.
+#[deprecated(since = "0.0.25-alpha", note = "See GarnishContext deprecation.")]
 pub struct EmptyContext {}
 
 /// Constant instantiation of [`EmptyContext`].
+#[deprecated(since = "0.0.25-alpha", note = "See GarnishContext deprecation.")]
 pub const EMPTY_CONTEXT: EmptyContext = EmptyContext {};
 /// An [`Option`] set to None. Typed as a mutable reference to an [`EmptyContext`] for use in [`crate::GarnishRuntime`] instruction methods that require a context be passed.
+#[deprecated(since = "0.0.25-alpha", note = "See GarnishContext deprecation.")]
 pub const NO_CONTEXT: Option<&mut EmptyContext> = None;
 
 impl<Data> GarnishContext<Data> for EmptyContext where Data: GarnishData {}

@@ -12,15 +12,15 @@ mod jumps;
 mod list;
 mod logical;
 mod pair;
+mod partial;
 mod put;
 mod range;
 mod resolve;
 mod runtime_impls;
 mod sideeffect;
 mod utilities;
-mod partial;
 
-pub use runtime_impls::{SimpleGarnishRuntime};
+pub use runtime_impls::SimpleGarnishRuntime;
 
 pub mod ops {
     pub use super::access::*;
@@ -36,11 +36,11 @@ pub mod ops {
     pub use super::list::*;
     pub use super::logical::*;
     pub use super::pair::*;
+    pub use super::partial::*;
     pub use super::put::*;
     pub use super::range::*;
     pub use super::resolve::*;
     pub use super::sideeffect::*;
-    pub use super::partial::*;
 }
 
 #[cfg(test)]
@@ -62,15 +62,12 @@ mod tests {
 
     pub struct MockIterator {
         current: i32,
-        max: i32
+        max: i32,
     }
 
     impl MockIterator {
         pub fn new(count: i32) -> Self {
-            Self {
-                current: 0,
-                max: count
-            }
+            Self { current: 0, max: count }
         }
 
         pub fn new_range(start: i32, end: i32) -> Self {
@@ -113,7 +110,7 @@ mod tests {
     #[derive(Default)]
     pub struct BasicData {
         pub(crate) type_stack: Vec<GarnishDataType>,
-        pub(crate) registers: Vec<i32>
+        pub(crate) registers: Vec<i32>,
     }
 
     impl BasicData {
@@ -195,10 +192,10 @@ mod tests {
         pub stub_get_symbol_list_len: fn(&T, addr: i32) -> Result<i32, MockError>,
         pub stub_get_symbol_list_item: fn(&T, addr: i32, item_index: i32) -> Result<u32, MockError>,
         pub stub_get_symbol_list_iter: fn(&T, list_addr: i32) -> MockIterator,
-        pub stub_get_list_item_iter:  fn(&T, addr: i32) -> MockIterator,
+        pub stub_get_list_item_iter: fn(&T, addr: i32) -> MockIterator,
         pub stub_get_concatenation_iter: fn(&T, addr: i32) -> MockIterator,
         pub stub_get_slice_iter: fn(&T, addr: i32) -> MockIterator,
-        pub stub_get_list_slice_item_iter:  fn(&T, addr: i32) -> MockIterator,
+        pub stub_get_list_slice_item_iter: fn(&T, addr: i32) -> MockIterator,
         pub stub_get_concatenation_slice_iter: fn(&T, addr: i32) -> MockIterator,
         pub stub_add_unit: fn(&mut T) -> Result<i32, MockError>,
         pub stub_add_true: fn(&mut T) -> Result<i32, MockError>,
@@ -263,6 +260,9 @@ mod tests {
         // stub_parse_byte: fn(&T, from: &str) -> Result<u8, MockError>,
         // stub_parse_char_list: fn(&T, from: &str) -> Result<Vec<char>, MockError>,
         // stub_parse_byte_list: fn(&T, from: &str) -> Result<Vec<u8>, MockError>,
+        pub stub_resolve: fn(&mut T, symbol: u32) -> Result<bool, MockError>,
+        pub stub_defer_op: fn(&mut T, operation: Instruction, left: (GarnishDataType, i32), right: (GarnishDataType, i32)) -> Result<bool, MockError>,
+        pub stub_apply: fn(&mut T, external_value: i32, input_addr: i32) -> Result<bool, MockError>,
     }
 
     impl MockGarnishData<BasicData> {
@@ -275,8 +275,8 @@ mod tests {
                 None => {
                     assert!(false, "Ran out of test register data.");
                     Err(MockError {})
-                },
-                i => Ok(i)
+                }
+                i => Ok(i),
             };
             mock.stub_get_instruction_cursor = |_| 0;
 
@@ -284,7 +284,10 @@ mod tests {
         }
     }
 
-    impl<T> MockGarnishData<T> where T: Default {
+    impl<T> MockGarnishData<T>
+    where
+        T: Default,
+    {
         pub fn default_with_data(data: T) -> Self {
             let mut m = MockGarnishData::default();
             m.data = data;
@@ -413,6 +416,9 @@ mod tests {
                 // stub_parse_byte: stub_parse_fn,
                 // stub_parse_char_list: stub_parse_fn,
                 // stub_parse_byte_list: stub_parse_fn,
+                stub_resolve: |_, _| unimplemented!(),
+                stub_defer_op: |_, _, _, _| unimplemented!(),
+                stub_apply: |_, _, _| unimplemented!(),
             }
         }
     }
@@ -873,6 +879,18 @@ mod tests {
 
         fn make_number_iterator_range(_min: Self::Number, _max: Self::Number) -> Self::NumberIterator {
             unimplemented!()
+        }
+
+        fn resolve(&mut self, symbol: Self::Symbol) -> Result<bool, Self::Error> {
+            (self.stub_resolve)(self.data_mut(), symbol)
+        }
+
+        fn apply(&mut self, external_value: Self::Size, input_addr: Self::Size) -> Result<bool, Self::Error> {
+            (self.stub_apply)(self.data_mut(), external_value, input_addr)
+        }
+
+        fn defer_op(&mut self, operation: Instruction, left: (GarnishDataType, Self::Size), right: (GarnishDataType, Self::Size)) -> Result<bool, Self::Error> {
+            (self.stub_defer_op)(self.data_mut(), operation, left, right)
         }
     }
 }

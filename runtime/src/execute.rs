@@ -106,7 +106,7 @@ pub fn execute_current_instruction<Data: GarnishData, T: GarnishContext<Data>>(d
         },
         Instruction::Resolve => match instruction_data {
             None => instruction_error(instruction, data.get_instruction_cursor())?,
-            Some(i) => resolve(data, i, context)?,
+            Some(i) => resolve(data, i)?,
         },
         Instruction::Reapply => match instruction_data {
             None => instruction_error(instruction, data.get_instruction_cursor())?,

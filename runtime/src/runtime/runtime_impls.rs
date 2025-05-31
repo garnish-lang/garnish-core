@@ -361,6 +361,6 @@ where
         data: Data::Size,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        resolve(self.get_data_mut(), data, context)
+        resolve(self.get_data_mut(), data)
     }
 }

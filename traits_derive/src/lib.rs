@@ -430,6 +430,20 @@ fn create_garnish_data_impl(
             fn make_number_iterator_range(min: Self::Number, max: Self::Number) -> Self::NumberIterator {
                 <#delegate_field_type as GarnishData>::make_number_iterator_range(min, max)
             }
+            fn resolve(&mut self, symbol: Self::Symbol) -> Result<bool, Self::Error> {
+                self.#delegate_field.resolve(symbol)
+            }
+            fn apply(&mut self, external_value: Self::Size, input_addr: Self::Size) -> Result<bool, Self::Error> {
+                self.#delegate_field.apply(external_value, input_addr)
+            }
+            fn defer_op(
+                &mut self,
+                operation: #library::Instruction,
+                left: (#library::GarnishDataType, Self::Size),
+                right: (#library::GarnishDataType, Self::Size),
+            ) -> Result<bool, Self::Error> {
+                self.#delegate_field.defer_op(operation, left, right)
+            }
         }
     }
 }
