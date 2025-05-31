@@ -1,6 +1,6 @@
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::{next_ref, push_unit};
-use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, Instruction, RuntimeError};
+use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction, RuntimeError};
 
 pub fn access<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let right_addr = next_ref(this)?;
