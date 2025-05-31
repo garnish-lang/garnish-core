@@ -260,7 +260,7 @@ where
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        access(self.get_data_mut(), context)
+        access(self.get_data_mut())
     }
 
     fn access_left_internal<T: GarnishContext<Data>>(

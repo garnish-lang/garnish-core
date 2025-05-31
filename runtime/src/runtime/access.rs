@@ -2,10 +2,7 @@ use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::{next_ref, push_unit};
 use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, Instruction, RuntimeError};
 
-pub fn access<Data: GarnishData, T: GarnishContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut T>,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn access<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let right_addr = next_ref(this)?;
     let left_addr = next_ref(this)?;
 
@@ -13,9 +10,7 @@ pub fn access<Data: GarnishData, T: GarnishContext<Data>>(
         (GarnishDataType::Symbol, GarnishDataType::Symbol)
         | (GarnishDataType::Symbol, GarnishDataType::SymbolList)
         | (GarnishDataType::SymbolList, GarnishDataType::Symbol)
-        | (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => {
-            this.merge_to_symbol_list(left_addr, right_addr).and_then(|i| this.push_register(i))?
-        }
+        | (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => this.merge_to_symbol_list(left_addr, right_addr).and_then(|i| this.push_register(i))?,
         (GarnishDataType::List, GarnishDataType::Number)
         | (GarnishDataType::List, GarnishDataType::Symbol)
         | (GarnishDataType::CharList, GarnishDataType::Number)
@@ -32,24 +27,46 @@ pub fn access<Data: GarnishData, T: GarnishContext<Data>>(
             None => push_unit(this)?,
             Some(i) => this.push_register(i)?,
         },
-        (l, r) => match context {
-            None => push_unit(this)?,
-            Some(c) => {
-                if !c.defer_op(this, Instruction::Access, (l, left_addr), (r, right_addr))? {
-                    push_unit(this)?
-                }
+        (l, r) => {
+            if !this.defer_op(Instruction::Access, (l, left_addr), (r, right_addr))? {
+                push_unit(this)?
             }
-        },
+        }
     }
 
     Ok(None)
 }
 
 #[cfg(test)]
+mod defer_op {
+    use crate::ops::access;
+    use crate::runtime::tests::MockGarnishData;
+    use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
+
+    #[test]
+    fn add_defer_op() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Symbol, GarnishDataType::Number]);
+
+        mock_data.stub_get_instruction_cursor = |_| 1;
+        mock_data.stub_defer_op = |data, instruction, left, right| {
+            assert_eq!(instruction, Instruction::Access);
+            assert_eq!(left, (GarnishDataType::Symbol, 0));
+            assert_eq!(right, (GarnishDataType::Number, 1));
+            data.registers.push(200);
+            Ok(true)
+        };
+
+        access(&mut mock_data).unwrap();
+
+        assert_eq!(mock_data.pop_register().unwrap(), Some(200));
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use crate::runtime::access::access;
     use crate::runtime::tests::MockGarnishData;
-    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
+    use garnish_lang_traits::GarnishDataType;
 
     #[test]
     fn create_symbol_list() {
@@ -65,7 +82,7 @@ mod tests {
             Ok(())
         };
 
-        let result = access(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = access(&mut mock_data).unwrap();
 
         assert_eq!(result, None);
     }
@@ -89,7 +106,7 @@ mod tests {
             Ok(())
         };
 
-        let result = access(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = access(&mut mock_data).unwrap();
 
         assert_eq!(result, None);
     }
@@ -108,7 +125,7 @@ mod tests {
             Ok(())
         };
 
-        let result = access(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = access(&mut mock_data).unwrap();
 
         assert_eq!(result, None);
     }
@@ -127,7 +144,7 @@ mod tests {
             Ok(())
         };
 
-        let result = access(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = access(&mut mock_data).unwrap();
 
         assert_eq!(result, None);
     }
@@ -146,7 +163,7 @@ mod tests {
             Ok(())
         };
 
-        let result = access(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = access(&mut mock_data).unwrap();
 
         assert_eq!(result, None);
     }

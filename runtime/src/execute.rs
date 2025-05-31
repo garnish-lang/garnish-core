@@ -75,7 +75,7 @@ pub fn execute_current_instruction<Data: GarnishData, T: GarnishContext<Data>>(d
         Instruction::GreaterThan => greater_than(data)?,
         Instruction::GreaterThanOrEqual => greater_than_or_equal(data)?,
         Instruction::MakePair => make_pair(data)?,
-        Instruction::Access => access(data, context)?,
+        Instruction::Access => access(data)?,
         Instruction::AccessLeftInternal => access_left_internal(data, context)?,
         Instruction::AccessRightInternal => access_right_internal(data, context)?,
         Instruction::AccessLengthInternal => access_length_internal(data, context)?,
