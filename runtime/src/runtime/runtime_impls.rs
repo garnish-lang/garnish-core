@@ -85,45 +85,45 @@ where
     //
 
     fn add<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        add(self.get_data_mut(), context)
+        add(self.get_data_mut())
     }
 
     fn subtract<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        subtract(self.get_data_mut(), context)
+        subtract(self.get_data_mut())
     }
 
     fn multiply<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        multiply(self.get_data_mut(), context)
+        multiply(self.get_data_mut())
     }
 
     fn power<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        power(self.get_data_mut(), context)
+        power(self.get_data_mut())
     }
 
     fn divide<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        divide(self.get_data_mut(), context)
+        divide(self.get_data_mut())
     }
 
     fn integer_divide<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        integer_divide(self.get_data_mut(), context)
+        integer_divide(self.get_data_mut())
     }
 
     fn remainder<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        remainder(self.get_data_mut(), context)
+        remainder(self.get_data_mut())
     }
 
     fn absolute_value<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        absolute_value(self.get_data_mut(), context)
+        absolute_value(self.get_data_mut())
     }
 
     fn opposite<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        opposite(self.get_data_mut(), context)
+        opposite(self.get_data_mut())
     }
 
     //
@@ -131,33 +131,33 @@ where
     //
 
     fn bitwise_not<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        bitwise_not(self.get_data_mut(), context)
+        bitwise_not(self.get_data_mut())
     }
 
     fn bitwise_and<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        bitwise_and(self.get_data_mut(), context)
+        bitwise_and(self.get_data_mut())
     }
 
     fn bitwise_or<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        bitwise_or(self.get_data_mut(), context)
+        bitwise_or(self.get_data_mut())
     }
 
     fn bitwise_xor<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        bitwise_xor(self.get_data_mut(), context)
+        bitwise_xor(self.get_data_mut())
     }
 
     fn bitwise_left_shift<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        bitwise_left_shift(self.get_data_mut(), context)
+        bitwise_left_shift(self.get_data_mut())
     }
 
     fn bitwise_right_shift<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        bitwise_right_shift(self.get_data_mut(), context)
+        bitwise_right_shift(self.get_data_mut())
     }
 
     //
