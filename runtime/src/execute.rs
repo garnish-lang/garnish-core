@@ -32,7 +32,7 @@ impl SimpleRuntimeInfo {
     }
 }
 
-pub fn execute_current_instruction<Data: GarnishData, T: GarnishContext<Data>>(data: &mut Data, context: Option<&mut T>) -> Result<SimpleRuntimeInfo, RuntimeError<Data::Error>> {
+pub fn execute_current_instruction<Data: GarnishData>(data: &mut Data) -> Result<SimpleRuntimeInfo, RuntimeError<Data::Error>> {
     let (instruction, instruction_data) = match data.get_instruction(data.get_instruction_cursor()) {
         None => return Ok(SimpleRuntimeInfo::new(SimpleRuntimeState::End)),
         Some(v) => v,

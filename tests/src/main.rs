@@ -1,7 +1,5 @@
-mod context;
 mod derive;
 
-use crate::context::TestingContext;
 use colored::Colorize;
 use garnish_lang::compiler::build::build;
 use garnish_lang::compiler::lex::lex;
@@ -206,12 +204,10 @@ fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
                 }
             }
 
-            let mut context = TestingContext::default();
-
             let mut instruction_count = 0;
 
             loop {
-                match execute_current_instruction(&mut data, Some(&mut context)) {
+                match execute_current_instruction(&mut data) {
                     Err(e) => {
                         return TestResult::Error(format!("({}): {}", &script_path, e));
                     }

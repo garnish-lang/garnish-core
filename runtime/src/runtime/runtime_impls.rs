@@ -50,7 +50,7 @@ impl<Data: GarnishData> SimpleGarnishRuntime<Data> {
         &mut self,
         context: Option<&mut T>,
     ) -> Result<SimpleRuntimeInfo, RuntimeError<Data::Error>> {
-        execute_current_instruction(self.get_data_mut(), context)
+        execute_current_instruction(self.get_data_mut())
     }
 }
 
