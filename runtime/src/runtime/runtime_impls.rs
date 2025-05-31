@@ -197,7 +197,7 @@ where
     }
 
     fn type_cast<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        type_cast(self.get_data_mut(), context)
+        type_cast(self.get_data_mut())
     }
 
     //

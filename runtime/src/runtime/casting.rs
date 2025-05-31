@@ -1,11 +1,11 @@
-use garnish_lang_traits::helpers::iterate_concatenation_mut;
 use garnish_lang_traits::Instruction;
+use garnish_lang_traits::helpers::iterate_concatenation_mut;
 
 use crate::runtime::error::OrNumberError;
 use crate::runtime::internals::concatenation_len;
 use crate::runtime::list::is_value_association;
 use crate::runtime::utilities::{get_range, next_ref, next_two_raw_ref, push_unit};
-use garnish_lang_traits::{GarnishDataType, GarnishContext, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, GarnishNumber, RuntimeError, TypeConstants};
 
 pub fn type_of<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let a = next_ref(this)?;
@@ -15,10 +15,7 @@ pub fn type_of<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>,
     Ok(None)
 }
 
-pub fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut Context>,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let (right, left) = next_two_raw_ref(this)?;
 
     let (left_type, mut right_type) = (this.get_data_type(left.clone())?, this.get_data_type(right.clone().clone())?);
@@ -70,9 +67,7 @@ pub fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
         (GarnishDataType::CharList, GarnishDataType::Char) => {
             let len = this.get_char_list_len(left.clone())?;
             if len == Data::Size::one() {
-                this.get_char_list_item(left, Data::Number::zero())
-                    .and_then(|c| this.add_char(c))
-                    .and_then(|r| this.push_register(r))?;
+                this.get_char_list_item(left, Data::Number::zero()).and_then(|c| this.add_char(c)).and_then(|r| this.push_register(r))?;
             } else {
                 push_unit(this)?;
             }
@@ -80,7 +75,7 @@ pub fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
         (GarnishDataType::SymbolList, GarnishDataType::List) => {
             let mut iter = this.get_symbol_list_iter(left.clone());
             let len = this.get_symbol_list_len(left.clone())?;
-            
+
             this.start_list(len)?;
             while let Some(index) = iter.next() {
                 let sym = this.get_symbol_list_item(left.clone(), index)?;
@@ -195,25 +190,17 @@ pub fn type_cast<Data: GarnishData, Context: GarnishContext<Data>>(
         (GarnishDataType::Unit, _) => push_unit(this)?,
         (_, GarnishDataType::False) => this.add_false().and_then(|r| this.push_register(r))?,
         (_, GarnishDataType::True) => this.add_true().and_then(|r| this.push_register(r))?,
-        (l, r) => match context {
-            None => push_unit(this)?,
-            Some(c) => {
-                if !c.defer_op(this, Instruction::ApplyType, (l, left), (r, right))? {
-                    push_unit(this)?
-                }
+        (l, r) => {
+            if !this.defer_op(Instruction::ApplyType, (l, left), (r, right))? {
+                push_unit(this)?
             }
-        },
+        }
     }
 
     Ok(None)
 }
 
-pub(crate) fn list_from_char_list<Data: GarnishData>(
-    this: &mut Data,
-    byte_list_addr: Data::Size,
-    start: Data::Number,
-    end: Data::Number,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn list_from_char_list<Data: GarnishData>(this: &mut Data, byte_list_addr: Data::Size, start: Data::Number, end: Data::Number) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let len = this.get_char_list_len(byte_list_addr.clone())?;
     let mut count = start;
 
@@ -231,12 +218,7 @@ pub(crate) fn list_from_char_list<Data: GarnishData>(
     Ok(None)
 }
 
-pub(crate) fn list_from_byte_list<Data: GarnishData>(
-    this: &mut Data,
-    byte_list_addr: Data::Size,
-    start: Data::Number,
-    end: Data::Number,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub(crate) fn list_from_byte_list<Data: GarnishData>(this: &mut Data, byte_list_addr: Data::Size, start: Data::Number, end: Data::Number) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let len = this.get_byte_list_len(byte_list_addr.clone())?;
     let mut count = start;
 
@@ -280,17 +262,14 @@ where
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
     use crate::runtime::casting::type_cast;
     use crate::runtime::tests::{MockGarnishData, MockIterator};
+    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
 
     #[test]
     fn symbol_list_to_list() {
-        let mut data = MockGarnishData::new_basic_data(vec![
-            GarnishDataType::SymbolList,
-            GarnishDataType::List,
-        ]);
-        
+        let mut data = MockGarnishData::new_basic_data(vec![GarnishDataType::SymbolList, GarnishDataType::List]);
+
         data.stub_get_symbol_list_iter = |_, _| MockIterator::new(2);
         data.stub_get_symbol_list_len = |_, _| Ok(2);
         data.stub_start_list = |_, _| Ok(());
@@ -308,9 +287,34 @@ mod tests {
             assert_eq!(i, 999);
             Ok(())
         };
-        
-        let result = type_cast(&mut data, NO_CONTEXT).unwrap();
-        
+
+        let result = type_cast(&mut data).unwrap();
+
         assert_eq!(result, None);
+    }
+}
+
+#[cfg(test)]
+mod defer_op {
+    use crate::ops::type_cast;
+    use crate::runtime::tests::MockGarnishData;
+    use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
+
+    #[test]
+    fn add_defer_op() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Symbol, GarnishDataType::Number]);
+
+        mock_data.stub_get_instruction_cursor = |_| 1;
+        mock_data.stub_defer_op = |data, instruction, left, right| {
+            assert_eq!(instruction, Instruction::ApplyType);
+            assert_eq!(left, (GarnishDataType::Symbol, 0));
+            assert_eq!(right, (GarnishDataType::Number, 1));
+            data.registers.push(200);
+            Ok(true)
+        };
+
+        type_cast(&mut mock_data).unwrap();
+
+        assert_eq!(mock_data.pop_register().unwrap(), Some(200));
     }
 }

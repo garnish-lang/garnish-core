@@ -66,7 +66,7 @@ pub fn execute_current_instruction<Data: GarnishData, T: GarnishContext<Data>>(d
         Instruction::StartSideEffect => start_side_effect(data)?,
         Instruction::EndSideEffect => end_side_effect(data)?,
         Instruction::TypeOf => type_of(data)?,
-        Instruction::ApplyType => type_cast(data, context)?,
+        Instruction::ApplyType => type_cast(data)?,
         Instruction::TypeEqual => type_equal(data)?,
         Instruction::Equal => equal(data)?,
         Instruction::NotEqual => not_equal(data)?,

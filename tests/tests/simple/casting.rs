@@ -1,17 +1,4 @@
 #[cfg(test)]
-mod deferring {
-    use crate::simple::testing_utilities::deferred_op;
-    use garnish_lang::GarnishRuntime;
-
-    #[test]
-    fn type_cast() {
-        deferred_op(|runtime, context| {
-            runtime.type_cast(Some(context)).unwrap();
-        })
-    }
-}
-
-#[cfg(test)]
 mod type_of {
     use crate::simple::testing_utilities::create_simple_runtime;
     use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
