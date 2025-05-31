@@ -1,65 +1,8 @@
 #[cfg(test)]
-mod deferring {
-    use crate::simple::testing_utilities::{DEFERRED_VALUE, DeferOpTestContext, create_simple_runtime};
-    use garnish_lang::{GarnishData, GarnishRuntime};
-
-    #[test]
-    fn apply() {
-        let mut runtime = create_simple_runtime();
-
-        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
-        let int2 = runtime.get_data_mut().add_number(20.into()).unwrap();
-
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
-
-        let mut context = DeferOpTestContext::new();
-
-        runtime.apply(Some(&mut context)).unwrap();
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_external(i).unwrap(), DEFERRED_VALUE);
-    }
-
-    #[test]
-    fn empty_apply() {
-        let mut runtime = create_simple_runtime();
-
-        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
-
-        runtime.get_data_mut().push_register(int1).unwrap();
-
-        let mut context = DeferOpTestContext::new();
-
-        runtime.empty_apply(Some(&mut context)).unwrap();
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_external(i).unwrap(), DEFERRED_VALUE);
-    }
-}
-
-#[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::{DEFERRED_VALUE, DeferOpTestContext, create_simple_runtime};
     use garnish_lang::simple::{DataError, SimpleGarnishData};
     use garnish_lang::{EmptyContext, GarnishContext, GarnishData, GarnishDataType, GarnishRuntime, Instruction, RuntimeError};
-
-    #[test]
-    fn deferred() {
-        let mut runtime = create_simple_runtime();
-
-        let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
-        let int2 = runtime.get_data_mut().add_number(20.into()).unwrap();
-
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
-
-        let mut context = DeferOpTestContext::new();
-        runtime.apply(Some(&mut context)).unwrap();
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_external(i).unwrap(), DEFERRED_VALUE);
-    }
 
     #[test]
     fn apply() {
@@ -185,56 +128,6 @@ mod tests {
         assert_eq!(runtime.get_data_mut().get_value_stack_len(), 1);
         assert_eq!(runtime.get_data_mut().get_value(0).unwrap(), int3);
         assert_eq!(next.unwrap(), i1);
-    }
-
-    #[test]
-    fn apply_from_context() {
-        let mut runtime = create_simple_runtime();
-
-        let ext1 = runtime.get_data_mut().add_external(3).unwrap();
-        let int1 = runtime.get_data_mut().add_number(100.into()).unwrap();
-
-        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
-        let i1 = runtime.get_data_mut().push_instruction(Instruction::Apply, None).unwrap();
-        let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
-        runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
-
-        runtime.get_data_mut().push_register(ext1).unwrap();
-        runtime.get_data_mut().push_register(int1).unwrap();
-
-        runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
-
-        struct MyContext {
-            new_addr: usize,
-        }
-
-        impl GarnishContext<SimpleGarnishData> for MyContext {
-            fn resolve(&mut self, _: u64, _: &mut SimpleGarnishData) -> Result<bool, RuntimeError<DataError>> {
-                Ok(false)
-            }
-
-            fn apply(&mut self, external_value: usize, input_addr: usize, data: &mut SimpleGarnishData) -> Result<bool, RuntimeError<DataError>> {
-                assert_eq!(external_value, 3);
-
-                let value = match data.get_data_type(input_addr)? {
-                    GarnishDataType::Number => data.get_number(input_addr)?,
-                    _ => return Ok(false),
-                };
-
-                self.new_addr = data.add_number(value * 2.into())?;
-                data.push_register(self.new_addr)?;
-
-                Ok(true)
-            }
-        }
-
-        let mut context = MyContext { new_addr: 0 };
-
-        let next = runtime.apply(Some(&mut context)).unwrap();
-
-        assert_eq!(runtime.get_data_mut().get_number(context.new_addr).unwrap(), 200.into());
-        assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), context.new_addr);
-        assert_eq!(next.unwrap(), i2);
     }
 }
 

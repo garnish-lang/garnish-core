@@ -85,9 +85,9 @@ pub fn execute_current_instruction<Data: GarnishData, T: GarnishContext<Data>>(d
         Instruction::MakeExclusiveRange => make_exclusive_range(data)?,
         Instruction::Concat => concat(data)?,
         Instruction::EndExpression => end_expression(data)?,
-        Instruction::Apply => apply(data, context)?,
+        Instruction::Apply => apply(data)?,
         Instruction::PartialApply => partial_apply(data)?,
-        Instruction::EmptyApply => empty_apply(data, context)?,
+        Instruction::EmptyApply => empty_apply(data)?,
         Instruction::And => match instruction_data {
             None => instruction_error(instruction, data.get_instruction_cursor())?,
             Some(i) => and(data, i)?,

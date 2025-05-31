@@ -69,7 +69,7 @@ where
     // Apply
 
     fn apply<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        apply(self.get_data_mut(), context)
+        apply(self.get_data_mut())
     }
 
     fn reapply(&mut self, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -77,7 +77,7 @@ where
     }
 
     fn empty_apply<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        empty_apply(self.get_data_mut(), context)
+        empty_apply(self.get_data_mut())
     }
 
     //

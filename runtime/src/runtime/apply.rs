@@ -4,8 +4,8 @@ use crate::runtime::utilities::*;
 use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, GarnishNumber, Instruction, RuntimeError, TypeConstants};
 use log::trace;
 
-pub fn apply<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    apply_internal(this, Instruction::Apply, context, true)
+pub fn apply<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+    apply_internal(this, Instruction::Apply, true)
 }
 
 pub fn reapply<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -31,12 +31,12 @@ pub fn reapply<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<
     Ok(Some(next_instruction))
 }
 
-pub fn empty_apply<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn empty_apply<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     push_unit(this)?;
-    apply_internal(this, Instruction::EmptyApply, context, false)
+    apply_internal(this, Instruction::EmptyApply, false)
 }
 
-fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, instruction: Instruction, context: Option<&mut T>, use_right: bool) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+fn apply_internal<Data: GarnishData>(this: &mut Data, instruction: Instruction, use_right: bool) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let right_addr = next_ref(this)?;
     let left_addr = next_ref(this)?;
 
@@ -68,27 +68,18 @@ fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, i
         (GarnishDataType::External, _) => {
             let external_value = this.get_external(left_addr)?;
 
-            match context {
-                None => {
+            match this.apply(external_value, right_addr)? {
+                true => (),
+                false => {
                     push_unit(this)?;
                 }
-                Some(c) => match c.apply(external_value, right_addr, this)? {
-                    true => (),
-                    false => {
-                        push_unit(this)?;
-                    }
-                },
-            };
+            }
         }
         (GarnishDataType::Partial, _) => {
             let (expression, input) = this.get_partial(left_addr)?;
             match this.get_data_type(expression.clone())? {
                 GarnishDataType::Expression => {
-                    let value = if use_right {
-                        this.add_concatenation(input, right_addr)?
-                    } else {
-                        input
-                    };
+                    let value = if use_right { this.add_concatenation(input, right_addr)? } else { input };
                     this.push_value_stack(value)?;
 
                     let expression = this.get_expression(expression)?;
@@ -157,14 +148,11 @@ fn apply_internal<Data: GarnishData, T: GarnishContext<Data>>(this: &mut Data, i
             let addr = this.add_slice(left_addr, right_addr)?;
             this.push_register(addr)?;
         }
-        (l, r) => match context {
-            None => push_unit(this)?,
-            Some(c) => {
-                if !c.defer_op(this, instruction, (l, left_addr), (r, right_addr))? {
-                    push_unit(this)?
-                }
+        (l, r) => {
+            if !this.defer_op(instruction, (l, left_addr), (r, right_addr))? {
+                push_unit(this)?
             }
-        },
+        }
     }
 
     Ok(Some(next_instruction))
@@ -204,6 +192,47 @@ pub(crate) fn narrow_range<Data: GarnishData>(this: &mut Data, to_narrow: Data::
 }
 
 #[cfg(test)]
+mod data_apply {
+    use crate::ops::apply;
+    use crate::runtime::tests::MockGarnishData;
+    use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
+
+    #[test]
+    fn calls_data_apply() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::External, GarnishDataType::Number]);
+
+        mock_data.stub_get_instruction_cursor = |_| 1;
+        mock_data.stub_get_external = |_, _| Ok(200);
+        mock_data.stub_apply = |data, external, _input| {
+            data.registers.push(external);
+            Ok(true)
+        };
+
+        apply(&mut mock_data).unwrap();
+
+        assert_eq!(mock_data.pop_register().unwrap(), Some(200));
+    }
+
+    #[test]
+    fn calls_defer_op() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Number, GarnishDataType::Symbol]);
+
+        mock_data.stub_get_instruction_cursor = |_| 1;
+        mock_data.stub_defer_op = |data, instruction, left, right| {
+            assert_eq!(instruction, Instruction::Apply);
+            assert_eq!(left, (GarnishDataType::Number, 0));
+            assert_eq!(right, (GarnishDataType::Symbol, 1));
+            data.registers.push(200);
+            Ok(true)
+        };
+
+        apply(&mut mock_data).unwrap();
+
+        assert_eq!(mock_data.pop_register().unwrap(), Some(200));
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use crate::runtime::apply::{apply, empty_apply};
     use crate::runtime::tests::{MockGarnishData, MockIterator};
@@ -228,7 +257,7 @@ mod tests {
             Ok(())
         };
 
-        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = apply(&mut mock_data).unwrap();
 
         assert_eq!(result, Some(1));
     }
@@ -251,7 +280,7 @@ mod tests {
             Ok(())
         };
 
-        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = apply(&mut mock_data).unwrap();
 
         assert_eq!(result, Some(1));
     }
@@ -282,7 +311,7 @@ mod tests {
             Ok(())
         };
 
-        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = apply(&mut mock_data).unwrap();
 
         assert_eq!(result, Some(1));
     }
@@ -301,7 +330,7 @@ mod tests {
             Ok(())
         };
 
-        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = apply(&mut mock_data).unwrap();
 
         assert_eq!(result, Some(1));
     }
@@ -320,7 +349,7 @@ mod tests {
             Ok(())
         };
 
-        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = apply(&mut mock_data).unwrap();
 
         assert_eq!(result, Some(1));
     }
@@ -339,7 +368,7 @@ mod tests {
             Ok(())
         };
 
-        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = apply(&mut mock_data).unwrap();
 
         assert_eq!(result, Some(1));
     }
@@ -363,7 +392,7 @@ mod tests {
             Ok(())
         };
 
-        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = apply(&mut mock_data).unwrap();
 
         assert_eq!(result, Some(1));
     }
@@ -377,8 +406,9 @@ mod tests {
             assert_eq!(i, 100);
             Ok(())
         };
+        mock_data.stub_defer_op = |_, _, _, _| Ok(false);
 
-        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = apply(&mut mock_data).unwrap();
 
         assert_eq!(result, Some(1));
     }
@@ -422,7 +452,7 @@ mod tests {
             Ok(())
         };
 
-        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = apply(&mut mock_data).unwrap();
 
         assert_eq!(result, Some(3000));
     }
@@ -462,7 +492,7 @@ mod tests {
             Ok(())
         };
 
-        let result = empty_apply(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = empty_apply(&mut mock_data).unwrap();
 
         assert_eq!(result, Some(3000));
     }
@@ -494,7 +524,7 @@ mod slice {
             Ok(())
         };
 
-        let result = apply(&mut mock_data, NO_CONTEXT).unwrap();
+        let result = apply(&mut mock_data).unwrap();
 
         assert_eq!(result, Some(1));
     }
