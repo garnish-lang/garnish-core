@@ -3,12 +3,9 @@ use crate::runtime::range::range_len;
 use crate::runtime::utilities::{next_ref, push_number, push_unit};
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
 use garnish_lang_traits::Instruction;
-use garnish_lang_traits::{GarnishDataType, GarnishContext, GarnishData, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, RuntimeError, TypeConstants};
 
-pub fn access_left_internal<Data: GarnishData, Context: GarnishContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut Context>,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn access_left_internal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
     match this.get_data_type(r.clone())? {
         GarnishDataType::Pair => {
@@ -32,28 +29,17 @@ pub fn access_left_internal<Data: GarnishData, Context: GarnishContext<Data>>(
             let (left, _) = this.get_concatenation(r)?;
             this.push_register(left)?;
         }
-        t => match context {
-            None => push_unit(this)?,
-            Some(c) => {
-                if !c.defer_op(
-                    this,
-                    Instruction::AccessLeftInternal,
-                    (t, r),
-                    (GarnishDataType::Unit, Data::Size::zero()),
-                )? {
-                    push_unit(this)?
-                }
+        t => {
+            if !this.defer_op(Instruction::AccessLeftInternal, (t, r), (GarnishDataType::Unit, Data::Size::zero()))? {
+                push_unit(this)?
             }
-        },
+        }
     }
 
     Ok(None)
 }
 
-pub fn access_right_internal<Data: GarnishData, Context: GarnishContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut Context>,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn access_right_internal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
     match this.get_data_type(r.clone())? {
         GarnishDataType::Pair => {
@@ -77,28 +63,17 @@ pub fn access_right_internal<Data: GarnishData, Context: GarnishContext<Data>>(
             let (_, right) = this.get_concatenation(r)?;
             this.push_register(right)?;
         }
-        t => match context {
-            None => push_unit(this)?,
-            Some(c) => {
-                if !c.defer_op(
-                    this,
-                    Instruction::AccessRightInternal,
-                    (t, r),
-                    (GarnishDataType::Unit, Data::Size::zero()),
-                )? {
-                    push_unit(this)?
-                }
+        t => {
+            if !this.defer_op(Instruction::AccessRightInternal, (t, r), (GarnishDataType::Unit, Data::Size::zero()))? {
+                push_unit(this)?
             }
-        },
+        }
     }
 
     Ok(None)
 }
 
-pub fn access_length_internal<Data: GarnishData, Context: GarnishContext<Data>>(
-    this: &mut Data,
-    context: Option<&mut Context>,
-) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
+pub fn access_length_internal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
     match this.get_data_type(r.clone())? {
         GarnishDataType::List => {
@@ -145,19 +120,11 @@ pub fn access_length_internal<Data: GarnishData, Context: GarnishContext<Data>>(
             let addr = this.add_number(Data::size_to_number(count))?;
             this.push_register(addr)?;
         }
-        t => match context {
-            None => push_unit(this)?,
-            Some(c) => {
-                if !c.defer_op(
-                    this,
-                    Instruction::AccessLengthInternal,
-                    (t, r),
-                    (GarnishDataType::Unit, Data::Size::zero()),
-                )? {
-                    push_unit(this)?
-                }
+        t => {
+            if !this.defer_op(Instruction::AccessLengthInternal, (t, r), (GarnishDataType::Unit, Data::Size::zero()))? {
+                push_unit(this)?
             }
-        },
+        }
     }
 
     Ok(None)
@@ -165,4 +132,65 @@ pub fn access_length_internal<Data: GarnishData, Context: GarnishContext<Data>>(
 
 pub(crate) fn concatenation_len<Data: GarnishData>(this: &mut Data, addr: Data::Size) -> Result<Data::Size, RuntimeError<Data::Error>> {
     Ok(iterate_concatenation_mut(this, addr, |_, _, _| Ok(None))?.1)
+}
+
+#[cfg(test)]
+mod defer_op {
+    use crate::ops::{access_left_internal, access_length_internal, access_right_internal};
+    use crate::runtime::tests::MockGarnishData;
+    use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
+
+    #[test]
+    fn access_left_defer_op() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Symbol, GarnishDataType::Number]);
+
+        mock_data.stub_get_instruction_cursor = |_| 1;
+        mock_data.stub_defer_op = |data, instruction, left, right| {
+            assert_eq!(instruction, Instruction::AccessLeftInternal);
+            assert_eq!(left, (GarnishDataType::Number, 1));
+            assert_eq!(right, (GarnishDataType::Unit, 0));
+            data.registers.push(200);
+            Ok(true)
+        };
+
+        access_left_internal(&mut mock_data).unwrap();
+
+        assert_eq!(mock_data.pop_register().unwrap(), Some(200));
+    }
+
+    #[test]
+    fn access_right_defer_op() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Symbol, GarnishDataType::Number]);
+
+        mock_data.stub_get_instruction_cursor = |_| 1;
+        mock_data.stub_defer_op = |data, instruction, left, right| {
+            assert_eq!(instruction, Instruction::AccessRightInternal);
+            assert_eq!(left, (GarnishDataType::Number, 1));
+            assert_eq!(right, (GarnishDataType::Unit, 0));
+            data.registers.push(200);
+            Ok(true)
+        };
+
+        access_right_internal(&mut mock_data).unwrap();
+
+        assert_eq!(mock_data.pop_register().unwrap(), Some(200));
+    }
+
+    #[test]
+    fn access_length_defer_op() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Symbol, GarnishDataType::Number]);
+
+        mock_data.stub_get_instruction_cursor = |_| 1;
+        mock_data.stub_defer_op = |data, instruction, left, right| {
+            assert_eq!(instruction, Instruction::AccessLengthInternal);
+            assert_eq!(left, (GarnishDataType::Number, 1));
+            assert_eq!(right, (GarnishDataType::Unit, 0));
+            data.registers.push(200);
+            Ok(true)
+        };
+
+        access_length_internal(&mut mock_data).unwrap();
+
+        assert_eq!(mock_data.pop_register().unwrap(), Some(200));
+    }
 }

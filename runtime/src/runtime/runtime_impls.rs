@@ -267,21 +267,21 @@ where
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        access_left_internal(self.get_data_mut(), context)
+        access_left_internal(self.get_data_mut())
     }
 
     fn access_right_internal<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        access_right_internal(self.get_data_mut(), context)
+        access_right_internal(self.get_data_mut())
     }
 
     fn access_length_internal<T: GarnishContext<Data>>(
         &mut self,
         context: Option<&mut T>,
     ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-        access_length_internal(self.get_data_mut(), context)
+        access_length_internal(self.get_data_mut())
     }
 
     //
