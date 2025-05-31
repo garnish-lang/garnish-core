@@ -1,7 +1,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
 use quote::{quote, ToTokens};
-use syn::{parse_macro_input, Data, DeriveInput, Error, Index, Type};
+use syn::{parse_macro_input, Data, DeriveInput, Error, Index, Type, TypeGenerics, WhereClause};
 
 #[proc_macro_derive(GarnishData, attributes(garnish_data))]
 pub fn garnish_lang_data_derive(input: TokenStream) -> TokenStream {
@@ -13,6 +13,7 @@ pub fn garnish_lang_data_derive(input: TokenStream) -> TokenStream {
     let library = quote! { garnish_lang_traits };
 
     let name = &ast.ident;
+    let (_, impl_generics, where_clause) = ast.generics.split_for_impl();
 
     let expanded = match ast.data {
         Data::Struct(data) => match data.fields.len() {
@@ -25,7 +26,7 @@ pub fn garnish_lang_data_derive(input: TokenStream) -> TokenStream {
                     Some(ident) => ident.to_token_stream(),
                 };
 
-                Ok(create_garnish_data_impl(name, field_name, &first.ty, library))
+                Ok(create_garnish_data_impl(name, impl_generics, where_clause, field_name, &first.ty, library))
             }
             _ => {
                 let marker = data
@@ -45,7 +46,7 @@ pub fn garnish_lang_data_derive(input: TokenStream) -> TokenStream {
                             Some(field_name) => field_name.to_token_stream(),
                         };
 
-                        Ok(create_garnish_data_impl(name, field_name, &field.ty, library))
+                        Ok(create_garnish_data_impl(name, impl_generics, where_clause, field_name, &field.ty, library))
                     }
                 }
             }
@@ -56,9 +57,16 @@ pub fn garnish_lang_data_derive(input: TokenStream) -> TokenStream {
     expanded.unwrap_or_else(Error::into_compile_error).into()
 }
 
-fn create_garnish_data_impl(for_type: &Ident, delegate_field: proc_macro2::TokenStream, delegate_field_type: &Type, library: proc_macro2::TokenStream) -> proc_macro2::TokenStream {
+fn create_garnish_data_impl(
+    for_type: &Ident,
+    impl_generics: TypeGenerics,
+    where_clause: Option<&WhereClause>,
+    delegate_field: proc_macro2::TokenStream,
+    delegate_field_type: &Type,
+    library: proc_macro2::TokenStream,
+) -> proc_macro2::TokenStream {
     quote! {
-        impl GarnishData for #for_type {
+        impl #impl_generics GarnishData for #for_type #impl_generics #where_clause {
             type Error = <#delegate_field_type as GarnishData>::Error;
             type Symbol = <#delegate_field_type as GarnishData>::Symbol;
             type Byte = <#delegate_field_type as GarnishData>::Byte;

@@ -1,9 +1,16 @@
+use std::fmt::Debug;
+use std::hash::Hash;
 use garnish_lang::simple::SimpleGarnishData;
 use garnish_lang::GarnishData;
 
 #[derive(Debug, Clone, PartialOrd, PartialEq, Eq, Hash)]
 pub struct Data {
 
+}
+
+#[derive(GarnishData)]
+pub struct GarnishDataWrapperWithGenerics<T> where T: Debug + Clone + PartialEq + Eq + Hash + PartialOrd {
+    data: SimpleGarnishData<T>
 }
 
 #[derive(GarnishData)]
