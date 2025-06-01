@@ -28,10 +28,14 @@ pub fn symbol_value(value: &str) -> u64 {
     hv
 }
 
+pub trait SimpleDataType: Clone + PartialEq + Eq + PartialOrd + Debug + Hash {}
+
 /// Default custom type for [`SimpleGarnishData`] when no custom types are needed.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Copy, Clone, PartialOrd, PartialEq, Eq, Debug, Hash)]
 pub struct NoCustom {}
+
+impl SimpleDataType for NoCustom {}
 
 impl Display for NoCustom {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -45,12 +49,26 @@ impl DisplayForCustomItem for NoCustom {
     }
 }
 
+fn default_resolver<T>(_data: &mut SimpleGarnishData<T>, _symbol: u64) -> Result<bool, DataError>
+where
+    T: SimpleDataType,
+{
+    Ok(false)
+}
+
+fn default_op_handler<T>(_data: &mut SimpleGarnishData<T>, _instruction: Instruction, _left: (GarnishDataType, usize), _right: (GarnishDataType, usize)) -> Result<bool, DataError>
+where
+    T: SimpleDataType,
+{
+    Ok(false)
+}
+
 /// Implementation of [`GarnishData`]. Uses standard Rust collections for storing data.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
 pub struct SimpleGarnishData<T = NoCustom>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: SimpleDataType,
 {
     register: Vec<usize>,
     data: SimpleDataList<T>,
@@ -64,6 +82,8 @@ where
     current_byte_list: Option<Vec<u8>>,
     cache: HashMap<u64, usize>,
     max_char_list_depth: usize,
+    resolver: fn(&mut SimpleGarnishData<T>, u64) -> Result<bool, DataError>,
+    op_handler: fn(&mut SimpleGarnishData<T>, Instruction, (GarnishDataType, usize), (GarnishDataType, usize)) -> Result<bool, DataError>,
 }
 
 /// Alias for [`SimpleGarnishData`] with [`NoCustom`] type parameter.
@@ -84,13 +104,15 @@ impl SimpleGarnishData<NoCustom> {
             current_byte_list: None,
             cache: HashMap::new(),
             max_char_list_depth: 1000,
+            resolver: default_resolver,
+            op_handler: default_op_handler,
         }
     }
 }
 
 impl<T> SimpleGarnishData<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: SimpleDataType,
 {
     pub fn new_custom() -> Self {
         SimpleGarnishData {
@@ -106,6 +128,8 @@ where
             current_byte_list: None,
             cache: HashMap::new(),
             max_char_list_depth: 1000,
+            resolver: default_resolver,
+            op_handler: default_op_handler,
         }
     }
 

@@ -14,7 +14,7 @@ readme.workspace = true
 proc-macro = true
 
 [dependencies]
-syn = { version = "2.0.101", features = ["full"] }
+syn = { version = "2.0.101", features = ["full", "parsing"] }
 quote = "1.0.40"
 proc-macro2 = "1.0.95"
 garnish_lang_traits = { workspace = true }

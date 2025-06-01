@@ -1,7 +1,16 @@
+mod data_wrapper;
+
 use proc_macro::TokenStream;
 use proc_macro2::Ident;
 use quote::{quote, ToTokens};
 use syn::{parse_macro_input, Data, DeriveInput, Error, Index, Type, TypeGenerics, WhereClause};
+
+use data_wrapper::process_data_wrapper_proc;
+
+#[proc_macro_attribute]
+pub fn data_wrapper_proc(args: TokenStream, item: TokenStream) -> TokenStream {
+    process_data_wrapper_proc(args, item)
+}
 
 #[proc_macro_derive(GarnishData, attributes(garnish_data))]
 pub fn garnish_lang_data_derive(input: TokenStream) -> TokenStream {

@@ -2,7 +2,7 @@
 mod tests {
     use crate::simple::clone::test_data_impl::TestData;
     use garnish_lang::helpers::{clone_data, clone_data_with_custom_handler, clone_data_with_handlers, clone_data_with_invalid_handler};
-    use garnish_lang::simple::{SimpleData, SimpleGarnishData, SimpleNumber};
+    use garnish_lang::simple::{SimpleData, SimpleDataType, SimpleGarnishData, SimpleNumber};
     use garnish_lang::{GarnishData, GarnishDataType};
 
     #[test]
@@ -239,6 +239,8 @@ mod tests {
     struct CustomData {
         num: usize,
     }
+    
+    impl SimpleDataType for CustomData {}
 
     #[test]
     fn copy_custom_no_handler() {

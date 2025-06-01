@@ -5,13 +5,11 @@ use std::hash::Hash;
 use garnish_lang_traits::{GarnishData, GarnishNumber};
 
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
-use crate::{
-    DataError, DataIndexIterator, GarnishDataType, Instruction, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value,
-};
+use crate::{DataError, DataIndexIterator, GarnishDataType, Instruction, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value, SimpleDataType};
 
 impl<T> GarnishData for SimpleGarnishData<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: SimpleDataType
 {
     type Error = DataError;
     type Symbol = u64;
@@ -828,6 +826,14 @@ where
 
     fn make_number_iterator_range(min: Self::Number, max: Self::Number) -> Self::NumberIterator {
         NumberIterator::new(min, max)
+    }
+
+    fn resolve(&mut self, symbol: Self::Symbol) -> Result<bool, Self::Error> {
+        (self.resolver)(self, symbol)
+    }
+
+    fn defer_op(&mut self, operation: Instruction, left: (GarnishDataType, Self::Size), right: (GarnishDataType, Self::Size)) -> Result<bool, Self::Error> {
+        (self.op_handler)(self, operation, left, right)
     }
 }
 

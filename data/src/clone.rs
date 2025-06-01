@@ -1,11 +1,11 @@
-use crate::{DataError, SimpleGarnishData};
+use crate::{DataError, SimpleDataType, SimpleGarnishData};
 use garnish_lang_traits::helpers::clone_data;
 use std::fmt::Debug;
 use std::hash::Hash;
 
 impl<T> SimpleGarnishData<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: SimpleDataType
 {
     pub fn clone_with_retained_data(&mut self, retain_data: Vec<usize>) -> Result<SimpleGarnishData<T>, DataError> {
         let mut new_data = SimpleGarnishData::<T>::new_custom();
