@@ -13,6 +13,14 @@ impl GarnishData for DataWrapper {
     }
 }
 
+pub struct MultiWrapper {
+    inner: DataWrapper
+}
+
+#[delegate_garnish_data(delegate_field = inner, delegate_field_type = DataWrapper)]
+impl GarnishData for MultiWrapper {
+}
+
 pub struct DataWrapperWithGenerics {
     data: SimpleGarnishData<Data>,
 }
