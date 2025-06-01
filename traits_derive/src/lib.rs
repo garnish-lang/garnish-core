@@ -8,7 +8,7 @@ use syn::{parse_macro_input, Data, DeriveInput, Error, Index, Type, TypeGenerics
 use data_wrapper::process_data_wrapper_proc;
 
 #[proc_macro_attribute]
-pub fn data_wrapper_proc(args: TokenStream, item: TokenStream) -> TokenStream {
+pub fn delegate_garnish_data(args: TokenStream, item: TokenStream) -> TokenStream {
     process_data_wrapper_proc(args, item)
 }
 
