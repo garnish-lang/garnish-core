@@ -58,11 +58,6 @@ impl Parse for GarnishWrapperArgs {
 }
 
 pub fn process_data_wrapper_proc(args: TokenStream, item: TokenStream) -> TokenStream {
-    #[cfg(feature = "garnish_facade")]
-    let library = quote! { garnish_lang };
-    #[cfg(not(feature = "garnish_facade"))]
-    let library = quote! { garnish_lang_traits };
-
     let parsed_args = parse_macro_input!(args as GarnishWrapperArgs);
     let delegate_field_name = &parsed_args.delegate_field_name;
     let delegate_field_type = &parsed_args.delegate_field_type;
@@ -80,7 +75,7 @@ pub fn process_data_wrapper_proc(args: TokenStream, item: TokenStream) -> TokenS
     }
 
     let associated_types = create_associated_types(delegate_field_type);
-    let remaining_items = match create_missing_functions(&library, delegate_field_name, delegate_field_type, &implemented_functions) {
+    let remaining_items = match create_missing_functions(delegate_field_name, delegate_field_type, &implemented_functions) {
         Ok(items) => items,
         Err(err) => return err.to_compile_error().into(),
     };
@@ -124,7 +119,6 @@ fn create_associated_types(delegate_field_type: &Type) -> Vec<ImplItem> {
 }
 
 fn create_missing_functions(
-    library: &proc_macro2::TokenStream,
     delegate_field: &Ident,
     delegate_field_type: &Type,
     implemented_functions: &HashSet<String>,
@@ -214,7 +208,7 @@ fn create_missing_functions(
     all_functions.insert(
         "get_data_type",
         quote! {
-            fn get_data_type(&self, addr: Self::Size) -> Result<#library::GarnishDataType, Self::Error> {
+            fn get_data_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
                 self.#delegate_field.get_data_type(addr)
             }
         },
@@ -230,7 +224,7 @@ fn create_missing_functions(
     all_functions.insert(
         "get_type",
         quote! {
-            fn get_type(&self, addr: Self::Size) -> Result<#library::GarnishDataType, Self::Error> {
+            fn get_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
                 self.#delegate_field.get_type(addr)
             }
         },
@@ -518,7 +512,7 @@ fn create_missing_functions(
     all_functions.insert(
         "add_type",
         quote! {
-            fn add_type(&mut self, value: #library::GarnishDataType) -> Result<Self::Size, Self::Error> {
+            fn add_type(&mut self, value: GarnishDataType) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.add_type(value)
             }
         },
@@ -734,7 +728,7 @@ fn create_missing_functions(
     all_functions.insert(
         "push_instruction",
         quote! {
-            fn push_instruction(&mut self, instruction: #library::Instruction, data: Option<Self::Size>) -> Result<Self::Size, Self::Error> {
+            fn push_instruction(&mut self, instruction: Instruction, data: Option<Self::Size>) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.push_instruction(instruction, data)
             }
         },
@@ -742,7 +736,7 @@ fn create_missing_functions(
     all_functions.insert(
         "get_instruction",
         quote! {
-            fn get_instruction(&self, addr: Self::Size) -> Option<(#library::Instruction, Option<Self::Size>)> {
+            fn get_instruction(&self, addr: Self::Size) -> Option<(Instruction, Option<Self::Size>)> {
                 self.#delegate_field.get_instruction(addr)
             }
         },
@@ -1073,9 +1067,9 @@ fn create_missing_functions(
         quote! {
             fn defer_op(
                 &mut self,
-                operation: #library::Instruction,
-                left: (#library::GarnishDataType, Self::Size),
-                right: (#library::GarnishDataType, Self::Size),
+                operation: Instruction,
+                left: (GarnishDataType, Self::Size),
+                right: (GarnishDataType, Self::Size),
             ) -> Result<bool, Self::Error> {
                 self.#delegate_field.defer_op(operation, left, right)
             }
