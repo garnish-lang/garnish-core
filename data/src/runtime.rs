@@ -7,9 +7,10 @@ use garnish_lang_traits::{GarnishData, GarnishNumber};
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
 use crate::{DataError, DataIndexIterator, GarnishDataType, Instruction, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value, SimpleDataType};
 
-impl<T> GarnishData for SimpleGarnishData<T>
+impl<T, A> GarnishData for SimpleGarnishData<T, A>
 where
-    T: SimpleDataType
+    T: SimpleDataType,
+    A: Default,
 {
     type Error = DataError;
     type Symbol = u64;

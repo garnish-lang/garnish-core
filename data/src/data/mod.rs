@@ -31,10 +31,10 @@ pub struct SimpleDataList<T = NoCustom>
 where
     T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
 {
-    list: Vec<SimpleData<T>>,
-    symbol_to_name: HashMap<u64, String>,
-    expression_to_symbol: HashMap<usize, u64>,
-    external_to_symbol: HashMap<usize, u64>
+    pub(crate) list: Vec<SimpleData<T>>,
+    pub(crate) symbol_to_name: HashMap<u64, String>,
+    pub(crate) expression_to_symbol: HashMap<usize, u64>,
+    pub(crate) external_to_symbol: HashMap<usize, u64>
 }
 
 impl<T> Default for SimpleDataList<T>

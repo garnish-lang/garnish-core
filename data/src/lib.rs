@@ -2,7 +2,8 @@ use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
-
+use std::io::Empty;
+use std::marker::PhantomData;
 pub use error::DataError;
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
 use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
@@ -49,24 +50,27 @@ impl DisplayForCustomItem for NoCustom {
     }
 }
 
-fn default_resolver<T>(_data: &mut SimpleGarnishData<T>, _symbol: u64) -> Result<bool, DataError>
+fn default_resolver<T, A>(_data: &mut SimpleGarnishData<T, A>, _symbol: u64) -> Result<bool, DataError>
 where
     T: SimpleDataType,
 {
     Ok(false)
 }
 
-fn default_op_handler<T>(_data: &mut SimpleGarnishData<T>, _instruction: Instruction, _left: (GarnishDataType, usize), _right: (GarnishDataType, usize)) -> Result<bool, DataError>
+fn default_op_handler<T, A>(_data: &mut SimpleGarnishData<T, A>, _instruction: Instruction, _left: (GarnishDataType, usize), _right: (GarnishDataType, usize)) -> Result<bool, DataError>
 where
     T: SimpleDataType,
 {
     Ok(false)
 }
+
+pub type SimpleResolver<T, A> = fn(&mut SimpleGarnishData<T, A>, u64) -> Result<bool, DataError>;
+pub type SimpleOpHandler<T, A> = fn(&mut SimpleGarnishData<T, A>, Instruction, (GarnishDataType, usize), (GarnishDataType, usize)) -> Result<bool, DataError>;
 
 /// Implementation of [`GarnishData`]. Uses standard Rust collections for storing data.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
-pub struct SimpleGarnishData<T = NoCustom>
+pub struct SimpleGarnishData<T = NoCustom, A = ()>
 where
     T: SimpleDataType,
 {
@@ -82,8 +86,9 @@ where
     current_byte_list: Option<Vec<u8>>,
     cache: HashMap<u64, usize>,
     max_char_list_depth: usize,
-    resolver: fn(&mut SimpleGarnishData<T>, u64) -> Result<bool, DataError>,
-    op_handler: fn(&mut SimpleGarnishData<T>, Instruction, (GarnishDataType, usize), (GarnishDataType, usize)) -> Result<bool, DataError>,
+    resolver: SimpleResolver<T, A>,
+    op_handler: SimpleOpHandler<T, A>,
+    auxiliary_data: A
 }
 
 /// Alias for [`SimpleGarnishData`] with [`NoCustom`] type parameter.
@@ -106,19 +111,22 @@ impl SimpleGarnishData<NoCustom> {
             max_char_list_depth: 1000,
             resolver: default_resolver,
             op_handler: default_op_handler,
+            auxiliary_data: ()
         }
     }
 }
 
-impl<T> SimpleGarnishData<T>
+impl<T, A> SimpleGarnishData<T, A>
 where
     T: SimpleDataType,
+    A: Default
 {
     pub fn new_custom() -> Self {
+        let data = SimpleDataList::<T>::default();
         SimpleGarnishData {
             register: vec![],
-            data: SimpleDataList::<T>::default(),
-            end_of_constant_data: 0,
+            end_of_constant_data: data.len() - 1,
+            data,
             values: vec![],
             instruction_cursor: 0,
             instructions: vec![],
@@ -130,7 +138,32 @@ where
             max_char_list_depth: 1000,
             resolver: default_resolver,
             op_handler: default_op_handler,
+            auxiliary_data: A::default()
         }
+    }
+
+    pub fn auxiliary_data(&self) -> &A {
+        &self.auxiliary_data
+    }
+
+    pub fn auxiliary_data_mut(&mut self) -> &mut A {
+        &mut self.auxiliary_data
+    }
+    
+    pub fn set_resolver(&mut self, resolver: SimpleResolver<T, A>) {
+        self.resolver = resolver;
+    }
+    
+    pub fn call_resolver(&mut self, symbol: u64) -> Result<bool, DataError> {
+        (self.resolver)(self, symbol)
+    }
+    
+    pub fn set_op_handler(&mut self, op_handler: SimpleOpHandler<T, A>) {
+        self.op_handler = op_handler;
+    }
+    
+    pub fn call_op_handler(&mut self, instruction: Instruction, left: (GarnishDataType, usize), right: (GarnishDataType, usize)) -> Result<bool, DataError> {
+        (self.op_handler)(self, instruction, left, right)
     }
 
     pub(crate) fn get(&self, index: usize) -> Result<&SimpleData<T>, DataError> {
@@ -498,7 +531,7 @@ where
 
                             Ok(None)
                         })
-                        .or_else(|err| Err(DataError::from(format!("{:?}", err))))?;
+                            .or_else(|err| Err(DataError::from(format!("{:?}", err))))?;
                     }
                     _ => {
                         self.add_to_current_char_list(value, depth + 1)?;
