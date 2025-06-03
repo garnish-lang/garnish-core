@@ -3,40 +3,66 @@ use garnish_lang_traits::helpers::clone_data;
 use std::fmt::Debug;
 use std::hash::Hash;
 
+fn clone_with_retained_data_internal<T, A>(
+    from: &SimpleGarnishData<T, A>,
+    retain_data: Vec<usize>,
+) -> Result<SimpleGarnishData<T, A>, DataError>
+where
+    T: SimpleDataType,
+    A: Default,
+{
+    let mut new_data = SimpleGarnishData::<T, A>::new_custom();
+    new_data.instructions = from.instructions.clone();
+    new_data.instruction_cursor = from.instruction_cursor.clone();
+    new_data.expression_table = from.expression_table.clone();
+    new_data.end_of_constant_data = from.end_of_constant_data;
+    new_data.resolver = from.resolver.clone();
+    new_data.op_handler = from.op_handler.clone();
+    new_data.cache = from.cache.clone();
+
+    new_data.data.expression_to_symbol = from.data.expression_to_symbol.clone();
+    new_data.data.symbol_to_name = from.data.symbol_to_name.clone();
+    new_data.data.external_to_symbol = from.data.external_to_symbol.clone();
+
+    for i in new_data.data.len()..=new_data.end_of_constant_data {
+        let data = from.get(i)?;
+        new_data.data.push(data.clone());
+    }
+
+    for data in retain_data {
+        clone_data(data, from, &mut new_data)?;
+    }
+
+    Ok(new_data)
+}
+
 impl<T, A> SimpleGarnishData<T, A>
 where
     T: SimpleDataType,
-    A: Default + Clone
+    A: Default,
 {
     pub fn clone_with_retained_data(&mut self, retain_data: Vec<usize>) -> Result<SimpleGarnishData<T, A>, DataError> {
-        let mut new_data = SimpleGarnishData::<T, A>::new_custom();
-        new_data.instructions = self.instructions.clone();
-        new_data.instruction_cursor = self.instruction_cursor.clone();
-        new_data.expression_table = self.expression_table.clone();
-        new_data.end_of_constant_data = self.end_of_constant_data;
-        new_data.auxiliary_data = self.auxiliary_data.clone();
-        new_data.resolver = self.resolver.clone();
-        new_data.op_handler = self.op_handler.clone();
-        new_data.cache = self.cache.clone();
-
-        new_data.data.expression_to_symbol = self.data.expression_to_symbol.clone();
-        new_data.data.symbol_to_name = self.data.symbol_to_name.clone();
-        new_data.data.external_to_symbol = self.data.external_to_symbol.clone();
-        
-        for i in new_data.data.len()..=new_data.end_of_constant_data {
-            let data = self.get(i)?;
-            new_data.data.push(data.clone());
-        }
-
-        for data in retain_data {
-            clone_data(data, self, &mut new_data)?;
-        }
-
-        Ok(new_data)
+        clone_with_retained_data_internal(self, retain_data)
     }
 
     pub fn clone_without_data(&mut self) -> Result<SimpleGarnishData<T, A>, DataError> {
         self.clone_with_retained_data(vec![])
+    }
+}
+
+impl<T, A> SimpleGarnishData<T, A>
+where
+    T: SimpleDataType,
+    A: Default + Clone,
+{
+    pub fn clone_with_aux_and_retained_data(&mut self, retain_data: Vec<usize>) -> Result<SimpleGarnishData<T, A>, DataError> {
+        let mut data = clone_with_retained_data_internal(self, retain_data)?;
+        data.auxiliary_data = self.auxiliary_data().clone();
+        Ok(data)
+    }
+
+    pub fn clone_with_aux_without_data(&mut self) -> Result<SimpleGarnishData<T, A>, DataError> {
+        self.clone_with_aux_and_retained_data(vec![])
     }
 }
 

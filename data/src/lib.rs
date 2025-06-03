@@ -50,14 +50,14 @@ impl DisplayForCustomItem for NoCustom {
     }
 }
 
-fn default_resolver<T, A>(_data: &mut SimpleGarnishData<T, A>, _symbol: u64) -> Result<bool, DataError>
+pub fn default_resolver<T, A>(_data: &mut SimpleGarnishData<T, A>, _symbol: u64) -> Result<bool, DataError>
 where
     T: SimpleDataType,
 {
     Ok(false)
 }
 
-fn default_op_handler<T, A>(_data: &mut SimpleGarnishData<T, A>, _instruction: Instruction, _left: (GarnishDataType, usize), _right: (GarnishDataType, usize)) -> Result<bool, DataError>
+pub fn default_op_handler<T, A>(_data: &mut SimpleGarnishData<T, A>, _instruction: Instruction, _left: (GarnishDataType, usize), _right: (GarnishDataType, usize)) -> Result<bool, DataError>
 where
     T: SimpleDataType,
 {
