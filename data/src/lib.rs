@@ -149,19 +149,19 @@ where
     pub fn auxiliary_data_mut(&mut self) -> &mut A {
         &mut self.auxiliary_data
     }
-    
+
     pub fn set_resolver(&mut self, resolver: SimpleResolver<T, A>) {
         self.resolver = resolver;
     }
-    
+
     pub fn call_resolver(&mut self, symbol: u64) -> Result<bool, DataError> {
         (self.resolver)(self, symbol)
     }
-    
+
     pub fn set_op_handler(&mut self, op_handler: SimpleOpHandler<T, A>) {
         self.op_handler = op_handler;
     }
-    
+
     pub fn call_op_handler(&mut self, instruction: Instruction, left: (GarnishDataType, usize), right: (GarnishDataType, usize)) -> Result<bool, DataError> {
         (self.op_handler)(self, instruction, left, right)
     }
@@ -181,6 +181,43 @@ where
     pub fn add_stack_frame(&mut self, frame: SimpleStackFrame) -> Result<usize, DataError> {
         self.data.push(SimpleData::StackFrame(frame));
         Ok(self.data.len() - 1)
+    }
+
+    pub fn add_string(&mut self, s: impl Into<String>) -> Result<usize, DataError> {
+        self.data.push(SimpleData::CharList(s.into()));
+        Ok(self.data.len() - 1)
+    }
+
+    pub fn add_u8_vec(&mut self, vec: impl Into<Vec<u8>>) -> Result<usize, DataError> {
+        self.data.push(SimpleData::ByteList(vec.into()));
+        Ok(self.data.len() - 1)
+    }
+
+    pub fn add_symbol_list(&mut self, list: impl Into<Vec<u64>>) -> Result<usize, DataError> {
+        self.data.push(SimpleData::SymbolList(list.into()));
+        Ok(self.data.len() - 1)
+    }
+
+    pub fn add_plain_list_from(&mut self, list: Vec<SimpleData<T>>) -> Result<usize, DataError> {
+        let mut items = vec![];
+
+        for item in list {
+            let i = self.cache_add(item.into())?;
+            items.push(i);
+        }
+
+        self.cache_add(SimpleData::List(items, vec![]))
+    }
+
+    pub fn add_associative_list_from(&mut self, list: Vec<(impl Into<String>, SimpleData<T>)>) -> Result<usize, DataError> {
+        self.start_list(list.len())?;
+        for (key, value) in list {
+            let symbol = self.parse_add_symbol(&key.into())?;
+            let i = self.cache_add(value.into())?;
+            let pair = self.add_pair((symbol, i))?;
+            self.add_to_list(pair, true)?;
+        }
+        self.end_list()
     }
 
     pub fn get_custom(&self, addr: usize) -> Result<T, DataError> {

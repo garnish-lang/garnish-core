@@ -18,7 +18,6 @@ where
     new_data.end_of_constant_data = from.end_of_constant_data;
     new_data.resolver = from.resolver.clone();
     new_data.op_handler = from.op_handler.clone();
-    new_data.cache = from.cache.clone();
 
     new_data.data.expression_to_symbol = from.data.expression_to_symbol.clone();
     new_data.data.symbol_to_name = from.data.symbol_to_name.clone();
@@ -26,7 +25,7 @@ where
 
     for i in new_data.data.len()..=new_data.end_of_constant_data {
         let data = from.get(i)?;
-        new_data.data.push(data.clone());
+        new_data.cache_add(data.clone())?;
     }
 
     for data in retain_data {
@@ -110,6 +109,7 @@ mod tests {
     #[test]
     fn retain_one_number() {
         let mut data = SimpleGarnishData::new();
+        data.end_of_constant_data = data.data.len() - 1;
         data.add_number(SimpleNumber::Integer(100)).unwrap();
         data.add_number(SimpleNumber::Integer(200)).unwrap();
         data.add_number(SimpleNumber::Integer(300)).unwrap();
@@ -123,6 +123,7 @@ mod tests {
     #[test]
     fn retain_pair() {
         let mut data = SimpleGarnishData::new();
+        data.end_of_constant_data = data.data.len() - 1;
         data.add_number(SimpleNumber::Integer(100)).unwrap();
         data.add_number(SimpleNumber::Integer(200)).unwrap();
         let num = data.add_number(SimpleNumber::Integer(300)).unwrap();

@@ -1,18 +1,20 @@
 use std::fmt::{Debug, Display};
 use std::hash::Hash;
 
+use crate::SimpleDataType;
 use crate::data::{SimpleData, SimpleDataList};
 
-pub trait DisplayForCustomItem {
-    fn display_with_list(&self, list: &SimpleDataList<Self>, level: usize) -> String where Self: Clone + PartialEq + Eq + PartialOrd + Debug + Hash;
+pub trait DisplayForCustomItem: SimpleDataType {
+    fn display_with_list(&self, list: &SimpleDataList<Self>, level: usize) -> String
+    where
+        Self: Clone + PartialEq + Eq + PartialOrd + Debug + Hash;
 }
 
 impl<T> SimpleData<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash + Display,
+    T: SimpleDataType + Display,
 {
-    pub fn display_simple(&self) -> String
-    {
+    pub fn display_simple(&self) -> String {
         match self {
             SimpleData::Unit => "()".into(),
             SimpleData::True => "True".into(),
@@ -49,15 +51,13 @@ where
 
 impl<T> SimpleDataList<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash + Display + DisplayForCustomItem,
+    T: Display + DisplayForCustomItem,
 {
-    pub fn display_for_item(&self, index: usize) -> String
-    {
+    pub fn display_for_item(&self, index: usize) -> String {
         self.display_for_item_internal(index, 0)
     }
 
-    fn display_for_item_internal(&self, index: usize, level: usize) -> String
-    {
+    fn display_for_item_internal(&self, index: usize, level: usize) -> String {
         match self.get(index) {
             None => String::from("<NoData>"),
             Some(item) => match item {
@@ -79,10 +79,14 @@ where
                     false => format!("{}", bytes.iter().map(|b| b.to_string()).collect::<Vec<String>>().join(" ")),
                 },
                 SimpleData::SymbolList(symbols) => {
-                    let base = symbols.iter().map(|s| match self.symbol_to_name.get(s) {
-                        None => SimpleData::<T>::display_simple_symbol(s),
-                        Some(s) => format!("{}", s),
-                    }).collect::<Vec<String>>().join(".");
+                    let base = symbols
+                        .iter()
+                        .map(|s| match self.symbol_to_name.get(s) {
+                            None => SimpleData::<T>::display_simple_symbol(s),
+                            Some(s) => format!("{}", s),
+                        })
+                        .collect::<Vec<String>>()
+                        .join(".");
 
                     format!(":{}", base)
                 }
@@ -145,10 +149,10 @@ where
                                     (s.to_integer().as_integer().unwrap(), e.to_integer().as_integer().unwrap())
                                 }
                                 (Some(SimpleData::Number(_s)), Some(_e)) => {
-                                    return format!("Slice({}, {}..{}", list, start, self.display_for_item_internal(*end, level + 1))
+                                    return format!("Slice({}, {}..{}", list, start, self.display_for_item_internal(*end, level + 1));
                                 }
                                 (Some(_s), Some(SimpleData::Number(_e))) => {
-                                    return format!("Slice({}, {}..{}", list, self.display_for_item_internal(*start, level + 1), end)
+                                    return format!("Slice({}, {}..{}", list, self.display_for_item_internal(*start, level + 1), end);
                                 }
                                 (Some(_s), Some(_e)) => {
                                     return format!(
@@ -156,13 +160,13 @@ where
                                         list,
                                         self.display_for_item_internal(*start, level + 1),
                                         self.display_for_item_internal(*end, level + 1)
-                                    )
+                                    );
                                 }
                                 (Some(_s), None) => {
-                                    return format!("Slice({}, ({})..<NoData>", list, self.display_for_item_internal(*start, level + 1))
+                                    return format!("Slice({}, ({})..<NoData>", list, self.display_for_item_internal(*start, level + 1));
                                 }
                                 (None, Some(_e)) => {
-                                    return format!("Slice({}, <NoData>..({})", list, self.display_for_item_internal(*end, level + 1))
+                                    return format!("Slice({}, <NoData>..({})", list, self.display_for_item_internal(*end, level + 1));
                                 }
                                 (None, None) => return format!("Slice({}, <NoData>..<NoData>", list),
                             },
@@ -239,8 +243,8 @@ where
 
 #[cfg(test)]
 mod shared {
+    use crate::{DisplayForCustomItem, SimpleDataList, SimpleDataType};
     use std::fmt::{Display, Formatter};
-    use crate::{DisplayForCustomItem, SimpleDataList};
 
     #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Debug, Hash)]
     pub struct Date {
@@ -254,6 +258,8 @@ mod shared {
         }
     }
 
+    impl SimpleDataType for Date {}
+
     impl DisplayForCustomItem for Date {
         fn display_with_list(&self, _list: &SimpleDataList<Date>, _level: usize) -> String {
             format!("day {} of month {}", self.day, self.month)
@@ -265,10 +271,10 @@ mod shared {
 mod simple {
     use garnish_lang_traits::GarnishDataType;
 
-    use crate::data::display::shared::Date;
-    use crate::data::{SimpleData, SimpleNumber};
-    use crate::data::stack_frame::SimpleStackFrame;
     use crate::NoCustom;
+    use crate::data::display::shared::Date;
+    use crate::data::stack_frame::SimpleStackFrame;
+    use crate::data::{SimpleData, SimpleNumber};
 
     #[test]
     fn simple_unit() {

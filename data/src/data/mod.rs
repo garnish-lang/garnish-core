@@ -1,21 +1,21 @@
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::hash::Hash;
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
 
 use garnish_lang_traits::GarnishDataType;
+pub use iterators::*;
 pub use number::*;
 pub use parsing::*;
-pub use iterators::*;
 pub use stack_frame::*;
 
-use crate::{DataError, NoCustom, symbol_value};
+use crate::{DataError, NoCustom, SimpleDataType, symbol_value};
 
 mod display;
+mod iterators;
 mod number;
 mod parsing;
-mod iterators;
 mod stack_frame;
 
 pub use display::*;
@@ -29,17 +29,17 @@ pub const UNIT_INDEX: usize = 0;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SimpleDataList<T = NoCustom>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: SimpleDataType,
 {
     pub(crate) list: Vec<SimpleData<T>>,
     pub(crate) symbol_to_name: HashMap<u64, String>,
     pub(crate) expression_to_symbol: HashMap<usize, u64>,
-    pub(crate) external_to_symbol: HashMap<usize, u64>
+    pub(crate) external_to_symbol: HashMap<usize, u64>,
 }
 
 impl<T> Default for SimpleDataList<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: SimpleDataType,
 {
     fn default() -> Self {
         SimpleDataList::new()
@@ -51,7 +51,7 @@ where
 
 impl<T> SimpleDataList<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: SimpleDataType,
 {
     pub fn new() -> Self {
         SimpleDataList {
@@ -123,7 +123,7 @@ pub type SimpleDataNC = SimpleData<NoCustom>;
 #[derive(Clone, PartialEq, Eq, PartialOrd, Debug, Hash)]
 pub enum SimpleData<T = NoCustom>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: SimpleDataType,
 {
     Unit,
     True,
@@ -150,7 +150,7 @@ where
 
 impl<T> SimpleData<T>
 where
-    T: Clone + PartialEq + Eq + PartialOrd + Debug + Hash,
+    T: SimpleDataType,
 {
     pub fn get_data_type(&self) -> GarnishDataType {
         match self {
@@ -173,8 +173,7 @@ where
             SimpleData::Slice(_, _) => GarnishDataType::Slice,
             SimpleData::Partial(_, _) => GarnishDataType::Partial,
             SimpleData::List(_, _) => GarnishDataType::List,
-            SimpleData::StackFrame(_)
-            | SimpleData::Custom(_) => GarnishDataType::Custom,
+            SimpleData::StackFrame(_) | SimpleData::Custom(_) => GarnishDataType::Custom,
         }
     }
 
@@ -247,9 +246,9 @@ where
             _ => Err(DataError::from(format!("{:?} is not a Symbol", self))),
         }
     }
-    
+
     pub fn as_symbol_list(&self) -> DataCastResult<Vec<u64>> {
-        match self { 
+        match self {
             SimpleData::SymbolList(v) => Ok(v.clone()),
             _ => Err(DataError::from(format!("{:?} is not a SymbolList", self))),
         }
@@ -326,11 +325,87 @@ where
     }
 }
 
+impl<T> From<bool> for SimpleData<T>
+where
+    T: SimpleDataType,
+{
+    fn from(value: bool) -> Self {
+        match value {
+            true => SimpleData::True,
+            false => SimpleData::False,
+        }
+    }
+}
+
+impl<T> From<&str> for SimpleData<T>
+where
+    T: SimpleDataType,
+{
+    fn from(value: &str) -> Self {
+        SimpleData::CharList(value.to_string())
+    }
+}
+
+impl<T> From<String> for SimpleData<T>
+where
+    T: SimpleDataType,
+{
+    fn from(value: String) -> Self {
+        SimpleData::CharList(value)
+    }
+}
+
+macro_rules! numbers_to_simple_data {
+    ( $( $x:ty ),* ) => {
+        $(
+            impl<T> From<$x> for SimpleData<T>
+            where
+                T: SimpleDataType, {
+                fn from(x: $x) -> Self {
+                    SimpleData::Number(x.into())
+                }
+            }
+        )*
+    }
+}
+numbers_to_simple_data!(i8, i16, i32, i64, u8, u16, u32, u64, isize, usize, f32, f64);
+
+
 #[cfg(test)]
 mod tests {
-    use crate::data::{SimpleDataNC, SimpleNumber};
-    use crate::{GarnishDataType, NoCustom};
     use crate::data::stack_frame::SimpleStackFrame;
+    use crate::data::{SimpleDataNC, SimpleNumber};
+    use crate::{GarnishDataType, NoCustom, SimpleData};
+
+    #[test]
+    fn from_true() {
+        assert_eq!(SimpleData::from(true), SimpleData::<NoCustom>::True)
+    }
+
+    #[test]
+    fn from_false() {
+        assert_eq!(SimpleData::from(false), SimpleData::<NoCustom>::False)
+    }
+
+    #[test]
+    fn from_str() {
+        assert_eq!(SimpleData::from("test"), SimpleData::<NoCustom>::CharList("test".into()))
+    }
+
+    #[test]
+    fn from_string() {
+        assert_eq!(SimpleData::from(String::from("test")), SimpleData::<NoCustom>::CharList("test".into()))
+    }
+
+    #[test]
+    fn from_i32() {
+        assert_eq!(SimpleData::from(10), SimpleData::<NoCustom>::Number(10.into()))
+    }
+
+    #[test]
+    fn from_f64() {
+        assert_eq!(SimpleData::from(10.0), SimpleData::<NoCustom>::Number(10.0.into()))
+    }
 
     #[test]
     fn get_data_type() {
@@ -351,7 +426,10 @@ mod tests {
         assert_eq!(SimpleDataNC::Range(0, 0).get_data_type(), GarnishDataType::Range);
         assert_eq!(SimpleDataNC::Slice(0, 0).get_data_type(), GarnishDataType::Slice);
         assert_eq!(SimpleDataNC::List(vec![], vec![]).get_data_type(), GarnishDataType::List);
-        assert_eq!(SimpleDataNC::StackFrame(SimpleStackFrame::new(0)).get_data_type(), GarnishDataType::Custom);
+        assert_eq!(
+            SimpleDataNC::StackFrame(SimpleStackFrame::new(0)).get_data_type(),
+            GarnishDataType::Custom
+        );
         assert_eq!(SimpleDataNC::Custom(NoCustom {}).get_data_type(), GarnishDataType::Custom);
     }
 
@@ -387,8 +465,10 @@ mod tests {
 
     #[test]
     fn is_custom() {
-        assert_eq!(SimpleDataNC::StackFrame(SimpleStackFrame::new(0))
-                       .as_stack_frame().unwrap(), SimpleStackFrame::new(0));
+        assert_eq!(
+            SimpleDataNC::StackFrame(SimpleStackFrame::new(0)).as_stack_frame().unwrap(),
+            SimpleStackFrame::new(0)
+        );
     }
 
     #[test]
