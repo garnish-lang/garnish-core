@@ -73,6 +73,17 @@ pub(crate) fn access_with_integer<Data: GarnishData>(
     value: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_data_type(value.clone())? {
+        GarnishDataType::Pair => {
+            if index == Data::Number::zero() {
+                let (left, right) = this.get_pair(value.clone())?;
+                match this.get_data_type(left.clone())? {
+                    GarnishDataType::Symbol => Ok(Some(value)),
+                    _ => Ok(None),
+                }
+            } else {
+                Ok(None)
+            }
+        }
         GarnishDataType::List => index_list(this, value, index),
         GarnishDataType::CharList => index_char_list(this, value, index),
         GarnishDataType::ByteList => index_byte_list(this, value, index),
@@ -212,6 +223,19 @@ pub(crate) fn access_with_symbol<Data: GarnishData>(
     value: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     match this.get_data_type(value.clone())? {
+        GarnishDataType::Pair => {
+            let (left, right) = this.get_pair(value)?;
+            match this.get_data_type(left.clone())? {
+                GarnishDataType::Symbol => {
+                    if this.get_symbol(left)? == sym {
+                        Ok(Some(right))
+                    } else {
+                        Ok(None)
+                    }
+                }
+                _ => Ok(None),
+            }
+        }
         GarnishDataType::List => Ok(this.get_list_item_with_symbol(value, sym.clone())?),
         GarnishDataType::Slice => {
             let (value, range) = this.get_slice(value)?;

@@ -115,6 +115,20 @@ fn apply_internal<Data: GarnishData>(this: &mut Data, instruction: Instruction, 
                 Some(i) => this.push_register(i)?,
             }
         }
+        (GarnishDataType::Pair, GarnishDataType::Number) => {
+            let num = this.get_number(right_addr)?;
+            match access_with_integer(this, num, left_addr)? {
+                None => push_unit(this)?,
+                Some(i) => this.push_register(i)?,
+            }
+        }
+        (GarnishDataType::Pair, GarnishDataType::Symbol) => {
+            let sym = this.get_symbol(right_addr)?;
+            match access_with_symbol(this, sym, left_addr)? {
+                None => push_unit(this)?,
+                Some(i) => this.push_register(i)?,
+            }
+        }
         (GarnishDataType::List, GarnishDataType::Symbol) => {
             let sym = this.get_symbol(right_addr)?;
             match access_with_symbol(this, sym, left_addr)? {
@@ -237,6 +251,100 @@ mod tests {
     use crate::runtime::apply::{apply, empty_apply};
     use crate::runtime::tests::{MockGarnishData, MockIterator};
     use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
+
+    #[test]
+    fn apply_number_to_pair() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Number, GarnishDataType::Symbol, GarnishDataType::Pair, GarnishDataType::Number]);
+
+        mock_data.stub_get_number = |_, i| {
+            assert_eq!(i, 3);
+            Ok(0)
+        };
+        mock_data.stub_get_pair = |_, i| {
+            assert_eq!(i, 2);
+            Ok((1, 0))
+        };
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 2);
+            Ok(())
+        };
+
+        let result = apply(&mut mock_data).unwrap();
+
+        assert_eq!(result, Some(1));
+    }
+
+    #[test]
+    fn apply_non_zero_number_to_pair() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Number, GarnishDataType::Symbol, GarnishDataType::Pair, GarnishDataType::Number]);
+
+        mock_data.stub_get_number = |_, i| {
+            assert_eq!(i, 3);
+            Ok(1)
+        };
+        mock_data.stub_get_pair = |_, i| {
+            assert_eq!(i, 2);
+            Ok((1, 0))
+        };
+        mock_data.stub_add_unit = |_| Ok(100);
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 100);
+            Ok(())
+        };
+
+        let result = apply(&mut mock_data).unwrap();
+
+        assert_eq!(result, Some(1));
+    }
+
+    #[test]
+    fn apply_symbol_to_pair() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Number, GarnishDataType::Pair, GarnishDataType::Symbol]);
+
+        mock_data.stub_get_symbol = |_, i| {
+            assert_eq!(i, 2);
+            Ok(0)
+        };
+        mock_data.stub_get_pair = |_, i| {
+            assert_eq!(i, 1);
+            Ok((2, 0))
+        };
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 0);
+            Ok(())
+        };
+
+        let result = apply(&mut mock_data).unwrap();
+
+        assert_eq!(result, Some(1));
+    }
+
+    #[test]
+    fn apply_non_matching_symbol_to_pair() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Number, GarnishDataType::Symbol, GarnishDataType::Pair, GarnishDataType::Symbol]);
+
+        mock_data.stub_get_symbol = |_, i| {
+            if i == 3 {
+                Ok(40)
+            } else {
+                assert_eq!(i, 1);
+                Ok(30)
+            }
+        };
+        mock_data.stub_get_pair = |_, i| {
+            assert_eq!(i, 2);
+            Ok((1, 0))
+        };
+        mock_data.stub_add_unit = |_| Ok(100);
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 100);
+            Ok(())
+        };
+
+        let result = apply(&mut mock_data).unwrap();
+
+        assert_eq!(result, Some(1));
+    }
 
     #[test]
     fn apply_integer_to_list() {
