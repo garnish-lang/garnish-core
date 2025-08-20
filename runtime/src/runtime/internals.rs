@@ -76,6 +76,15 @@ pub fn access_right_internal<Data: GarnishData>(this: &mut Data) -> Result<Optio
 pub fn access_length_internal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
     match this.get_data_type(r.clone())? {
+        GarnishDataType::Pair => {
+            let (left, _) = this.get_pair(r)?;
+            match this.get_data_type(left.clone())? {
+                GarnishDataType::Symbol => {
+                    push_number(this, Data::Number::one())?;
+                }
+                _ => push_unit(this)?,
+            }
+        }
         GarnishDataType::List => {
             let len = Data::size_to_number(this.get_list_len(r)?);
             push_number(this, len)?;
@@ -139,6 +148,53 @@ mod defer_op {
     use crate::ops::{access_left_internal, access_length_internal, access_right_internal};
     use crate::runtime::tests::MockGarnishData;
     use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
+
+    #[test]
+    fn access_length_of_pair() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Number, GarnishDataType::Symbol, GarnishDataType::Pair]);
+
+        mock_data.stub_get_pair = |_, i| {
+            assert_eq!(i, 2);
+            Ok((1, 0))
+        };
+        mock_data.stub_get_symbol = |_, i| Ok(100);
+        mock_data.stub_add_number = |_, num| {
+            assert_eq!(num, 1);
+            Ok(100)
+        };
+        mock_data.stub_push_register = |data, i| {
+            assert_eq!(i, 100);
+            data.registers.push(i);
+            Ok(())
+        };
+        
+        access_length_internal(&mut mock_data).unwrap();
+
+        assert_eq!(mock_data.pop_register().unwrap(), Some(100));
+    }
+
+    #[test]
+    fn access_length_of_pair_with_symbol() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Number, GarnishDataType::CharList, GarnishDataType::Pair]);
+
+        mock_data.stub_get_pair = |_, i| {
+            assert_eq!(i, 2);
+            Ok((1, 0))
+        };
+        mock_data.stub_get_symbol = |_, i| Ok(100);
+        mock_data.stub_add_unit = |_| {
+            Ok(200)
+        };
+        mock_data.stub_push_register = |data, i| {
+            assert_eq!(i, 200);
+            data.registers.push(i);
+            Ok(())
+        };
+
+        access_length_internal(&mut mock_data).unwrap();
+
+        assert_eq!(mock_data.pop_register().unwrap(), Some(200));
+    }
 
     #[test]
     fn access_left_defer_op() {
