@@ -355,6 +355,24 @@ where
     }
 }
 
+impl<T> From<Vec<usize>> for SimpleData<T>
+where
+    T: SimpleDataType,
+{
+    fn from(value: Vec<usize>) -> Self {
+        SimpleData::List(value, vec![])
+    }
+}
+
+impl<T> From<(Vec<usize>, Vec<usize>)> for SimpleData<T>
+where
+    T: SimpleDataType,
+{
+    fn from(value: (Vec<usize>, Vec<usize>)) -> Self {
+        SimpleData::List(value.0, value.1)
+    }
+}
+
 macro_rules! numbers_to_simple_data {
     ( $( $x:ty ),* ) => {
         $(
@@ -369,7 +387,6 @@ macro_rules! numbers_to_simple_data {
     }
 }
 numbers_to_simple_data!(i8, i16, i32, i64, u8, u16, u32, u64, isize, usize, f32, f64);
-
 
 #[cfg(test)]
 mod tests {

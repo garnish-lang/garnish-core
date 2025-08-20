@@ -1,12 +1,10 @@
+pub use error::DataError;
+use garnish_lang_traits::helpers::iterate_concatenation_mut;
+use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
 use std::{collections::HashMap, hash::Hasher};
-use std::io::Empty;
-use std::marker::PhantomData;
-pub use error::DataError;
-use garnish_lang_traits::helpers::iterate_concatenation_mut;
-use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -57,7 +55,12 @@ where
     Ok(false)
 }
 
-pub fn default_op_handler<T, A>(_data: &mut SimpleGarnishData<T, A>, _instruction: Instruction, _left: (GarnishDataType, usize), _right: (GarnishDataType, usize)) -> Result<bool, DataError>
+pub fn default_op_handler<T, A>(
+    _data: &mut SimpleGarnishData<T, A>,
+    _instruction: Instruction,
+    _left: (GarnishDataType, usize),
+    _right: (GarnishDataType, usize),
+) -> Result<bool, DataError>
 where
     T: SimpleDataType,
 {
@@ -65,7 +68,8 @@ where
 }
 
 pub type SimpleResolver<T, A> = fn(&mut SimpleGarnishData<T, A>, u64) -> Result<bool, DataError>;
-pub type SimpleOpHandler<T, A> = fn(&mut SimpleGarnishData<T, A>, Instruction, (GarnishDataType, usize), (GarnishDataType, usize)) -> Result<bool, DataError>;
+pub type SimpleOpHandler<T, A> =
+    fn(&mut SimpleGarnishData<T, A>, Instruction, (GarnishDataType, usize), (GarnishDataType, usize)) -> Result<bool, DataError>;
 
 /// Implementation of [`GarnishData`]. Uses standard Rust collections for storing data.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -88,7 +92,7 @@ where
     max_char_list_depth: usize,
     resolver: SimpleResolver<T, A>,
     op_handler: SimpleOpHandler<T, A>,
-    auxiliary_data: A
+    auxiliary_data: A,
 }
 
 /// Alias for [`SimpleGarnishData`] with [`NoCustom`] type parameter.
@@ -111,7 +115,7 @@ impl SimpleGarnishData<NoCustom> {
             max_char_list_depth: 1000,
             resolver: default_resolver,
             op_handler: default_op_handler,
-            auxiliary_data: ()
+            auxiliary_data: (),
         }
     }
 }
@@ -119,7 +123,7 @@ impl SimpleGarnishData<NoCustom> {
 impl<T, A> SimpleGarnishData<T, A>
 where
     T: SimpleDataType,
-    A: Default
+    A: Default,
 {
     pub fn new_custom() -> Self {
         let data = SimpleDataList::<T>::default();
@@ -138,7 +142,7 @@ where
             max_char_list_depth: 1000,
             resolver: default_resolver,
             op_handler: default_op_handler,
-            auxiliary_data: A::default()
+            auxiliary_data: A::default(),
         }
     }
 
@@ -162,7 +166,12 @@ where
         self.op_handler = op_handler;
     }
 
-    pub fn call_op_handler(&mut self, instruction: Instruction, left: (GarnishDataType, usize), right: (GarnishDataType, usize)) -> Result<bool, DataError> {
+    pub fn call_op_handler(
+        &mut self,
+        instruction: Instruction,
+        left: (GarnishDataType, usize),
+        right: (GarnishDataType, usize),
+    ) -> Result<bool, DataError> {
         (self.op_handler)(self, instruction, left, right)
     }
 
@@ -171,6 +180,10 @@ where
             None => Err(format!("No data at addr {:?}", index))?,
             Some(d) => Ok(d),
         }
+    }
+
+    pub fn add(&mut self, data: SimpleData<T>) -> Result<usize, DataError> {
+        self.cache_add(data)
     }
 
     pub fn add_custom(&mut self, data: T) -> Result<usize, DataError> {
@@ -198,6 +211,12 @@ where
         Ok(self.data.len() - 1)
     }
 
+    pub fn add_pair_from(&mut self, left: SimpleData<T>, right: SimpleData<T>) -> Result<usize, DataError> {
+        let left = self.cache_add(left)?;
+        let right = self.cache_add(right)?;
+        self.add_pair((left, right))
+    }
+
     pub fn add_plain_list_from(&mut self, list: Vec<SimpleData<T>>) -> Result<usize, DataError> {
         let mut items = vec![];
 
@@ -218,6 +237,24 @@ where
             self.add_to_list(pair, true)?;
         }
         self.end_list()
+    }
+
+    pub fn add_concatenation_from(
+        &mut self,
+        first: SimpleData<T>,
+        second: SimpleData<T>,
+        additional: Vec<SimpleData<T>>,
+    ) -> Result<usize, DataError> {
+        let first = self.cache_add(first.into())?;
+        let second = self.cache_add(second.into())?;
+        let mut current = self.add_concatenation(first, second)?;
+
+        for item in additional {
+            let next = self.cache_add(item)?;
+            current = self.add_concatenation(current, next)?;
+        }
+
+        Ok(current)
     }
 
     pub fn get_custom(&self, addr: usize) -> Result<T, DataError> {
@@ -254,7 +291,9 @@ where
 
     pub fn set_end_of_constant(&mut self, addr: usize) -> Result<(), DataError> {
         if addr >= self.data.len() {
-            Err(DataError::from("Cannot set end of constant data to be over current data amount".to_string()))
+            Err(DataError::from(
+                "Cannot set end of constant data to be over current data amount".to_string(),
+            ))
         } else {
             self.end_of_constant_data = addr;
             Ok(())
@@ -278,7 +317,10 @@ where
     where
         T: Display + DisplayForCustomItem,
     {
-        self.values.last().and_then(|l| Some(self.data.display_for_item(*l))).unwrap_or("<NoData>".to_string())
+        self.values
+            .last()
+            .and_then(|l| Some(self.data.display_for_item(*l)))
+            .unwrap_or("<NoData>".to_string())
     }
 
     pub fn collect_concatenation_indices(&self, left: usize, right: usize) -> Vec<usize> {
@@ -305,31 +347,33 @@ where
                             items.push(item.clone());
                         }
                     }
-                    (Some(SimpleData::Concatenation(left, right)), Some(SimpleData::Range(start, end))) => match (self.get_data().get(*start), self.get_data().get(*end)) {
-                        (Some(SimpleData::Number(SimpleNumber::Integer(start))), Some(SimpleData::Number(SimpleNumber::Integer(end)))) => {
-                            let mut nested_con_stack = vec![*right, *left];
-                            let mut top_level_con_items = vec![];
+                    (Some(SimpleData::Concatenation(left, right)), Some(SimpleData::Range(start, end))) => {
+                        match (self.get_data().get(*start), self.get_data().get(*end)) {
+                            (Some(SimpleData::Number(SimpleNumber::Integer(start))), Some(SimpleData::Number(SimpleNumber::Integer(end)))) => {
+                                let mut nested_con_stack = vec![*right, *left];
+                                let mut top_level_con_items = vec![];
 
-                            while let Some(item) = nested_con_stack.pop() {
-                                match self.get_data().get(item) {
-                                    None => items.push(UNIT_INDEX),
-                                    Some(SimpleData::Concatenation(left, right)) => {
-                                        nested_con_stack.push(right.clone());
-                                        nested_con_stack.push(left.clone());
+                                while let Some(item) = nested_con_stack.pop() {
+                                    match self.get_data().get(item) {
+                                        None => items.push(UNIT_INDEX),
+                                        Some(SimpleData::Concatenation(left, right)) => {
+                                            nested_con_stack.push(right.clone());
+                                            nested_con_stack.push(left.clone());
+                                        }
+                                        _ => top_level_con_items.push(item.clone()),
                                     }
-                                    _ => top_level_con_items.push(item.clone()),
                                 }
-                            }
 
-                            top_level_con_items
-                                .iter()
-                                .skip(*start as usize)
-                                .take((end - start) as usize + 1)
-                                .map(usize::clone)
-                                .for_each(|i| items.push(i));
+                                top_level_con_items
+                                    .iter()
+                                    .skip(*start as usize)
+                                    .take((end - start) as usize + 1)
+                                    .map(usize::clone)
+                                    .for_each(|i| items.push(i));
+                            }
+                            _ => items.push(UNIT_INDEX),
                         }
-                        _ => items.push(UNIT_INDEX),
-                    },
+                    }
                     _ => items.push(UNIT_INDEX),
                 },
                 Some(_) => items.push(item),
@@ -466,7 +510,9 @@ where
                 }
             }
             GarnishDataType::Range => {
-                let (start, end) = self.get_range(from).and_then(|(start, end)| Ok((self.get_number(start)?, self.get_number(end)?)))?;
+                let (start, end) = self
+                    .get_range(from)
+                    .and_then(|(start, end)| Ok((self.get_number(start)?, self.get_number(end)?)))?;
 
                 let s = format!("{}..{}", start, end);
 
@@ -531,7 +577,10 @@ where
             GarnishDataType::Slice => {
                 let (value, range) = self.get_slice(from)?;
                 let (start, end) = self.get_range(range)?;
-                let (start, end) = (self.get_number(start)?.to_integer().as_integer()?, self.get_number(end)?.to_integer().as_integer()?);
+                let (start, end) = (
+                    self.get_number(start)?.to_integer().as_integer()?,
+                    self.get_number(end)?.to_integer().as_integer()?,
+                );
 
                 match self.get_data_type(value)? {
                     GarnishDataType::CharList => {
@@ -568,7 +617,7 @@ where
 
                             Ok(None)
                         })
-                            .or_else(|err| Err(DataError::from(format!("{:?}", err))))?;
+                        .or_else(|err| Err(DataError::from(format!("{:?}", err))))?;
                     }
                     _ => {
                         self.add_to_current_char_list(value, depth + 1)?;
@@ -860,7 +909,11 @@ mod to_char_list {
     #[test]
     fn symbol() {
         let s = SimpleGarnishData::<NoCustom>::parse_symbol("my_symbol").unwrap().to_string();
-        assert_to_char_list(s.as_str(), |runtime| runtime.add_symbol(SimpleGarnishData::<NoCustom>::parse_symbol("my_symbol").unwrap()).unwrap())
+        assert_to_char_list(s.as_str(), |runtime| {
+            runtime
+                .add_symbol(SimpleGarnishData::<NoCustom>::parse_symbol("my_symbol").unwrap())
+                .unwrap()
+        })
     }
 
     #[test]
