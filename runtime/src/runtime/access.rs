@@ -11,7 +11,9 @@ pub fn access<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, 
         | (GarnishDataType::Symbol, GarnishDataType::SymbolList)
         | (GarnishDataType::SymbolList, GarnishDataType::Symbol)
         | (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => this.merge_to_symbol_list(left_addr, right_addr).and_then(|i| this.push_register(i))?,
-        (GarnishDataType::List, GarnishDataType::Number)
+        (GarnishDataType::Pair, GarnishDataType::Number)
+        | (GarnishDataType::Pair, GarnishDataType::Symbol)
+        | (GarnishDataType::List, GarnishDataType::Number)
         | (GarnishDataType::List, GarnishDataType::Symbol)
         | (GarnishDataType::CharList, GarnishDataType::Number)
         | (GarnishDataType::CharList, GarnishDataType::Symbol)
@@ -67,6 +69,100 @@ mod tests {
     use crate::runtime::access::access;
     use crate::runtime::tests::MockGarnishData;
     use garnish_lang_traits::GarnishDataType;
+
+    #[test]
+    fn access_pair_with_number() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Number, GarnishDataType::Symbol, GarnishDataType::Pair, GarnishDataType::Number]);
+
+        mock_data.stub_get_number = |_, i| {
+            assert_eq!(i, 3);
+            Ok(0)
+        };
+        mock_data.stub_get_pair = |_, i| {
+            assert_eq!(i, 2);
+            Ok((1, 0))
+        };
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 2);
+            Ok(())
+        };
+
+        let result = access(&mut mock_data).unwrap();
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn access_pair_with_non_zero_number() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Number, GarnishDataType::Symbol, GarnishDataType::Pair, GarnishDataType::Number]);
+
+        mock_data.stub_get_number = |_, i| {
+            assert_eq!(i, 3);
+            Ok(1)
+        };
+        mock_data.stub_get_pair = |_, i| {
+            assert_eq!(i, 2);
+            Ok((1, 0))
+        };
+        mock_data.stub_add_unit = |_| Ok(100);
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 100);
+            Ok(())
+        };
+
+        let result = access(&mut mock_data).unwrap();
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn access_pair_with_symbol() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Number, GarnishDataType::Pair, GarnishDataType::Symbol]);
+
+        mock_data.stub_get_symbol = |_, i| {
+            assert_eq!(i, 2);
+            Ok(0)
+        };
+        mock_data.stub_get_pair = |_, i| {
+            assert_eq!(i, 1);
+            Ok((2, 0))
+        };
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 0);
+            Ok(())
+        };
+
+        let result = access(&mut mock_data).unwrap();
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn access_pair_with_non_matching_symbol() {
+        let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::Number, GarnishDataType::Symbol, GarnishDataType::Pair, GarnishDataType::Symbol]);
+
+        mock_data.stub_get_symbol = |_, i| {
+            if i == 3 {
+                Ok(40)
+            } else {
+                assert_eq!(i, 1);
+                Ok(30)
+            }
+        };
+        mock_data.stub_get_pair = |_, i| {
+            assert_eq!(i, 2);
+            Ok((1, 0))
+        };
+        mock_data.stub_add_unit = |_| Ok(100);
+        mock_data.stub_push_register = |_, i| {
+            assert_eq!(i, 100);
+            Ok(())
+        };
+
+        let result = access(&mut mock_data).unwrap();
+
+        assert_eq!(result, None);
+    }
 
     #[test]
     fn create_symbol_list() {
