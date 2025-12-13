@@ -465,7 +465,7 @@ mod tests {
 
     #[test]
     fn get_data_len() {
-        let mut data = BasicGarnishDataUnit::new();
+        let data = BasicGarnishDataUnit::new();
         assert_eq!(data.get_data_len(), 0);
     }
 
