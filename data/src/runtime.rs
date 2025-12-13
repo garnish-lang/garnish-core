@@ -2,10 +2,10 @@ use std::convert::TryInto;
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use garnish_lang_traits::{GarnishData, GarnishNumber};
+use garnish_lang_traits::{GarnishData, GarnishDataType, GarnishNumber, Instruction};
 
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
-use crate::{DataError, DataIndexIterator, GarnishDataType, Instruction, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value, SimpleDataType};
+use crate::{DataError, DataIndexIterator, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value, SimpleDataType};
 
 impl<T, A> GarnishData for SimpleGarnishData<T, A>
 where
@@ -842,7 +842,8 @@ where
 mod tests {
     use garnish_lang_traits::GarnishData;
 
-    use crate::{GarnishDataType, Instruction, SimpleGarnishData, SimpleNumber};
+    use crate::{SimpleGarnishData, SimpleNumber};
+    use garnish_lang_traits::{GarnishDataType, Instruction};
 
     #[test]
     fn type_of() {

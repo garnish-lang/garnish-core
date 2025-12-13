@@ -392,7 +392,8 @@ numbers_to_simple_data!(i8, i16, i32, i64, u8, u16, u32, u64, isize, usize, f32,
 mod tests {
     use crate::data::stack_frame::SimpleStackFrame;
     use crate::data::{SimpleDataNC, SimpleNumber};
-    use crate::{GarnishDataType, NoCustom, SimpleData};
+    use crate::{NoCustom, SimpleData};
+    use garnish_lang_traits::GarnishDataType;
 
     #[test]
     fn from_true() {
