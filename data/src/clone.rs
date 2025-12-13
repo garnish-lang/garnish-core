@@ -1,7 +1,5 @@
 use crate::{DataError, SimpleDataType, SimpleGarnishData};
 use garnish_lang_traits::helpers::clone_data;
-use std::fmt::Debug;
-use std::hash::Hash;
 
 fn clone_with_retained_data_internal<T, A>(
     from: &SimpleGarnishData<T, A>,
