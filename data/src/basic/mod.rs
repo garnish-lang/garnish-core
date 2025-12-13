@@ -158,12 +158,6 @@ pub struct BasicGarnishData<T> {
 
 pub type BasicGarnishDataUnit = BasicGarnishData<()>;
 
-impl BasicGarnishDataUnit {
-    pub fn new_unit() -> Self {
-        Self { data: vec![] }
-    }
-}
-
 impl<T> BasicGarnishData<T> {
     pub fn new() -> Self {
         Self { data: Vec::new() }
@@ -205,13 +199,8 @@ mod tests {
     }
 
     #[test]
-    fn test_basic_garnish_data_new_unit() {
-        BasicGarnishData::new_unit();
-    }
-
-    #[test]
     fn add_basic_data() {
-        let mut data = BasicGarnishData::new_unit();
+        let mut data = BasicGarnishDataUnit::new();
 
         let index = data.push_basic_data(BasicData::Unit);
         assert_eq!(index, 0);
@@ -224,7 +213,7 @@ mod tests {
 
     #[test]
     fn get_basic_data() {
-        let mut data = BasicGarnishData::new_unit();
+        let mut data = BasicGarnishDataUnit::new();
         let index1 = data.push_basic_data(BasicData::Unit);
         let index2 = data.push_basic_data(BasicData::True);
 
@@ -234,7 +223,7 @@ mod tests {
 
     #[test]
     fn get_basic_data_mut() {
-        let mut data = BasicGarnishData::new_unit();
+        let mut data = BasicGarnishDataUnit::new();
         let index1 = data.push_basic_data(BasicData::Unit);
         let index2 = data.push_basic_data(BasicData::True);
 
@@ -244,7 +233,7 @@ mod tests {
 
     #[test]
     fn get_data_ensure_index_ok() {
-        let mut data = BasicGarnishData::new_unit();
+        let mut data = BasicGarnishDataUnit::new();
         data.push_basic_data(BasicData::Number(100.into()));
         let result = data.get_data_ensure_index(0);
         assert_eq!(result, Ok(&BasicData::Number(100.into())));
@@ -252,7 +241,7 @@ mod tests {
 
     #[test]
     fn get_data_ensure_index_error() {
-        let mut data = BasicGarnishData::new_unit();
+        let mut data = BasicGarnishDataUnit::new();
         data.push_basic_data(BasicData::Number(100.into()));
         let result = data.get_data_ensure_index(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
