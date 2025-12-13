@@ -485,7 +485,7 @@ mod tests {
 #[allow(unused)]
 mod test_data_impl {
     use garnish_lang::simple::{DataError, NumberIterator, SimpleNumber, SizeIterator};
-    use garnish_lang::{GarnishData, GarnishDataType, Instruction};
+    use garnish_lang::{GarnishData, GarnishDataType, Instruction, SymbolListPart};
 
     pub struct TestData {
         pub unit_added: bool,
@@ -670,7 +670,7 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Symbol, Self::Error> {
+        fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error> {
             unimplemented!()
         }
 

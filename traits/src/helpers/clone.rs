@@ -1,4 +1,4 @@
-use crate::{GarnishData, GarnishDataType, TypeConstants};
+use crate::{GarnishData, GarnishDataType, SymbolListPart, TypeConstants};
 
 pub type CloneHandler<Data> = fn(<Data as GarnishData>::Size, &Data, &mut Data) -> Result<<Data as GarnishData>::Size, <Data as GarnishData>::Error>;
 
@@ -118,18 +118,27 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
             None => to.add_unit(),
             Some(first) => {
                 let sym = from.get_symbol_list_item(addr.clone(), first)?;
-                let sym1_addr = to.add_symbol(sym)?;
+                let sym1_addr = match sym {
+                    SymbolListPart::Symbol(sym) => to.add_symbol(sym)?,
+                    SymbolListPart::Number(num) => to.add_number(num)?
+                };
 
                 match iter.next() {
                     None => Ok(sym1_addr),
                     Some(second) => {
                         let sym = from.get_symbol_list_item(addr.clone(), second)?;
-                        let sym2_addr = to.add_symbol(sym)?;
+                        let sym2_addr = match sym {
+                            SymbolListPart::Symbol(sym) => to.add_symbol(sym)?,
+                            SymbolListPart::Number(num) => to.add_number(num)?
+                        };
                         let mut previous = to.merge_to_symbol_list(sym1_addr, sym2_addr)?;
 
                         while let Some(index) = iter.next() {
                             let sym = from.get_symbol_list_item(addr.clone(), index)?;
-                            let sym_addr = to.add_symbol(sym)?;
+                            let sym_addr = match sym {
+                                SymbolListPart::Symbol(sym) => to.add_symbol(sym)?,
+                                SymbolListPart::Number(num) => to.add_number(num)?
+                            };
                             let sym_list = to.merge_to_symbol_list(previous, sym_addr)?;
                             previous = sym_list;
                         }

@@ -1,4 +1,4 @@
-use garnish_lang_traits::{GarnishData, GarnishDataType};
+use garnish_lang_traits::{GarnishData, GarnishDataType, SymbolListPart};
 use crate::{BasicData, DataError, DataIndexIterator, NumberIterator, SizeIterator, basic::{BasicGarnishData, BasicNumber}, error::DataErrorType};
 
 impl<T> GarnishData for BasicGarnishData<T> {
@@ -168,7 +168,7 @@ impl<T> GarnishData for BasicGarnishData<T> {
         todo!()
     }
     
-    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Symbol, Self::Error> {
+    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error> {
         todo!()
     }
     

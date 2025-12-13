@@ -477,7 +477,7 @@ where
 mod tests {
     use crate::runtime::equality::equal;
     use crate::runtime::tests::{MockError, MockGarnishData, MockIterator};
-    use garnish_lang_traits::GarnishDataType;
+    use garnish_lang_traits::{GarnishDataType, SymbolListPart};
 
     struct ListCompData {
         pub types: Vec<GarnishDataType>,
@@ -487,9 +487,9 @@ mod tests {
     }
 
     impl ListCompData {
-        fn get_symbol_list_item(&self, list: i32, index: i32) -> Result<u32, MockError> {
+        fn get_symbol_list_item(&self, list: i32, index: i32) -> Result<SymbolListPart<u32, i32>, MockError> {
             let item = self.items.get(list as usize).unwrap().get(index as usize).unwrap().clone();
-            Ok(item)
+            Ok(SymbolListPart::Symbol(item))
         }
 
         fn get_character_list_item(&self, list: i32, index: i32) -> Result<char, MockError> {

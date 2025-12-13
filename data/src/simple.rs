@@ -2,7 +2,7 @@ use crate::data::{DisplayForCustomItem, SimpleDataList, SimpleStackFrame, UNIT_I
 use crate::error::DataError;
 use crate::instruction::SimpleInstruction;
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
-use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
+use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction, SymbolListPart};
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
@@ -464,10 +464,12 @@ where
                 let len = self.get_symbol_list_len(from)?;
                 let mut strs = vec![];
                 for i in 0..len {
-                    let sym = self.get_symbol_list_item(from, i.into())?;
-                    let s = match self.data.get_symbol(sym) {
-                        None => sym.to_string(),
-                        Some(s) => s.clone(),
+                    let s = match self.get_symbol_list_item(from, i.into())? {
+                        SymbolListPart::Symbol(sym) => match self.data.get_symbol(sym) {
+                            None => sym.to_string(),
+                            Some(s) => s.clone(),
+                        },
+                        SymbolListPart::Number(num) => num.to_integer().as_integer()?.to_string(),
                     };
                     strs.push(format!("{}", s));
                 }

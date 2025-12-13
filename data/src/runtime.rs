@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-use garnish_lang_traits::{GarnishData, GarnishDataType, GarnishNumber, Instruction};
+use garnish_lang_traits::{GarnishData, GarnishDataType, GarnishNumber, Instruction, SymbolListPart};
 
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
 use crate::{DataError, DataIndexIterator, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value, SimpleDataType};
@@ -256,11 +256,11 @@ where
         Ok(self.get(addr)?.as_symbol_list()?.len())
     }
 
-    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Symbol, Self::Error> {
+    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error> {
         match item_index {
             SimpleNumber::Integer(item_index) => match self.get(addr)?.as_symbol_list()?.get(item_index as usize) {
                 None => Err(format!("No value at index {:?} for symbol list at {:?}", item_index, addr))?,
-                Some(c) => Ok(*c),
+                Some(c) => Ok(SymbolListPart::Symbol(*c)),
             },
             SimpleNumber::Float(_) => Err(DataError::from("Cannot index symbol list with decimal value.".to_string())), // should return None
         }

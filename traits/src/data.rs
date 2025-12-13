@@ -59,6 +59,12 @@ pub trait GarnishNumber: Sized {
     fn bitwise_shift_right(self, rhs: Self) -> Option<Self>;
 }
 
+#[derive(Clone, PartialEq, Eq, PartialOrd, Debug)]
+pub enum SymbolListPart<A, B> {
+    Symbol(A),
+    Number(B)
+}
+
 /// Trait defining what a data access operations are required by a runtime.
 pub trait GarnishData {
     type Error: std::error::Error + 'static;
@@ -132,7 +138,7 @@ pub trait GarnishData {
     fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
 
     fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Symbol, Self::Error>;
+    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error>;
     fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
 
     fn get_list_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator;

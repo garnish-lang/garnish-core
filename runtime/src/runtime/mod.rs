@@ -45,7 +45,7 @@ pub mod ops {
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
+    use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction, SymbolListPart};
     use std::error::Error;
     use std::fmt::Display;
 
@@ -190,7 +190,7 @@ mod tests {
         pub stub_get_byte_list_item: fn(&T, addr: i32, item_index: i32) -> Result<u8, MockError>,
         pub stub_get_byte_list_iter: fn(&T, list_addr: i32) -> MockIterator,
         pub stub_get_symbol_list_len: fn(&T, addr: i32) -> Result<i32, MockError>,
-        pub stub_get_symbol_list_item: fn(&T, addr: i32, item_index: i32) -> Result<u32, MockError>,
+        pub stub_get_symbol_list_item: fn(&T, addr: i32, item_index: i32) -> Result<SymbolListPart<u32, i32>, MockError>,
         pub stub_get_symbol_list_iter: fn(&T, list_addr: i32) -> MockIterator,
         pub stub_get_list_item_iter: fn(&T, addr: i32) -> MockIterator,
         pub stub_get_concatenation_iter: fn(&T, addr: i32) -> MockIterator,
@@ -593,7 +593,7 @@ mod tests {
             (self.stub_get_symbol_list_len)(self.data(), addr)
         }
 
-        fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Symbol, Self::Error> {
+        fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error> {
             (self.stub_get_symbol_list_item)(self.data(), addr, item_index)
         }
 

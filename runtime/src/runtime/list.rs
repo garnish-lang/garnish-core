@@ -2,6 +2,7 @@ use crate::runtime::error::state_error;
 use crate::runtime::error::OrNumberError;
 use crate::runtime::range::range_len;
 use crate::runtime::utilities::get_range;
+use garnish_lang_traits::SymbolListPart;
 use garnish_lang_traits::helpers::{iterate_concatenation_mut, iterate_rev_concatenation_mut};
 use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
 
@@ -210,8 +211,10 @@ fn index_symbol_list<Data: GarnishData>(
         if index >= Data::size_to_number(this.get_symbol_list_len(list.clone())?) {
             Ok(None)
         } else {
-            let c = this.get_symbol_list_item(list, index)?;
-            let addr = this.add_symbol(c)?;
+            let addr = match this.get_symbol_list_item(list, index)? {
+                SymbolListPart::Symbol(sym) => this.add_symbol(sym)?,
+                SymbolListPart::Number(num) => this.add_number(num)?,
+            };
             Ok(Some(addr))
         }
     }

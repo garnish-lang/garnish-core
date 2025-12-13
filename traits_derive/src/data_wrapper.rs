@@ -424,7 +424,7 @@ fn create_missing_functions(
     all_functions.insert(
         "get_symbol_list_item",
         quote! {
-            fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Symbol, Self::Error> {
+            fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error> {
                 self.#delegate_field.get_symbol_list_item(addr, item_index)
             }
         },

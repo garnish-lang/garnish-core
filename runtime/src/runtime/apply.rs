@@ -1,7 +1,7 @@
 use crate::runtime::error::state_error;
 use crate::runtime::list::{access_with_integer, access_with_symbol};
 use crate::runtime::utilities::*;
-use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, GarnishNumber, Instruction, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, GarnishNumber, Instruction, RuntimeError, SymbolListPart, TypeConstants};
 use log::trace;
 
 pub fn apply<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -141,14 +141,26 @@ fn apply_internal<Data: GarnishData>(this: &mut Data, instruction: Instruction, 
             let mut current = left_addr.clone();
             while let Some(sym_index) = iter.next() {
                 let sym = this.get_symbol_list_item(right_addr.clone(), sym_index)?;
-
-                match access_with_symbol(this, sym, current)? {
-                    None => {
-                        current = this.add_unit()?;
-                        break;
+                match sym {
+                    SymbolListPart::Symbol(sym) => {
+                        match access_with_symbol(this, sym, current)? {
+                            None => {
+                                current = this.add_unit()?;
+                                break;
+                            }
+                            Some(i) => current = i,
+                        }
+                    },
+                    SymbolListPart::Number(num) => {
+                        match access_with_integer(this, num, current)? {
+                            None => {
+                                current = this.add_unit()?;
+                                break;
+                            }
+                            Some(i) => current = i,
+                        }
                     }
-                    Some(i) => current = i,
-                }
+                };
             }
 
             this.push_register(current)?;
@@ -250,7 +262,7 @@ mod data_apply {
 mod tests {
     use crate::runtime::apply::{apply, empty_apply};
     use crate::runtime::tests::{MockGarnishData, MockIterator};
-    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
+    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT, SymbolListPart};
 
     #[test]
     fn apply_number_to_pair() {
@@ -400,7 +412,7 @@ mod tests {
         mock_data.stub_get_symbol_list_iter = |_, _| MockIterator::new(2);
         mock_data.stub_get_symbol_list_item = |_, list, i| {
             assert_eq!(list, 2);
-            Ok((i + 1) as u32 * 100u32)
+            Ok(SymbolListPart::Symbol((i + 1) as u32 * 100u32))
         };
         mock_data.stub_get_list_item_with_symbol = |_, list, i| {
             if i == 100 {
@@ -490,7 +502,7 @@ mod tests {
             Ok(1)
         };
         mock_data.stub_get_symbol_list_len = |_, _| Ok(2);
-        mock_data.stub_get_symbol_list_item = |_, _, index| Ok((index + 1) as u32 * 10);
+        mock_data.stub_get_symbol_list_item = |_, _, index| Ok(SymbolListPart::Symbol((index + 1) as u32 * 100u32));
         mock_data.stub_add_symbol = |_, sym| {
             assert_eq!(sym, 20);
             Ok(5)
@@ -610,7 +622,7 @@ mod tests {
 mod slice {
     use crate::runtime::apply::apply;
     use crate::runtime::tests::MockGarnishData;
-    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
+    use garnish_lang_traits::{GarnishDataType, SymbolListPart};
 
     #[test]
     fn symbol_list() {
@@ -621,7 +633,7 @@ mod slice {
             Ok(1)
         };
         mock_data.stub_get_symbol_list_len = |_, _| Ok(2);
-        mock_data.stub_get_symbol_list_item = |_, _, index| Ok((index + 1) as u32 * 10);
+        mock_data.stub_get_symbol_list_item = |_, _, index| Ok(SymbolListPart::Symbol((index + 1) as u32 * 100u32));
         mock_data.stub_add_slice = |_, list, range| {
             assert_eq!(list, 0);
             assert_eq!(range, 1);

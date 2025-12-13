@@ -205,7 +205,7 @@ fn create_garnish_data_impl(
             fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.get_symbol_list_len(addr)
             }
-            fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Symbol, Self::Error> {
+            fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error> {
                 self.#delegate_field.get_symbol_list_item(addr, item_index)
             }
             fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {

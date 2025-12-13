@@ -1,4 +1,4 @@
-use garnish_lang_traits::Instruction;
+use garnish_lang_traits::{Instruction, SymbolListPart};
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
 
 use crate::runtime::error::OrNumberError;
@@ -79,7 +79,10 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
             this.start_list(len)?;
             while let Some(index) = iter.next() {
                 let sym = this.get_symbol_list_item(left.clone(), index)?;
-                let item_index = this.add_symbol(sym)?;
+                let item_index = match sym {
+                    SymbolListPart::Symbol(sym) => this.add_symbol(sym)?,
+                    SymbolListPart::Number(num) => this.add_number(num)?,
+                };
                 this.add_to_list(item_index, false)?;
             }
             this.end_list().and_then(|r| this.push_register(r))?
@@ -264,7 +267,7 @@ where
 mod tests {
     use crate::runtime::casting::type_cast;
     use crate::runtime::tests::{MockGarnishData, MockIterator};
-    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT};
+    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT, SymbolListPart};
 
     #[test]
     fn symbol_list_to_list() {
@@ -273,7 +276,7 @@ mod tests {
         data.stub_get_symbol_list_iter = |_, _| MockIterator::new(2);
         data.stub_get_symbol_list_len = |_, _| Ok(2);
         data.stub_start_list = |_, _| Ok(());
-        data.stub_get_symbol_list_item = |_, _, i| Ok(i as u32 + 10);
+        data.stub_get_symbol_list_item = |_, _, i| Ok(SymbolListPart::Symbol(i as u32 + 10));
         data.stub_add_symbol = |_, sym| {
             assert!([10, 11].contains(&sym));
             Ok(sym as i32)
