@@ -1,5 +1,5 @@
 use garnish_lang_traits::{GarnishData, GarnishDataType};
-use crate::{DataError, DataIndexIterator, NumberIterator, SizeIterator, basic::{BasicGarnishData, BasicNumber}, error::DataErrorType};
+use crate::{BasicData, DataError, DataIndexIterator, NumberIterator, SizeIterator, basic::{BasicGarnishData, BasicNumber}, error::DataErrorType};
 
 impl<T> GarnishData for BasicGarnishData<T> {
     type Error = DataError;
@@ -68,11 +68,23 @@ impl<T> GarnishData for BasicGarnishData<T> {
     }
     
     fn get_number(&self, addr: Self::Size) -> Result<Self::Number, Self::Error> {
-        todo!()
+        match self.get_basic_data(addr) {
+            Some(data) => match data {
+                BasicData::Number(number) => Ok(*number),
+                _ => Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Number))),
+            },
+            None => Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(addr))),
+        }
     }
     
     fn get_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
-        todo!()
+        match self.get_basic_data(addr) {
+            Some(data) => match data {
+                BasicData::Type(type_) => Ok(*type_),
+                _ => Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Type))),
+            },
+            None => Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(addr))),
+        }
     }
     
     fn get_char(&self, addr: Self::Size) -> Result<Self::Char, Self::Error> {
@@ -506,5 +518,53 @@ mod tests {
         data.push_basic_data(BasicData::Number(100.into()));
         let result = data.get_data_type(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_number_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_number(0);
+        assert_eq!(result, Ok(100.into()));
+    }
+
+    #[test]
+    fn get_number_invalid_index() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_number(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_number_not_number() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Symbol(100));
+        let result = data.get_number(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Number))));
+    }
+
+    #[test]
+    fn get_type_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Type(GarnishDataType::Number));
+        let result = data.get_type(0);
+        assert_eq!(result, Ok(GarnishDataType::Number));
+    }
+    
+    #[test]
+    fn get_type_error() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Type(GarnishDataType::Number));
+        let result = data.get_type(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_type_not_type() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Symbol(100));
+        let result = data.get_type(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Type))));
     }
 }

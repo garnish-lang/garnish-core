@@ -1,9 +1,12 @@
 use std::fmt::{Debug, Display, Formatter};
 
+use garnish_lang_traits::GarnishDataType;
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub enum DataErrorType {
     Unknown,
     InvalidDataIndex(usize),
+    NotType(GarnishDataType),
 }
 
 /// Error implemenation for [`crate::SimpleGarnishData`].
