@@ -371,7 +371,7 @@ where
 
                 Ok(list_index)
             }
-            _ => todo!(),
+            _ => Ok(self.push_basic_data(BasicData::Unit)),
         }
     }
 
@@ -935,6 +935,63 @@ mod tests {
                 BasicData::Symbol(200),
                 BasicData::Symbol(300),
                 BasicData::Symbol(400),
+            ])
+        );
+    }
+
+    #[test]
+    fn merge_to_symbol_list_invalid_left() {
+        let mut data = BasicGarnishDataUnit::new();
+        let v1 = data.push_basic_data(BasicData::Number(100.into()));
+        let v2 = data.push_basic_data(BasicData::Expression(2));
+
+        let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
+
+        assert_eq!(v3, 2);
+        assert_eq!(
+            data,
+            BasicGarnishDataUnit::new_full(vec![
+                BasicData::Number(100.into()),
+                BasicData::Expression(2),
+                BasicData::Unit,
+            ])
+        );
+    }
+
+    #[test]
+    fn merge_to_symbol_list_invalid_right() {
+        let mut data = BasicGarnishDataUnit::new();
+        let v1 = data.push_basic_data(BasicData::Number(100.into()));
+        let v2 = data.push_basic_data(BasicData::Expression(2));
+
+        let v3 = data.merge_to_symbol_list(v2, v1).unwrap();
+
+        assert_eq!(v3, 2);
+        assert_eq!(
+            data,
+            BasicGarnishDataUnit::new_full(vec![
+                BasicData::Number(100.into()),
+                BasicData::Expression(2),
+                BasicData::Unit,
+            ])
+        );
+    }
+
+    #[test]
+    fn merge_to_symbol_list_invalid_right_and_left() {
+        let mut data = BasicGarnishDataUnit::new();
+        let v1 = data.push_basic_data(BasicData::Expression(100));
+        let v2 = data.push_basic_data(BasicData::Expression(2));
+
+        let v3 = data.merge_to_symbol_list(v2, v1).unwrap();
+
+        assert_eq!(v3, 2);
+        assert_eq!(
+            data,
+            BasicGarnishDataUnit::new_full(vec![
+                BasicData::Expression(100),
+                BasicData::Expression(2),
+                BasicData::Unit,
             ])
         );
     }
