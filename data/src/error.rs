@@ -1,7 +1,7 @@
 use std::fmt::{Debug, Display, Formatter};
 
 /// Error implemenation for [`crate::SimpleGarnishData`].
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub struct DataError {
     message: String,
 }
@@ -13,6 +13,12 @@ impl Display for DataError {
 }
 
 impl std::error::Error for DataError {}
+
+impl From<&str> for DataError {
+    fn from(s: &str) -> Self {
+        DataError { message: s.to_string() }
+    }
+}
 
 impl From<String> for DataError {
     fn from(s: String) -> Self {

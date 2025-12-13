@@ -61,7 +61,10 @@ impl<T> GarnishData for BasicGarnishData<T> {
     }
     
     fn get_data_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
-        todo!()
+        match self.get_basic_data(addr) {
+            Some(data) => Ok(data.get_data_type()),
+            None => Err(DataError::from("Invalid data index")),
+        }
     }
     
     fn get_number(&self, addr: Self::Size) -> Result<Self::Number, Self::Error> {
@@ -487,5 +490,21 @@ mod tests {
         assert_eq!(iter.next(), Some(0));
         assert_eq!(iter.next(), Some(1));
         assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn get_data_type_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_data_type(0);
+        assert_eq!(result, Ok(GarnishDataType::Number));
+    }
+
+    #[test]
+    fn get_data_type_error() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_data_type(1);
+        assert_eq!(result, Err(DataError::from("Invalid data index")));
     }
 }
