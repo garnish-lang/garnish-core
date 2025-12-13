@@ -20,6 +20,10 @@ impl DataError {
     pub fn new(message: &str, error_type: DataErrorType) -> Self {
         DataError { message: message.to_string(), error_type }
     }
+
+    pub fn not_type_error(expected: GarnishDataType) -> Self {
+        DataError::new("Not of type", DataErrorType::NotType(expected))
+    }
 }
 
 impl Display for DataError {

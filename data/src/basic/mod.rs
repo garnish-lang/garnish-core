@@ -60,96 +60,92 @@ impl<T> BasicData<T> {
     pub fn as_type(&self) -> Result<GarnishDataType, DataError> {
         match self {
             BasicData::Type(type_) => Ok(*type_),
-            _ => Err(Self::not_type_error(GarnishDataType::Type)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Type)),
         }
     }
 
     pub fn as_number(&self) -> Result<BasicNumber, DataError> {
         match self {
             BasicData::Number(number) => Ok(*number),
-            _ => Err(Self::not_type_error(GarnishDataType::Number)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Number)),
         }
     }
 
     pub fn as_char(&self) -> Result<char, DataError> {
         match self {
             BasicData::Char(c) => Ok(*c),
-            _ => Err(Self::not_type_error(GarnishDataType::Char)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Char)),
         }
     }
 
     pub fn as_byte(&self) -> Result<u8, DataError> {
         match self {
             BasicData::Byte(b) => Ok(*b),
-            _ => Err(Self::not_type_error(GarnishDataType::Byte)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Byte)),
         }
     }
 
     pub fn as_symbol(&self) -> Result<u64, DataError> {
         match self {
             BasicData::Symbol(s) => Ok(*s),
-            _ => Err(Self::not_type_error(GarnishDataType::Symbol)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Symbol)),
         }
     }
 
     pub fn as_expression(&self) -> Result<usize, DataError> {
         match self {
             BasicData::Expression(e) => Ok(*e),
-            _ => Err(Self::not_type_error(GarnishDataType::Expression)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Expression)),
         }
     }
 
     pub fn as_external(&self) -> Result<usize, DataError> {
         match self {
             BasicData::External(e) => Ok(*e),
-            _ => Err(Self::not_type_error(GarnishDataType::External)),
+            _ => Err(DataError::not_type_error(GarnishDataType::External)),
         }
     }
 
     pub fn as_pair(&self) -> Result<(usize, usize), DataError> {
         match self {
             BasicData::Pair(left, right) => Ok((*left, *right)),
-            _ => Err(Self::not_type_error(GarnishDataType::Pair)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Pair)),
         }
     }
 
     pub fn as_partial(&self) -> Result<(usize, usize), DataError> {
         match self {
             BasicData::Partial(left, right) => Ok((*left, *right)),
-            _ => Err(Self::not_type_error(GarnishDataType::Partial)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Partial)),
         }
     }
 
     pub fn as_concatenation(&self) -> Result<(usize, usize), DataError> {
         match self {
             BasicData::Concatenation(left, right) => Ok((*left, *right)),
-            _ => Err(Self::not_type_error(GarnishDataType::Concatenation)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Concatenation)),
         }
     }
 
     pub fn as_range(&self) -> Result<(usize, usize), DataError> {
         match self {
             BasicData::Range(start, end) => Ok((*start, *end)),
-            _ => Err(Self::not_type_error(GarnishDataType::Range)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Range)),
         }
     }
 
     pub fn as_slice(&self) -> Result<(usize, usize), DataError> {
         match self {
             BasicData::Slice(value, range) => Ok((*value, *range)),
-            _ => Err(Self::not_type_error(GarnishDataType::Slice)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Slice)),
         }
     }
 
     pub fn as_custom(&self) -> Result<&T, DataError> {
         match self {
             BasicData::Custom(c) => Ok(c),
-            _ => Err(Self::not_type_error(GarnishDataType::Custom)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Custom)),
         }
-    }
-
-    fn not_type_error(expected: GarnishDataType) -> DataError {
-        DataError::new("Not of type", DataErrorType::NotType(expected))
     }
 }
 
