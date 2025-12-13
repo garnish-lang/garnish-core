@@ -9,10 +9,12 @@ mod error;
 mod instruction;
 mod runtime;
 mod simple;
+mod basic;
 
 pub use data::*;
 pub use instruction::SimpleInstruction;
 pub use simple::*;
+pub use basic::*;
 
 /// Utility to convert strings to [`u64`], the Symbol type for [`SimpleGarnishData`].
 pub fn symbol_value(value: &str) -> u64 {
