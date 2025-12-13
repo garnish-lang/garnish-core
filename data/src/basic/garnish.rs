@@ -73,43 +73,43 @@ impl<T> GarnishData for BasicGarnishData<T> {
     }
     
     fn get_char(&self, addr: Self::Size) -> Result<Self::Char, Self::Error> {
-        todo!()
+        self.get_data_ensure_index(addr)?.as_char()
     }
     
     fn get_byte(&self, addr: Self::Size) -> Result<Self::Byte, Self::Error> {
-        todo!()
+        self.get_data_ensure_index(addr)?.as_byte()
     }
     
     fn get_symbol(&self, addr: Self::Size) -> Result<Self::Symbol, Self::Error> {
-        todo!()
+        self.get_data_ensure_index(addr)?.as_symbol()
     }
     
     fn get_expression(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        self.get_data_ensure_index(addr)?.as_expression()
     }
     
     fn get_external(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        self.get_data_ensure_index(addr)?.as_external()
     }
     
     fn get_pair(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
-        todo!()
+        self.get_data_ensure_index(addr)?.as_pair()
     }
     
     fn get_concatenation(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
-        todo!()
+        self.get_data_ensure_index(addr)?.as_concatenation()
     }
     
     fn get_range(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
-        todo!()
+        self.get_data_ensure_index(addr)?.as_range()
     }
     
     fn get_slice(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
-        todo!()
+        self.get_data_ensure_index(addr)?.as_slice()
     }
     
     fn get_partial(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error> {
-        todo!()
+        self.get_data_ensure_index(addr)?.as_partial()
     }
     
     fn get_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -551,5 +551,245 @@ mod tests {
         data.push_basic_data(BasicData::Symbol(100));
         let result = data.get_type(0);
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Type))));
+    }
+
+    #[test]
+    fn get_char_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Char('a'));
+        let result = data.get_char(0);
+        assert_eq!(result, Ok('a'));
+    }
+
+    #[test]
+    fn get_char_not_char() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_char(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Char))));
+    }
+
+    #[test]
+    fn get_char_invalid_index() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Char('a'));
+        let result = data.get_char(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_byte_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Byte(100));
+        let result = data.get_byte(0);
+        assert_eq!(result, Ok(100));
+    }
+
+    #[test]
+    fn get_byte_not_byte() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_byte(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Byte))));
+    }
+
+    #[test]
+    fn get_byte_invalid_index() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Byte(100));
+        let result = data.get_byte(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_symbol_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Symbol(100));
+        let result = data.get_symbol(0);
+        assert_eq!(result, Ok(100));
+    }
+
+    #[test]
+    fn get_symbol_not_symbol() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_symbol(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Symbol))));
+    }
+
+    #[test]
+    fn get_symbol_invalid_index() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Symbol(100));
+        let result = data.get_symbol(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_expression_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Expression(100));
+        let result = data.get_expression(0);
+        assert_eq!(result, Ok(100));
+    }
+
+    #[test]
+    fn get_expression_not_expression() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_expression(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Expression))));
+    }
+
+    #[test]
+    fn get_expression_invalid_index() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Expression(100));
+        let result = data.get_expression(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_external_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::External(100));
+        let result = data.get_external(0);
+        assert_eq!(result, Ok(100));
+    }
+
+    #[test]
+    fn get_external_not_external() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_external(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::External))));
+    }
+
+    #[test]
+    fn get_external_invalid_index() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::External(100));
+        let result = data.get_external(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_pair_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Pair(100, 200));
+        let result = data.get_pair(0);
+        assert_eq!(result, Ok((100, 200)));
+    }
+
+    #[test]
+    fn get_pair_not_pair() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_pair(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Pair))));
+    }
+
+    #[test]
+    fn get_pair_invalid_index() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Pair(100, 200));
+        let result = data.get_pair(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_partial_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Partial(100, 200));
+        let result = data.get_partial(0);
+        assert_eq!(result, Ok((100, 200)));
+    }
+
+    #[test]
+    fn get_partial_not_partial() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_partial(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Partial))));
+    }
+
+    #[test]
+    fn get_partial_invalid_index() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Partial(100, 200));
+        let result = data.get_partial(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_concatenation_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Concatenation(100, 200));
+        let result = data.get_concatenation(0);
+        assert_eq!(result, Ok((100, 200)));
+    }
+
+    #[test]
+    fn get_concatenation_not_concatenation() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_concatenation(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Concatenation))));
+    }
+
+    #[test]
+    fn get_concatenation_invalid_index() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Concatenation(100, 200));
+        let result = data.get_concatenation(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_range_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Range(100, 200));
+        let result = data.get_range(0);
+        assert_eq!(result, Ok((100, 200)));
+    }
+
+    #[test]
+    fn get_range_not_range() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_range(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Range))));
+    }
+
+    #[test]
+    fn get_range_invalid_index() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Range(100, 200));
+        let result = data.get_range(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_slice_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Slice(100, 200));
+        let result = data.get_slice(0);
+        assert_eq!(result, Ok((100, 200)));
+    }
+
+    #[test]
+    fn get_slice_not_slice() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_slice(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Slice))));
+    }
+
+    #[test]
+    fn get_slice_invalid_index() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Slice(100, 200));
+        let result = data.get_slice(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
 }
