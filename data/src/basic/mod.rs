@@ -5,8 +5,13 @@ use crate::{DataError, data::SimpleNumber, error::DataErrorType};
 
 type BasicNumber = SimpleNumber;
 
+pub trait BasicDataCustom: Clone {}
+
+impl BasicDataCustom for () {}
+
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
-pub enum BasicData<T> {
+pub enum BasicData<T> 
+where T: BasicDataCustom {
     Unit,
     True,
     False,
@@ -30,7 +35,8 @@ pub enum BasicData<T> {
     Custom(T),
 }
 
-impl<T> BasicData<T> {
+impl<T> BasicData<T>
+where T: BasicDataCustom {
     pub fn get_data_type(&self) -> GarnishDataType {
         match self {
             BasicData::Unit => GarnishDataType::Unit,
@@ -152,13 +158,15 @@ impl<T> BasicData<T> {
 pub type BasicDataUnitCustom = BasicData<()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BasicGarnishData<T> {
+pub struct BasicGarnishData<T>
+where T: BasicDataCustom {
     data: Vec<BasicData<T>>,
 }
 
 pub type BasicGarnishDataUnit = BasicGarnishData<()>;
 
-impl<T> BasicGarnishData<T> {
+impl<T> BasicGarnishData<T>
+where T: BasicDataCustom {
     pub fn new() -> Self {
         Self { data: Vec::new() }
     }
