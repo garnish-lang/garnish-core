@@ -61,30 +61,15 @@ impl<T> GarnishData for BasicGarnishData<T> {
     }
     
     fn get_data_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
-        match self.get_basic_data(addr) {
-            Some(data) => Ok(data.get_data_type()),
-            None => Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(addr))),
-        }
+        self.get_data_ensure_index(addr).map(|data| data.get_data_type())
     }
     
     fn get_number(&self, addr: Self::Size) -> Result<Self::Number, Self::Error> {
-        match self.get_basic_data(addr) {
-            Some(data) => match data {
-                BasicData::Number(number) => Ok(*number),
-                _ => Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Number))),
-            },
-            None => Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(addr))),
-        }
+        self.get_data_ensure_index(addr)?.as_number()
     }
     
     fn get_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
-        match self.get_basic_data(addr) {
-            Some(data) => match data {
-                BasicData::Type(type_) => Ok(*type_),
-                _ => Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Type))),
-            },
-            None => Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(addr))),
-        }
+        self.get_data_ensure_index(addr)?.as_type()
     }
     
     fn get_char(&self, addr: Self::Size) -> Result<Self::Char, Self::Error> {

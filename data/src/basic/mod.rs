@@ -1,7 +1,7 @@
 mod garnish;
 
 use garnish_lang_traits::GarnishDataType;
-use crate::data::SimpleNumber;
+use crate::{DataError, data::SimpleNumber, error::DataErrorType};
 
 type BasicNumber = SimpleNumber;
 
@@ -56,6 +56,24 @@ impl<T> BasicData<T> {
             BasicData::Custom(_) => GarnishDataType::Custom,
         }
     }
+
+    pub fn as_type(&self) -> Result<GarnishDataType, DataError> {
+        match self {
+            BasicData::Type(type_) => Ok(*type_),
+            _ => Err(self.not_type_error(GarnishDataType::Type)),
+        }
+    }
+
+    pub fn as_number(&self) -> Result<BasicNumber, DataError> {
+        match self {
+            BasicData::Number(number) => Ok(*number),
+            _ => Err(self.not_type_error(GarnishDataType::Number)),
+        }
+    }
+
+    fn not_type_error(&self, expected: GarnishDataType) -> DataError {
+        DataError::new("Not of type", DataErrorType::NotType(expected))
+    }
 }
 
 pub type BasicDataUnitCustom = BasicData<()>;
@@ -89,6 +107,13 @@ impl<T> BasicGarnishData<T> {
 
     pub fn get_basic_data_mut(&mut self, index: usize) -> Option<&mut BasicData<T>> {
         self.data.get_mut(index)
+    }
+
+    pub(crate) fn get_data_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
+        match self.get_basic_data(index) {
+            Some(data) => Ok(data),
+            None => Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(index))),
+        }
     }
 }
 
@@ -138,6 +163,22 @@ mod tests {
         assert_eq!(data.get_basic_data_mut(index1), Some(&mut BasicData::Unit));
         assert_eq!(data.get_basic_data_mut(index2), Some(&mut BasicData::True));
     }
+
+    #[test]
+    fn get_data_ensure_index_ok() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_data_ensure_index(0);
+        assert_eq!(result, Ok(&BasicData::Number(100.into())));
+    }
+
+    #[test]
+    fn get_data_ensure_index_error() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_data_ensure_index(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
 }
 
 #[cfg(test)]
@@ -173,5 +214,29 @@ mod basic_data {
         for (data, expected) in scenarios {
             assert_eq!(data.get_data_type(), expected, "Got {:?} expected {:?}", data.get_data_type(), expected);
         }
+    }
+
+    #[test]
+    fn as_number() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_number(), Ok(100.into()));
+    }
+
+    #[test]
+    fn as_number_not_number() {
+        let data = BasicDataUnitCustom::Symbol(100);
+        assert_eq!(data.as_number(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Number))));
+    }
+
+    #[test]
+    fn as_type() {
+        let data = BasicDataUnitCustom::Type(GarnishDataType::Number);
+        assert_eq!(data.as_type(), Ok(GarnishDataType::Number));
+    }
+
+    #[test]
+    fn as_type_not_type() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_type(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Type))));
     }
 }
