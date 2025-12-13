@@ -1,7 +1,6 @@
 use crate::data::{DisplayForCustomItem, SimpleDataList, SimpleStackFrame, UNIT_INDEX};
 use crate::error::DataError;
 use crate::instruction::SimpleInstruction;
-use crate::symbol_value;
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
 use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
 use std::collections::hash_map::DefaultHasher;

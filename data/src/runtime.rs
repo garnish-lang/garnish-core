@@ -1,6 +1,4 @@
 use std::convert::TryInto;
-use std::fmt::Debug;
-use std::hash::Hash;
 
 use garnish_lang_traits::{GarnishData, GarnishDataType, GarnishNumber, Instruction};
 
