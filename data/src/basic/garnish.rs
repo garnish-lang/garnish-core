@@ -201,59 +201,59 @@ impl<T> GarnishData for BasicGarnishData<T> {
     }
     
     fn add_true(&mut self) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::True))
     }
     
     fn add_false(&mut self) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::False))
     }
     
     fn add_number(&mut self, value: Self::Number) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::Number(value)))
     }
     
     fn add_type(&mut self, value: garnish_lang_traits::GarnishDataType) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::Type(value)))
     }
     
     fn add_char(&mut self, value: Self::Char) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::Char(value)))
     }
     
     fn add_byte(&mut self, value: Self::Byte) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::Byte(value)))
     }
     
     fn add_symbol(&mut self, value: Self::Symbol) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::Symbol(value)))
     }
     
     fn add_expression(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::Expression(value)))
     }
     
     fn add_external(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::External(value)))
     }
     
     fn add_pair(&mut self, value: (Self::Size, Self::Size)) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::Pair(value.0, value.1)))
     }
     
     fn add_concatenation(&mut self, left: Self::Size, right: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::Concatenation(left, right)))
     }
     
     fn add_range(&mut self, start: Self::Size, end: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::Range(start, end)))
     }
     
     fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::Slice(list, range)))
     }
     
-    fn add_partial(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+    fn add_partial(&mut self, reciever: Self::Size, input: Self::Size) -> Result<Self::Size, Self::Error> {
+        Ok(self.push_basic_data(BasicData::Partial(reciever, input)))
     }
     
     fn merge_to_symbol_list(&mut self, first: Self::Size, second: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -496,6 +496,146 @@ mod tests {
 
         assert_eq!(data, BasicGarnishDataUnit::new_full(
             vec![BasicData::Unit]
+        ));
+    }
+
+    #[test]
+    fn add_true() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_true().unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::True]
+        ));
+    }
+
+    #[test]
+    fn add_false() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_false().unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::False]
+        ));
+    }
+
+    #[test]
+    fn add_number() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_number(100.into()).unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::Number(100.into())]
+        ));
+    }
+
+    #[test]
+    fn add_type() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_type(GarnishDataType::Number).unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::Type(GarnishDataType::Number)]
+        ));
+    }
+
+    #[test]
+    fn add_char() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_char('a').unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::Char('a')]
+        ));
+    }
+
+    #[test]
+    fn add_byte() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_byte(100).unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::Byte(100)]
+        ));
+    }
+
+    #[test]
+    fn add_symbol() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_symbol(100).unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::Symbol(100)]
+        ));
+    }
+
+    #[test]
+    fn add_expression() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_expression(100).unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::Expression(100)]
+        ));
+    }
+
+    #[test]
+    fn add_external() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_external(100).unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::External(100)]
+        ));
+    }
+
+    #[test]
+    fn add_pair() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_pair((100, 200)).unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::Pair(100, 200)]
+        ));
+    }
+
+    #[test]
+    fn add_concatenation() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_concatenation(100, 200).unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::Concatenation(100, 200)]
+        ));
+    }
+
+    #[test]
+    fn add_range() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_range(100, 200).unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::Range(100, 200)]
+        ));
+    }
+
+    #[test]
+    fn add_slice() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_slice(100, 200).unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::Slice(100, 200)]
+        ));
+    }
+
+    #[test]
+    fn add_partial() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_partial(100, 200).unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::Partial(100, 200)]
         ));
     }
 
