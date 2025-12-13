@@ -197,7 +197,7 @@ impl<T> GarnishData for BasicGarnishData<T> {
     }
     
     fn add_unit(&mut self) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.push_basic_data(BasicData::Unit))
     }
     
     fn add_true(&mut self) -> Result<Self::Size, Self::Error> {
@@ -459,7 +459,7 @@ impl<T> GarnishData for BasicGarnishData<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::{BasicData, error::DataErrorType};
+    use crate::{BasicData, BasicGarnishDataUnit, error::DataErrorType};
 
     use super::*;
 
@@ -487,6 +487,16 @@ mod tests {
         assert_eq!(iter.next(), Some(0));
         assert_eq!(iter.next(), Some(1));
         assert_eq!(iter.next(), None);
+    }
+
+    #[test]
+    fn add_unit() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.add_unit().unwrap();
+
+        assert_eq!(data, BasicGarnishDataUnit::new_full(
+            vec![BasicData::Unit]
+        ));
     }
 
     #[test]

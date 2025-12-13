@@ -151,6 +151,7 @@ impl<T> BasicData<T> {
 
 pub type BasicDataUnitCustom = BasicData<()>;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BasicGarnishData<T> {
     data: Vec<BasicData<T>>,
 }
@@ -166,6 +167,10 @@ impl BasicGarnishDataUnit {
 impl<T> BasicGarnishData<T> {
     pub fn new() -> Self {
         Self { data: Vec::new() }
+    }
+
+    pub fn new_full(data: Vec<BasicData<T>>) -> Self {
+        Self { data }
     }
 
     pub fn push_basic_data(&mut self, data: BasicData<T>) -> usize {
