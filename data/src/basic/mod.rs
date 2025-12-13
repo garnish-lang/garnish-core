@@ -107,7 +107,7 @@ mod tests {
         let index1 = data.push_basic_data(BasicData::Unit);
         let index2 = data.push_basic_data(BasicData::True);
 
-        assert_eq!(data.get_basic_data(index1), Some(&BasicData::Unit));
-        assert_eq!(data.get_basic_data(index2), Some(&BasicData::True));
+        assert_eq!(data.get_basic_data_mut(index1), Some(&mut BasicData::Unit));
+        assert_eq!(data.get_basic_data_mut(index2), Some(&mut BasicData::True));
     }
 }
