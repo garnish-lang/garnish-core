@@ -1,4 +1,4 @@
-use garnish_lang_traits::GarnishData;
+use garnish_lang_traits::{GarnishData, GarnishDataType};
 use crate::{DataError, DataIndexIterator, NumberIterator, SizeIterator, basic::{BasicGarnishData, BasicNumber}};
 
 impl<T> GarnishData for BasicGarnishData<T> {
@@ -21,11 +21,11 @@ impl<T> GarnishData for BasicGarnishData<T> {
     type ConcatenationItemIterator = DataIndexIterator;
     
     fn get_data_len(&self) -> Self::Size {
-        todo!()
+        self.data.len()
     }
     
     fn get_data_iter(&self) -> Self::DataIndexIterator {
-        todo!()
+        SizeIterator::new(0, self.data.len())
     }
     
     fn get_value_stack_len(&self) -> Self::Size {
@@ -60,7 +60,7 @@ impl<T> GarnishData for BasicGarnishData<T> {
         todo!()
     }
     
-    fn get_data_type(&self, addr: Self::Size) -> Result<garnish_lang_traits::GarnishDataType, Self::Error> {
+    fn get_data_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
         todo!()
     }
     
@@ -68,7 +68,7 @@ impl<T> GarnishData for BasicGarnishData<T> {
         todo!()
     }
     
-    fn get_type(&self, addr: Self::Size) -> Result<garnish_lang_traits::GarnishDataType, Self::Error> {
+    fn get_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
         todo!()
     }
     
@@ -459,11 +459,33 @@ impl<T> GarnishData for BasicGarnishData<T> {
 
 #[cfg(test)]
 mod tests {
+    use crate::BasicData;
+
     use super::*;
 
     #[test]
     fn get_data_len() {
         let data = BasicGarnishData::new_unit();
         assert_eq!(data.get_data_len(), 0);
+    }
+
+    #[test]
+    fn get_data_len_with_items() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Unit);
+        data.push_basic_data(BasicData::True);
+        assert_eq!(data.get_data_len(), 2);
+    }
+
+    #[test]
+    fn get_data_iter() {
+        let mut data = BasicGarnishData::new_unit();
+        data.push_basic_data(BasicData::Unit);
+        data.push_basic_data(BasicData::True);
+
+        let mut iter = data.get_data_iter();
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next(), Some(1));
+        assert_eq!(iter.next(), None);
     }
 }
