@@ -1,5 +1,5 @@
 use garnish_lang_traits::{GarnishData, GarnishDataType};
-use crate::{DataError, DataIndexIterator, NumberIterator, SizeIterator, basic::{BasicGarnishData, BasicNumber}};
+use crate::{DataError, DataIndexIterator, NumberIterator, SizeIterator, basic::{BasicGarnishData, BasicNumber}, error::DataErrorType};
 
 impl<T> GarnishData for BasicGarnishData<T> {
     type Error = DataError;
@@ -63,7 +63,7 @@ impl<T> GarnishData for BasicGarnishData<T> {
     fn get_data_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
         match self.get_basic_data(addr) {
             Some(data) => Ok(data.get_data_type()),
-            None => Err(DataError::from("Invalid data index")),
+            None => Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(addr))),
         }
     }
     
@@ -462,7 +462,7 @@ impl<T> GarnishData for BasicGarnishData<T> {
 
 #[cfg(test)]
 mod tests {
-    use crate::BasicData;
+    use crate::{BasicData, error::DataErrorType};
 
     use super::*;
 
@@ -505,6 +505,6 @@ mod tests {
         let mut data = BasicGarnishData::new_unit();
         data.push_basic_data(BasicData::Number(100.into()));
         let result = data.get_data_type(1);
-        assert_eq!(result, Err(DataError::from("Invalid data index")));
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
 }

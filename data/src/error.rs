@@ -1,9 +1,22 @@
 use std::fmt::{Debug, Display, Formatter};
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
+pub enum DataErrorType {
+    Unknown,
+    InvalidDataIndex(usize),
+}
+
 /// Error implemenation for [`crate::SimpleGarnishData`].
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub struct DataError {
     message: String,
+    error_type: DataErrorType,
+}
+
+impl DataError {
+    pub fn new(message: &str, error_type: DataErrorType) -> Self {
+        DataError { message: message.to_string(), error_type }
+    }
 }
 
 impl Display for DataError {
@@ -16,13 +29,13 @@ impl std::error::Error for DataError {}
 
 impl From<&str> for DataError {
     fn from(s: &str) -> Self {
-        DataError { message: s.to_string() }
+        DataError { message: s.to_string(), error_type: DataErrorType::Unknown }
     }
 }
 
 impl From<String> for DataError {
     fn from(s: String) -> Self {
-        DataError { message: s }
+        DataError { message: s, error_type: DataErrorType::Unknown }
     }
 }
 
