@@ -267,15 +267,31 @@ where
     }
 
     fn start_list(&mut self, len: Self::Size) -> Result<(), Self::Error> {
-        todo!()
+        self.push_basic_data(BasicData::List(len));
+        Ok(())
     }
 
     fn add_to_list(&mut self, addr: Self::Size, is_associative: bool) -> Result<(), Self::Error> {
-        todo!()
+        self.push_basic_data(BasicData::ListItem(addr));
+        Ok(())
     }
 
     fn end_list(&mut self) -> Result<Self::Size, Self::Error> {
-        todo!()
+        let mut current = self.get_data_len();
+
+        while current > 0 {
+            let item = self.get_basic_data(current);
+            match item {
+                Some(BasicData::List(_)) => {
+                    break;
+                }
+                _ => {}
+            }
+
+            current -= 1;
+        }
+
+        Ok(current)
     }
 
     fn start_char_list(&mut self) -> Result<(), Self::Error> {
@@ -936,5 +952,29 @@ mod tests {
         data.push_basic_data(BasicData::Slice(100, 200));
         let result = data.get_slice(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn create_list() {
+        let mut data = BasicGarnishDataUnit::new();
+        let v1 = data.push_basic_data(BasicData::Number(100.into()));
+        let v2 = data.push_basic_data(BasicData::Number(200.into()));
+        let v3 = data.push_basic_data(BasicData::Number(300.into()));
+        data.start_list(3).unwrap();
+        data.add_to_list(v1, false).unwrap();
+        data.add_to_list(v2, false).unwrap();
+        data.add_to_list(v3, false).unwrap();
+        let list = data.end_list().unwrap();
+
+        assert_eq!(list, 3);
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![
+            BasicData::Number(100.into()),
+            BasicData::Number(200.into()),
+            BasicData::Number(300.into()),
+            BasicData::List(3),
+            BasicData::ListItem(v1),
+            BasicData::ListItem(v2),
+            BasicData::ListItem(v3),
+        ]));
     }
 }
