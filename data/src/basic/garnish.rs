@@ -271,18 +271,13 @@ where
         for i in 0..len {
             let index = list_index + 1 + i;
             if matches!(self.get_basic_data(index), Some(BasicData::Empty)) {
-                first_empty = Some(index);
+                first_empty = self.get_basic_data_mut(index);
                 break;
             }
         }
 
         match first_empty {
-            Some(index) => {
-                let data = match self.get_basic_data_mut(index) {
-                    Some(data) => data,
-                    None => todo!(),
-                };
-
+            Some(data) => {
                 *data = BasicData::ListItem(item_index);
             }
             None => return Err(DataError::new("Exceeded initial list length", DataErrorType::ExceededInitialListLength(len))),
