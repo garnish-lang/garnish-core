@@ -126,26 +126,26 @@ pub trait GarnishData {
     fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error>;
     fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error>;
-    fn get_list_items_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
-    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
+    fn get_list_items_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error>;
+    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error>;
 
     fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error>;
-    fn get_char_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
+    fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error>;
 
     fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error>;
-    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
+    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error>;
 
     fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error>;
-    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator;
+    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error>;
 
-    fn get_list_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator;
-    fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator;
-    fn get_slice_iter(&self, addr: Self::Size) -> Self::ListIndexIterator;
-    fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator;
-    fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator;
+    fn get_list_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error>;
+    fn get_concatenation_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error>;
+    fn get_slice_iter(&self, addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error>;
+    fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error>;
+    fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error>;
 
     fn add_unit(&mut self) -> Result<Self::Size, Self::Error>;
     fn add_true(&mut self) -> Result<Self::Size, Self::Error>;

@@ -307,7 +307,7 @@ where
             .unwrap_or("<NoData>".to_string())
     }
 
-    pub fn collect_concatenation_indices(&self, left: usize, right: usize) -> Vec<usize> {
+    pub fn collect_concatenation_indices(&self, left: usize, right: usize) -> Result<Vec<usize>, DataError> {
         let mut items = vec![];
         let mut con_stack = vec![right, left];
 
@@ -325,7 +325,7 @@ where
                 }
                 Some(crate::data::SimpleData::Slice(list, range)) => match (self.get_data().get(*list), self.get_data().get(*range)) {
                     (Some(crate::data::SimpleData::List(_, _)), Some(crate::data::SimpleData::Range(_, _))) => {
-                        let iter = self.get_list_slice_item_iter(item);
+                        let iter = self.get_list_slice_item_iter(item)?;
 
                         for item in iter {
                             items.push(item.clone());
@@ -364,7 +364,7 @@ where
             }
         }
 
-        items
+        Ok(items)
     }
 
     pub(crate) fn cache_add(&mut self, value: crate::data::SimpleData<T>) -> Result<usize, DataError> {

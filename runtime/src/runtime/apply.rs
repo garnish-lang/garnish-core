@@ -137,7 +137,7 @@ fn apply_internal<Data: GarnishData>(this: &mut Data, instruction: Instruction, 
             }
         }
         (GarnishDataType::List, GarnishDataType::SymbolList) => {
-            let mut iter = this.get_symbol_list_iter(right_addr.clone());
+            let mut iter = this.get_symbol_list_iter(right_addr.clone())?;
             let mut current = left_addr.clone();
             while let Some(sym_index) = iter.next() {
                 let sym = this.get_symbol_list_item(right_addr.clone(), sym_index)?;

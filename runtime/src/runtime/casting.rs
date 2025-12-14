@@ -73,7 +73,7 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
             }
         }
         (GarnishDataType::SymbolList, GarnishDataType::List) => {
-            let mut iter = this.get_symbol_list_iter(left.clone());
+            let mut iter = this.get_symbol_list_iter(left.clone())?;
             let len = this.get_symbol_list_len(left.clone())?;
 
             this.start_list(len)?;

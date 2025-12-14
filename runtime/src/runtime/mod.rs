@@ -557,12 +557,12 @@ mod tests {
             (self.stub_get_list_item_with_symbol)(self.data(), list_addr, sym)
         }
 
-        fn get_list_items_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-            (self.stub_get_list_items_iter)(self.data(), list_addr)
+        fn get_list_items_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+            Ok((self.stub_get_list_items_iter)(self.data(), list_addr))
         }
 
-        fn get_list_associations_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-            (self.stub_get_list_associations_iter)(self.data(), list_addr)
+        fn get_list_associations_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+            Ok((self.stub_get_list_associations_iter)(self.data(), list_addr))
         }
 
         fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -573,8 +573,8 @@ mod tests {
             (self.stub_get_char_list_item)(self.data(), addr, item_index)
         }
 
-        fn get_char_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-            (self.stub_get_char_list_iter)(self.data(), list_addr)
+        fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+            Ok((self.stub_get_char_list_iter)(self.data(), list_addr))
         }
 
         fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -585,8 +585,8 @@ mod tests {
             (self.stub_get_byte_list_item)(self.data(), addr, item_index)
         }
 
-        fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-            (self.stub_get_byte_list_iter)(self.data(), list_addr)
+        fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+            Ok((self.stub_get_byte_list_iter)(self.data(), list_addr))
         }
 
         fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -597,28 +597,28 @@ mod tests {
             (self.stub_get_symbol_list_item)(self.data(), addr, item_index)
         }
 
-        fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-            (self.stub_get_symbol_list_iter)(self.data(), list_addr)
+        fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+            Ok((self.stub_get_symbol_list_iter)(self.data(), list_addr))
         }
 
-        fn get_list_item_iter(&self, addr: Self::Size) -> Self::ListItemIterator {
-            (self.stub_get_list_item_iter)(self.data(), addr)
+        fn get_list_item_iter(&self, addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
+            Ok((self.stub_get_list_item_iter)(self.data(), addr))
         }
 
-        fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
-            (self.stub_get_concatenation_iter)(self.data(), addr)
+        fn get_concatenation_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
+            Ok((self.stub_get_concatenation_iter)(self.data(), addr))
         }
 
-        fn get_slice_iter(&self, addr: Self::Size) -> Self::ListIndexIterator {
-            (self.stub_get_slice_iter)(self.data(), addr)
+        fn get_slice_iter(&self, addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+            Ok((self.stub_get_slice_iter)(self.data(), addr))
         }
 
-        fn get_list_slice_item_iter(&self, addr: Self::Size) -> Self::ListItemIterator {
-            (self.stub_get_list_slice_item_iter)(self.data(), addr)
+        fn get_list_slice_item_iter(&self, addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
+            Ok((self.stub_get_list_slice_item_iter)(self.data(), addr))
         }
 
-        fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
-            (self.stub_get_concatenation_slice_iter)(self.data(), addr)
+        fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
+            Ok((self.stub_get_concatenation_slice_iter)(self.data(), addr))
         }
 
         fn add_unit(&mut self) -> Result<Self::Size, Self::Error> {

@@ -110,24 +110,24 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
         )?,
         (GarnishDataType::CharList, GarnishDataType::CharList) => compare_index_iterator_values(
             this,
-            this.get_char_list_iter(left_addr.clone()),
-            this.get_char_list_iter(right_addr.clone()),
+            this.get_char_list_iter(left_addr.clone())?,
+            this.get_char_list_iter(right_addr.clone())?,
             left_addr,
             right_addr,
             Data::get_char_list_item,
         )?,
         (GarnishDataType::ByteList, GarnishDataType::ByteList) => compare_index_iterator_values(
             this,
-            this.get_byte_list_iter(left_addr.clone()),
-            this.get_byte_list_iter(right_addr.clone()),
+            this.get_byte_list_iter(left_addr.clone())?,
+            this.get_byte_list_iter(right_addr.clone())?,
             left_addr,
             right_addr,
             Data::get_byte_list_item,
         )?,
         (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => compare_index_iterator_values(
             this,
-            this.get_symbol_list_iter(left_addr.clone()),
-            this.get_symbol_list_iter(right_addr.clone()),
+            this.get_symbol_list_iter(left_addr.clone())?,
+            this.get_symbol_list_iter(right_addr.clone())?,
             left_addr,
             right_addr,
             Data::get_symbol_list_item,
@@ -239,24 +239,24 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
             match (this.get_data_type(value1.clone())?, this.get_data_type(value2.clone())?) {
                 (GarnishDataType::CharList, GarnishDataType::CharList) => compare_index_iterator_values(
                     this,
-                    this.get_slice_iter(left_addr.clone()),
-                    this.get_slice_iter(right_addr.clone()),
+                    this.get_slice_iter(left_addr.clone())?,
+                    this.get_slice_iter(right_addr.clone())?,
                     value1,
                     value2,
                     Data::get_char_list_item,
                 )?,
                 (GarnishDataType::ByteList, GarnishDataType::ByteList) => compare_index_iterator_values(
                     this,
-                    this.get_slice_iter(left_addr.clone()),
-                    this.get_slice_iter(right_addr.clone()),
+                    this.get_slice_iter(left_addr.clone())?,
+                    this.get_slice_iter(right_addr.clone())?,
                     value1,
                     value2,
                     Data::get_byte_list_item,
                 )?,
                 (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => compare_index_iterator_values(
                     this,
-                    this.get_slice_iter(left_addr.clone()),
-                    this.get_slice_iter(right_addr.clone()),
+                    this.get_slice_iter(left_addr.clone())?,
+                    this.get_slice_iter(right_addr.clone())?,
                     value1,
                     value2,
                     Data::get_symbol_list_item,
@@ -325,7 +325,7 @@ fn compare_slice_index_iterator_values<Data, GetValueIterFn, GetValueItemFn, Val
 ) -> Result<bool, RuntimeError<Data::Error>>
 where
     Data: GarnishData,
-    GetValueIterFn: Fn(&Data, Data::Size) -> Data::ListIndexIterator,
+    GetValueIterFn: Fn(&Data, Data::Size) -> Result<Data::ListIndexIterator, Data::Error>,
     GetValueItemFn: Fn(&Data, Data::Size, Data::Number) -> Result<Value, Data::Error>,
     Value: PartialEq,
 {
@@ -333,8 +333,8 @@ where
     if this.get_data_type(value1.clone())? == expected_data_type {
         compare_index_iterator_values(
             this,
-            get_value_iter(this, value_addr.clone()),
-            this.get_slice_iter(slice_addr.clone()),
+            get_value_iter(this, value_addr.clone())?,
+            this.get_slice_iter(slice_addr.clone())?,
             value_addr,
             value1,
             get_value_item,
@@ -383,9 +383,9 @@ fn compare_item_iterators<Data: GarnishData, Iter, GetFn>(
 ) -> Result<bool, RuntimeError<Data::Error>>
 where
     Iter: Iterator<Item = Data::Size>,
-    GetFn: Fn(&Data, Data::Size) -> Iter,
+    GetFn: Fn(&Data, Data::Size) -> Result<Iter, Data::Error>,
 {
-    let (iter1, iter2) = (get_iter(this, left_addr.clone()), get_iter(this, right_addr.clone()));
+    let (iter1, iter2) = (get_iter(this, left_addr.clone())?, get_iter(this, right_addr.clone())?);
     push_iterator_values(this, iter1, iter2)
 }
 
@@ -398,7 +398,7 @@ fn compare_slice_item_iterators_2<Data, Iter, GetValueIterFn>(
 where
     Data: GarnishData,
     Iter: Iterator<Item = Data::Size>,
-    GetValueIterFn: Fn(&Data, Data::Size) -> Iter,
+    GetValueIterFn: Fn(&Data, Data::Size) -> Result<Iter, Data::Error>,
 {
     let (value2, _) = this.get_slice(slice_addr.clone())?;
     match this.get_data_type(value2)? {
@@ -418,10 +418,10 @@ fn compare_item_iterators_2<Data: GarnishData, Iter1, Iter2, GetFn1, GetFn2>(
 where
     Iter1: Iterator<Item = Data::Size>,
     Iter2: Iterator<Item = Data::Size>,
-    GetFn1: Fn(&Data, Data::Size) -> Iter1,
-    GetFn2: Fn(&Data, Data::Size) -> Iter2,
+    GetFn1: Fn(&Data, Data::Size) -> Result<Iter1, Data::Error>,
+    GetFn2: Fn(&Data, Data::Size) -> Result<Iter2, Data::Error>,
 {
-    let (iter1, iter2) = (get_iter_left(this, left_addr.clone()), get_iter_right(this, right_addr.clone()));
+    let (iter1, iter2) = (get_iter_left(this, left_addr.clone())?, get_iter_right(this, right_addr.clone())?);
     push_iterator_values(this, iter1, iter2)
 }
 

@@ -634,11 +634,11 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_list_items_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+        fn get_list_items_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
             unimplemented!()
         }
 
-        fn get_list_associations_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+        fn get_list_associations_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
             unimplemented!()
         }
 
@@ -650,7 +650,7 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_char_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+        fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
             unimplemented!()
         }
 
@@ -662,7 +662,7 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+        fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
             unimplemented!()
         }
 
@@ -674,27 +674,27 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+        fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
             unimplemented!()
         }
 
-        fn get_list_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator {
+        fn get_list_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
             unimplemented!()
         }
 
-        fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
+        fn get_concatenation_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
             unimplemented!()
         }
 
-        fn get_slice_iter(&self, addr: Self::Size) -> Self::ListIndexIterator {
+        fn get_slice_iter(&self, addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
             unimplemented!()
         }
 
-        fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator {
+        fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
             unimplemented!()
         }
 
-        fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
+        fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
             unimplemented!()
         }
 

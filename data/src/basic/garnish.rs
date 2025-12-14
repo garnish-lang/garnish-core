@@ -138,11 +138,11 @@ where
         todo!()
     }
 
-    fn get_list_items_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+    fn get_list_items_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
         todo!()
     }
 
-    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
         todo!()
     }
 
@@ -154,7 +154,7 @@ where
         todo!()
     }
 
-    fn get_char_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+    fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
         todo!()
     }
 
@@ -166,7 +166,7 @@ where
         todo!()
     }
 
-    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
         todo!()
     }
 
@@ -178,27 +178,27 @@ where
         todo!()
     }
 
-    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
+    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
         todo!()
     }
 
-    fn get_list_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator {
+    fn get_list_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
         todo!()
     }
 
-    fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
+    fn get_concatenation_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
         todo!()
     }
 
-    fn get_slice_iter(&self, addr: Self::Size) -> Self::ListIndexIterator {
+    fn get_slice_iter(&self, addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
         todo!()
     }
 
-    fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator {
+    fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
         todo!()
     }
 
-    fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
+    fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
         todo!()
     }
 

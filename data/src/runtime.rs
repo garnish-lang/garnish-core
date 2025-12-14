@@ -200,16 +200,16 @@ where
         }
     }
 
-    fn get_list_items_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-        self.get_list_len(list_addr)
+    fn get_list_items_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        Ok(self.get_list_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
     }
 
-    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-        self.get_list_associations_len(list_addr)
+    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        Ok(self.get_list_associations_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
     }
 
     fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -226,10 +226,10 @@ where
         }
     }
 
-    fn get_char_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-        self.get_char_list_len(list_addr)
+    fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        Ok(self.get_char_list_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
     }
 
     fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -246,10 +246,10 @@ where
         }
     }
 
-    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-        self.get_byte_list_len(list_addr)
+    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        Ok(self.get_byte_list_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
     }
 
     fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -266,88 +266,88 @@ where
         }
     }
 
-    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Self::ListIndexIterator {
-        self.get_symbol_list_len(list_addr)
+    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        Ok(self.get_symbol_list_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0)))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
     }
 
-    fn get_list_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator {
+    fn get_list_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
         match self.get_data().get(list_addr) {
-            Some(SimpleData::List(items, _)) => DataIndexIterator::new(items.clone()),
-            _ => DataIndexIterator::new(vec![]),
+            Some(SimpleData::List(items, _)) => Ok(DataIndexIterator::new(items.clone())),
+            _ => Ok(DataIndexIterator::new(vec![])),
         }
     }
 
-    fn get_concatenation_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
+    fn get_concatenation_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
         match self.get_data().get(addr) {
-            Some(SimpleData::Concatenation(left, right)) => DataIndexIterator::new(self.collect_concatenation_indices(*left, *right)),
-            _ => DataIndexIterator::new(vec![]),
+            Some(SimpleData::Concatenation(left, right)) => Ok(DataIndexIterator::new(self.collect_concatenation_indices(*left, *right)?)),
+            _ => Ok(DataIndexIterator::new(vec![])),
         }
     }
 
-    fn get_slice_iter(&self, addr: Self::Size) -> Self::ListIndexIterator {
+    fn get_slice_iter(&self, addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
         match self.get_data().get(addr) {
             Some(SimpleData::Slice(_, range)) => match self.get_data().get(*range) {
                 Some(SimpleData::Range(start, end)) => match (self.get_data().get(*start), self.get_data().get(*end)) {
                     (Some(SimpleData::Number(start)), Some(SimpleData::Number(end))) => end
                         .clone()
                         .plus(SimpleNumber::Integer(1))
-                        .and_then(|end| Some(NumberIterator::new(start.clone(), end)))
-                        .unwrap_or(NumberIterator::new(0.into(), 0.into())),
-                    _ => NumberIterator::new(0.into(), 0.into()),
+                        .and_then(|end| Some(Ok(NumberIterator::new(start.clone(), end))))
+                        .unwrap_or(Ok(NumberIterator::new(0.into(), 0.into()))),
+                    _ => Ok(NumberIterator::new(0.into(), 0.into())),
                 },
-                _ => NumberIterator::new(0.into(), 0.into()),
+                _ => Ok(NumberIterator::new(0.into(), 0.into())),
             },
-            _ => NumberIterator::new(0.into(), 0.into()),
+            _ => Ok(NumberIterator::new(0.into(), 0.into())),
         }
     }
 
-    fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Self::ListItemIterator {
+    fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
         match self.get_data().get(list_addr) {
             Some(SimpleData::Slice(list, range)) => match (self.get_data().get(*list), self.get_data().get(*range)) {
                 (Some(SimpleData::List(items, _)), Some(SimpleData::Range(start, end))) => {
                     match (self.get_data().get(*start), self.get_data().get(*end)) {
                         (Some(SimpleData::Number(SimpleNumber::Integer(start))), Some(SimpleData::Number(SimpleNumber::Integer(end)))) => {
-                            DataIndexIterator::new(
+                            Ok(DataIndexIterator::new(
                                 items
                                     .iter()
                                     .skip(*start as usize)
                                     .take((end - start) as usize + 1)
                                     .map(usize::clone)
                                     .collect::<Vec<_>>(),
-                            )
+                            ))
                         }
-                        _ => DataIndexIterator::new(vec![]),
+                        _ => Ok(DataIndexIterator::new(vec![])),
                     }
                 }
-                _ => DataIndexIterator::new(vec![]),
+                _ => Ok(DataIndexIterator::new(vec![])),
             },
-            _ => DataIndexIterator::new(vec![]),
+            _ => Ok(DataIndexIterator::new(vec![])),
         }
     }
 
-    fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Self::ConcatenationItemIterator {
+    fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
         match self.get_data().get(addr) {
             Some(SimpleData::Slice(list, range)) => match (self.get_data().get(*list), self.get_data().get(*range)) {
                 (Some(SimpleData::Concatenation(left, right)), Some(SimpleData::Range(start, end))) => {
                     match (self.get_data().get(*start), self.get_data().get(*end)) {
                         (Some(SimpleData::Number(SimpleNumber::Integer(start))), Some(SimpleData::Number(SimpleNumber::Integer(end)))) => {
-                            DataIndexIterator::new(
-                                self.collect_concatenation_indices(*left, *right)
+                            Ok(DataIndexIterator::new(
+                                self.collect_concatenation_indices(*left, *right)?
                                     .iter()
                                     .skip(*start as usize)
                                     .take((end - start) as usize + 1)
                                     .map(usize::clone)
-                                    .collect::<Vec<_>>(),
+                                    .collect::<Vec<_>>())
                             )
                         }
-                        _ => DataIndexIterator::new(vec![]),
+                        _ => Ok(DataIndexIterator::new(vec![])),
                     }
                 }
-                _ => DataIndexIterator::new(vec![]),
+                _ => Ok(DataIndexIterator::new(vec![])),
             },
-            _ => DataIndexIterator::new(vec![]),
+            _ => Ok(DataIndexIterator::new(vec![])),
         }
     }
 
@@ -1118,7 +1118,7 @@ mod iterators {
         let list_index = data.get_data().len();
         data.get_data_mut().push(SimpleData::List(vec![100, 200, 300, 400, 500], vec![]));
 
-        let mut iter = data.get_list_item_iter(list_index);
+        let mut iter = data.get_list_item_iter(list_index).unwrap();
 
         assert_eq!(iter.next(), 100.into());
         assert_eq!(iter.next(), 200.into());
@@ -1132,7 +1132,7 @@ mod iterators {
         let mut data = SimpleGarnishData::new();
         let num1 = data.add_number(10.into()).unwrap();
 
-        let mut iter = data.get_list_item_iter(num1);
+        let mut iter = data.get_list_item_iter(num1).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1149,7 +1149,7 @@ mod iterators {
         let con2 = data.add_concatenation(con1, 1).unwrap();
         let con3 = data.add_concatenation(con2, 2).unwrap();
 
-        let mut iter = data.get_concatenation_iter(con3);
+        let mut iter = data.get_concatenation_iter(con3).unwrap();
 
         assert_eq!(iter.next(), num1.into());
         assert_eq!(iter.next(), num2.into());
@@ -1188,7 +1188,7 @@ mod iterators {
 
         let con7 = data.add_concatenation(con3, slice2).unwrap();
 
-        let mut iter = data.get_concatenation_iter(con7);
+        let mut iter = data.get_concatenation_iter(con7).unwrap();
 
         assert_eq!(iter.next(), num1.into());
         assert_eq!(iter.next(), num2.into());
@@ -1206,7 +1206,7 @@ mod iterators {
         let mut data = SimpleGarnishData::new();
         let num1 = data.add_number(10.into()).unwrap();
 
-        let mut iter = data.get_concatenation_iter(num1);
+        let mut iter = data.get_concatenation_iter(num1).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1221,7 +1221,7 @@ mod iterators {
         let range = data.add_range(num1, num2).unwrap();
         let slice = data.add_slice(s1, range).unwrap();
 
-        let mut iter = data.get_slice_iter(slice);
+        let mut iter = data.get_slice_iter(slice).unwrap();
 
         assert_eq!(iter.next(), Some(2.into()));
         assert_eq!(iter.next(), Some(3.into()));
@@ -1239,7 +1239,7 @@ mod iterators {
         let num2 = data.add_number(5.into()).unwrap();
         let range = data.add_range(num1, num2).unwrap();
 
-        let mut iter = data.get_slice_iter(range);
+        let mut iter = data.get_slice_iter(range).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1252,7 +1252,7 @@ mod iterators {
         let num1 = data.add_number(2.into()).unwrap();
         let slice = data.add_slice(s1, num1).unwrap();
 
-        let mut iter = data.get_slice_iter(slice);
+        let mut iter = data.get_slice_iter(slice).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1267,7 +1267,7 @@ mod iterators {
         let range = data.add_range(num1, num2).unwrap();
         let slice = data.add_slice(s1, range).unwrap();
 
-        let mut iter = data.get_slice_iter(slice);
+        let mut iter = data.get_slice_iter(slice).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1282,7 +1282,7 @@ mod iterators {
         let range = data.add_range(num1, num2).unwrap();
         let slice = data.add_slice(s1, range).unwrap();
 
-        let mut iter = data.get_slice_iter(slice);
+        let mut iter = data.get_slice_iter(slice).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1297,7 +1297,7 @@ mod iterators {
         let range = data.add_range(num1, num2).unwrap();
         let slice = data.add_slice(list_index, range).unwrap();
 
-        let mut iter = data.get_list_slice_item_iter(slice);
+        let mut iter = data.get_list_slice_item_iter(slice).unwrap();
 
         assert_eq!(iter.next(), Some(200));
         assert_eq!(iter.next(), Some(300));
@@ -1313,7 +1313,7 @@ mod iterators {
         let num2 = data.add_number(3.into()).unwrap();
         let range = data.add_range(num1, num2).unwrap();
 
-        let mut iter = data.get_list_slice_item_iter(range);
+        let mut iter = data.get_list_slice_item_iter(range).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1326,7 +1326,7 @@ mod iterators {
         let num2 = data.add_number(3.into()).unwrap();
         let slice = data.add_slice(list_index, num2).unwrap();
 
-        let mut iter = data.get_list_slice_item_iter(slice);
+        let mut iter = data.get_list_slice_item_iter(slice).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1340,7 +1340,7 @@ mod iterators {
         let range = data.add_range(num1, num2).unwrap();
         let slice = data.add_slice(num1, range).unwrap();
 
-        let mut iter = data.get_list_slice_item_iter(slice);
+        let mut iter = data.get_list_slice_item_iter(slice).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1355,7 +1355,7 @@ mod iterators {
         let range = data.add_range(num1, num2).unwrap();
         let slice = data.add_slice(list_index, range).unwrap();
 
-        let mut iter = data.get_list_slice_item_iter(slice);
+        let mut iter = data.get_list_slice_item_iter(slice).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1370,7 +1370,7 @@ mod iterators {
         let range = data.add_range(num1, num2).unwrap();
         let slice = data.add_slice(list_index, range).unwrap();
 
-        let mut iter = data.get_list_slice_item_iter(slice);
+        let mut iter = data.get_list_slice_item_iter(slice).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1393,7 +1393,7 @@ mod iterators {
         let range = data.add_range(start, end).unwrap();
         let slice = data.add_slice(con3, range).unwrap();
 
-        let mut iter = data.get_concatenation_slice_iter(slice);
+        let mut iter = data.get_concatenation_slice_iter(slice).unwrap();
 
         assert_eq!(iter.next(), num3.into());
         assert_eq!(iter.next(), 2.into());
@@ -1410,7 +1410,7 @@ mod iterators {
         let end = data.add_number(5.into()).unwrap();
         let range = data.add_range(start, end).unwrap();
 
-        let mut iter = data.get_concatenation_slice_iter(range);
+        let mut iter = data.get_concatenation_slice_iter(range).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1431,7 +1431,7 @@ mod iterators {
         let start = data.add_number(2.into()).unwrap();
         let slice = data.add_slice(con3, start).unwrap();
 
-        let mut iter = data.get_concatenation_slice_iter(slice);
+        let mut iter = data.get_concatenation_slice_iter(slice).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1445,7 +1445,7 @@ mod iterators {
         let range = data.add_range(start, end).unwrap();
         let slice = data.add_slice(start, range).unwrap();
 
-        let mut iter = data.get_concatenation_slice_iter(slice);
+        let mut iter = data.get_concatenation_slice_iter(slice).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1468,7 +1468,7 @@ mod iterators {
         let range = data.add_range(start, end).unwrap();
         let slice = data.add_slice(con3, range).unwrap();
 
-        let mut iter = data.get_concatenation_slice_iter(slice);
+        let mut iter = data.get_concatenation_slice_iter(slice).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1491,7 +1491,7 @@ mod iterators {
         let range = data.add_range(start, end).unwrap();
         let slice = data.add_slice(con3, range).unwrap();
 
-        let mut iter = data.get_concatenation_slice_iter(slice);
+        let mut iter = data.get_concatenation_slice_iter(slice).unwrap();
 
         assert_eq!(iter.next(), None);
     }

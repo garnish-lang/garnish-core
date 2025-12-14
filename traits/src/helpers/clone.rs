@@ -112,7 +112,7 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
     }
 
     fn clone_symbol_list(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {
-        let mut iter = from.get_symbol_list_iter(addr.clone());
+        let mut iter = from.get_symbol_list_iter(addr.clone())?;
 
         match iter.next() {
             None => to.add_unit(),
