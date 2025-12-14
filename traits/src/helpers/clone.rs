@@ -1,4 +1,4 @@
-use crate::{GarnishData, GarnishDataType, SymbolListPart, TypeConstants};
+use crate::{Extents, GarnishData, GarnishDataType, SymbolListPart, TypeConstants};
 
 pub type CloneHandler<Data> = fn(<Data as GarnishData>::Size, &Data, &mut Data) -> Result<<Data as GarnishData>::Size, <Data as GarnishData>::Error>;
 
@@ -82,7 +82,7 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
     }
 
     fn clone_char_list(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {
-        let iter = from.get_char_list_iter(addr.clone())?;
+        let iter = from.get_char_list_iter(addr.clone(), Extents::new(Data::Number::zero(), Data::Number::max_value()))?;
         to.start_char_list()?;
         for i in iter {
             to.add_to_char_list(i)?;
@@ -95,7 +95,7 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
     }
 
     fn clone_byte_list(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {
-        let iter = from.get_byte_list_iter(addr.clone())?;
+        let iter = from.get_byte_list_iter(addr.clone(), Extents::new(Data::Number::zero(), Data::Number::max_value()))?;
         to.start_byte_list()?;
         for i in iter {
             to.add_to_byte_list(i)?;
@@ -108,7 +108,7 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
     }
 
     fn clone_symbol_list(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {
-        let mut iter = from.get_symbol_list_iter(addr.clone())?;
+        let mut iter = from.get_symbol_list_iter(addr.clone(), Extents::new(Data::Number::zero(), Data::Number::max_value()))?;
 
         match iter.next() {
             None => to.add_unit(),
@@ -177,7 +177,7 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
 
     fn clone_list(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {
         let len = from.get_list_len(addr.clone())?;
-        let iter = from.get_list_item_iter(addr.clone())?;
+        let iter = from.get_list_item_iter(addr.clone(), Extents::new(Data::Number::zero(), Data::Number::max_value()))?;
 
         let mut items = vec![];
         for i in iter {

@@ -1,6 +1,6 @@
 use crate::derive::Data;
 use garnish_lang::simple::{SimpleDataType, SimpleGarnishData};
-use garnish_lang::{GarnishData, delegate_garnish_data, SymbolListPart};
+use garnish_lang::{Extents, GarnishData, delegate_garnish_data, SymbolListPart};
 #[allow(unused_imports)]
 use garnish_lang::{GarnishDataType, Instruction};
 

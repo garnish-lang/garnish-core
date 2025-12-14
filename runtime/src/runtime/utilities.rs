@@ -19,7 +19,7 @@ pub(crate) fn next_two_raw_ref<Data: GarnishData>(this: &mut Data) -> Result<(Da
 }
 
 pub(crate) fn get_range<Data: GarnishData>(
-    this: &mut Data,
+    this: &Data,
     addr: Data::Size,
 ) -> Result<(Data::Number, Data::Number, Data::Number), RuntimeError<Data::Error>> {
     let (start, end) = this.get_range(addr)?;

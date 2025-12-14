@@ -355,16 +355,16 @@ fn create_missing_functions(
     all_functions.insert(
         "get_list_items_iter",
         quote! {
-            fn get_list_items_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
-                self.#delegate_field.get_list_items_iter(list_addr)
+            fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
+                self.#delegate_field.get_list_items_iter(list_addr, extents)
             }
         },
     );
     all_functions.insert(
         "get_list_associations_iter",
         quote! {
-            fn get_list_associations_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
-                self.#delegate_field.get_list_associations_iter(list_addr)
+            fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
+                self.#delegate_field.get_list_associations_iter(list_addr, extents)
             }
         },
     );
@@ -387,8 +387,8 @@ fn create_missing_functions(
     all_functions.insert(
         "get_char_list_iter",
         quote! {
-            fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::CharIterator, Self::Error> {
-                self.#delegate_field.get_char_list_iter(list_addr)
+            fn get_char_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::CharIterator, Self::Error> {
+                self.#delegate_field.get_char_list_iter(list_addr, extents)
             }
         },
     );
@@ -411,8 +411,8 @@ fn create_missing_functions(
     all_functions.insert(
         "get_byte_list_iter",
         quote! {
-            fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ByteIterator, Self::Error> {
-                self.#delegate_field.get_byte_list_iter(list_addr)
+            fn get_byte_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ByteIterator, Self::Error> {
+                self.#delegate_field.get_byte_list_iter(list_addr, extents)
             }
         },
     );
@@ -435,48 +435,24 @@ fn create_missing_functions(
     all_functions.insert(
         "get_symbol_list_iter",
         quote! {
-            fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::SymbolListPartIterator, Self::Error> {
-                self.#delegate_field.get_symbol_list_iter(list_addr)
+            fn get_symbol_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::SymbolListPartIterator, Self::Error> {
+                self.#delegate_field.get_symbol_list_iter(list_addr, extents)
             }
         },
     );
     all_functions.insert(
         "get_list_item_iter",
         quote! {
-            fn get_list_item_iter(&self, addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
-                self.#delegate_field.get_list_item_iter(addr)
+            fn get_list_item_iter(&self, addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
+                self.#delegate_field.get_list_item_iter(addr, extents)
             }
         },
     );
     all_functions.insert(
         "get_concatenation_iter",
         quote! {
-            fn get_concatenation_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
-                self.#delegate_field.get_concatenation_iter(addr)
-            }
-        },
-    );
-    all_functions.insert(
-        "get_slice_iter",
-        quote! {
-            fn get_slice_iter(&self, addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
-                self.#delegate_field.get_slice_iter(addr)
-            }
-        },
-    );
-    all_functions.insert(
-        "get_list_slice_item_iter",
-        quote! {
-            fn get_list_slice_item_iter(&self, addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
-                self.#delegate_field.get_list_slice_item_iter(addr)
-            }
-        },
-    );
-    all_functions.insert(
-        "get_concatenation_slice_iter",
-        quote! {
-            fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
-                self.#delegate_field.get_concatenation_slice_iter(addr)
+            fn get_concatenation_iter(&self, addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ConcatenationItemIterator, Self::Error> {
+                self.#delegate_field.get_concatenation_iter(addr, extents)
             }
         },
     );

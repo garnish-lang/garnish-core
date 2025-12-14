@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 use std::hash::Hash;
 use garnish_lang::simple::{SimpleDataType, SimpleGarnishData};
-use garnish_lang::{GarnishData, SymbolListPart};
+use garnish_lang::{Extents, GarnishData, SymbolListPart};
 
 #[derive(Debug, Clone, PartialOrd, PartialEq, Eq, Hash)]
 pub struct Data {

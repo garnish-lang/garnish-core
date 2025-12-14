@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-use garnish_lang_traits::{GarnishData, GarnishDataType, GarnishNumber, Instruction, SymbolListPart};
+use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, GarnishNumber, Instruction, SymbolListPart, TypeConstants};
 
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
 use crate::{ByteListIterator, CharListIterator, DataError, DataIndexIterator, SimpleData, SimpleDataType, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, SymbolListPartIterator, symbol_value};
@@ -203,13 +203,13 @@ where
         }
     }
 
-    fn get_list_items_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+    fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
         Ok(self.get_list_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
             .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
     }
 
-    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+    fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
         Ok(self.get_list_associations_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
             .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
@@ -229,7 +229,7 @@ where
         }
     }
 
-    fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<CharListIterator, Self::Error> {
+    fn get_char_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<CharListIterator, Self::Error> {
         Ok(self.get_char_list_len(list_addr)
             .and_then(|len| Ok(CharListIterator::new(self.get(list_addr)?.as_char_list()?.chars().collect())))
             .unwrap_or(CharListIterator::new(vec![])))
@@ -249,7 +249,7 @@ where
         }
     }
 
-    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<ByteListIterator, Self::Error> {
+    fn get_byte_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<ByteListIterator, Self::Error> {
         Ok(self.get_byte_list_len(list_addr)
             .and_then(|len| Ok(ByteListIterator::new(self.get(list_addr)?.as_byte_list()?.clone())))
             .unwrap_or(ByteListIterator::new(vec![])))
@@ -269,87 +269,22 @@ where
         }
     }
 
-    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<SymbolListPartIterator, Self::Error> {
+    fn get_symbol_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<SymbolListPartIterator, Self::Error> {
         Ok(self.get_symbol_list_len(list_addr)
             .and_then(|len| Ok(SymbolListPartIterator::new(self.get(list_addr)?.as_symbol_list()?.iter().map(|s| SymbolListPart::Symbol(*s)).collect())))
             .unwrap_or(SymbolListPartIterator::new(vec![])))
     }
 
-    fn get_list_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
+    fn get_list_item_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
         match self.get_data().get(list_addr) {
             Some(SimpleData::List(items, _)) => Ok(DataIndexIterator::new(items.clone())),
             _ => Ok(DataIndexIterator::new(vec![])),
         }
     }
 
-    fn get_concatenation_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
+    fn get_concatenation_iter(&self, addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ConcatenationItemIterator, Self::Error> {
         match self.get_data().get(addr) {
             Some(SimpleData::Concatenation(left, right)) => Ok(DataIndexIterator::new(self.collect_concatenation_indices(*left, *right)?)),
-            _ => Ok(DataIndexIterator::new(vec![])),
-        }
-    }
-
-    fn get_slice_iter(&self, addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
-        match self.get_data().get(addr) {
-            Some(SimpleData::Slice(_, range)) => match self.get_data().get(*range) {
-                Some(SimpleData::Range(start, end)) => match (self.get_data().get(*start), self.get_data().get(*end)) {
-                    (Some(SimpleData::Number(start)), Some(SimpleData::Number(end))) => end
-                        .clone()
-                        .plus(SimpleNumber::Integer(1))
-                        .and_then(|end| Some(Ok(NumberIterator::new(start.clone(), end))))
-                        .unwrap_or(Ok(NumberIterator::new(0.into(), 0.into()))),
-                    _ => Ok(NumberIterator::new(0.into(), 0.into())),
-                },
-                _ => Ok(NumberIterator::new(0.into(), 0.into())),
-            },
-            _ => Ok(NumberIterator::new(0.into(), 0.into())),
-        }
-    }
-
-    fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
-        match self.get_data().get(list_addr) {
-            Some(SimpleData::Slice(list, range)) => match (self.get_data().get(*list), self.get_data().get(*range)) {
-                (Some(SimpleData::List(items, _)), Some(SimpleData::Range(start, end))) => {
-                    match (self.get_data().get(*start), self.get_data().get(*end)) {
-                        (Some(SimpleData::Number(SimpleNumber::Integer(start))), Some(SimpleData::Number(SimpleNumber::Integer(end)))) => {
-                            Ok(DataIndexIterator::new(
-                                items
-                                    .iter()
-                                    .skip(*start as usize)
-                                    .take((end - start) as usize + 1)
-                                    .map(usize::clone)
-                                    .collect::<Vec<_>>(),
-                            ))
-                        }
-                        _ => Ok(DataIndexIterator::new(vec![])),
-                    }
-                }
-                _ => Ok(DataIndexIterator::new(vec![])),
-            },
-            _ => Ok(DataIndexIterator::new(vec![])),
-        }
-    }
-
-    fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
-        match self.get_data().get(addr) {
-            Some(SimpleData::Slice(list, range)) => match (self.get_data().get(*list), self.get_data().get(*range)) {
-                (Some(SimpleData::Concatenation(left, right)), Some(SimpleData::Range(start, end))) => {
-                    match (self.get_data().get(*start), self.get_data().get(*end)) {
-                        (Some(SimpleData::Number(SimpleNumber::Integer(start))), Some(SimpleData::Number(SimpleNumber::Integer(end)))) => {
-                            Ok(DataIndexIterator::new(
-                                self.collect_concatenation_indices(*left, *right)?
-                                    .iter()
-                                    .skip(*start as usize)
-                                    .take((end - start) as usize + 1)
-                                    .map(usize::clone)
-                                    .collect::<Vec<_>>())
-                            )
-                        }
-                        _ => Ok(DataIndexIterator::new(vec![])),
-                    }
-                }
-                _ => Ok(DataIndexIterator::new(vec![])),
-            },
             _ => Ok(DataIndexIterator::new(vec![])),
         }
     }
@@ -739,7 +674,7 @@ where
     fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         match self.get_data_type(from)? {
             GarnishDataType::CharList => {
-                let iter = self.get_char_list_iter(from)?;
+                let iter = self.get_char_list_iter(from, Extents::new(SimpleNumber::zero(), SimpleNumber::max_value()))?;
                 let mut s = String::new();
                 for c in iter {
                     s.push(c);
@@ -757,7 +692,7 @@ where
     fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         match self.get_data_type(from)? {
             GarnishDataType::CharList => {
-                let iter = self.get_char_list_iter(from)?;
+                let iter = self.get_char_list_iter(from, Extents::new(SimpleNumber::zero(), SimpleNumber::max_value()))?;
                 let mut s = String::new();
                 for c in iter {
                     s.push(c);
@@ -1110,8 +1045,8 @@ mod add_data {
 
 #[cfg(test)]
 mod iterators {
-    use crate::{SimpleData, SimpleGarnishData};
-    use garnish_lang_traits::GarnishData;
+    use crate::{SimpleData, SimpleGarnishData, SimpleNumber};
+    use garnish_lang_traits::{Extents, GarnishData, TypeConstants};
 
     #[test]
     fn list_item_iterator() {
@@ -1119,7 +1054,7 @@ mod iterators {
         let list_index = data.get_data().len();
         data.get_data_mut().push(SimpleData::List(vec![100, 200, 300, 400, 500], vec![]));
 
-        let mut iter = data.get_list_item_iter(list_index).unwrap();
+        let mut iter = data.get_list_item_iter(list_index, Extents::new(SimpleNumber::zero(), SimpleNumber::max_value())).unwrap();
 
         assert_eq!(iter.next(), 100.into());
         assert_eq!(iter.next(), 200.into());
@@ -1133,7 +1068,7 @@ mod iterators {
         let mut data = SimpleGarnishData::new();
         let num1 = data.add_number(10.into()).unwrap();
 
-        let mut iter = data.get_list_item_iter(num1).unwrap();
+        let mut iter = data.get_list_item_iter(num1, Extents::new(SimpleNumber::zero(), SimpleNumber::max_value())).unwrap();
 
         assert_eq!(iter.next(), None);
     }
@@ -1150,7 +1085,7 @@ mod iterators {
         let con2 = data.add_concatenation(con1, 1).unwrap();
         let con3 = data.add_concatenation(con2, 2).unwrap();
 
-        let mut iter = data.get_concatenation_iter(con3).unwrap();
+        let mut iter = data.get_concatenation_iter(con3, Extents::new(SimpleNumber::zero(), SimpleNumber::max_value())).unwrap();
 
         assert_eq!(iter.next(), num1.into());
         assert_eq!(iter.next(), num2.into());
@@ -1189,7 +1124,7 @@ mod iterators {
 
         let con7 = data.add_concatenation(con3, slice2).unwrap();
 
-        let mut iter = data.get_concatenation_iter(con7).unwrap();
+        let mut iter = data.get_concatenation_iter(con7, Extents::new(SimpleNumber::zero(), SimpleNumber::max_value())).unwrap();
 
         assert_eq!(iter.next(), num1.into());
         assert_eq!(iter.next(), num2.into());
@@ -1207,292 +1142,7 @@ mod iterators {
         let mut data = SimpleGarnishData::new();
         let num1 = data.add_number(10.into()).unwrap();
 
-        let mut iter = data.get_concatenation_iter(num1).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn slice_iterator() {
-        let mut data = SimpleGarnishData::new();
-        let s1 = data.get_data().len();
-        data.get_data_mut().push(SimpleData::CharList("Iterators".to_string()));
-        let num1 = data.add_number(2.into()).unwrap();
-        let num2 = data.add_number(5.into()).unwrap();
-        let range = data.add_range(num1, num2).unwrap();
-        let slice = data.add_slice(s1, range).unwrap();
-
-        let mut iter = data.get_slice_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), Some(2.into()));
-        assert_eq!(iter.next(), Some(3.into()));
-        assert_eq!(iter.next(), Some(4.into()));
-        assert_eq!(iter.next(), Some(5.into()));
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn slice_iterator_not_slice() {
-        let mut data = SimpleGarnishData::new();
-
-        data.get_data_mut().push(SimpleData::CharList("Iterators".to_string()));
-        let num1 = data.add_number(2.into()).unwrap();
-        let num2 = data.add_number(5.into()).unwrap();
-        let range = data.add_range(num1, num2).unwrap();
-
-        let mut iter = data.get_slice_iter(range).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn slice_iterator_no_range_in_slice() {
-        let mut data = SimpleGarnishData::new();
-        let s1 = data.get_data().len();
-        data.get_data_mut().push(SimpleData::CharList("Iterators".to_string()));
-        let num1 = data.add_number(2.into()).unwrap();
-        let slice = data.add_slice(s1, num1).unwrap();
-
-        let mut iter = data.get_slice_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn slice_iterator_range_start_not_number() {
-        let mut data = SimpleGarnishData::new();
-        let s1 = data.get_data().len();
-        data.get_data_mut().push(SimpleData::CharList("Iterators".to_string()));
-        let num1 = data.add_byte(2).unwrap();
-        let num2 = data.add_number(5.into()).unwrap();
-        let range = data.add_range(num1, num2).unwrap();
-        let slice = data.add_slice(s1, range).unwrap();
-
-        let mut iter = data.get_slice_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn slice_iterator_range_end_not_number() {
-        let mut data = SimpleGarnishData::new();
-        let s1 = data.get_data().len();
-        data.get_data_mut().push(SimpleData::CharList("Iterators".to_string()));
-        let num1 = data.add_number(2.into()).unwrap();
-        let num2 = data.add_byte(5).unwrap();
-        let range = data.add_range(num1, num2).unwrap();
-        let slice = data.add_slice(s1, range).unwrap();
-
-        let mut iter = data.get_slice_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn list_slice_iterator() {
-        let mut data = SimpleGarnishData::new();
-        let list_index = data.get_data().len();
-        data.get_data_mut().push(SimpleData::List(vec![100, 200, 300, 400, 500], vec![]));
-        let num1 = data.add_number(1.into()).unwrap();
-        let num2 = data.add_number(3.into()).unwrap();
-        let range = data.add_range(num1, num2).unwrap();
-        let slice = data.add_slice(list_index, range).unwrap();
-
-        let mut iter = data.get_list_slice_item_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), Some(200));
-        assert_eq!(iter.next(), Some(300));
-        assert_eq!(iter.next(), Some(400));
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn list_slice_iterator_not_slice() {
-        let mut data = SimpleGarnishData::new();
-
-        let num1 = data.add_number(1.into()).unwrap();
-        let num2 = data.add_number(3.into()).unwrap();
-        let range = data.add_range(num1, num2).unwrap();
-
-        let mut iter = data.get_list_slice_item_iter(range).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn list_slice_iterator_no_range() {
-        let mut data = SimpleGarnishData::new();
-        let list_index = data.get_data().len();
-        data.get_data_mut().push(SimpleData::List(vec![100, 200, 300, 400, 500], vec![]));
-        let num2 = data.add_number(3.into()).unwrap();
-        let slice = data.add_slice(list_index, num2).unwrap();
-
-        let mut iter = data.get_list_slice_item_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn list_slice_iterator_no_list() {
-        let mut data = SimpleGarnishData::new();
-
-        let num1 = data.add_number(1.into()).unwrap();
-        let num2 = data.add_number(3.into()).unwrap();
-        let range = data.add_range(num1, num2).unwrap();
-        let slice = data.add_slice(num1, range).unwrap();
-
-        let mut iter = data.get_list_slice_item_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn list_slice_iterator_start_not_number() {
-        let mut data = SimpleGarnishData::new();
-        let list_index = data.get_data().len();
-        data.get_data_mut().push(SimpleData::List(vec![100, 200, 300, 400, 500], vec![]));
-        let num1 = data.add_byte(1.into()).unwrap();
-        let num2 = data.add_number(3.into()).unwrap();
-        let range = data.add_range(num1, num2).unwrap();
-        let slice = data.add_slice(list_index, range).unwrap();
-
-        let mut iter = data.get_list_slice_item_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn list_slice_iterator_end_not_number() {
-        let mut data = SimpleGarnishData::new();
-        let list_index = data.get_data().len();
-        data.get_data_mut().push(SimpleData::List(vec![100, 200, 300, 400, 500], vec![]));
-        let num1 = data.add_number(1.into()).unwrap();
-        let num2 = data.add_byte(3.into()).unwrap();
-        let range = data.add_range(num1, num2).unwrap();
-        let slice = data.add_slice(list_index, range).unwrap();
-
-        let mut iter = data.get_list_slice_item_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn concatenation_slice_iterator() {
-        let mut data = SimpleGarnishData::new();
-
-        let num1 = data.add_number(10.into()).unwrap();
-        let num2 = data.add_number(10.into()).unwrap();
-        let num3 = data.add_number(10.into()).unwrap();
-        let list_index = data.get_data().len();
-        data.get_data_mut().push(SimpleData::List(vec![num1, num2, num3], vec![]));
-        let con1 = data.add_concatenation(list_index, 2).unwrap();
-        let con2 = data.add_concatenation(con1, 1).unwrap();
-        let con3 = data.add_concatenation(con2, 2).unwrap();
-
-        let start = data.add_number(2.into()).unwrap();
-        let end = data.add_number(5.into()).unwrap();
-        let range = data.add_range(start, end).unwrap();
-        let slice = data.add_slice(con3, range).unwrap();
-
-        let mut iter = data.get_concatenation_slice_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), num3.into());
-        assert_eq!(iter.next(), 2.into());
-        assert_eq!(iter.next(), 1.into());
-        assert_eq!(iter.next(), 2.into());
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn concatenation_slice_iterator_not_slice() {
-        let mut data = SimpleGarnishData::new();
-
-        let start = data.add_number(2.into()).unwrap();
-        let end = data.add_number(5.into()).unwrap();
-        let range = data.add_range(start, end).unwrap();
-
-        let mut iter = data.get_concatenation_slice_iter(range).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn concatenation_slice_iterator_no_range() {
-        let mut data = SimpleGarnishData::new();
-
-        let num1 = data.add_number(10.into()).unwrap();
-        let num2 = data.add_number(10.into()).unwrap();
-        let num3 = data.add_number(10.into()).unwrap();
-        let list_index = data.get_data().len();
-        data.get_data_mut().push(SimpleData::List(vec![num1, num2, num3], vec![]));
-        let con1 = data.add_concatenation(list_index, 2).unwrap();
-        let con2 = data.add_concatenation(con1, 1).unwrap();
-        let con3 = data.add_concatenation(con2, 2).unwrap();
-
-        let start = data.add_number(2.into()).unwrap();
-        let slice = data.add_slice(con3, start).unwrap();
-
-        let mut iter = data.get_concatenation_slice_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn concatenation_slice_iterator_no_concatenation() {
-        let mut data = SimpleGarnishData::new();
-
-        let start = data.add_number(2.into()).unwrap();
-        let end = data.add_number(5.into()).unwrap();
-        let range = data.add_range(start, end).unwrap();
-        let slice = data.add_slice(start, range).unwrap();
-
-        let mut iter = data.get_concatenation_slice_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn concatenation_slice_iterator_start_not_number() {
-        let mut data = SimpleGarnishData::new();
-
-        let num1 = data.add_number(10.into()).unwrap();
-        let num2 = data.add_number(10.into()).unwrap();
-        let num3 = data.add_number(10.into()).unwrap();
-        let list_index = data.get_data().len();
-        data.get_data_mut().push(SimpleData::List(vec![num1, num2, num3], vec![]));
-        let con1 = data.add_concatenation(list_index, 2).unwrap();
-        let con2 = data.add_concatenation(con1, 1).unwrap();
-        let con3 = data.add_concatenation(con2, 2).unwrap();
-
-        let start = data.add_byte(2.into()).unwrap();
-        let end = data.add_number(5.into()).unwrap();
-        let range = data.add_range(start, end).unwrap();
-        let slice = data.add_slice(con3, range).unwrap();
-
-        let mut iter = data.get_concatenation_slice_iter(slice).unwrap();
-
-        assert_eq!(iter.next(), None);
-    }
-
-    #[test]
-    fn concatenation_slice_iterator_end_not_number() {
-        let mut data = SimpleGarnishData::new();
-
-        let num1 = data.add_number(10.into()).unwrap();
-        let num2 = data.add_number(10.into()).unwrap();
-        let num3 = data.add_number(10.into()).unwrap();
-        let list_index = data.get_data().len();
-        data.get_data_mut().push(SimpleData::List(vec![num1, num2, num3], vec![]));
-        let con1 = data.add_concatenation(list_index, 2).unwrap();
-        let con2 = data.add_concatenation(con1, 1).unwrap();
-        let con3 = data.add_concatenation(con2, 2).unwrap();
-
-        let start = data.add_number(2.into()).unwrap();
-        let end = data.add_byte(5.into()).unwrap();
-        let range = data.add_range(start, end).unwrap();
-        let slice = data.add_slice(con3, range).unwrap();
-
-        let mut iter = data.get_concatenation_slice_iter(slice).unwrap();
+        let mut iter = data.get_concatenation_iter(num1, Extents::new(SimpleNumber::zero(), SimpleNumber::max_value())).unwrap();
 
         assert_eq!(iter.next(), None);
     }

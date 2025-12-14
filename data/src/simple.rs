@@ -1,8 +1,9 @@
+use crate::SimpleNumber;
 use crate::data::{DisplayForCustomItem, SimpleDataList, SimpleStackFrame, UNIT_INDEX};
 use crate::error::DataError;
 use crate::instruction::SimpleInstruction;
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
-use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction, SymbolListPart};
+use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, Instruction, SymbolListPart, TypeConstants};
 use std::collections::hash_map::DefaultHasher;
 use std::fmt::{Debug, Display, Formatter};
 use std::hash::Hash;
@@ -324,11 +325,13 @@ where
                     }
                 }
                 Some(crate::data::SimpleData::Slice(list, range)) => match (self.get_data().get(*list), self.get_data().get(*range)) {
-                    (Some(crate::data::SimpleData::List(_, _)), Some(crate::data::SimpleData::Range(_, _))) => {
-                        let iter = self.get_list_slice_item_iter(item)?;
+                    (Some(crate::data::SimpleData::List(_, _)), Some(crate::data::SimpleData::Range(start, end))) => {
+                        let start = self.get_number(*start)?.to_integer();
+                        let end = self.get_number(*end)?.to_integer();
+                        let iter = self.get_list_item_iter(*list, Extents::new(start, end))?;
 
                         for item in iter {
-                            items.push(item.clone());
+                            items.push(item);
                         }
                     }
                     (Some(crate::data::SimpleData::Concatenation(left, right)), Some(crate::data::SimpleData::Range(start, end))) => {
@@ -422,7 +425,7 @@ where
                 self.add_to_char_list(c)?;
             }
             GarnishDataType::CharList => {
-                let iter = self.get_char_list_iter(from)?;
+                let iter = self.get_char_list_iter(from, Extents::new(SimpleNumber::zero(), SimpleNumber::max_value()))?;
                 for c in iter {
                     self.add_to_char_list(c)?;
                 }
@@ -436,7 +439,7 @@ where
                 }
             }
             GarnishDataType::ByteList => {
-                let mut iter = self.get_byte_list_iter(from)?;
+                let iter = self.get_byte_list_iter(from, Extents::new(SimpleNumber::zero(), SimpleNumber::max_value()))?;
                 let mut strs = vec![];
                 for b in iter {
                     strs.push(format!("'{}'", b));
@@ -459,7 +462,7 @@ where
                 }
             }
             GarnishDataType::SymbolList => {
-                let mut iter = self.get_symbol_list_iter(from)?;
+                let iter = self.get_symbol_list_iter(from, Extents::new(SimpleNumber::zero(), SimpleNumber::max_value()))?;
                 let mut strs = vec![];
                 for part in iter {
                     let s = match part {

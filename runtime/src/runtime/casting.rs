@@ -1,4 +1,4 @@
-use garnish_lang_traits::{Instruction, SymbolListPart};
+use garnish_lang_traits::{Extents, Instruction, SymbolListPart};
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
 
 use crate::runtime::error::OrNumberError;
@@ -67,7 +67,7 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
         (GarnishDataType::CharList, GarnishDataType::Char) => {
             let len = this.get_char_list_len(left.clone())?;
             if len == Data::Size::one() {
-                let mut iter = this.get_char_list_iter(left.clone())?;
+                let mut iter = this.get_char_list_iter(left.clone(), Extents::new(Data::Number::zero(), Data::Number::max_value()))?;
                 match iter.next() {
                     Some(c) => this.add_char(c).and_then(|r| this.push_register(r))?,
                     None => push_unit(this)?,
@@ -77,7 +77,7 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
             }
         }
         (GarnishDataType::SymbolList, GarnishDataType::List) => {
-            let mut iter = this.get_symbol_list_iter(left.clone())?;
+            let mut iter = this.get_symbol_list_iter(left.clone(), Extents::new(Data::Number::zero(), Data::Number::max_value()))?;
             let len = this.get_symbol_list_len(left.clone())?;
 
             this.start_list(len)?;

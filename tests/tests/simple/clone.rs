@@ -485,7 +485,7 @@ mod tests {
 #[allow(unused)]
 mod test_data_impl {
     use garnish_lang::simple::{ByteListIterator, CharListIterator, DataError, NumberIterator, SimpleNumber, SizeIterator, SymbolListPartIterator};
-    use garnish_lang::{GarnishData, GarnishDataType, Instruction, SymbolListPart};
+    use garnish_lang::{Extents, GarnishData, GarnishDataType, Instruction, SymbolListPart};
 
     pub struct TestData {
         pub unit_added: bool,
@@ -637,11 +637,11 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_list_items_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
             unimplemented!()
         }
 
-        fn get_list_associations_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
             unimplemented!()
         }
 
@@ -653,7 +653,7 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::CharIterator, Self::Error> {
+        fn get_char_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::CharIterator, Self::Error> {
             unimplemented!()
         }
 
@@ -665,7 +665,7 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ByteIterator, Self::Error> {
+        fn get_byte_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ByteIterator, Self::Error> {
             unimplemented!()
         }
 
@@ -677,27 +677,15 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::SymbolListPartIterator, Self::Error> {
+        fn get_symbol_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::SymbolListPartIterator, Self::Error> {
             unimplemented!()
         }
 
-        fn get_list_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
+        fn get_list_item_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
             unimplemented!()
         }
 
-        fn get_concatenation_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
-            unimplemented!()
-        }
-
-        fn get_slice_iter(&self, addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
-            unimplemented!()
-        }
-
-        fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
-            unimplemented!()
-        }
-
-        fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
+        fn get_concatenation_iter(&self, addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ConcatenationItemIterator, Self::Error> {
             unimplemented!()
         }
 

@@ -1,7 +1,7 @@
 use crate::runtime::error::state_error;
 use crate::runtime::list::{access_with_integer, access_with_symbol};
 use crate::runtime::utilities::*;
-use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, GarnishNumber, Instruction, RuntimeError, SymbolListPart, TypeConstants};
+use garnish_lang_traits::{Extents, GarnishContext, GarnishData, GarnishDataType, GarnishNumber, Instruction, RuntimeError, SymbolListPart, TypeConstants};
 use log::trace;
 
 pub fn apply<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -137,7 +137,7 @@ fn apply_internal<Data: GarnishData>(this: &mut Data, instruction: Instruction, 
             }
         }
         (GarnishDataType::List, GarnishDataType::SymbolList) => {
-            let mut iter = this.get_symbol_list_iter(right_addr.clone())?;
+            let mut iter = this.get_symbol_list_iter(right_addr.clone(), Extents::new(Data::Number::zero(), Data::Number::max_value()))?;
             let mut current = left_addr.clone();
             while let Some(part) = iter.next() {
                 match part {

@@ -1,7 +1,7 @@
 use crate::{
     BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list}
 };
-use garnish_lang_traits::{GarnishData, GarnishDataType, SymbolListPart};
+use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, SymbolListPart};
 
 impl<T> GarnishData for BasicGarnishData<T>
 where
@@ -140,11 +140,11 @@ where
         todo!()
     }
 
-    fn get_list_items_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+    fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
         todo!()
     }
 
-    fn get_list_associations_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+    fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
         todo!()
     }
 
@@ -156,7 +156,7 @@ where
         todo!()
     }
 
-    fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::CharIterator, Self::Error> {
+    fn get_char_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::CharIterator, Self::Error> {
         todo!()
     }
 
@@ -168,7 +168,7 @@ where
         todo!()
     }
 
-    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ByteIterator, Self::Error> {
+    fn get_byte_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ByteIterator, Self::Error> {
         todo!()
     }
 
@@ -180,27 +180,15 @@ where
         todo!()
     }
 
-    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::SymbolListPartIterator, Self::Error> {
+    fn get_symbol_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::SymbolListPartIterator, Self::Error> {
         todo!()
     }
 
-    fn get_list_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
+    fn get_list_item_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
         todo!()
     }
 
-    fn get_concatenation_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
-        todo!()
-    }
-
-    fn get_slice_iter(&self, addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
-        todo!()
-    }
-
-    fn get_list_slice_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
-        todo!()
-    }
-
-    fn get_concatenation_slice_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error> {
+    fn get_concatenation_iter(&self, addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ConcatenationItemIterator, Self::Error> {
         todo!()
     }
 
