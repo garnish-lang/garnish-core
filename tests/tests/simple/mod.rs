@@ -94,7 +94,7 @@ pub mod testing_utilities {
         runtime.start_list(count).unwrap();
         for i in 0..count {
             let d = add_pair(runtime, format!("val{}", i).as_str(), (i as i32 + 1) * 10);
-            runtime.add_to_list(d, true).unwrap();
+            runtime.add_to_list(d, d).unwrap();
         }
         runtime.end_list().unwrap()
     }
@@ -109,7 +109,7 @@ pub mod testing_utilities {
             // println!("{} = {}", sym, symbol_value(sym.as_str()));
 
             let d = add_pair(runtime, format!("val{}", v).as_str(), v);
-            runtime.add_to_list(d, true).unwrap();
+            runtime.add_to_list(d, d).unwrap();
         }
         runtime.end_list().unwrap()
     }
@@ -119,7 +119,7 @@ pub mod testing_utilities {
         for i in 0..count {
             let v = start_value + i as i32;
             let d = runtime.add_number(v.into()).unwrap();
-            runtime.add_to_list(d, false).unwrap();
+            runtime.add_to_list(d, d).unwrap();
         }
         runtime.end_list().unwrap()
     }
@@ -128,7 +128,7 @@ pub mod testing_utilities {
         runtime.start_list(count).unwrap();
         for i in 0..count {
             let d = runtime.add_number(((i as i32 + 1) * 10).into()).unwrap();
-            runtime.add_to_list(d, false).unwrap();
+            runtime.add_to_list(d, d).unwrap();
         }
         runtime.end_list().unwrap()
     }

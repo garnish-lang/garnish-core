@@ -587,7 +587,7 @@ fn create_missing_functions(
     all_functions.insert(
         "start_list",
         quote! {
-            fn start_list(&mut self, len: Self::Size) -> Result<(), Self::Error> {
+            fn start_list(&mut self, len: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.start_list(len)
             }
         },
@@ -595,8 +595,8 @@ fn create_missing_functions(
     all_functions.insert(
         "add_to_list",
         quote! {
-            fn add_to_list(&mut self, addr: Self::Size, is_associative: bool) -> Result<(), Self::Error> {
-                self.#delegate_field.add_to_list(addr, is_associative)
+            fn add_to_list(&mut self, list_index: Self::Size, item_index: Self::Size) -> Result<Self::Size, Self::Error> {
+                self.#delegate_field.add_to_list(list_index, item_index)
             }
         },
     );

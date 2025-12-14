@@ -944,19 +944,19 @@ mod lists {
         let i1 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i3 = runtime.get_data_mut().add_number(10.into()).unwrap();
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i1, false).unwrap();
-        runtime.get_data_mut().add_to_list(i2, false).unwrap();
-        runtime.get_data_mut().add_to_list(i3, false).unwrap();
+        let list_index1  =runtime.get_data_mut().start_list(3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i1).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i2).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i3).unwrap();
         let i4 = runtime.get_data_mut().end_list().unwrap();
 
         let i5 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i6 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i7 = runtime.get_data_mut().add_number(10.into()).unwrap();
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i5, false).unwrap();
-        runtime.get_data_mut().add_to_list(i6, false).unwrap();
-        runtime.get_data_mut().add_to_list(i7, false).unwrap();
+        let list_index2 = runtime.get_data_mut().start_list(3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i5).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i6).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i7).unwrap();
         let i8 = runtime.get_data_mut().end_list().unwrap();
 
         runtime.get_data_mut().push_register(i4).unwrap();
@@ -975,23 +975,23 @@ mod lists {
         let i1 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i3 = runtime.get_data_mut().add_number(10.into()).unwrap();
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i1, false).unwrap();
-        runtime.get_data_mut().add_to_list(i2, false).unwrap();
-        runtime.get_data_mut().add_to_list(i3, false).unwrap();
-        let i4 = runtime.get_data_mut().end_list().unwrap();
+        let list_index1 = runtime.get_data_mut().start_list(3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i1).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i2).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i3).unwrap();
+        let list_index1 = runtime.get_data_mut().end_list().unwrap();
 
         let i5 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i6 = runtime.get_data_mut().add_number(20.into()).unwrap();
         let i7 = runtime.get_data_mut().add_number(30.into()).unwrap();
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i5, false).unwrap();
-        runtime.get_data_mut().add_to_list(i6, false).unwrap();
-        runtime.get_data_mut().add_to_list(i7, false).unwrap();
-        let i8 = runtime.get_data_mut().end_list().unwrap();
+        let list_index2 = runtime.get_data_mut().start_list(3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i5).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i6).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i7).unwrap();
+        let list_index2 = runtime.get_data_mut().end_list().unwrap();
 
-        runtime.get_data_mut().push_register(i4).unwrap();
-        runtime.get_data_mut().push_register(i8).unwrap();
+        runtime.get_data_mut().push_register(list_index1).unwrap();
+        runtime.get_data_mut().push_register(list_index2).unwrap();
 
         runtime.get_data_mut().push_instruction(Instruction::Equal, None).unwrap();
 
@@ -1017,11 +1017,11 @@ mod lists {
         let i8 = runtime.get_data_mut().add_number(30.into()).unwrap();
         let i9 = runtime.get_data_mut().add_pair((i7, i8)).unwrap();
 
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i3, true).unwrap();
-        runtime.get_data_mut().add_to_list(i6, true).unwrap();
-        runtime.get_data_mut().add_to_list(i9, true).unwrap();
-        let i10 = runtime.get_data_mut().end_list().unwrap();
+        let list_index1 = runtime.get_data_mut().start_list(3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i6).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i9).unwrap();
+        let list_index1 = runtime.get_data_mut().end_list().unwrap();
 
         let i11 = runtime.get_data_mut().add_symbol(3).unwrap();
         let i12 = runtime.get_data_mut().add_number(30.into()).unwrap();
@@ -1035,14 +1035,14 @@ mod lists {
         let i18 = runtime.get_data_mut().add_number(100.into()).unwrap();
         let i19 = runtime.get_data_mut().add_pair((i17, i18)).unwrap();
 
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i13, true).unwrap();
-        runtime.get_data_mut().add_to_list(i16, true).unwrap();
-        runtime.get_data_mut().add_to_list(i19, true).unwrap();
-        let i20 = runtime.get_data_mut().end_list().unwrap();
+        let list_index2 = runtime.get_data_mut().start_list(3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i13).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i16).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i19).unwrap();
+        let list_index2 = runtime.get_data_mut().end_list().unwrap();
 
-        runtime.get_data_mut().push_register(i10).unwrap();
-        runtime.get_data_mut().push_register(i20).unwrap();
+        runtime.get_data_mut().push_register(list_index1).unwrap();
+        runtime.get_data_mut().push_register(list_index2).unwrap();
 
         runtime.equal().unwrap();
 
@@ -1064,11 +1064,11 @@ mod lists {
         let i6 = runtime.get_data_mut().add_number(30.into()).unwrap();
         let i7 = runtime.get_data_mut().add_pair((i5, i6)).unwrap();
 
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i3, true).unwrap();
-        runtime.get_data_mut().add_to_list(i4, false).unwrap();
-        runtime.get_data_mut().add_to_list(i7, true).unwrap();
-        let i8 = runtime.get_data_mut().end_list().unwrap();
+        let list_index1 = runtime.get_data_mut().start_list(3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i4).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i7).unwrap();
+        let list_index1 = runtime.get_data_mut().end_list().unwrap();
 
         let i9 = runtime.get_data_mut().add_symbol(1).unwrap();
         let i10 = runtime.get_data_mut().add_number(10.into()).unwrap();
@@ -1080,14 +1080,14 @@ mod lists {
         let i14 = runtime.get_data_mut().add_number(30.into()).unwrap();
         let i15 = runtime.get_data_mut().add_pair((i13, i14)).unwrap();
 
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i11, true).unwrap();
-        runtime.get_data_mut().add_to_list(i12, false).unwrap();
-        runtime.get_data_mut().add_to_list(i15, true).unwrap();
-        let i16 = runtime.get_data_mut().end_list().unwrap();
+        let list_index2 = runtime.get_data_mut().start_list(3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i11).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i12).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i15).unwrap();
+        let list_index2 = runtime.get_data_mut().end_list().unwrap();
 
-        runtime.get_data_mut().push_register(i8).unwrap();
-        runtime.get_data_mut().push_register(i16).unwrap();
+        runtime.get_data_mut().push_register(list_index1).unwrap();
+        runtime.get_data_mut().push_register(list_index2).unwrap();
 
         runtime.equal().unwrap();
 
@@ -1109,11 +1109,11 @@ mod lists {
         let i6 = runtime.get_data_mut().add_number(30.into()).unwrap();
         let i7 = runtime.get_data_mut().add_pair((i5, i6)).unwrap();
 
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i3, true).unwrap();
-        runtime.get_data_mut().add_to_list(i4, false).unwrap();
-        runtime.get_data_mut().add_to_list(i7, true).unwrap();
-        let i8 = runtime.get_data_mut().end_list().unwrap();
+        let list_index1 = runtime.get_data_mut().start_list(3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i4).unwrap();
+        runtime.get_data_mut().add_to_list(list_index1, i7).unwrap();
+        let list_index1 = runtime.get_data_mut().end_list().unwrap();
 
         let i9 = runtime.get_data_mut().add_symbol(1).unwrap();
         let i10 = runtime.get_data_mut().add_number(10.into()).unwrap();
@@ -1125,14 +1125,14 @@ mod lists {
         let i14 = runtime.get_data_mut().add_number(30.into()).unwrap();
         let i15 = runtime.get_data_mut().add_pair((i13, i14)).unwrap();
 
-        runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(i11, true).unwrap();
-        runtime.get_data_mut().add_to_list(i12, false).unwrap();
-        runtime.get_data_mut().add_to_list(i15, true).unwrap();
-        let i16 = runtime.get_data_mut().end_list().unwrap();
+        let list_index2 = runtime.get_data_mut().start_list(3).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i11).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i12).unwrap();
+        runtime.get_data_mut().add_to_list(list_index2, i15).unwrap();
+        let list_index2 = runtime.get_data_mut().end_list().unwrap();
 
-        runtime.get_data_mut().push_register(i8).unwrap();
-        runtime.get_data_mut().push_register(i16).unwrap();
+        runtime.get_data_mut().push_register(list_index1).unwrap();
+        runtime.get_data_mut().push_register(list_index2).unwrap();
 
         runtime.equal().unwrap();
 

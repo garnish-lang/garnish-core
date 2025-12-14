@@ -384,22 +384,19 @@ where
         Ok(self.data.len() - 1)
     }
 
-    fn start_list(&mut self, _: usize) -> Result<(), Self::Error> {
+    fn start_list(&mut self, _: usize) -> Result<usize, Self::Error> {
         self.current_list = Some((vec![], vec![]));
-        Ok(())
+        Ok(0)
     }
 
-    fn add_to_list(&mut self, addr: usize, is_associative: bool) -> Result<(), Self::Error> {
+    fn add_to_list(&mut self, list_index: usize, item_index: usize) -> Result<usize, Self::Error> {
         match &mut self.current_list {
             None => Err("Not currently creating a list.".to_string())?,
             Some((items, associations)) => {
-                items.push(addr);
+                items.push(item_index);
+                associations.push(item_index);
 
-                if is_associative {
-                    associations.push(addr);
-                }
-
-                Ok(())
+                Ok(list_index)
             }
         }
     }

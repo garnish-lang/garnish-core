@@ -256,14 +256,13 @@ where
         merge_to_symbol_list(self, first, second)
     }
 
-    fn start_list(&mut self, len: Self::Size) -> Result<(), Self::Error> {
-        self.push_basic_data(BasicData::List(len));
-        Ok(())
+    fn start_list(&mut self, len: Self::Size) -> Result<Self::Size, Self::Error> {
+        Ok(self.push_basic_data(BasicData::List(len)))
     }
 
-    fn add_to_list(&mut self, addr: Self::Size, is_associative: bool) -> Result<(), Self::Error> {
-        self.push_basic_data(BasicData::ListItem(addr));
-        Ok(())
+    fn add_to_list(&mut self, list_index: Self::Size, item_index: Self::Size) -> Result<Self::Size, Self::Error> {
+        self.push_basic_data(BasicData::ListItem(item_index));
+        Ok(list_index)
     }
 
     fn end_list(&mut self) -> Result<Self::Size, Self::Error> {
@@ -950,13 +949,13 @@ mod tests {
         let v1 = data.push_basic_data(BasicData::Number(100.into()));
         let v2 = data.push_basic_data(BasicData::Number(200.into()));
         let v3 = data.push_basic_data(BasicData::Number(300.into()));
-        data.start_list(3).unwrap();
-        data.add_to_list(v1, false).unwrap();
-        data.add_to_list(v2, false).unwrap();
-        data.add_to_list(v3, false).unwrap();
-        let list = data.end_list().unwrap();
+        let list_index = data.start_list(3).unwrap();
+        data.add_to_list(list_index, v1).unwrap();
+        data.add_to_list(list_index, v2).unwrap();
+        data.add_to_list(list_index, v3).unwrap();
+        let list_index = data.end_list().unwrap();
 
-        assert_eq!(list, 3);
+        assert_eq!(list_index, 3);
         assert_eq!(data, BasicGarnishDataUnit::new_full(vec![
             BasicData::Number(100.into()),
             BasicData::Number(200.into()),

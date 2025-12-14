@@ -46,7 +46,7 @@ mod tests {
         let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
         runtime.get_data_mut().start_list(1).unwrap();
-        runtime.get_data_mut().add_to_list(i3, true).unwrap();
+        runtime.get_data_mut().add_to_list(i3, i3).unwrap();
         let i4 = runtime.get_data_mut().end_list().unwrap();
         let i5 = runtime.get_data_mut().add_symbol(1).unwrap();
 
@@ -67,7 +67,7 @@ mod tests {
         let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
         runtime.get_data_mut().start_list(1).unwrap();
-        runtime.get_data_mut().add_to_list(i3, true).unwrap();
+        runtime.get_data_mut().add_to_list(i3, i3).unwrap();
         let _i4 = runtime.get_data_mut().end_list().unwrap();
         let i5 = runtime.get_data_mut().add_symbol(2).unwrap();
 

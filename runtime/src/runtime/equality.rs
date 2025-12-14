@@ -652,7 +652,7 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_byte_list_iter = |data, i| MockByteIterator::new(vec![10, 20]);
+        data.stub_get_byte_list_iter = |_data, _i| MockByteIterator::new(vec![10, 20]);
         data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
 
         data.stub_add_true = |_| Ok(999);
@@ -679,7 +679,7 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_byte_list_iter = |data, i| MockByteIterator::new(vec![10, 20]);
+        data.stub_get_byte_list_iter = |_data, _i| MockByteIterator::new(vec![10, 20]);
         data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
 
         data.stub_add_false = |_| Ok(999);
@@ -706,7 +706,7 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_char_list_iter = |data, i| MockCharIterator::new(String::from("ab"));
+        data.stub_get_char_list_iter = |_data, _i| MockCharIterator::new(String::from("ab"));
         data.stub_get_char_list_item = ListCompData::get_character_list_item;
 
         data.stub_add_true = |_| Ok(999);
@@ -733,7 +733,7 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_symbol_list_iter = |data, i| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(20)]);
+        data.stub_get_symbol_list_iter = |_data, _i| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(20)]);
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_true = |_| Ok(999);
@@ -760,9 +760,9 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_symbol_list_iter = |data, i| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(20)]);
+        data.stub_get_symbol_list_iter = |_data, _i| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(20)]);
         data.stub_get_symbol_list_len = |data, i| Ok(data.lens.get(i as usize).unwrap().clone());
-        data.stub_start_list = |_, _| Ok(());
+        data.stub_start_list = |_, _| Ok(0);
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_false = |_| Ok(999);
@@ -789,7 +789,7 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_symbol_list_iter = |data, i| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(20)]);
+        data.stub_get_symbol_list_iter = |_data, _i| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(20)]);
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_false = |_| Ok(999);
@@ -833,7 +833,7 @@ mod tests {
                 Err(MockError {})
             }
         };
-        data.stub_get_slice_iter = |_, _| MockIterator::new(2);
+        data.stub_get_slice_iter = |_data, _i| MockIterator::new(2);
         data.stub_get_char_list_item = ListCompData::get_character_list_item;
 
         data.stub_add_true = |_| Ok(999);

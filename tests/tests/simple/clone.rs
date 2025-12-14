@@ -355,18 +355,18 @@ mod tests {
     #[test]
     fn copy_list() {
         let mut from = SimpleGarnishData::new();
-        from.start_list(3).unwrap();
-        from.add_number(SimpleNumber::Integer(100)).and_then(|i| from.add_to_list(i, false)).unwrap();
-        from.add_number(SimpleNumber::Integer(200)).and_then(|i| from.add_to_list(i, false)).unwrap();
-        from.add_number(SimpleNumber::Integer(300)).and_then(|i| from.add_to_list(i, false)).unwrap();
-        let d4 = from.end_list().unwrap();
+        let list_index1 = from.start_list(3).unwrap();
+        from.add_number(SimpleNumber::Integer(100)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        from.add_number(SimpleNumber::Integer(200)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        from.add_number(SimpleNumber::Integer(300)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        let list_index1 = from.end_list().unwrap();
 
         let mut to = SimpleGarnishData::new();
         to.add_number(SimpleNumber::Integer(10)).unwrap();
         to.add_number(SimpleNumber::Integer(20)).unwrap();
         to.add_number(SimpleNumber::Integer(30)).unwrap();
 
-        let new_addr = clone_data(d4, &from, &mut to).unwrap();
+        let new_addr = clone_data(list_index1, &from, &mut to).unwrap();
 
         assert_eq!(new_addr, 9);
         assert_eq!(to.get_data().get(9).unwrap().as_list().unwrap(), (vec![6, 7, 8], vec![]));
@@ -378,41 +378,41 @@ mod tests {
     #[test]
     fn copy_nested_list() {
         let mut from = SimpleGarnishData::new();
-        from.start_list(3).unwrap();
+        let list_index1 = from.start_list(3).unwrap();
         from.add_number(SimpleNumber::Integer(100)) // 6
-            .and_then(|i| from.add_to_list(i, false))
+            .and_then(|i| from.add_to_list(list_index1, i))
             .unwrap();
         from.add_number(SimpleNumber::Integer(200)) // 7
-            .and_then(|i| from.add_to_list(i, false))
+            .and_then(|i| from.add_to_list(list_index1, i))
             .unwrap();
         from.add_number(SimpleNumber::Integer(300)) // 8
-            .and_then(|i| from.add_to_list(i, false))
+            .and_then(|i| from.add_to_list(list_index1, i))
             .unwrap();
-        let d4 = from.end_list().unwrap();
+        let list_index1 = from.end_list().unwrap();
 
-        from.start_list(3).unwrap(); // 9
+        let list_index2 = from.start_list(3).unwrap(); // 9
 
         from.add_number(SimpleNumber::Integer(400)) // 10
-            .and_then(|i| from.add_to_list(i, false))
+            .and_then(|i| from.add_to_list(list_index2, i))
             .unwrap();
         from.add_number(SimpleNumber::Integer(500)) // 11
-            .and_then(|i| from.add_to_list(i, false))
+            .and_then(|i| from.add_to_list(list_index2, i))
             .unwrap();
         from.add_number(SimpleNumber::Integer(600)) // 12
-            .and_then(|i| from.add_to_list(i, false))
+            .and_then(|i| from.add_to_list(list_index2, i))
             .unwrap();
 
-        let d5 = from.end_list().unwrap(); // 13
+        let list_index2 = from.end_list().unwrap(); // 13
 
-        let d6 = from.get_data_len(); // 14
-        from.get_data_mut().push(SimpleData::List(vec![d4, d5], vec![]));
+        let list_index3 = from.get_data_len(); // 14
+        from.get_data_mut().push(SimpleData::List(vec![list_index1, list_index2], vec![]));
 
         let mut to = SimpleGarnishData::new();
         to.add_number(SimpleNumber::Integer(10)).unwrap();
         to.add_number(SimpleNumber::Integer(20)).unwrap();
         to.add_number(SimpleNumber::Integer(30)).unwrap();
 
-        let new_addr = clone_data(d6, &from, &mut to).unwrap();
+        let new_addr = clone_data(list_index3, &from, &mut to).unwrap();
 
         assert_eq!(new_addr, 14);
         assert_eq!(to.get_data().get(new_addr).unwrap().as_list().unwrap(), (vec![9, 13], vec![]));
@@ -429,19 +429,19 @@ mod tests {
     #[test]
     fn copy_list_with_associations() {
         let mut from = SimpleGarnishData::new();
-        from.start_list(3).unwrap();
+        let list_index1 = from.start_list(3).unwrap();
 
         let left = from.add_symbol(200).unwrap();
         let right = from.add_number(SimpleNumber::Integer(100)).unwrap();
-        from.add_pair((left, right)).and_then(|i| from.add_to_list(i, false)).unwrap();
-        let d4 = from.end_list().unwrap();
+        from.add_pair((left, right)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        let list_index1 = from.end_list().unwrap();
 
         let mut to = SimpleGarnishData::new();
         to.add_number(SimpleNumber::Integer(10)).unwrap();
         to.add_number(SimpleNumber::Integer(20)).unwrap();
         to.add_number(SimpleNumber::Integer(30)).unwrap();
 
-        let new_addr = clone_data(d4, &from, &mut to).unwrap();
+        let new_addr = clone_data(list_index1, &from, &mut to).unwrap();
 
         assert_eq!(new_addr, 9);
         assert_eq!(to.get_data().get(9).unwrap().as_list().unwrap(), (vec![8], vec![8]));
@@ -455,19 +455,19 @@ mod tests {
         let d1 = from.add_number(SimpleNumber::Integer(1)).unwrap();
         let d2 = from.add_number(SimpleNumber::Integer(3)).unwrap();
         let d3 = from.add_range(d1, d2).unwrap();
-        from.start_list(3).unwrap();
-        from.add_number(SimpleNumber::Integer(100)).and_then(|i| from.add_to_list(i, false)).unwrap();
-        from.add_number(SimpleNumber::Integer(200)).and_then(|i| from.add_to_list(i, false)).unwrap();
-        from.add_number(SimpleNumber::Integer(300)).and_then(|i| from.add_to_list(i, false)).unwrap();
-        let d4 = from.end_list().unwrap();
-        let d5 = from.add_slice(d4, d3).unwrap();
+        let list_index1 = from.start_list(3).unwrap();
+        from.add_number(SimpleNumber::Integer(100)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        from.add_number(SimpleNumber::Integer(200)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        from.add_number(SimpleNumber::Integer(300)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        let list_index1 = from.end_list().unwrap();
+        let list_index2 = from.add_slice(list_index1, d3).unwrap();
 
         let mut to = SimpleGarnishData::new();
         to.add_number(SimpleNumber::Integer(10)).unwrap();
         to.add_number(SimpleNumber::Integer(20)).unwrap();
         to.add_number(SimpleNumber::Integer(30)).unwrap();
 
-        let new_addr = clone_data(d5, &from, &mut to).unwrap();
+        let new_addr = clone_data(list_index2, &from, &mut to).unwrap();
 
         assert_eq!(new_addr, 13);
         assert_eq!(to.get_data().get(13).unwrap().as_slice().unwrap(), (9, 12));
@@ -756,11 +756,11 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn start_list(&mut self, len: Self::Size) -> Result<(), Self::Error> {
+        fn start_list(&mut self, len: Self::Size) -> Result<Self::Size, Self::Error> {
             unimplemented!()
         }
 
-        fn add_to_list(&mut self, addr: Self::Size, is_associative: bool) -> Result<(), Self::Error> {
+        fn add_to_list(&mut self, list_index: Self::Size, item_index: Self::Size) -> Result<Self::Size, Self::Error> {
             unimplemented!()
         }
 

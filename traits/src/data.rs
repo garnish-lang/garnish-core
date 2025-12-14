@@ -188,8 +188,8 @@ pub trait GarnishData {
 
     fn merge_to_symbol_list(&mut self, first: Self::Size, second: Self::Size) -> Result<Self::Size, Self::Error>;
 
-    fn start_list(&mut self, len: Self::Size) -> Result<(), Self::Error>;
-    fn add_to_list(&mut self, addr: Self::Size, is_associative: bool) -> Result<(), Self::Error>;
+    fn start_list(&mut self, len: Self::Size) -> Result<Self::Size, Self::Error>;
+    fn add_to_list(&mut self, list_index: Self::Size, item_index: Self::Size) -> Result<Self::Size, Self::Error>;
     fn end_list(&mut self) -> Result<Self::Size, Self::Error>;
 
     fn start_char_list(&mut self) -> Result<(), Self::Error>;

@@ -288,8 +288,8 @@ mod tests {
         pub stub_add_slice: fn(&mut T, list: i32, range: i32) -> Result<i32, MockError>,
         pub stub_add_partial: fn(&mut T, list: i32, range: i32) -> Result<i32, MockError>,
         pub stub_merge_to_symbol_list: fn(&mut T, first: i32, second: i32) -> Result<i32, MockError>,
-        pub stub_start_list: fn(&mut T, len: i32) -> Result<(), MockError>,
-        pub stub_add_to_list: fn(&mut T, addr: i32, is_associative: bool) -> Result<(), MockError>,
+        pub stub_start_list: fn(&mut T, len: i32) -> Result<i32, MockError>,
+        pub stub_add_to_list: fn(&mut T, list_index: i32, item_index: i32) -> Result<i32, MockError>,
         pub stub_end_list: fn(&mut T) -> Result<i32, MockError>,
         pub stub_start_char_list: fn(&mut T) -> Result<(), MockError>,
         pub stub_add_to_char_list: fn(&mut T, c: char) -> Result<(), MockError>,
@@ -635,11 +635,11 @@ mod tests {
             (self.stub_get_list_item_with_symbol)(self.data(), list_addr, sym)
         }
 
-        fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
+        fn get_list_items_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
             Ok((self.stub_get_list_items_iter)(self.data(), list_addr))
         }
 
-        fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
+        fn get_list_associations_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
             Ok((self.stub_get_list_associations_iter)(self.data(), list_addr))
         }
 
@@ -651,7 +651,7 @@ mod tests {
             (self.stub_get_char_list_item)(self.data(), addr, item_index)
         }
 
-        fn get_char_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::CharIterator, Self::Error> {
+        fn get_char_list_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::CharIterator, Self::Error> {
             Ok((self.stub_get_char_list_iter)(self.data(), list_addr))
         }
 
@@ -663,7 +663,7 @@ mod tests {
             (self.stub_get_byte_list_item)(self.data(), addr, item_index)
         }
 
-        fn get_byte_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ByteIterator, Self::Error> {
+        fn get_byte_list_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ByteIterator, Self::Error> {
             Ok((self.stub_get_byte_list_iter)(self.data(), list_addr))
         }
 
@@ -675,15 +675,15 @@ mod tests {
             (self.stub_get_symbol_list_item)(self.data(), addr, item_index)
         }
 
-        fn get_symbol_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::SymbolListPartIterator, Self::Error> {
+        fn get_symbol_list_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::SymbolListPartIterator, Self::Error> {
             Ok((self.stub_get_symbol_list_iter)(self.data(), list_addr))
         }
 
-        fn get_list_item_iter(&self, addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
+        fn get_list_item_iter(&self, addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
             Ok((self.stub_get_list_item_iter)(self.data(), addr))
         }
 
-        fn get_concatenation_iter(&self, addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ConcatenationItemIterator, Self::Error> {
+        fn get_concatenation_iter(&self, addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ConcatenationItemIterator, Self::Error> {
             Ok((self.stub_get_concatenation_iter)(self.data(), addr))
         }
 
@@ -751,12 +751,12 @@ mod tests {
             (self.stub_merge_to_symbol_list)(self.data_mut(), first, second)
         }
 
-        fn start_list(&mut self, len: Self::Size) -> Result<(), Self::Error> {
+        fn start_list(&mut self, len: Self::Size) -> Result<Self::Size, Self::Error> {
             (self.stub_start_list)(self.data_mut(), len)
         }
 
-        fn add_to_list(&mut self, addr: Self::Size, is_associative: bool) -> Result<(), Self::Error> {
-            (self.stub_add_to_list)(self.data_mut(), addr, is_associative)
+        fn add_to_list(&mut self, list_index: Self::Size, item_index: Self::Size) -> Result<Self::Size, Self::Error> {
+            (self.stub_add_to_list)(self.data_mut(), list_index, item_index)
         }
 
         fn end_list(&mut self) -> Result<Self::Size, Self::Error> {

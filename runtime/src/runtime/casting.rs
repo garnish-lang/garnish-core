@@ -80,13 +80,13 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
             let mut iter = this.get_symbol_list_iter(left.clone(), Extents::new(Data::Number::zero(), Data::Number::max_value()))?;
             let len = this.get_symbol_list_len(left.clone())?;
 
-            this.start_list(len)?;
+            let list_index = this.start_list(len)?;
             while let Some(part) = iter.next() {
                 let item_index = match part {
                     SymbolListPart::Symbol(sym) => this.add_symbol(sym)?,
                     SymbolListPart::Number(num) => this.add_number(num)?,
                 };
-                this.add_to_list(item_index, false)?;
+                this.add_to_list(list_index.clone(), item_index)?;
             }
             this.end_list().and_then(|r| this.push_register(r))?
         }
@@ -96,10 +96,10 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
             let (start, end, _) = get_range(this, left)?;
             let mut count = start;
 
-            this.start_list(len)?;
+            let list_index = this.start_list(len)?;
             while count <= end {
                 let addr = this.add_number(count.clone())?;
-                this.add_to_list(addr, false)?;
+                this.add_to_list(list_index.clone(), addr)?;
                 count = count.increment().or_num_err()?;
             }
 
@@ -115,10 +115,9 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
         }
         (GarnishDataType::Concatenation, GarnishDataType::List) => {
             let len = concatenation_len(this, left.clone())?;
-            this.start_list(len)?;
+            let list_index = this.start_list(len)?;
             iterate_concatenation_mut(this, left, |this, _, addr| {
-                let is_associative = is_value_association(this, addr.clone())?;
-                this.add_to_list(addr, is_associative)?;
+                this.add_to_list(list_index.clone(), addr)?;
                 Ok(None)
             })?;
 
@@ -132,7 +131,7 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
                 GarnishDataType::List => {
                     let len = this.get_list_len(value.clone())?;
 
-                    this.start_list(len)?;
+                    let list_index = this.start_list(len)?;
 
                     let mut i = start;
 
@@ -144,18 +143,7 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
                             }
                         };
 
-                        let is_associative = match this.get_data_type(addr.clone().clone())? {
-                            GarnishDataType::Pair => {
-                                let (left, _) = this.get_pair(addr.clone())?;
-                                match this.get_data_type(left)? {
-                                    GarnishDataType::Symbol => true,
-                                    _ => false,
-                                }
-                            }
-                            _ => false,
-                        };
-
-                        this.add_to_list(addr, is_associative)?;
+                        this.add_to_list(list_index.clone(), addr)?;
                         i = i.increment().or_num_err()?;
                     }
 
@@ -168,7 +156,7 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
                     list_from_byte_list(this, value, start, end.increment().or_num_err()?)?;
                 }
                 GarnishDataType::Concatenation => {
-                    this.start_list(Data::number_to_size(len).or_num_err()?)?;
+                    let list_index = this.start_list(Data::number_to_size(len).or_num_err()?)?;
 
                     iterate_concatenation_mut(this, value, |this, current_index, addr| {
                         if current_index < start {
@@ -181,8 +169,7 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
                             return Ok(Some(addr));
                         }
 
-                        let is_associative = is_value_association(this, addr.clone())?;
-                        this.add_to_list(addr, is_associative)?;
+                        this.add_to_list(list_index.clone(), addr)?;
                         Ok(None)
                     })?;
 
@@ -216,14 +203,14 @@ pub(crate) fn list_from_char_list<Data: GarnishData>(this: &mut Data, byte_list_
     let len = this.get_char_list_len(byte_list_addr.clone())?;
     let mut count = start;
 
-    this.start_list(len)?;
+    let list_index = this.start_list(len)?;
     while count < end {
         let c = this.get_char_list_item(byte_list_addr.clone(), count.clone())?;
         let addr = match c {
             Some(c) => this.add_char(c)?,
             None => this.add_unit()?,
         };
-        this.add_to_list(addr, false)?;
+        this.add_to_list(list_index.clone(), addr)?;
 
         count = count.increment().or_num_err()?;
     }
@@ -237,14 +224,14 @@ pub(crate) fn list_from_byte_list<Data: GarnishData>(this: &mut Data, byte_list_
     let len = this.get_byte_list_len(byte_list_addr.clone())?;
     let mut count = start;
 
-    this.start_list(len)?;
+    let list_index = this.start_list(len)?;
     while count < end {
         let c = this.get_byte_list_item(byte_list_addr.clone(), count.clone())?;
         let addr = match c {
             Some(c) => this.add_byte(c)?,
             None => this.add_unit()?,
         };
-        this.add_to_list(addr, false)?;
+        this.add_to_list(list_index.clone(), addr)?;
 
         count = count.increment().or_num_err()?;
     }
@@ -281,8 +268,8 @@ where
 #[cfg(test)]
 mod tests {
     use crate::runtime::casting::type_cast;
-    use crate::runtime::tests::{MockGarnishData, MockIterator, MockSymbolListPartIterator};
-    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT, SymbolListPart};
+    use crate::runtime::tests::{MockGarnishData, MockSymbolListPartIterator};
+    use garnish_lang_traits::{GarnishDataType, SymbolListPart};
 
     #[test]
     fn symbol_list_to_list() {
@@ -290,15 +277,15 @@ mod tests {
 
         data.stub_get_symbol_list_iter = |_, _| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(11)]);
         data.stub_get_symbol_list_len = |_, _| Ok(2);
-        data.stub_start_list = |_, _| Ok(());
+        data.stub_start_list = |_, _| Ok(0);
         data.stub_get_symbol_list_item = |_, _, i| Ok(Some(SymbolListPart::Symbol(i as u32 + 10)));
         data.stub_add_symbol = |_, sym| {
             assert!([10, 11].contains(&sym));
             Ok(sym as i32)
         };
-        data.stub_add_to_list = |_, addr, _| {
-            assert!([10, 11].contains(&addr));
-            Ok(())
+        data.stub_add_to_list = |_, list_index, item_index| {
+            assert!([10, 11].contains(&item_index));
+            Ok(list_index as i32)
         };
         data.stub_end_list = |_| Ok(999);
         data.stub_push_register = |_, i| {

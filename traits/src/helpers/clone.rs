@@ -195,9 +195,9 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
             items.push((addr, is_association));
         }
 
-        to.start_list(len.clone())?;
-        for (addr, is_association) in items {
-            to.add_to_list(addr, is_association)?;
+        let list_index = to.start_list(len.clone())?;
+        for (addr, ..) in items {
+            to.add_to_list(list_index.clone(), addr)?;
         }
         to.end_list()
     }

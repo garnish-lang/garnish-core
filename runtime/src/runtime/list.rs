@@ -13,6 +13,7 @@ pub fn make_list<Data: GarnishData>(this: &mut Data, len: Data::Size) -> Result<
 
     this.start_list(len.clone())?;
 
+    let list_index = this.start_list(len.clone())?;
     let mut count = this.get_register_len() - len.clone();
     let end = this.get_register_len();
     // look into getting this to work with a range value
@@ -22,18 +23,7 @@ pub fn make_list<Data: GarnishData>(this: &mut Data, len: Data::Size) -> Result<
             Some(r) => r,
         };
 
-        let is_associative = match this.get_data_type(r.clone().clone())? {
-            GarnishDataType::Pair => {
-                let (left, _right) = this.get_pair(r.clone())?;
-                match this.get_data_type(left)? {
-                    GarnishDataType::Symbol => true,
-                    _ => false,
-                }
-            }
-            _ => false,
-        };
-
-        this.add_to_list(r, is_associative)?;
+        this.add_to_list(list_index.clone(), r)?;
 
         count += Data::Size::one();
     }
@@ -76,7 +66,7 @@ pub(crate) fn access_with_integer<Data: GarnishData>(
     match this.get_data_type(value.clone())? {
         GarnishDataType::Pair => {
             if index == Data::Number::zero() {
-                let (left, right) = this.get_pair(value.clone())?;
+                let (left, _right) = this.get_pair(value.clone())?;
                 match this.get_data_type(left.clone())? {
                     GarnishDataType::Symbol => Ok(Some(value)),
                     _ => Ok(None),

@@ -214,12 +214,12 @@ where
     }
 
     pub fn add_associative_list_from(&mut self, list: Vec<(impl Into<String>, crate::data::SimpleData<T>)>) -> Result<usize, DataError> {
-        self.start_list(list.len())?;
+        let list_index = self.start_list(list.len())?;
         for (key, value) in list {
             let symbol = self.parse_add_symbol(&key.into())?;
             let i = self.cache_add(value.into())?;
             let pair = self.add_pair((symbol, i))?;
-            self.add_to_list(pair, true)?;
+            self.add_to_list(list_index.clone(), pair)?;
         }
         self.end_list()
     }
@@ -987,10 +987,10 @@ mod to_char_list {
             let d1 = runtime.add_number(10.into()).unwrap();
             let d2 = runtime.add_number(20.into()).unwrap();
             let d3 = runtime.add_number(30.into()).unwrap();
-            runtime.start_list(3).unwrap();
-            runtime.add_to_list(d1, false).unwrap();
-            runtime.add_to_list(d2, false).unwrap();
-            runtime.add_to_list(d3, false).unwrap();
+            let list_index = runtime.start_list(3).unwrap();
+            runtime.add_to_list(list_index.clone(), d1).unwrap();
+            runtime.add_to_list(list_index.clone(), d2).unwrap();
+            runtime.add_to_list(list_index.clone(), d3).unwrap();
             runtime.end_list().unwrap()
         })
     }
@@ -1003,15 +1003,15 @@ mod to_char_list {
             let d3 = runtime.add_number(30.into()).unwrap();
             let d4 = runtime.add_number(40.into()).unwrap();
 
-            runtime.start_list(2).unwrap();
-            runtime.add_to_list(d2, false).unwrap();
-            runtime.add_to_list(d3, false).unwrap();
+            let list_index = runtime.start_list(2).unwrap();
+            runtime.add_to_list(list_index.clone(), d2).unwrap();
+            runtime.add_to_list(list_index.clone(), d3).unwrap();
             let list = runtime.end_list().unwrap();
 
             runtime.start_list(3).unwrap();
-            runtime.add_to_list(d1, false).unwrap();
-            runtime.add_to_list(list, false).unwrap();
-            runtime.add_to_list(d4, false).unwrap();
+            runtime.add_to_list(list_index.clone(), d1).unwrap();
+            runtime.add_to_list(list_index.clone(), list).unwrap();
+            runtime.add_to_list(list_index.clone(), d4).unwrap();
             runtime.end_list().unwrap()
         })
     }
@@ -1063,13 +1063,13 @@ mod to_char_list {
             let d5 = runtime.add_number(50.into()).unwrap();
             let d6 = runtime.add_number(60.into()).unwrap();
 
-            runtime.start_list(3).unwrap();
-            runtime.add_to_list(d1, false).unwrap();
-            runtime.add_to_list(d2, false).unwrap();
-            runtime.add_to_list(d3, false).unwrap();
-            runtime.add_to_list(d4, false).unwrap();
-            runtime.add_to_list(d5, false).unwrap();
-            runtime.add_to_list(d6, false).unwrap();
+            let list_index = runtime.start_list(3).unwrap();
+            runtime.add_to_list(list_index.clone(), d1).unwrap();
+            runtime.add_to_list(list_index.clone(), d2).unwrap();
+            runtime.add_to_list(list_index.clone(), d3).unwrap();
+            runtime.add_to_list(list_index.clone(), d4).unwrap();
+            runtime.add_to_list(list_index.clone(), d5).unwrap();
+            runtime.add_to_list(list_index.clone(), d6).unwrap();
             let list = runtime.end_list().unwrap();
 
             let start = runtime.add_number(2.into()).unwrap();
