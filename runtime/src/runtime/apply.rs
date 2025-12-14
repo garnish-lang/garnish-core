@@ -139,9 +139,8 @@ fn apply_internal<Data: GarnishData>(this: &mut Data, instruction: Instruction, 
         (GarnishDataType::List, GarnishDataType::SymbolList) => {
             let mut iter = this.get_symbol_list_iter(right_addr.clone())?;
             let mut current = left_addr.clone();
-            while let Some(sym_index) = iter.next() {
-                let sym = this.get_symbol_list_item(right_addr.clone(), sym_index)?;
-                match sym {
+            while let Some(part) = iter.next() {
+                match part {
                     SymbolListPart::Symbol(sym) => {
                         match access_with_symbol(this, sym, current)? {
                             None => {
@@ -261,7 +260,7 @@ mod data_apply {
 #[cfg(test)]
 mod tests {
     use crate::runtime::apply::{apply, empty_apply};
-    use crate::runtime::tests::{MockGarnishData, MockIterator};
+    use crate::runtime::tests::{MockGarnishData, MockIterator, MockSymbolListPartIterator};
     use garnish_lang_traits::{GarnishDataType, NO_CONTEXT, SymbolListPart};
 
     #[test]
@@ -370,7 +369,7 @@ mod tests {
         mock_data.stub_get_list_item = |_, list, i| {
             assert_eq!(list, 0);
             assert_eq!(i, 0);
-            Ok(30)
+            Ok(Some(30))
         };
         mock_data.stub_push_register = |_, i| {
             assert_eq!(i, 30);
@@ -409,10 +408,10 @@ mod tests {
     fn apply_symbol_list_to_list() {
         let mut mock_data = MockGarnishData::new_basic_data(vec![GarnishDataType::List, GarnishDataType::List, GarnishDataType::SymbolList]);
 
-        mock_data.stub_get_symbol_list_iter = |_, _| MockIterator::new(2);
+        mock_data.stub_get_symbol_list_iter = |_, _| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(100), SymbolListPart::Symbol(200)]);
         mock_data.stub_get_symbol_list_item = |_, list, i| {
             assert_eq!(list, 2);
-            Ok(SymbolListPart::Symbol((i + 1) as u32 * 100u32))
+            Ok(Some(SymbolListPart::Symbol((i + 1) as u32 * 100u32)))
         };
         mock_data.stub_get_list_item_with_symbol = |_, list, i| {
             if i == 100 {
@@ -502,7 +501,7 @@ mod tests {
             Ok(1)
         };
         mock_data.stub_get_symbol_list_len = |_, _| Ok(2);
-        mock_data.stub_get_symbol_list_item = |_, _, index| Ok(SymbolListPart::Symbol((index + 1) as u32 * 100u32));
+        mock_data.stub_get_symbol_list_item = |_, _, index| Ok(Some(SymbolListPart::Symbol((index + 1) as u32 * 100u32)));
         mock_data.stub_add_symbol = |_, sym| {
             assert_eq!(sym, 20);
             Ok(5)
@@ -633,7 +632,7 @@ mod slice {
             Ok(1)
         };
         mock_data.stub_get_symbol_list_len = |_, _| Ok(2);
-        mock_data.stub_get_symbol_list_item = |_, _, index| Ok(SymbolListPart::Symbol((index + 1) as u32 * 100u32));
+        mock_data.stub_get_symbol_list_item = |_, _, index| Ok(Some(SymbolListPart::Symbol((index + 1) as u32 * 100u32)));
         mock_data.stub_add_slice = |_, list, range| {
             assert_eq!(list, 0);
             assert_eq!(range, 1);

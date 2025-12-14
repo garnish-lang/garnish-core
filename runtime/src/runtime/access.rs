@@ -192,7 +192,7 @@ mod tests {
             Ok(1)
         };
         mock_data.stub_get_symbol_list_len = |_, _| Ok(2);
-        mock_data.stub_get_symbol_list_item = |_, _, index| Ok(SymbolListPart::Symbol((index + 1) as u32 * 100u32));
+        mock_data.stub_get_symbol_list_item = |_, _, index| Ok(Some(SymbolListPart::Symbol((index + 1) as u32 * 100u32)));
         mock_data.stub_add_symbol = |_, sym| {
             assert_eq!(sym, 20);
             Ok(5)

@@ -93,6 +93,9 @@ pub trait GarnishData {
     type ListIndexIterator: DoubleEndedIterator<Item = Self::Number>;
     type ListItemIterator: Iterator<Item = Self::Size>;
     type ConcatenationItemIterator: Iterator<Item = Self::Size>;
+    type CharIterator: Iterator<Item = Self::Char>;
+    type ByteIterator: Iterator<Item = Self::Byte>;
+    type SymbolListPartIterator: Iterator<Item = SymbolListPart<Self::Symbol, Self::Number>>;
 
     fn get_data_len(&self) -> Self::Size;
     fn get_data_iter(&self) -> Self::DataIndexIterator;
@@ -122,24 +125,24 @@ pub trait GarnishData {
     fn get_partial(&self, addr: Self::Size) -> Result<(Self::Size, Self::Size), Self::Error>;
 
     fn get_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error>;
+    fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error>;
     fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error>;
+    fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error>;
     fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error>;
     fn get_list_items_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error>;
     fn get_list_associations_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error>;
 
     fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error>;
-    fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error>;
+    fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Char>, Self::Error>;
+    fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::CharIterator, Self::Error>;
 
     fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error>;
-    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error>;
+    fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Byte>, Self::Error>;
+    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ByteIterator, Self::Error>;
 
     fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error>;
-    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error>;
+    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<SymbolListPart<Self::Symbol, Self::Number>>, Self::Error>;
+    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::SymbolListPartIterator, Self::Error>;
 
     fn get_list_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error>;
     fn get_concatenation_iter(&self, addr: Self::Size) -> Result<Self::ConcatenationItemIterator, Self::Error>;

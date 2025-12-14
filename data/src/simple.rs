@@ -422,9 +422,8 @@ where
                 self.add_to_char_list(c)?;
             }
             GarnishDataType::CharList => {
-                let len = self.get_char_list_len(from)?;
-                for i in 0..len {
-                    let c = self.get_char_list_item(from, i.into())?;
+                let iter = self.get_char_list_iter(from)?;
+                for c in iter {
                     self.add_to_char_list(c)?;
                 }
             }
@@ -437,10 +436,9 @@ where
                 }
             }
             GarnishDataType::ByteList => {
-                let len = self.get_byte_list_len(from)?;
+                let mut iter = self.get_byte_list_iter(from)?;
                 let mut strs = vec![];
-                for i in 0..len {
-                    let b = self.get_byte_list_item(from, i.into())?;
+                for b in iter {
                     strs.push(format!("'{}'", b));
                 }
                 let s = strs.join(" ");
@@ -461,10 +459,10 @@ where
                 }
             }
             GarnishDataType::SymbolList => {
-                let len = self.get_symbol_list_len(from)?;
+                let mut iter = self.get_symbol_list_iter(from)?;
                 let mut strs = vec![];
-                for i in 0..len {
-                    let s = match self.get_symbol_list_item(from, i.into())? {
+                for part in iter {
+                    let s = match part {
                         SymbolListPart::Symbol(sym) => match self.data.get_symbol(sym) {
                             None => sym.to_string(),
                             Some(s) => s.clone(),
@@ -548,7 +546,10 @@ where
 
                 for i in 0..len {
                     let item = self.get_list_item(from, i.into())?;
-                    self.add_to_current_char_list(item, depth + 1)?;
+                    match item {
+                        Some(item) => self.add_to_current_char_list(item, depth + 1)?,
+                        None => continue,
+                    };
 
                     if i < len - 1 {
                         self.add_to_char_list(',')?;
@@ -572,7 +573,10 @@ where
                     GarnishDataType::CharList => {
                         for i in start..=end {
                             let c = self.get_char_list_item(value, i.into())?;
-                            self.add_to_char_list(c)?;
+                            match c {
+                                Some(c) => self.add_to_char_list(c)?,
+                                None => continue,
+                            };
                         }
                     }
                     GarnishDataType::List => {
@@ -582,7 +586,10 @@ where
 
                         for i in start..=end {
                             let item = self.get_list_item(value, i.into())?;
-                            self.add_to_current_char_list(item, depth + 1)?;
+                            match item {
+                                Some(item) => self.add_to_current_char_list(item, depth + 1)?,
+                                None => continue,
+                            };
 
                             if i != end {
                                 self.add_to_char_list(',')?;
@@ -827,7 +834,10 @@ mod to_char_list {
 
         for i in 0..len {
             let c = runtime.get_char_list_item(addr, i.into()).unwrap();
-            chars.push(c);
+            match c {
+                Some(c) => chars.push(c),
+                None => assert!(false, "Expected Some(c) but got None"),
+            };
         }
 
         assert_eq!(chars, expected, "{:?} != {:?}", chars, expected);

@@ -82,13 +82,11 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
     }
 
     fn clone_char_list(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {
-        let len = from.get_char_list_len(addr.clone())?;
-        let iter = Data::make_number_iterator_range(Data::Number::zero(), Data::size_to_number(len));
+        let iter = from.get_char_list_iter(addr.clone())?;
         to.start_char_list()?;
         for i in iter {
-            to.add_to_char_list(from.get_char_list_item(addr.clone(), i)?)?;
+            to.add_to_char_list(i)?;
         }
-
         to.end_char_list()
     }
 
@@ -97,13 +95,11 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
     }
 
     fn clone_byte_list(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {
-        let len = from.get_byte_list_len(addr.clone())?;
-        let iter = Data::make_number_iterator_range(Data::Number::zero(), Data::size_to_number(len));
+        let iter = from.get_byte_list_iter(addr.clone())?;
         to.start_byte_list()?;
         for i in iter {
-            to.add_to_byte_list(from.get_byte_list_item(addr.clone(), i)?)?;
+            to.add_to_byte_list(i)?;
         }
-
         to.end_byte_list()
     }
 
@@ -117,8 +113,7 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
         match iter.next() {
             None => to.add_unit(),
             Some(first) => {
-                let sym = from.get_symbol_list_item(addr.clone(), first)?;
-                let sym1_addr = match sym {
+                let sym1_addr = match first {
                     SymbolListPart::Symbol(sym) => to.add_symbol(sym)?,
                     SymbolListPart::Number(num) => to.add_number(num)?
                 };
@@ -126,16 +121,14 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
                 match iter.next() {
                     None => Ok(sym1_addr),
                     Some(second) => {
-                        let sym = from.get_symbol_list_item(addr.clone(), second)?;
-                        let sym2_addr = match sym {
+                        let sym2_addr = match second {
                             SymbolListPart::Symbol(sym) => to.add_symbol(sym)?,
                             SymbolListPart::Number(num) => to.add_number(num)?
                         };
                         let mut previous = to.merge_to_symbol_list(sym1_addr, sym2_addr)?;
 
                         while let Some(index) = iter.next() {
-                            let sym = from.get_symbol_list_item(addr.clone(), index)?;
-                            let sym_addr = match sym {
+                            let sym_addr = match index {
                                 SymbolListPart::Symbol(sym) => to.add_symbol(sym)?,
                                 SymbolListPart::Number(num) => to.add_number(num)?
                             };
@@ -184,11 +177,11 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
 
     fn clone_list(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {
         let len = from.get_list_len(addr.clone())?;
-        let iter = Data::make_number_iterator_range(Data::Number::zero(), Data::size_to_number(len.clone()));
+        let iter = from.get_list_item_iter(addr.clone())?;
 
         let mut items = vec![];
         for i in iter {
-            let addr = from.get_list_item(addr.clone(), i).and_then(|addr| self.clone_data(addr, from, to))?;
+            let addr = self.clone_data(i, from, to)?;
             let is_association = match to.get_data_type(addr.clone())? {
                 GarnishDataType::Pair => {
                     let (left, _right) = to.get_pair(addr.clone())?;

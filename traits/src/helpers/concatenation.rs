@@ -83,7 +83,10 @@ where
 
                         while i < len {
                             let sub_index = Data::size_to_number(i.clone());
-                            let item = this.get_list_item(r.clone(), sub_index.clone())?;
+                            let item = match this.get_list_item(r.clone(), sub_index.clone())? {
+                                None => unimplemented!("Not sure this function is used"),
+                                Some(item) => item,
+                            };
                             temp_result = check_fn(
                                 this,
                                 (Data::size_to_number(index.clone())).plus(sub_index.clone()).ok_or(RuntimeError::new("Number error"))?,

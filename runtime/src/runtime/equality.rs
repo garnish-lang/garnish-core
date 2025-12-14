@@ -112,25 +112,16 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
             this,
             this.get_char_list_iter(left_addr.clone())?,
             this.get_char_list_iter(right_addr.clone())?,
-            left_addr,
-            right_addr,
-            Data::get_char_list_item,
         )?,
         (GarnishDataType::ByteList, GarnishDataType::ByteList) => compare_index_iterator_values(
             this,
             this.get_byte_list_iter(left_addr.clone())?,
             this.get_byte_list_iter(right_addr.clone())?,
-            left_addr,
-            right_addr,
-            Data::get_byte_list_item,
         )?,
         (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => compare_index_iterator_values(
             this,
             this.get_symbol_list_iter(left_addr.clone())?,
             this.get_symbol_list_iter(right_addr.clone())?,
-            left_addr,
-            right_addr,
-            Data::get_symbol_list_item,
         )?,
         (GarnishDataType::Range, GarnishDataType::Range) => {
             let (start1, end1) = this.get_range(left_addr)?;
@@ -241,25 +232,16 @@ fn data_equal<Data: GarnishData>(this: &mut Data, left_addr: Data::Size, right_a
                     this,
                     this.get_slice_iter(left_addr.clone())?,
                     this.get_slice_iter(right_addr.clone())?,
-                    value1,
-                    value2,
-                    Data::get_char_list_item,
                 )?,
                 (GarnishDataType::ByteList, GarnishDataType::ByteList) => compare_index_iterator_values(
                     this,
                     this.get_slice_iter(left_addr.clone())?,
                     this.get_slice_iter(right_addr.clone())?,
-                    value1,
-                    value2,
-                    Data::get_byte_list_item,
                 )?,
                 (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => compare_index_iterator_values(
                     this,
                     this.get_slice_iter(left_addr.clone())?,
                     this.get_slice_iter(right_addr.clone())?,
-                    value1,
-                    value2,
-                    Data::get_symbol_list_item,
                 )?,
                 (GarnishDataType::List, GarnishDataType::List) => {
                     compare_item_iterators(this, left_addr, right_addr, Data::get_list_slice_item_iter)?
@@ -302,11 +284,14 @@ where
     Data: GarnishData,
     T: PartialEq,
     LenFn: Fn(&Data, Data::Size) -> Result<Data::Size, Data::Error>,
-    ItemFn: Fn(&Data, Data::Size, Data::Number) -> Result<T, Data::Error>,
+    ItemFn: Fn(&Data, Data::Size, Data::Number) -> Result<Option<T>, Data::Error>,
     GetFn: Fn(&Data, Data::Size) -> Result<T, Data::Error>,
 {
     Ok(if len_fn(this, list_addr.clone())? == Data::Size::one() {
-        let c1 = item_fn(this, list_addr, Data::Number::zero())?;
+        let c1 = match item_fn(this, list_addr, Data::Number::zero())? {
+            Some(c) => c,
+            None => return Ok(false),
+        };
         let c2 = get_fn(this, primitive_addr)?;
 
         c1 == c2
@@ -315,7 +300,7 @@ where
     })
 }
 
-fn compare_slice_index_iterator_values<Data, GetValueIterFn, GetValueItemFn, Value>(
+fn compare_slice_index_iterator_values<Data, Iter, GetValueIterFn, GetValueItemFn, Value>(
     this: &Data,
     value_addr: Data::Size,
     slice_addr: Data::Size,
@@ -325,44 +310,57 @@ fn compare_slice_index_iterator_values<Data, GetValueIterFn, GetValueItemFn, Val
 ) -> Result<bool, RuntimeError<Data::Error>>
 where
     Data: GarnishData,
-    GetValueIterFn: Fn(&Data, Data::Size) -> Result<Data::ListIndexIterator, Data::Error>,
-    GetValueItemFn: Fn(&Data, Data::Size, Data::Number) -> Result<Value, Data::Error>,
-    Value: PartialEq,
+    Iter: Iterator<Item = Value>,
+    GetValueIterFn: Fn(&Data, Data::Size) -> Result<Iter, Data::Error>,
+    GetValueItemFn: Fn(&Data, Data::Size, Data::Number) -> Result<Option<Value>, Data::Error>,
+    Value: PartialEq + Clone,
 {
-    let (value1, _) = this.get_slice(slice_addr.clone())?;
-    if this.get_data_type(value1.clone())? == expected_data_type {
-        compare_index_iterator_values(
-            this,
-            get_value_iter(this, value_addr.clone())?,
-            this.get_slice_iter(slice_addr.clone())?,
-            value_addr,
-            value1,
-            get_value_item,
-        )
+    let (slice_value, _) = this.get_slice(slice_addr.clone())?;
+    if this.get_data_type(slice_value.clone())? == expected_data_type {
+        let mut iter1 = get_value_iter(this, value_addr.clone())?;
+        let mut iter2 = this.get_slice_iter(slice_addr.clone())?;
+        
+        let mut index1 = iter1.next();
+        let mut index2 = iter2.next();
+
+        loop {
+            match (index1.clone(), index2.clone()) {
+                (Some(value1), Some(slice_index)) => {
+                    let value2 = match get_value_item(this, slice_value.clone(), slice_index)? {
+                        Some(value) => value,
+                        None => return Ok(false),
+                    };
+                    if value1 != value2 {
+                        return Ok(false);
+                    }
+                }
+                _ => break,
+            }
+            index1 = iter1.next();
+            index2 = iter2.next();
+        }
+
+        match_last_iter_values::<Data, Value, Data::Number>(index1, index2)
     } else {
         Ok(false)
     }
 }
 
-fn compare_index_iterator_values<Data: GarnishData, Value, GetFn>(
-    this: &Data,
-    mut iter1: Data::ListIndexIterator,
-    mut iter2: Data::ListIndexIterator,
-    list_index_1: Data::Size,
-    list_index_2: Data::Size,
-    get_fn: GetFn,
+fn compare_index_iterator_values<Data: GarnishData, Value, Iter>(
+    _this: &Data,
+    mut iter1: Iter,
+    mut iter2: Iter,
 ) -> Result<bool, RuntimeError<Data::Error>>
 where
-    Value: PartialEq,
-    GetFn: Fn(&Data, Data::Size, Data::Number) -> Result<Value, Data::Error>,
+    Value: PartialEq + Clone,
+    Iter: Iterator<Item = Value>,
 {
-    let mut index1: Option<Data::Number> = iter1.next();
-    let mut index2: Option<Data::Number> = iter2.next();
+    let mut index1: Option<Value> = iter1.next();
+    let mut index2: Option<Value> = iter2.next();
     loop {
         match (index1.clone(), index2.clone()) {
-            (Some(index1), Some(index2)) => {
-                let (item1, item2) = (get_fn(this, list_index_1.clone(), index1)?, get_fn(this, list_index_2.clone(), index2)?);
-                if item1 != item2 {
+            (Some(value1), Some(value2)) => {
+                if value1 != value2 {
                     return Ok(false);
                 }
             }
@@ -372,7 +370,7 @@ where
         index2 = iter2.next();
     }
 
-    match_last_iter_values::<Data, Data::Number>(index1, index2)
+    match_last_iter_values::<Data, Value, Value>(index1, index2)
 }
 
 fn compare_item_iterators<Data: GarnishData, Iter, GetFn>(
@@ -445,10 +443,10 @@ where
         index2 = iter2.next();
     }
 
-    match_last_iter_values::<Data, Data::Size>(index1, index2)
+    match_last_iter_values::<Data, Data::Size, Data::Size>(index1, index2)
 }
 
-fn match_last_iter_values<Data: GarnishData, T>(value_1: Option<T>, value_2: Option<T>) -> Result<bool, RuntimeError<Data::Error>> {
+fn match_last_iter_values<Data: GarnishData, T1, T2>(value_1: Option<T1>, value_2: Option<T2>) -> Result<bool, RuntimeError<Data::Error>> {
     Ok(match (value_1, value_2) {
         (Some(_), Some(_)) => state_error("Both slice operand's have remaining values in iterators after comparison".to_string())?,
         (None, Some(_)) | (Some(_), None) => false, // one operand as more items, automatically not equal
@@ -476,7 +474,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::runtime::equality::equal;
-    use crate::runtime::tests::{MockError, MockGarnishData, MockIterator};
+    use crate::runtime::tests::{MockByteIterator, MockCharIterator, MockError, MockGarnishData, MockIterator, MockSymbolListPartIterator};
     use garnish_lang_traits::{GarnishDataType, SymbolListPart};
 
     struct ListCompData {
@@ -487,19 +485,19 @@ mod tests {
     }
 
     impl ListCompData {
-        fn get_symbol_list_item(&self, list: i32, index: i32) -> Result<SymbolListPart<u32, i32>, MockError> {
+        fn get_symbol_list_item(&self, list: i32, index: i32) -> Result<Option<SymbolListPart<u32, i32>>, MockError> {
             let item = self.items.get(list as usize).unwrap().get(index as usize).unwrap().clone();
-            Ok(SymbolListPart::Symbol(item))
+            Ok(Some(SymbolListPart::Symbol(item)))
         }
 
-        fn get_character_list_item(&self, list: i32, index: i32) -> Result<char, MockError> {
+        fn get_character_list_item(&self, list: i32, index: i32) -> Result<Option<char>, MockError> {
             let item = self.items.get(list as usize).unwrap().get(index as usize).unwrap().clone();
-            Ok(char::from_u32(item).unwrap())
+            Ok(Some(char::from_u32(item).unwrap()))
         }
 
-        fn get_byte_list_item(&self, list: i32, index: i32) -> Result<u8, MockError> {
+        fn get_byte_list_item(&self, list: i32, index: i32) -> Result<Option<u8>, MockError> {
             let item = self.items.get(list as usize).unwrap().get(index as usize).unwrap().clone();
-            Ok(item as u8)
+            Ok(Some(item as u8))
         }
     }
 
@@ -638,7 +636,7 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_byte_list_iter = |data, i| MockIterator::new(data.lens.get(i as usize).unwrap().clone());
+        data.stub_get_byte_list_iter = |data, i| MockByteIterator::new(vec![10, 20]);
         data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
 
         data.stub_add_true = |_| Ok(999);
@@ -665,7 +663,7 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_byte_list_iter = |data, i| MockIterator::new(data.lens.get(i as usize).unwrap().clone());
+        data.stub_get_byte_list_iter = |data, i| MockByteIterator::new(vec![10, 20]);
         data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
 
         data.stub_add_false = |_| Ok(999);
@@ -692,7 +690,7 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_char_list_iter = |data, i| MockIterator::new(data.lens.get(i as usize).unwrap().clone());
+        data.stub_get_char_list_iter = |data, i| MockCharIterator::new(String::from("ab"));
         data.stub_get_char_list_item = ListCompData::get_character_list_item;
 
         data.stub_add_true = |_| Ok(999);
@@ -719,7 +717,7 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_symbol_list_iter = |data, i| MockIterator::new(data.lens.get(i as usize).unwrap().clone());
+        data.stub_get_symbol_list_iter = |data, i| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(20)]);
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_true = |_| Ok(999);
@@ -746,7 +744,7 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_symbol_list_iter = |data, i| MockIterator::new(data.lens.get(i as usize).unwrap().clone());
+        data.stub_get_symbol_list_iter = |data, i| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(20)]);
         data.stub_get_symbol_list_len = |data, i| Ok(data.lens.get(i as usize).unwrap().clone());
         data.stub_start_list = |_, _| Ok(());
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
@@ -775,7 +773,7 @@ mod tests {
         data.stub_get_data_type = |data, i| Ok(data.types.get(i as usize).unwrap().clone());
         data.stub_pop_register = |data| Ok(data.registers.pop());
         data.stub_get_register_len = |data| data.registers.len() as i32;
-        data.stub_get_symbol_list_iter = |data, i| MockIterator::new(data.lens.get(i as usize).unwrap().clone());
+        data.stub_get_symbol_list_iter = |data, i| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(20)]);
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_false = |_| Ok(999);
@@ -855,7 +853,7 @@ mod tests {
             }
         };
         data.stub_get_slice_iter = |_, _| MockIterator::new(2);
-        data.stub_get_char_list_iter = |_, _| MockIterator::new(2);
+        data.stub_get_char_list_iter = |_, _| MockCharIterator::new(String::from("ab"));
         data.stub_get_char_list_item = ListCompData::get_character_list_item;
 
         data.stub_add_true = |_| Ok(999);
@@ -891,7 +889,7 @@ mod tests {
             }
         };
         data.stub_get_slice_iter = |_, _| MockIterator::new(2);
-        data.stub_get_char_list_iter = |_, _| MockIterator::new(2);
+        data.stub_get_char_list_iter = |_, _| MockCharIterator::new(String::from("ab"));
         data.stub_get_char_list_item = ListCompData::get_character_list_item;
 
         data.stub_add_true = |_| Ok(999);
@@ -971,7 +969,7 @@ mod tests {
             }
         };
         data.stub_get_slice_iter = |_, _| MockIterator::new(2);
-        data.stub_get_byte_list_iter = |_, _| MockIterator::new(2);
+        data.stub_get_byte_list_iter = |_, _| MockByteIterator::new(vec![10, 20]);
         data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
 
         data.stub_add_true = |_| Ok(999);
@@ -1007,7 +1005,7 @@ mod tests {
             }
         };
         data.stub_get_slice_iter = |_, _| MockIterator::new(2);
-        data.stub_get_byte_list_iter = |_, _| MockIterator::new(2);
+        data.stub_get_byte_list_iter = |_, _| MockByteIterator::new(vec![10, 20]);
         data.stub_get_byte_list_item = ListCompData::get_byte_list_item;
 
         data.stub_add_true = |_| Ok(999);
@@ -1603,7 +1601,7 @@ mod tests {
             }
         };
         data.stub_get_slice_iter = |_, _| MockIterator::new(2);
-        data.stub_get_symbol_list_iter = |_, _| MockIterator::new(2);
+        data.stub_get_symbol_list_iter = |_, _| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(20)]);
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_true = |_| Ok(999);
@@ -1639,7 +1637,7 @@ mod tests {
             }
         };
         data.stub_get_slice_iter = |_, _| MockIterator::new(2);
-        data.stub_get_symbol_list_iter = |_, _| MockIterator::new(2);
+        data.stub_get_symbol_list_iter = |_, _| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(20)]);
         data.stub_get_symbol_list_item = ListCompData::get_symbol_list_item;
 
         data.stub_add_true = |_| Ok(999);

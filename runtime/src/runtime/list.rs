@@ -156,10 +156,12 @@ fn index_list<Data: GarnishData>(
     if index < Data::Number::zero() {
         Ok(None)
     } else {
-        if index >= Data::size_to_number(this.get_list_len(list.clone())?) {
-            Ok(None)
-        } else {
-            Ok(Some(this.get_list_item(list, index)?))
+        match this.get_list_item(list, index)? {
+            Some(addr) => Ok(Some(addr)),
+            None => {
+                let index = this.add_unit()?;
+                Ok(Some(index))
+            },
         }
     }
 }
@@ -176,7 +178,10 @@ fn index_char_list<Data: GarnishData>(
             Ok(None)
         } else {
             let c = this.get_char_list_item(list, index)?;
-            let addr = this.add_char(c)?;
+            let addr = match c {
+                Some(c) => this.add_char(c)?,
+                _ => this.add_unit()?,
+            };
             Ok(Some(addr))
         }
     }
@@ -194,7 +199,10 @@ fn index_byte_list<Data: GarnishData>(
             Ok(None)
         } else {
             let c = this.get_byte_list_item(list, index)?;
-            let addr = this.add_byte(c)?;
+            let addr = match c {
+                Some(c) => this.add_byte(c)?,
+                _ => this.add_unit()?,
+            };
             Ok(Some(addr))
         }
     }
@@ -212,8 +220,9 @@ fn index_symbol_list<Data: GarnishData>(
             Ok(None)
         } else {
             let addr = match this.get_symbol_list_item(list, index)? {
-                SymbolListPart::Symbol(sym) => this.add_symbol(sym)?,
-                SymbolListPart::Number(num) => this.add_number(num)?,
+                Some(SymbolListPart::Symbol(sym)) => this.add_symbol(sym)?,
+                Some(SymbolListPart::Number(num)) => this.add_number(num)?,
+                _ => this.add_unit()?,
             };
             Ok(Some(addr))
         }
@@ -262,19 +271,24 @@ pub(crate) fn access_with_symbol<Data: GarnishData>(
                     // check entire concatenation, reassigning found each time we find a match
                     while i <= end {
                         let list_item = this.get_list_item(value.clone(), i.clone())?;
-                        match this.get_data_type(list_item.clone())? {
-                            GarnishDataType::Pair => {
-                                let (left, right) = this.get_pair(list_item)?;
-                                match this.get_data_type(left.clone())? {
-                                    GarnishDataType::Symbol => {
-                                        if this.get_symbol(left)? == sym {
-                                            item = Some(right);
+                        match list_item {
+                            Some(addr) => {
+                                match this.get_data_type(addr.clone())? {
+                                    GarnishDataType::Pair => {
+                                        let (left, right) = this.get_pair(addr)?;
+                                        match this.get_data_type(left.clone())? {
+                                            GarnishDataType::Symbol => {
+                                                if this.get_symbol(left)? == sym {
+                                                    item = Some(right);
+                                                }
+                                            }
+                                            _ => (),
                                         }
                                     }
                                     _ => (),
                                 }
                             }
-                            _ => (),
+                            None => {}
                         }
 
                         i = i.increment().or_num_err()?;

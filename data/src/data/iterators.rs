@@ -1,5 +1,5 @@
 use crate::data::number::SimpleNumber;
-use garnish_lang_traits::GarnishNumber;
+use garnish_lang_traits::{GarnishNumber, SymbolListPart};
 
 /// Custom size iterator for [`garnish_lang_traits::GarnishData`] implementation.
 pub struct SizeIterator {
@@ -110,6 +110,81 @@ impl DataIndexIterator {
 
 impl Iterator for DataIndexIterator {
     type Item = usize;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current >= self.items.len() {
+            None
+        } else {
+            let item = Some(self.items[self.current]);
+            self.current += 1;
+            item
+        }
+    }
+}
+
+pub struct SymbolListPartIterator {
+    items: Vec<SymbolListPart<u64, SimpleNumber>>,
+    current: usize,
+}
+
+impl SymbolListPartIterator {
+    pub fn new(items: Vec<SymbolListPart<u64, SimpleNumber>>) -> Self {
+        Self { items, current: 0 }
+    }
+}
+
+impl Iterator for SymbolListPartIterator {
+    type Item = SymbolListPart<u64, SimpleNumber>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current >= self.items.len() {
+            None
+        } else {
+            let item = Some(self.items[self.current].clone());
+            self.current += 1;
+            item
+        }
+    }
+}
+
+pub struct ByteListIterator {
+    items: Vec<u8>,
+    current: usize,
+}
+
+impl ByteListIterator {
+    pub fn new(items: Vec<u8>) -> Self {
+        Self { items, current: 0 }
+    }
+}
+
+impl Iterator for ByteListIterator {
+    type Item = u8;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current >= self.items.len() {
+            None
+        } else {
+            let item = Some(self.items[self.current]);
+            self.current += 1;
+            item
+        }
+    }
+}
+
+pub struct CharListIterator {
+    items: Vec<char>,
+    current: usize,
+}
+
+impl CharListIterator {
+    pub fn new(items: Vec<char>) -> Self {
+        Self { items, current: 0 }
+    }
+}
+
+impl Iterator for CharListIterator {
+    type Item = char;
+
     fn next(&mut self) -> Option<Self::Item> {
         if self.current >= self.items.len() {
             None

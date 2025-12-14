@@ -67,7 +67,11 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
         (GarnishDataType::CharList, GarnishDataType::Char) => {
             let len = this.get_char_list_len(left.clone())?;
             if len == Data::Size::one() {
-                this.get_char_list_item(left, Data::Number::zero()).and_then(|c| this.add_char(c)).and_then(|r| this.push_register(r))?;
+                let mut iter = this.get_char_list_iter(left.clone())?;
+                match iter.next() {
+                    Some(c) => this.add_char(c).and_then(|r| this.push_register(r))?,
+                    None => push_unit(this)?,
+                }
             } else {
                 push_unit(this)?;
             }
@@ -77,9 +81,8 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
             let len = this.get_symbol_list_len(left.clone())?;
 
             this.start_list(len)?;
-            while let Some(index) = iter.next() {
-                let sym = this.get_symbol_list_item(left.clone(), index)?;
-                let item_index = match sym {
+            while let Some(part) = iter.next() {
+                let item_index = match part {
                     SymbolListPart::Symbol(sym) => this.add_symbol(sym)?,
                     SymbolListPart::Number(num) => this.add_number(num)?,
                 };
@@ -134,7 +137,13 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
                     let mut i = start;
 
                     while i <= end {
-                        let addr = this.get_list_item(value.clone(), i.clone())?;
+                        let addr = match this.get_list_item(value.clone(), i.clone())? {
+                            Some(addr) => addr,
+                            None => {
+                                this.add_unit()?
+                            }
+                        };
+
                         let is_associative = match this.get_data_type(addr.clone().clone())? {
                             GarnishDataType::Pair => {
                                 let (left, _) = this.get_pair(addr.clone())?;
@@ -210,7 +219,10 @@ pub(crate) fn list_from_char_list<Data: GarnishData>(this: &mut Data, byte_list_
     this.start_list(len)?;
     while count < end {
         let c = this.get_char_list_item(byte_list_addr.clone(), count.clone())?;
-        let addr = this.add_char(c)?;
+        let addr = match c {
+            Some(c) => this.add_char(c)?,
+            None => this.add_unit()?,
+        };
         this.add_to_list(addr, false)?;
 
         count = count.increment().or_num_err()?;
@@ -228,7 +240,10 @@ pub(crate) fn list_from_byte_list<Data: GarnishData>(this: &mut Data, byte_list_
     this.start_list(len)?;
     while count < end {
         let c = this.get_byte_list_item(byte_list_addr.clone(), count.clone())?;
-        let addr = this.add_byte(c)?;
+        let addr = match c {
+            Some(c) => this.add_byte(c)?,
+            None => this.add_unit()?,
+        };
         this.add_to_list(addr, false)?;
 
         count = count.increment().or_num_err()?;
@@ -266,17 +281,17 @@ where
 #[cfg(test)]
 mod tests {
     use crate::runtime::casting::type_cast;
-    use crate::runtime::tests::{MockGarnishData, MockIterator};
+    use crate::runtime::tests::{MockGarnishData, MockIterator, MockSymbolListPartIterator};
     use garnish_lang_traits::{GarnishDataType, NO_CONTEXT, SymbolListPart};
 
     #[test]
     fn symbol_list_to_list() {
         let mut data = MockGarnishData::new_basic_data(vec![GarnishDataType::SymbolList, GarnishDataType::List]);
 
-        data.stub_get_symbol_list_iter = |_, _| MockIterator::new(2);
+        data.stub_get_symbol_list_iter = |_, _| MockSymbolListPartIterator::new(vec![SymbolListPart::Symbol(10), SymbolListPart::Symbol(11)]);
         data.stub_get_symbol_list_len = |_, _| Ok(2);
         data.stub_start_list = |_, _| Ok(());
-        data.stub_get_symbol_list_item = |_, _, i| Ok(SymbolListPart::Symbol(i as u32 + 10));
+        data.stub_get_symbol_list_item = |_, _, i| Ok(Some(SymbolListPart::Symbol(i as u32 + 10)));
         data.stub_add_symbol = |_, sym| {
             assert!([10, 11].contains(&sym));
             Ok(sym as i32)

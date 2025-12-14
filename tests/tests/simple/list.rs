@@ -22,9 +22,9 @@ mod tests {
         runtime.make_list(3).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_list_len(start).unwrap(), 3);
-        assert_eq!(runtime.get_data_mut().get_list_item(start, 0.into()).unwrap(), i1);
-        assert_eq!(runtime.get_data_mut().get_list_item(start, 1.into()).unwrap(), i2);
-        assert_eq!(runtime.get_data_mut().get_list_item(start, 2.into()).unwrap(), i3);
+        assert_eq!(runtime.get_data_mut().get_list_item(start, 0.into()).unwrap(), Some(i1));
+        assert_eq!(runtime.get_data_mut().get_list_item(start, 1.into()).unwrap(), Some(i2));
+        assert_eq!(runtime.get_data_mut().get_list_item(start, 2.into()).unwrap(), Some(i3));
     }
 
     #[test]
@@ -68,14 +68,14 @@ mod tests {
         runtime.make_list(3).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_list_len(start).unwrap(), 3);
-        assert_eq!(runtime.get_data_mut().get_list_item(start, 0.into()).unwrap(), i7);
-        assert_eq!(runtime.get_data_mut().get_list_item(start, 1.into()).unwrap(), i8);
-        assert_eq!(runtime.get_data_mut().get_list_item(start, 2.into()).unwrap(), i9);
+        assert_eq!(runtime.get_data_mut().get_list_item(start, 0.into()).unwrap(), Some(i7));
+        assert_eq!(runtime.get_data_mut().get_list_item(start, 1.into()).unwrap(), Some(i8));
+        assert_eq!(runtime.get_data_mut().get_list_item(start, 2.into()).unwrap(), Some(i9));
 
         assert_eq!(runtime.get_data_mut().get_list_associations_len(start).unwrap(), 3);
-        assert_eq!(runtime.get_data_mut().get_list_association(start, 0.into()).unwrap(), i7);
-        assert_eq!(runtime.get_data_mut().get_list_association(start, 1.into()).unwrap(), i8);
-        assert_eq!(runtime.get_data_mut().get_list_association(start, 2.into()).unwrap(), i9);
+        assert_eq!(runtime.get_data_mut().get_list_association(start, 0.into()).unwrap(), Some(i7));
+        assert_eq!(runtime.get_data_mut().get_list_association(start, 1.into()).unwrap(), Some(i8));
+        assert_eq!(runtime.get_data_mut().get_list_association(start, 2.into()).unwrap(), Some(i9));
     }
 
     #[test]

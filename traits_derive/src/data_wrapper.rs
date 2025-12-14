@@ -107,6 +107,9 @@ fn create_associated_types(delegate_field_type: &Type) -> Vec<ImplItem> {
         "ListIndexIterator",
         "ListItemIterator",
         "ConcatenationItemIterator",
+        "CharIterator",
+        "ByteIterator",
+        "SymbolListPartIterator",
     ];
 
     let associated_types = types.iter().map(|t| Ident::new(t, proc_macro2::Span::call_site())).map(|ident| {
@@ -320,7 +323,7 @@ fn create_missing_functions(
     all_functions.insert(
         "get_list_item",
         quote! {
-            fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error> {
+            fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
                 self.#delegate_field.get_list_item(list_addr, item_addr)
             }
         },
@@ -336,7 +339,7 @@ fn create_missing_functions(
     all_functions.insert(
         "get_list_association",
         quote! {
-            fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error> {
+            fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
                 self.#delegate_field.get_list_association(list_addr, item_addr)
             }
         },
@@ -376,7 +379,7 @@ fn create_missing_functions(
     all_functions.insert(
         "get_char_list_item",
         quote! {
-            fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error> {
+            fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Char>, Self::Error> {
                 self.#delegate_field.get_char_list_item(addr, item_index)
             }
         },
@@ -384,7 +387,7 @@ fn create_missing_functions(
     all_functions.insert(
         "get_char_list_iter",
         quote! {
-            fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+            fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::CharIterator, Self::Error> {
                 self.#delegate_field.get_char_list_iter(list_addr)
             }
         },
@@ -400,7 +403,7 @@ fn create_missing_functions(
     all_functions.insert(
         "get_byte_list_item",
         quote! {
-            fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error> {
+            fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Byte>, Self::Error> {
                 self.#delegate_field.get_byte_list_item(addr, item_index)
             }
         },
@@ -408,7 +411,7 @@ fn create_missing_functions(
     all_functions.insert(
         "get_byte_list_iter",
         quote! {
-            fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+            fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ByteIterator, Self::Error> {
                 self.#delegate_field.get_byte_list_iter(list_addr)
             }
         },
@@ -424,7 +427,7 @@ fn create_missing_functions(
     all_functions.insert(
         "get_symbol_list_item",
         quote! {
-            fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error> {
+            fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<SymbolListPart<Self::Symbol, Self::Number>>, Self::Error> {
                 self.#delegate_field.get_symbol_list_item(addr, item_index)
             }
         },
@@ -432,7 +435,7 @@ fn create_missing_functions(
     all_functions.insert(
         "get_symbol_list_iter",
         quote! {
-            fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+            fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::SymbolListPartIterator, Self::Error> {
                 self.#delegate_field.get_symbol_list_iter(list_addr)
             }
         },

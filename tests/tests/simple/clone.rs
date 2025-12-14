@@ -301,11 +301,11 @@ mod tests {
         let from = TestData::new();
         let mut to = TestData::new();
 
-        clone_data_with_handlers(0, &from, &mut to, |_, _, to| to.add_number(SimpleNumber::Integer(10)), |_, _, to| to.add_char(0)).unwrap();
+        clone_data_with_handlers(0, &from, &mut to, |_, _, to| to.add_number(SimpleNumber::Integer(10)), |_, _, to| to.add_char('a')).unwrap();
 
         assert!(to.char_added);
 
-        clone_data_with_handlers(1, &from, &mut to, |_, _, to| to.add_number(SimpleNumber::Integer(10)), |_, _, to| to.add_char(0)).unwrap();
+        clone_data_with_handlers(1, &from, &mut to, |_, _, to| to.add_number(SimpleNumber::Integer(10)), |_, _, to| to.add_char('a')).unwrap();
 
         assert!(to.number_added);
 
@@ -484,7 +484,7 @@ mod tests {
 #[cfg(test)]
 #[allow(unused)]
 mod test_data_impl {
-    use garnish_lang::simple::{DataError, NumberIterator, SimpleNumber, SizeIterator};
+    use garnish_lang::simple::{ByteListIterator, CharListIterator, DataError, NumberIterator, SimpleNumber, SizeIterator, SymbolListPartIterator};
     use garnish_lang::{GarnishData, GarnishDataType, Instruction, SymbolListPart};
 
     pub struct TestData {
@@ -505,9 +505,9 @@ mod test_data_impl {
 
     impl GarnishData for TestData {
         type Error = DataError;
-        type Symbol = usize;
-        type Byte = usize;
-        type Char = usize;
+        type Symbol = u64;
+        type Byte = u8;
+        type Char = char;
         type Number = SimpleNumber;
         type Size = usize;
         type SizeIterator = SizeIterator;
@@ -521,6 +521,9 @@ mod test_data_impl {
         type ListIndexIterator = NumberIterator;
         type ListItemIterator = SizeIterator;
         type ConcatenationItemIterator = SizeIterator;
+        type CharIterator = CharListIterator;
+        type ByteIterator = ByteListIterator;
+        type SymbolListPartIterator = SymbolListPartIterator;
 
         fn get_data_len(&self) -> Self::Size {
             unimplemented!()
@@ -618,7 +621,7 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error> {
+        fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
             unimplemented!()
         }
 
@@ -626,7 +629,7 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error> {
+        fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
             unimplemented!()
         }
 
@@ -646,11 +649,11 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error> {
+        fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Char>, Self::Error> {
             unimplemented!()
         }
 
-        fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::CharIterator, Self::Error> {
             unimplemented!()
         }
 
@@ -658,11 +661,11 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error> {
+        fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Byte>, Self::Error> {
             unimplemented!()
         }
 
-        fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ByteIterator, Self::Error> {
             unimplemented!()
         }
 
@@ -670,11 +673,11 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error> {
+        fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<SymbolListPart<Self::Symbol, Self::Number>>, Self::Error> {
             unimplemented!()
         }
 
-        fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::SymbolListPartIterator, Self::Error> {
             unimplemented!()
         }
 

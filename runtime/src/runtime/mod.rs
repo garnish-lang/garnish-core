@@ -107,6 +107,81 @@ mod tests {
         }
     }
 
+    pub struct MockCharIterator {
+        current: usize,
+        s: String,
+    }
+
+    impl MockCharIterator {
+        pub fn new(s: String) -> Self {
+            Self { current: 0, s: s }
+        }
+    }
+
+    impl Iterator for MockCharIterator {
+        type Item = char;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.current >= self.s.len() {
+                None
+            } else {
+                let value = Some(self.s.chars().nth(self.current).unwrap());
+                self.current += 1;
+                value
+            }
+        }
+    }
+
+    pub struct MockByteIterator {
+        current: usize,
+        b: Vec<u8>,
+    }
+
+    impl MockByteIterator {
+        pub fn new(b: Vec<u8>) -> Self {
+            Self { current: 0, b: b }
+        }
+    }
+
+    impl Iterator for MockByteIterator {
+        type Item = u8;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.current >= self.b.len() {
+                None
+            } else {
+                let value = Some(self.b[self.current]);
+                self.current += 1;
+                value
+            }
+        }
+    }
+
+    pub struct MockSymbolListPartIterator {
+        current: usize,
+        symbol_list: Vec<SymbolListPart<u32, i32>>,
+    }
+
+    impl MockSymbolListPartIterator {
+        pub fn new(symbol_list: Vec<SymbolListPart<u32, i32>>) -> Self {
+            Self { current: 0, symbol_list: symbol_list }
+        }
+    }
+
+    impl Iterator for MockSymbolListPartIterator {
+        type Item = SymbolListPart<u32, i32>;
+
+        fn next(&mut self) -> Option<Self::Item> {
+            if self.current >= self.symbol_list.len() {
+                None
+            } else {
+                let value = Some(self.symbol_list[self.current].clone());
+                self.current += 1;
+                value
+            }
+        }
+    }
+
     #[derive(Default)]
     pub struct BasicData {
         pub(crate) type_stack: Vec<GarnishDataType>,
@@ -177,21 +252,21 @@ mod tests {
         pub stub_get_slice: fn(&T, addr: i32) -> Result<(i32, i32), MockError>,
         pub stub_get_partial: fn(&T, addr: i32) -> Result<(i32, i32), MockError>,
         pub stub_get_list_len: fn(&T, addr: i32) -> Result<i32, MockError>,
-        pub stub_get_list_item: fn(&T, list_addr: i32, item_addr: i32) -> Result<i32, MockError>,
+        pub stub_get_list_item: fn(&T, list_addr: i32, item_addr: i32) -> Result<Option<i32>, MockError>,
         pub stub_get_list_associations_len: fn(&T, addr: i32) -> Result<i32, MockError>,
-        pub stub_get_list_association: fn(&T, list_addr: i32, item_addr: i32) -> Result<i32, MockError>,
+        pub stub_get_list_association: fn(&T, list_addr: i32, item_addr: i32) -> Result<Option<i32>, MockError>,
         pub stub_get_list_item_with_symbol: fn(&T, list_addr: i32, sym: u32) -> Result<Option<i32>, MockError>,
         pub stub_get_list_items_iter: fn(&T, list_addr: i32) -> MockIterator,
         pub stub_get_list_associations_iter: fn(&T, list_addr: i32) -> MockIterator,
         pub stub_get_char_list_len: fn(&T, addr: i32) -> Result<i32, MockError>,
-        pub stub_get_char_list_item: fn(&T, addr: i32, item_index: i32) -> Result<char, MockError>,
-        pub stub_get_char_list_iter: fn(&T, list_addr: i32) -> MockIterator,
+        pub stub_get_char_list_item: fn(&T, addr: i32, item_index: i32) -> Result<Option<char>, MockError>,
+        pub stub_get_char_list_iter: fn(&T, list_addr: i32) -> MockCharIterator,
         pub stub_get_byte_list_len: fn(&T, addr: i32) -> Result<i32, MockError>,
-        pub stub_get_byte_list_item: fn(&T, addr: i32, item_index: i32) -> Result<u8, MockError>,
-        pub stub_get_byte_list_iter: fn(&T, list_addr: i32) -> MockIterator,
+        pub stub_get_byte_list_item: fn(&T, addr: i32, item_index: i32) -> Result<Option<u8>, MockError>,
+        pub stub_get_byte_list_iter: fn(&T, list_addr: i32) -> MockByteIterator,
         pub stub_get_symbol_list_len: fn(&T, addr: i32) -> Result<i32, MockError>,
-        pub stub_get_symbol_list_item: fn(&T, addr: i32, item_index: i32) -> Result<SymbolListPart<u32, i32>, MockError>,
-        pub stub_get_symbol_list_iter: fn(&T, list_addr: i32) -> MockIterator,
+        pub stub_get_symbol_list_item: fn(&T, addr: i32, item_index: i32) -> Result<Option<SymbolListPart<u32, i32>>, MockError>,
+        pub stub_get_symbol_list_iter: fn(&T, list_addr: i32) -> MockSymbolListPartIterator,
         pub stub_get_list_item_iter: fn(&T, addr: i32) -> MockIterator,
         pub stub_get_concatenation_iter: fn(&T, addr: i32) -> MockIterator,
         pub stub_get_slice_iter: fn(&T, addr: i32) -> MockIterator,
@@ -444,6 +519,9 @@ mod tests {
         type ListIndexIterator = MockIterator;
         type ListItemIterator = MockIterator;
         type ConcatenationItemIterator = MockIterator;
+        type CharIterator = MockCharIterator;
+        type ByteIterator = MockByteIterator;
+        type SymbolListPartIterator = MockSymbolListPartIterator;
 
         fn get_data_len(&self) -> Self::Size {
             (self.stub_get_data_len)(self.data())
@@ -541,7 +619,7 @@ mod tests {
             (self.stub_get_list_len)(self.data(), addr)
         }
 
-        fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error> {
+        fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
             (self.stub_get_list_item)(self.data(), list_addr, item_addr)
         }
 
@@ -549,7 +627,7 @@ mod tests {
             (self.stub_get_list_associations_len)(self.data(), addr)
         }
 
-        fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error> {
+        fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
             (self.stub_get_list_association)(self.data(), list_addr, item_addr)
         }
 
@@ -569,11 +647,11 @@ mod tests {
             (self.stub_get_char_list_len)(self.data(), addr)
         }
 
-        fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error> {
+        fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Char>, Self::Error> {
             (self.stub_get_char_list_item)(self.data(), addr, item_index)
         }
 
-        fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::CharIterator, Self::Error> {
             Ok((self.stub_get_char_list_iter)(self.data(), list_addr))
         }
 
@@ -581,11 +659,11 @@ mod tests {
             (self.stub_get_byte_list_len)(self.data(), addr)
         }
 
-        fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error> {
+        fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Byte>, Self::Error> {
             (self.stub_get_byte_list_item)(self.data(), addr, item_index)
         }
 
-        fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ByteIterator, Self::Error> {
             Ok((self.stub_get_byte_list_iter)(self.data(), list_addr))
         }
 
@@ -593,11 +671,11 @@ mod tests {
             (self.stub_get_symbol_list_len)(self.data(), addr)
         }
 
-        fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error> {
+        fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<SymbolListPart<Self::Symbol, Self::Number>>, Self::Error> {
             (self.stub_get_symbol_list_item)(self.data(), addr, item_index)
         }
 
-        fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+        fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::SymbolListPartIterator, Self::Error> {
             Ok((self.stub_get_symbol_list_iter)(self.data(), list_addr))
         }
 

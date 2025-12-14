@@ -3,7 +3,7 @@ use std::convert::TryInto;
 use garnish_lang_traits::{GarnishData, GarnishDataType, GarnishNumber, Instruction, SymbolListPart};
 
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
-use crate::{DataError, DataIndexIterator, SimpleData, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, symbol_value, SimpleDataType};
+use crate::{ByteListIterator, CharListIterator, DataError, DataIndexIterator, SimpleData, SimpleDataType, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, SymbolListPartIterator, symbol_value};
 
 impl<T, A> GarnishData for SimpleGarnishData<T, A>
 where
@@ -27,6 +27,9 @@ where
     type ListIndexIterator = NumberIterator;
     type ListItemIterator = DataIndexIterator;
     type ConcatenationItemIterator = DataIndexIterator;
+    type CharIterator = CharListIterator;
+    type ByteIterator = ByteListIterator;
+    type SymbolListPartIterator = SymbolListPartIterator;
 
     fn get_data_len(&self) -> usize {
         self.data.len()
@@ -127,11 +130,11 @@ where
         Ok(self.get(index)?.as_list()?.0.len())
     }
 
-    fn get_list_item(&self, list_index: usize, item_index: SimpleNumber) -> Result<usize, Self::Error> {
+    fn get_list_item(&self, list_index: usize, item_index: SimpleNumber) -> Result<Option<usize>, Self::Error> {
         match item_index {
             SimpleNumber::Integer(item_index) => match self.get(list_index)?.as_list()?.0.get(item_index as usize) {
-                None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
-                Some(v) => Ok(*v),
+                None => Ok(None),
+                Some(v) => Ok(Some(*v)),
             },
             SimpleNumber::Float(_) => Err(DataError::from("Cannot index list with decimal value.".to_string())), // should return None
         }
@@ -141,11 +144,11 @@ where
         Ok(self.get(index)?.as_list()?.1.len())
     }
 
-    fn get_list_association(&self, list_index: usize, item_index: SimpleNumber) -> Result<usize, Self::Error> {
+    fn get_list_association(&self, list_index: usize, item_index: SimpleNumber) -> Result<Option<usize>, Self::Error> {
         match item_index {
             SimpleNumber::Integer(item_index) => match self.get(list_index)?.as_list()?.1.get(item_index as usize) {
                 None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
-                Some(v) => Ok(*v),
+                Some(v) => Ok(Some(*v)),
             },
             SimpleNumber::Float(_) => Err(DataError::from("Cannot index list with decimal value.".to_string())), // should return None
         }
@@ -163,31 +166,31 @@ where
 
         loop {
             // check to make sure item has same symbol
-            let association_ref = self.get_list_association(list_addr, i.into())?;
-
-            // should have symbol on left
-            match self.get_data_type(association_ref)? {
-                GarnishDataType::Pair => {
-                    let (left, right) = self.get_pair(association_ref)?;
-
-                    let left_ref = left;
-
-                    match self.get_data_type(left_ref)? {
-                        GarnishDataType::Symbol => {
-                            let v = self.get_symbol(left_ref)?;
-
-                            if v == sym {
-                                // found match
-                                // insert pair right as value
-                                return Ok(Some(right));
+            match self.get_list_association(list_addr, i.into())? {
+                None => {}
+                Some(association_ref) => match self.get_data_type(association_ref)? {
+                    GarnishDataType::Pair => {
+                        let (left, right) = self.get_pair(association_ref)?;
+    
+                        let left_ref = left;
+    
+                        match self.get_data_type(left_ref)? {
+                            GarnishDataType::Symbol => {
+                                let v = self.get_symbol(left_ref)?;
+    
+                                if v == sym {
+                                    // found match
+                                    // insert pair right as value
+                                    return Ok(Some(right));
+                                }
                             }
+                            t => Err(format!("Association created with non-symbol type {:?} on pair left.", t))?,
                         }
-                        t => Err(format!("Association created with non-symbol type {:?} on pair left.", t))?,
                     }
-                }
-                t => Err(format!("Association created with non-pair type {:?}.", t))?,
+                    t => Err(format!("Association created with non-pair type {:?}.", t))?,
+                },
             }
-
+            
             i += 1;
             if i >= associations_len {
                 i = 0;
@@ -216,60 +219,60 @@ where
         Ok(self.get(addr)?.as_char_list()?.len())
     }
 
-    fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error> {
+    fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Char>, Self::Error> {
         match item_index {
             SimpleNumber::Integer(item_index) => match self.get(addr)?.as_char_list()?.chars().nth(item_index as usize) {
                 None => Err(format!("No value at index {:?} for char list at {:?}", item_index, addr))?,
-                Some(c) => Ok(c),
+                Some(c) => Ok(Some(c)),
             },
             SimpleNumber::Float(_) => Err(DataError::from("Cannot index char list with decimal value.".to_string())), // should return None
         }
     }
 
-    fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+    fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<CharListIterator, Self::Error> {
         Ok(self.get_char_list_len(list_addr)
-            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
+            .and_then(|len| Ok(CharListIterator::new(self.get(list_addr)?.as_char_list()?.chars().collect())))
+            .unwrap_or(CharListIterator::new(vec![])))
     }
 
     fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
         Ok(self.get(addr)?.as_byte_list()?.len())
     }
 
-    fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error> {
+    fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Byte>, Self::Error> {
         match item_index {
             SimpleNumber::Integer(item_index) => match self.get(addr)?.as_byte_list()?.get(item_index as usize) {
                 None => Err(format!("No value at index {:?} for byte list at {:?}", item_index, addr))?,
-                Some(c) => Ok(*c),
+                Some(c) => Ok(Some(*c)),
             },
             SimpleNumber::Float(_) => Err(DataError::from("Cannot index byte list with decimal value.".to_string())), // should return None
         }
     }
 
-    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<ByteListIterator, Self::Error> {
         Ok(self.get_byte_list_len(list_addr)
-            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
+            .and_then(|len| Ok(ByteListIterator::new(self.get(list_addr)?.as_byte_list()?.clone())))
+            .unwrap_or(ByteListIterator::new(vec![])))
     }
 
     fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
         Ok(self.get(addr)?.as_symbol_list()?.len())
     }
 
-    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error> {
+    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<SymbolListPart<Self::Symbol, Self::Number>>, Self::Error> {
         match item_index {
             SimpleNumber::Integer(item_index) => match self.get(addr)?.as_symbol_list()?.get(item_index as usize) {
                 None => Err(format!("No value at index {:?} for symbol list at {:?}", item_index, addr))?,
-                Some(c) => Ok(SymbolListPart::Symbol(*c)),
+                Some(c) => Ok(Some(SymbolListPart::Symbol(*c))),
             },
             SimpleNumber::Float(_) => Err(DataError::from("Cannot index symbol list with decimal value.".to_string())), // should return None
         }
     }
 
-    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<SymbolListPartIterator, Self::Error> {
         Ok(self.get_symbol_list_len(list_addr)
-            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
+            .and_then(|len| Ok(SymbolListPartIterator::new(self.get(list_addr)?.as_symbol_list()?.iter().map(|s| SymbolListPart::Symbol(*s)).collect())))
+            .unwrap_or(SymbolListPartIterator::new(vec![])))
     }
 
     fn get_list_item_iter(&self, list_addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {
@@ -736,10 +739,9 @@ where
     fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         match self.get_data_type(from)? {
             GarnishDataType::CharList => {
-                let len = self.get_char_list_len(from)?;
+                let iter = self.get_char_list_iter(from)?;
                 let mut s = String::new();
-                for i in 0..len {
-                    let c = self.get_char_list_item(from, i.into())?;
+                for c in iter {
                     s.push(c);
                 }
 
@@ -755,10 +757,9 @@ where
     fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         match self.get_data_type(from)? {
             GarnishDataType::CharList => {
-                let len = self.get_char_list_len(from)?;
+                let iter = self.get_char_list_iter(from)?;
                 let mut s = String::new();
-                for i in 0..len {
-                    let c = self.get_char_list_item(from, i.into())?;
+                for c in iter {
                     s.push(c);
                 }
 

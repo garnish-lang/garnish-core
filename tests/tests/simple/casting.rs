@@ -354,7 +354,7 @@ mod lists {
         assert_eq!(len, 11);
 
         for i in 0..10 {
-            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap();
+            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap().unwrap();
             assert_eq!(runtime.get_data_mut().get_number(item_addr).unwrap(), (10 + i).into());
         }
     }
@@ -377,7 +377,7 @@ mod lists {
         let mut result = vec![];
 
         for i in 0..input.len() {
-            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap();
+            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap().unwrap();
             let item = runtime.get_data_mut().get_char(item_addr).unwrap();
             result.push(item);
         }
@@ -403,7 +403,7 @@ mod lists {
         let mut result = vec![];
 
         for i in 0..input.len() {
-            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap();
+            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap().unwrap();
             let item = runtime.get_data_mut().get_byte(item_addr).unwrap();
             result.push(item);
         }
@@ -431,7 +431,7 @@ mod lists {
 
         for i in 0..6 {
             let value = 22 + i;
-            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap();
+            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap().unwrap();
             let (left, right) = runtime.get_data_mut().get_pair(item_addr).unwrap();
             let s = symbol_value(format!("val{}", value).as_ref());
             assert_eq!(runtime.get_data_mut().get_symbol(left).unwrap(), s);
@@ -462,7 +462,7 @@ mod lists {
         let mut result = vec![];
 
         for i in 0..expected.len() {
-            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap();
+            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap().unwrap();
             let item = runtime.get_data_mut().get_char(item_addr).unwrap();
             result.push(item);
         }
@@ -490,7 +490,7 @@ mod lists {
         let mut result = vec![];
 
         for i in 0..expected.len() {
-            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap();
+            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap().unwrap();
             let item = runtime.get_data_mut().get_byte(item_addr).unwrap();
             result.push(item);
         }
@@ -523,7 +523,7 @@ mod concatenation {
         assert_eq!(len, 10);
 
         for i in 0..10 {
-            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap();
+            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap().unwrap();
             let (left, right) = runtime.get_data_mut().get_pair(item_addr).unwrap();
             let s = symbol_value(format!("val{}", start_value + i).as_ref());
             assert_eq!(runtime.get_data_mut().get_symbol(left).unwrap(), s);
@@ -554,7 +554,7 @@ mod concatenation {
         assert_eq!(len, 7);
 
         for i in 0..6 {
-            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap();
+            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap().unwrap();
             let (left, right) = runtime.get_data_mut().get_pair(item_addr).unwrap();
             let v = start_value + 2 + i;
             let s = symbol_value(format!("val{}", v).as_ref());
@@ -586,7 +586,7 @@ mod concatenation {
         assert_eq!(len, 20);
 
         for i in 0..20 {
-            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap();
+            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap().unwrap();
             let (left, right) = runtime.get_data_mut().get_pair(item_addr).unwrap();
             let s = symbol_value(format!("val{}", start_value + i).as_ref());
             assert_eq!(runtime.get_data_mut().get_symbol(left).unwrap(), s);
@@ -619,7 +619,7 @@ mod concatenation {
         assert_eq!(len, 5);
 
         for i in 0..5 {
-            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap();
+            let item_addr = runtime.get_data_mut().get_list_item(addr, i.into()).unwrap().unwrap();
             let (left, right) = runtime.get_data_mut().get_pair(item_addr).unwrap();
             let v = start_value + 8 + i;
             let s = symbol_value(format!("val{}", v).as_ref());
@@ -659,7 +659,7 @@ mod deferred {
         let mut chars = String::new();
 
         for i in 0..len {
-            let c = runtime.get_data_mut().get_char_list_item(addr, i.into()).unwrap();
+            let c = runtime.get_data_mut().get_char_list_item(addr, i.into()).unwrap().unwrap();
             chars.push(c);
         }
 

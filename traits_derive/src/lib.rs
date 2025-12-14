@@ -93,6 +93,9 @@ fn create_garnish_data_impl(
             type ListIndexIterator = <#delegate_field_type as GarnishData>::ListIndexIterator;
             type ListItemIterator = <#delegate_field_type as GarnishData>::ListItemIterator;
             type ConcatenationItemIterator = <#delegate_field_type as GarnishData>::ConcatenationItemIterator;
+            type CharIterator = <#delegate_field_type as GarnishData>::CharIterator;
+            type ByteIterator = <#delegate_field_type as GarnishData>::ByteIterator;
+            type SymbolListPartIterator = <#delegate_field_type as GarnishData>::SymbolListPartIterator;
 
             fn get_data_len(&self) -> Self::Size {
                 self.#delegate_field.get_data_len()
@@ -166,13 +169,13 @@ fn create_garnish_data_impl(
             fn get_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.get_list_len(addr)
             }
-            fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error> {
+            fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
                 self.#delegate_field.get_list_item(list_addr, item_addr)
             }
             fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.get_list_associations_len(addr)
             }
-            fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error> {
+            fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
                 self.#delegate_field.get_list_association(list_addr, item_addr)
             }
             fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error> {
@@ -187,28 +190,28 @@ fn create_garnish_data_impl(
             fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.get_char_list_len(addr)
             }
-            fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error> {
+            fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Char>, Self::Error> {
                 self.#delegate_field.get_char_list_item(addr, item_index)
             }
-            fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+            fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::CharIterator, Self::Error> {
                 self.#delegate_field.get_char_list_iter(list_addr)
             }
             fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.get_byte_list_len(addr)
             }
-            fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error> {
+            fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Byte>, Self::Error> {
                 self.#delegate_field.get_byte_list_item(addr, item_index)
             }
-            fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+            fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ByteIterator, Self::Error> {
                 self.#delegate_field.get_byte_list_iter(list_addr)
             }
             fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.get_symbol_list_len(addr)
             }
-            fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error> {
+            fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<SymbolListPart<Self::Symbol, Self::Number>>, Self::Error> {
                 self.#delegate_field.get_symbol_list_item(addr, item_index)
             }
-            fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+            fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::SymbolListPartIterator, Self::Error> {
                 self.#delegate_field.get_symbol_list_iter(list_addr)
             }
             fn get_list_item_iter(&self, addr: Self::Size) -> Result<Self::ListItemIterator, Self::Error> {

@@ -1,6 +1,5 @@
 use crate::{
-    BasicData, BasicDataCustom, DataError, DataIndexIterator, NumberIterator, SizeIterator,
-    basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list},
+    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list}
 };
 use garnish_lang_traits::{GarnishData, GarnishDataType, SymbolListPart};
 
@@ -25,6 +24,9 @@ where
     type ListIndexIterator = NumberIterator;
     type ListItemIterator = DataIndexIterator;
     type ConcatenationItemIterator = DataIndexIterator;
+    type CharIterator = CharListIterator;
+    type ByteIterator = ByteListIterator;
+    type SymbolListPartIterator = SymbolListPartIterator;
 
     fn get_data_len(&self) -> Self::Size {
         self.data.len()
@@ -122,7 +124,7 @@ where
         self.get_data_ensure_index(addr)?.as_list()
     }
 
-    fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error> {
+    fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
         todo!()
     }
 
@@ -130,7 +132,7 @@ where
         todo!()
     }
 
-    fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error> {
+    fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
         todo!()
     }
 
@@ -150,11 +152,11 @@ where
         todo!()
     }
 
-    fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Char, Self::Error> {
+    fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Char>, Self::Error> {
         todo!()
     }
 
-    fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+    fn get_char_list_iter(&self, list_addr: Self::Size) -> Result<Self::CharIterator, Self::Error> {
         todo!()
     }
 
@@ -162,11 +164,11 @@ where
         todo!()
     }
 
-    fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Self::Byte, Self::Error> {
+    fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Byte>, Self::Error> {
         todo!()
     }
 
-    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+    fn get_byte_list_iter(&self, list_addr: Self::Size) -> Result<Self::ByteIterator, Self::Error> {
         todo!()
     }
 
@@ -174,11 +176,11 @@ where
         todo!()
     }
 
-    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<SymbolListPart<Self::Symbol, Self::Number>, Self::Error> {
+    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<SymbolListPart<Self::Symbol, Self::Number>>, Self::Error> {
         todo!()
     }
 
-    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::ListIndexIterator, Self::Error> {
+    fn get_symbol_list_iter(&self, list_addr: Self::Size) -> Result<Self::SymbolListPartIterator, Self::Error> {
         todo!()
     }
 
