@@ -203,13 +203,13 @@ where
         }
     }
 
-    fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
+    fn get_list_items_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
         Ok(self.get_list_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
             .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
     }
 
-    fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
+    fn get_list_associations_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
         Ok(self.get_list_associations_len(list_addr)
             .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
             .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
@@ -229,9 +229,9 @@ where
         }
     }
 
-    fn get_char_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<CharListIterator, Self::Error> {
+    fn get_char_list_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<CharListIterator, Self::Error> {
         Ok(self.get_char_list_len(list_addr)
-            .and_then(|len| Ok(CharListIterator::new(self.get(list_addr)?.as_char_list()?.chars().collect())))
+            .and_then(|_len| Ok(CharListIterator::new(self.get(list_addr)?.as_char_list()?.chars().collect())))
             .unwrap_or(CharListIterator::new(vec![])))
     }
 
@@ -249,9 +249,9 @@ where
         }
     }
 
-    fn get_byte_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<ByteListIterator, Self::Error> {
+    fn get_byte_list_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<ByteListIterator, Self::Error> {
         Ok(self.get_byte_list_len(list_addr)
-            .and_then(|len| Ok(ByteListIterator::new(self.get(list_addr)?.as_byte_list()?.clone())))
+            .and_then(|_len| Ok(ByteListIterator::new(self.get(list_addr)?.as_byte_list()?.clone())))
             .unwrap_or(ByteListIterator::new(vec![])))
     }
 
@@ -269,20 +269,20 @@ where
         }
     }
 
-    fn get_symbol_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<SymbolListPartIterator, Self::Error> {
+    fn get_symbol_list_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<SymbolListPartIterator, Self::Error> {
         Ok(self.get_symbol_list_len(list_addr)
-            .and_then(|len| Ok(SymbolListPartIterator::new(self.get(list_addr)?.as_symbol_list()?.iter().map(|s| SymbolListPart::Symbol(*s)).collect())))
+            .and_then(|_len| Ok(SymbolListPartIterator::new(self.get(list_addr)?.as_symbol_list()?.iter().map(|s| SymbolListPart::Symbol(*s)).collect())))
             .unwrap_or(SymbolListPartIterator::new(vec![])))
     }
 
-    fn get_list_item_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
+    fn get_list_item_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
         match self.get_data().get(list_addr) {
             Some(SimpleData::List(items, _)) => Ok(DataIndexIterator::new(items.clone())),
             _ => Ok(DataIndexIterator::new(vec![])),
         }
     }
 
-    fn get_concatenation_iter(&self, addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ConcatenationItemIterator, Self::Error> {
+    fn get_concatenation_iter(&self, addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ConcatenationItemIterator, Self::Error> {
         match self.get_data().get(addr) {
             Some(SimpleData::Concatenation(left, right)) => Ok(DataIndexIterator::new(self.collect_concatenation_indices(*left, *right)?)),
             _ => Ok(DataIndexIterator::new(vec![])),
