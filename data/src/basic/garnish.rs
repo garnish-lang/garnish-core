@@ -1,5 +1,5 @@
 use crate::{
-    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list}
+    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list}, error::DataErrorType
 };
 use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, SymbolListPart};
 
@@ -257,11 +257,37 @@ where
     }
 
     fn start_list(&mut self, len: Self::Size) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_basic_data(BasicData::List(len)))
+        let list_index = self.push_basic_data(BasicData::List(len));
+        for _ in 0..len {
+            self.push_basic_data(BasicData::Empty);
+        }
+        Ok(list_index)
     }
 
     fn add_to_list(&mut self, list_index: Self::Size, item_index: Self::Size) -> Result<Self::Size, Self::Error> {
-        self.push_basic_data(BasicData::ListItem(item_index));
+        let mut first_empty = None;
+        let len = self.get_data_ensure_index(list_index)?.as_list()?;
+
+        for i in 0..len {
+            let index = list_index + 1 + i;
+            if matches!(self.get_basic_data(index), Some(BasicData::Empty)) {
+                first_empty = Some(index);
+                break;
+            }
+        }
+
+        match first_empty {
+            Some(index) => {
+                let data = match self.get_basic_data_mut(index) {
+                    Some(data) => data,
+                    None => todo!(),
+                };
+
+                *data = BasicData::ListItem(item_index);
+            }
+            None => return Err(DataError::new("Exceeded initial list length", DataErrorType::ExceededInitialListLength(len))),
+        }
+
         Ok(list_index)
     }
 
@@ -941,6 +967,70 @@ mod tests {
         data.push_basic_data(BasicData::Slice(100, 200));
         let result = data.get_slice(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn start_list_ok() {
+        let mut data = BasicGarnishDataUnit::new();
+        let list_index = data.start_list(3).unwrap();
+
+        assert_eq!(list_index, 0);
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![
+            BasicData::List(3),
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+        ]));
+    }
+
+    #[test]
+    fn add_list_list_ok() {
+        let mut data = BasicGarnishDataUnit::new();
+        let v1 = data.push_basic_data(BasicData::Number(100.into()));
+        let list_index = data.start_list(3).unwrap();
+        let list_index = data.add_to_list(list_index, v1).unwrap();
+
+        assert_eq!(list_index, 1);
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![
+            BasicData::Number(100.into()),
+            BasicData::List(3),
+            BasicData::ListItem(v1),
+            BasicData::Empty,
+            BasicData::Empty,
+        ]));
+    }
+
+    #[test]
+    fn add_list_list_invalid_list_index() {
+        let mut data = BasicGarnishDataUnit::new();
+        let v1 = data.push_basic_data(BasicData::Number(100.into()));
+        data.start_list(3).unwrap();
+        let result = data.add_to_list(10, v1);
+
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(10))));
+    }
+
+    #[test]
+    fn add_list_item_past_initial_length() {
+        let mut data = BasicGarnishDataUnit::new();
+        let v1 = data.push_basic_data(BasicData::Number(100.into()));
+        let list_index = data.start_list(3).unwrap();
+        let list_index = data.add_to_list(list_index, v1).unwrap();
+        let list_index = data.add_to_list(list_index, v1).unwrap();
+        let list_index = data.add_to_list(list_index, v1).unwrap();
+        let result = data.add_to_list(list_index, v1);
+
+        assert_eq!(result, Err(DataError::new("Exceeded initial list length", DataErrorType::ExceededInitialListLength(3))));
+    }
+
+    #[test]
+    fn add_list_with_non_list() {
+        let mut data = BasicGarnishDataUnit::new();
+        let v1 = data.push_basic_data(BasicData::Number(100.into()));
+        let list_index = data.start_list(3).unwrap();
+        let result = data.add_to_list(v1, v1);
+
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
     }
 
     #[test]

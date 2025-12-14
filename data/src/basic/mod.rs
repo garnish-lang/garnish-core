@@ -13,6 +13,7 @@ impl BasicDataCustom for () {}
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub enum BasicData<T> 
 where T: BasicDataCustom {
+    Empty,
     Unit,
     True,
     False,
@@ -40,6 +41,7 @@ impl<T> BasicData<T>
 where T: BasicDataCustom {
     pub fn get_data_type(&self) -> GarnishDataType {
         match self {
+            BasicData::Empty => GarnishDataType::Invalid,
             BasicData::Unit => GarnishDataType::Unit,
             BasicData::True => GarnishDataType::True,
             BasicData::False => GarnishDataType::False,
