@@ -119,7 +119,7 @@ where
     }
 
     fn get_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        self.get_data_ensure_index(addr)?.as_list()
     }
 
     fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Self::Size, Self::Error> {
@@ -976,5 +976,29 @@ mod tests {
             BasicData::ListItem(v2),
             BasicData::ListItem(v3),
         ]));
+    }
+
+    #[test]
+    fn get_list_len_ok() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.push_basic_data(BasicData::List(100));
+        let result = data.get_list_len(0);
+        assert_eq!(result, Ok(100));
+    }
+
+    #[test]
+    fn get_list_len_invalid_index() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.push_basic_data(BasicData::List(100));
+        let result = data.get_list_len(1);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
+    }
+
+    #[test]
+    fn get_list_len_not_list() {
+        let mut data = BasicGarnishDataUnit::new();
+        data.push_basic_data(BasicData::Number(100.into()));
+        let result = data.get_list_len(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
     }
 }

@@ -148,6 +148,13 @@ where T: BasicDataCustom {
         }
     }
 
+    pub fn as_list(&self) -> Result<usize, DataError> {
+        match self {
+            BasicData::List(list) => Ok(*list),
+            _ => Err(DataError::not_type_error(GarnishDataType::List)),
+        }
+    }
+
     pub fn as_custom(&self) -> Result<&T, DataError> {
         match self {
             BasicData::Custom(c) => Ok(c),
@@ -553,6 +560,18 @@ mod basic_data {
     fn as_slice_not_slice() {
         let data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_slice(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Slice))));
+    }
+
+    #[test]
+    fn as_list() {
+        let data = BasicDataUnitCustom::List(100);
+        assert_eq!(data.as_list(), Ok(100));
+    }
+
+    #[test]
+    fn as_list_not_list() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_list(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
     }
 
     #[test]
