@@ -491,7 +491,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{BasicData, BasicGarnishDataUnit, error::DataErrorType};
+    use crate::{BasicData, BasicGarnishDataUnit, basic::storage::StorageSettings, error::DataErrorType};
 
     use super::*;
 
@@ -526,7 +526,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_unit().unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Unit]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Unit], StorageSettings::default()));
     }
 
     #[test]
@@ -534,7 +534,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_true().unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::True]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::True], StorageSettings::default()));
     }
 
     #[test]
@@ -542,7 +542,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_false().unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::False]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::False], StorageSettings::default()));
     }
 
     #[test]
@@ -550,7 +550,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_number(100.into()).unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Number(100.into())]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Number(100.into())], StorageSettings::default()));
     }
 
     #[test]
@@ -558,7 +558,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_type(GarnishDataType::Number).unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Type(GarnishDataType::Number)]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Type(GarnishDataType::Number)], StorageSettings::default()));
     }
 
     #[test]
@@ -566,7 +566,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_char('a').unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Char('a')]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Char('a')], StorageSettings::default()));
     }
 
     #[test]
@@ -574,7 +574,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_byte(100).unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Byte(100)]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Byte(100)], StorageSettings::default()));
     }
 
     #[test]
@@ -582,7 +582,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_symbol(100).unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Symbol(100)]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Symbol(100)], StorageSettings::default()));
     }
 
     #[test]
@@ -590,7 +590,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_expression(100).unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Expression(100)]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Expression(100)], StorageSettings::default()));
     }
 
     #[test]
@@ -598,7 +598,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_external(100).unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::External(100)]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::External(100)], StorageSettings::default()));
     }
 
     #[test]
@@ -606,7 +606,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_pair((100, 200)).unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Pair(100, 200)]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Pair(100, 200)], StorageSettings::default()));
     }
 
     #[test]
@@ -614,7 +614,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_concatenation(100, 200).unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Concatenation(100, 200)]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Concatenation(100, 200)], StorageSettings::default()));
     }
 
     #[test]
@@ -622,7 +622,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_range(100, 200).unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Range(100, 200)]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Range(100, 200)], StorageSettings::default()));
     }
 
     #[test]
@@ -630,7 +630,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_slice(100, 200).unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Slice(100, 200)]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Slice(100, 200)], StorageSettings::default()));
     }
 
     #[test]
@@ -638,7 +638,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new();
         data.add_partial(100, 200).unwrap();
 
-        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Partial(100, 200)]));
+        assert_eq!(data, BasicGarnishDataUnit::new_full(vec![BasicData::Partial(100, 200)], StorageSettings::default()));
     }
 
 
@@ -975,7 +975,7 @@ mod tests {
             BasicData::Empty,
             BasicData::Empty,
             BasicData::Empty,
-        ]));
+        ], StorageSettings::default()));
     }
 
     #[test]
@@ -992,7 +992,7 @@ mod tests {
             BasicData::ListItem(v1),
             BasicData::Empty,
             BasicData::Empty,
-        ]));
+        ], StorageSettings::default()));
     }
 
     #[test]
@@ -1049,7 +1049,7 @@ mod tests {
             BasicData::ListItem(v1),
             BasicData::ListItem(v2),
             BasicData::ListItem(v3),
-        ]));
+        ], StorageSettings::default()));
     }
 
     #[test]

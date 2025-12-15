@@ -1,9 +1,13 @@
 mod data;
 mod garnish;
 mod merge_to_symbol_list;
+mod storage;
+
+use std::usize;
 
 pub use data::{BasicData, BasicDataUnitCustom};
 
+use crate::basic::storage::StorageSettings;
 use crate::data::SimpleNumber;
 
 pub type BasicNumber = SimpleNumber;
@@ -18,6 +22,7 @@ impl BasicDataCustom for () {}
 pub struct BasicGarnishData<T>
 where T: BasicDataCustom {
     data: Vec<BasicData<T>>,
+    storage_settings: StorageSettings,
 }
 
 pub type BasicGarnishDataUnit = BasicGarnishData<()>;
@@ -25,11 +30,11 @@ pub type BasicGarnishDataUnit = BasicGarnishData<()>;
 impl<T> BasicGarnishData<T>
 where T: BasicDataCustom {
     pub fn new() -> Self {
-        Self { data: Vec::new() }
+        Self { data: Vec::new(), storage_settings: StorageSettings::default() }
     }
 
-    pub fn new_full(data: Vec<BasicData<T>>) -> Self {
-        Self { data }
+    pub fn new_full(data: Vec<BasicData<T>>, storage_settings: StorageSettings) -> Self {
+        Self { data, storage_settings }
     }
 
     pub fn push_basic_data(&mut self, data: BasicData<T>) -> usize {

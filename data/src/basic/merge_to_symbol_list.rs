@@ -121,6 +121,8 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::basic::storage::StorageSettings;
+
     use super::*;
     use super::super::BasicGarnishDataUnit;
     use garnish_lang_traits::GarnishData;
@@ -141,7 +143,7 @@ mod tests {
                 BasicData::SymbolList(2),
                 BasicData::Symbol(100),
                 BasicData::Symbol(200),
-            ])
+            ], StorageSettings::default())
         );
     }
 
@@ -161,7 +163,7 @@ mod tests {
                 BasicData::SymbolList(2),
                 BasicData::Number(100.into()),
                 BasicData::Number(200.into()),
-            ])
+            ], StorageSettings::default())
         );
     }
 
@@ -181,7 +183,7 @@ mod tests {
                 BasicData::SymbolList(2),
                 BasicData::Symbol(100),
                 BasicData::Number(200.into()),
-            ])
+            ], StorageSettings::default())
         );
     }
 
@@ -201,7 +203,7 @@ mod tests {
                 BasicData::SymbolList(2),
                 BasicData::Number(100.into()),
                 BasicData::Symbol(200),
-            ])
+            ], StorageSettings::default())
         );
     }
 
@@ -227,7 +229,7 @@ mod tests {
                 BasicData::Symbol(100),
                 BasicData::Symbol(200),
                 BasicData::Symbol(300),
-            ])
+            ], StorageSettings::default())
         );
     }
 
@@ -253,7 +255,7 @@ mod tests {
                 BasicData::Symbol(300),
                 BasicData::Symbol(100),
                 BasicData::Symbol(200),
-            ])
+            ], StorageSettings::default())
         );
     }
 
@@ -279,7 +281,7 @@ mod tests {
                 BasicData::Symbol(100),
                 BasicData::Symbol(200),
                 BasicData::Number(300.into()),
-            ])
+            ], StorageSettings::default())
         );
     }
 
@@ -305,7 +307,7 @@ mod tests {
                 BasicData::Number(300.into()),
                 BasicData::Symbol(100),
                 BasicData::Symbol(200),
-            ])
+            ], StorageSettings::default())
         );
     }
 
@@ -336,7 +338,7 @@ mod tests {
                 BasicData::Symbol(200),
                 BasicData::Symbol(300),
                 BasicData::Symbol(400),
-            ])
+            ], StorageSettings::default())
         );
     }
 
@@ -355,7 +357,7 @@ mod tests {
                 BasicData::Number(100.into()),
                 BasicData::Expression(2),
                 BasicData::Unit,
-            ])
+            ], StorageSettings::default())
         );
     }
 
@@ -374,7 +376,7 @@ mod tests {
                 BasicData::Number(100.into()),
                 BasicData::Expression(2),
                 BasicData::Unit,
-            ])
+            ], StorageSettings::default())
         );
     }
 
@@ -393,7 +395,7 @@ mod tests {
                 BasicData::Expression(100),
                 BasicData::Expression(2),
                 BasicData::Unit,
-            ])
+            ], StorageSettings::default())
         );
     }
 }
