@@ -109,18 +109,18 @@ mod utilities {
         BasicData, BasicGarnishDataUnit, basic::storage::{ReallocationStrategy, StorageSettings}
     };
 
-    pub fn test_basic_data() -> BasicGarnishDataUnit {
+    pub fn test_data() -> BasicGarnishDataUnit {
         BasicGarnishDataUnit::new_full(vec![], StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)))
     }
 
-    pub fn test_basic_data_with_data(data: Vec<BasicData<()>>) -> BasicGarnishDataUnit {
+    pub fn test_with_data(data: Vec<BasicData<()>>) -> BasicGarnishDataUnit {
         BasicGarnishDataUnit::new_full(data, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)))
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::basic::{storage::ReallocationStrategy, utilities::{test_basic_data, test_basic_data_with_data}};
+    use crate::basic::{storage::ReallocationStrategy, utilities::{test_data, test_with_data}};
 
     use super::*;
 
@@ -131,7 +131,7 @@ mod tests {
 
     #[test]
     fn add_basic_data() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
 
         let index = data.push_basic_data(BasicData::Unit);
         assert_eq!(index, 0);
@@ -158,7 +158,7 @@ mod tests {
 
     #[test]
     fn get_basic_data() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         let index1 = data.push_basic_data(BasicData::Unit);
         let index2 = data.push_basic_data(BasicData::True);
 
@@ -168,7 +168,7 @@ mod tests {
 
     #[test]
     fn get_basic_data_mut() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         let index1 = data.push_basic_data(BasicData::Unit);
         let index2 = data.push_basic_data(BasicData::True);
 
@@ -178,7 +178,7 @@ mod tests {
 
     #[test]
     fn get_data_ensure_index_ok() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         data.push_basic_data(BasicData::Number(100.into()));
         let result = data.get_data_ensure_index(0);
         assert_eq!(result, Ok(&BasicData::Number(100.into())));
@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     fn get_data_ensure_index_error() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         data.push_basic_data(BasicData::Number(100.into()));
         let result = data.get_data_ensure_index(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
@@ -194,7 +194,7 @@ mod tests {
 
     #[test]
     fn add_char_list_from_string() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         let index = data.add_char_list_from_string("hello").unwrap();
 
         assert_eq!(index, 0);
@@ -217,7 +217,7 @@ mod tests {
 
     #[test]
     fn add_char_list_from_string_empty() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         let index = data.add_char_list_from_string("").unwrap();
 
         assert_eq!(index, 0);
@@ -240,7 +240,7 @@ mod tests {
 
     #[test]
     fn add_char_list_from_string_single_char() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         let index = data.add_char_list_from_string("a").unwrap();
 
         assert_eq!(index, 0);
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn add_byte_list_from_vec() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         let index = data.add_byte_list_from_vec(vec![100, 150, 200]).unwrap();
 
         assert_eq!(index, 0);
@@ -286,7 +286,7 @@ mod tests {
 
     #[test]
     fn add_byte_list_from_vec_empty() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         let index = data.add_byte_list_from_vec(vec![]).unwrap();
 
         assert_eq!(index, 0);
@@ -309,7 +309,7 @@ mod tests {
 
     #[test]
     fn add_byte_list_from_vec_single_byte() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         let index = data.add_byte_list_from_vec(vec![42]).unwrap();
 
         assert_eq!(index, 0);
@@ -332,7 +332,7 @@ mod tests {
 
     #[test]
     fn add_byte_list_from_vec_slice() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         let bytes = [10, 20, 30, 40];
         let index = data.add_byte_list_from_vec(&bytes[..]).unwrap();
 
@@ -356,7 +356,7 @@ mod tests {
 
     #[test]
     fn created_with_initial_size() {
-        let data = test_basic_data();
+        let data = test_data();
 
         assert_eq!(
             data.data,
@@ -377,7 +377,7 @@ mod tests {
 
     #[test]
     fn data_not_resized_if_initialized_larger_than_initial_size() {
-        let data = test_basic_data_with_data(vec![BasicData::Unit; 20]);
+        let data = test_with_data(vec![BasicData::Unit; 20]);
         assert_eq!(data.data, 
             vec![
                 BasicData::Unit,
@@ -405,21 +405,21 @@ mod tests {
 
     #[test]
     fn resize_when_pushed_past_max_fixed_size() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         for _ in 0..15 {
             data.push_basic_data(BasicData::Unit);
         }
         
         let mut expected: Vec<BasicData<()>> = vec![BasicData::Unit; 15];
         expected.resize(20, BasicData::Empty);
-        let mut expected_data = test_basic_data_with_data(expected);
+        let mut expected_data = test_with_data(expected);
         expected_data.data_cursor = 15;
         assert_eq!(data, expected_data);
     }
 
     #[test]
     fn resize_when_pushed_past_max_multiplicative_size() {
-        let mut data = test_basic_data();
+        let mut data = test_data();
         data.storage_settings.reallocation_strategy = ReallocationStrategy::Multiplicative(3);
         for _ in 0..15 {
             data.push_basic_data(BasicData::Unit);
@@ -427,7 +427,7 @@ mod tests {
         
         let mut expected: Vec<BasicData<()>> = vec![BasicData::Unit; 15];
         expected.resize(30, BasicData::Empty);
-        let mut expected_data = test_basic_data_with_data(expected);
+        let mut expected_data = test_with_data(expected);
         expected_data.storage_settings.reallocation_strategy = ReallocationStrategy::Multiplicative(3);
         expected_data.data_cursor = 15;
         assert_eq!(data, expected_data);
