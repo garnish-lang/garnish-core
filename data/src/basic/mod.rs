@@ -7,7 +7,7 @@ use std::usize;
 
 pub use data::{BasicData, BasicDataUnitCustom};
 
-use crate::basic::storage::StorageSettings;
+use crate::basic::storage::{ReallocationStrategy, StorageSettings};
 use crate::data::SimpleNumber;
 
 pub type BasicNumber = SimpleNumber;
@@ -49,12 +49,21 @@ where
     }
 
     fn fill_data(data: &mut Vec<BasicData<T>>, settings: &StorageSettings) {
-        data.resize(settings.initial_size(), BasicData::Empty);
+        if data.len() < settings.initial_size() {
+            data.resize(settings.initial_size(), BasicData::Empty);
+        }
     }
 
     pub fn push_basic_data(&mut self, data: BasicData<T>) -> usize {
         if self.data_cursor >= self.data.len() {
-            todo!()
+            match self.storage_settings.reallocation_strategy() {
+                ReallocationStrategy::FixedSize(size) => {
+                    self.data.resize(self.data_cursor + size, BasicData::Empty);
+                }
+                ReallocationStrategy::Multiplicative(multiplier) => {
+                    self.data.resize(self.data_cursor * multiplier, BasicData::Empty);
+                }
+            }
         }
         let index = self.data_cursor;
         self.data[self.data_cursor] = data;
@@ -111,7 +120,7 @@ mod utilities {
 
 #[cfg(test)]
 mod tests {
-    use crate::basic::utilities::test_basic_data;
+    use crate::basic::{storage::ReallocationStrategy, utilities::{test_basic_data, test_basic_data_with_data}};
 
     use super::*;
 
@@ -364,5 +373,63 @@ mod tests {
                 BasicData::Empty,
             ]
         );
+    }
+
+    #[test]
+    fn data_not_resized_if_initialized_larger_than_initial_size() {
+        let data = test_basic_data_with_data(vec![BasicData::Unit; 20]);
+        assert_eq!(data.data, 
+            vec![
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+                BasicData::Unit,
+            ]);
+    }
+
+    #[test]
+    fn resize_when_pushed_past_max_fixed_size() {
+        let mut data = test_basic_data();
+        for _ in 0..15 {
+            data.push_basic_data(BasicData::Unit);
+        }
+        
+        let mut expected: Vec<BasicData<()>> = vec![BasicData::Unit; 15];
+        expected.resize(20, BasicData::Empty);
+        let mut expected_data = test_basic_data_with_data(expected);
+        expected_data.data_cursor = 15;
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn resize_when_pushed_past_max_multiplicative_size() {
+        let mut data = test_basic_data();
+        data.storage_settings.reallocation_strategy = ReallocationStrategy::Multiplicative(3);
+        for _ in 0..15 {
+            data.push_basic_data(BasicData::Unit);
+        }
+        
+        let mut expected: Vec<BasicData<()>> = vec![BasicData::Unit; 15];
+        expected.resize(30, BasicData::Empty);
+        let mut expected_data = test_basic_data_with_data(expected);
+        expected_data.storage_settings.reallocation_strategy = ReallocationStrategy::Multiplicative(3);
+        expected_data.data_cursor = 15;
+        assert_eq!(data, expected_data);
     }
 }

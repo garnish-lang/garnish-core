@@ -1,9 +1,9 @@
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StorageSettings {
-    initial_size: usize,
-    max_items: usize,
-    reallocation_strategy: ReallocationStrategy,
+    pub(crate) initial_size: usize,
+    pub(crate) max_items: usize,
+    pub(crate) reallocation_strategy: ReallocationStrategy,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
