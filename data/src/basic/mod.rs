@@ -20,7 +20,10 @@ impl BasicDataCustom for () {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BasicGarnishData<T>
-where T: BasicDataCustom {
+where
+    T: BasicDataCustom,
+{
+    data_cursor: usize,
     data: Vec<BasicData<T>>,
     storage_settings: StorageSettings,
 }
@@ -28,18 +31,34 @@ where T: BasicDataCustom {
 pub type BasicGarnishDataUnit = BasicGarnishData<()>;
 
 impl<T> BasicGarnishData<T>
-where T: BasicDataCustom {
+where
+    T: BasicDataCustom,
+{
     pub fn new() -> Self {
-        Self { data: Vec::new(), storage_settings: StorageSettings::default() }
+        Self::new_full(vec![], StorageSettings::default())
     }
 
-    pub fn new_full(data: Vec<BasicData<T>>, storage_settings: StorageSettings) -> Self {
-        Self { data, storage_settings }
+    pub fn new_full(mut data: Vec<BasicData<T>>, storage_settings: StorageSettings) -> Self {
+        let data_cursor = data.len();
+        Self::fill_data(&mut data, &storage_settings);
+        Self {
+            data_cursor,
+            data,
+            storage_settings,
+        }
+    }
+
+    fn fill_data(data: &mut Vec<BasicData<T>>, settings: &StorageSettings) {
+        data.resize(settings.initial_size(), BasicData::Empty);
     }
 
     pub fn push_basic_data(&mut self, data: BasicData<T>) -> usize {
-        let index = self.data.len();
-        self.data.push(data);
+        if self.data_cursor >= self.data.len() {
+            todo!()
+        }
+        let index = self.data_cursor;
+        self.data[self.data_cursor] = data;
+        self.data_cursor += 1;
         index
     }
 
@@ -52,10 +71,10 @@ where T: BasicDataCustom {
     }
 
     pub(crate) fn get_data_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
-        match self.get_basic_data(index) {
-            Some(data) => Ok(data),
-            None => Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(index))),
+        if index >= self.data_cursor {
+            return Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(index)));
         }
+        Ok(&self.data[index])
     }
 
     pub fn add_char_list_from_string(&mut self, s: impl AsRef<str>) -> Result<usize, DataError> {
@@ -76,7 +95,24 @@ where T: BasicDataCustom {
 }
 
 #[cfg(test)]
+mod utilities {
+    use crate::{
+        BasicData, BasicGarnishDataUnit, basic::storage::{ReallocationStrategy, StorageSettings}
+    };
+
+    pub fn test_basic_data() -> BasicGarnishDataUnit {
+        BasicGarnishDataUnit::new_full(vec![], StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)))
+    }
+
+    pub fn test_basic_data_with_data(data: Vec<BasicData<()>>) -> BasicGarnishDataUnit {
+        BasicGarnishDataUnit::new_full(data, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)))
+    }
+}
+
+#[cfg(test)]
 mod tests {
+    use crate::basic::utilities::test_basic_data;
+
     use super::*;
 
     #[test]
@@ -86,20 +122,34 @@ mod tests {
 
     #[test]
     fn add_basic_data() {
-        let mut data = BasicGarnishDataUnit::new();
+        let mut data = test_basic_data();
 
         let index = data.push_basic_data(BasicData::Unit);
         assert_eq!(index, 0);
 
         let index = data.push_basic_data(BasicData::True);
         assert_eq!(index, 1);
-        
-        assert_eq!(data.data, vec![BasicData::Unit, BasicData::True]);
+
+        assert_eq!(
+            data.data,
+            vec![
+                BasicData::Unit,
+                BasicData::True,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty
+            ]
+        );
     }
 
     #[test]
     fn get_basic_data() {
-        let mut data = BasicGarnishDataUnit::new();
+        let mut data = test_basic_data();
         let index1 = data.push_basic_data(BasicData::Unit);
         let index2 = data.push_basic_data(BasicData::True);
 
@@ -109,7 +159,7 @@ mod tests {
 
     #[test]
     fn get_basic_data_mut() {
-        let mut data = BasicGarnishDataUnit::new();
+        let mut data = test_basic_data();
         let index1 = data.push_basic_data(BasicData::Unit);
         let index2 = data.push_basic_data(BasicData::True);
 
@@ -119,7 +169,7 @@ mod tests {
 
     #[test]
     fn get_data_ensure_index_ok() {
-        let mut data = BasicGarnishDataUnit::new();
+        let mut data = test_basic_data();
         data.push_basic_data(BasicData::Number(100.into()));
         let result = data.get_data_ensure_index(0);
         assert_eq!(result, Ok(&BasicData::Number(100.into())));
@@ -127,7 +177,7 @@ mod tests {
 
     #[test]
     fn get_data_ensure_index_error() {
-        let mut data = BasicGarnishDataUnit::new();
+        let mut data = test_basic_data();
         data.push_basic_data(BasicData::Number(100.into()));
         let result = data.get_data_ensure_index(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
@@ -135,7 +185,7 @@ mod tests {
 
     #[test]
     fn add_char_list_from_string() {
-        let mut data = BasicGarnishDataUnit::new();
+        let mut data = test_basic_data();
         let index = data.add_char_list_from_string("hello").unwrap();
 
         assert_eq!(index, 0);
@@ -148,22 +198,40 @@ mod tests {
                 BasicData::Char('l'),
                 BasicData::Char('l'),
                 BasicData::Char('o'),
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
             ]
         );
     }
 
     #[test]
     fn add_char_list_from_string_empty() {
-        let mut data = BasicGarnishDataUnit::new();
+        let mut data = test_basic_data();
         let index = data.add_char_list_from_string("").unwrap();
 
         assert_eq!(index, 0);
-        assert_eq!(data.data, vec![BasicData::CharList(0)]);
+        assert_eq!(
+            data.data,
+            vec![
+                BasicData::CharList(0),
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+            ]
+        );
     }
 
     #[test]
     fn add_char_list_from_string_single_char() {
-        let mut data = BasicGarnishDataUnit::new();
+        let mut data = test_basic_data();
         let index = data.add_char_list_from_string("a").unwrap();
 
         assert_eq!(index, 0);
@@ -172,13 +240,21 @@ mod tests {
             vec![
                 BasicData::CharList(1),
                 BasicData::Char('a'),
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
             ]
         );
     }
 
     #[test]
     fn add_byte_list_from_vec() {
-        let mut data = BasicGarnishDataUnit::new();
+        let mut data = test_basic_data();
         let index = data.add_byte_list_from_vec(vec![100, 150, 200]).unwrap();
 
         assert_eq!(index, 0);
@@ -189,22 +265,42 @@ mod tests {
                 BasicData::Byte(100),
                 BasicData::Byte(150),
                 BasicData::Byte(200),
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
             ]
         );
     }
 
     #[test]
     fn add_byte_list_from_vec_empty() {
-        let mut data = BasicGarnishDataUnit::new();
+        let mut data = test_basic_data();
         let index = data.add_byte_list_from_vec(vec![]).unwrap();
 
         assert_eq!(index, 0);
-        assert_eq!(data.data, vec![BasicData::ByteList(0)]);
+        assert_eq!(
+            data.data,
+            vec![
+                BasicData::ByteList(0),
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+            ]
+        );
     }
 
     #[test]
     fn add_byte_list_from_vec_single_byte() {
-        let mut data = BasicGarnishDataUnit::new();
+        let mut data = test_basic_data();
         let index = data.add_byte_list_from_vec(vec![42]).unwrap();
 
         assert_eq!(index, 0);
@@ -213,13 +309,21 @@ mod tests {
             vec![
                 BasicData::ByteList(1),
                 BasicData::Byte(42),
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
             ]
         );
     }
 
     #[test]
     fn add_byte_list_from_vec_slice() {
-        let mut data = BasicGarnishDataUnit::new();
+        let mut data = test_basic_data();
         let bytes: [u8; 4] = [10, 20, 30, 40];
         let index = data.add_byte_list_from_vec(&bytes[..]).unwrap();
 
@@ -232,6 +336,32 @@ mod tests {
                 BasicData::Byte(20),
                 BasicData::Byte(30),
                 BasicData::Byte(40),
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+            ]
+        );
+    }
+
+    #[test]
+    fn created_with_initial_size() {
+        let data = test_basic_data();
+
+        assert_eq!(
+            data.data,
+            vec![
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
             ]
         );
     }
