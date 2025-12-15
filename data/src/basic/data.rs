@@ -169,6 +169,7 @@ mod tests {
     #[test]
     fn get_data_type() {
         let scenarios = vec![
+            (BasicDataUnitCustom::Empty, GarnishDataType::Invalid),
             (BasicDataUnitCustom::Unit, GarnishDataType::Unit),
             (BasicDataUnitCustom::True, GarnishDataType::True),
             (BasicDataUnitCustom::False, GarnishDataType::False),
