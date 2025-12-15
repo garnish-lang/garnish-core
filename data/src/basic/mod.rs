@@ -324,7 +324,7 @@ mod tests {
     #[test]
     fn add_byte_list_from_vec_slice() {
         let mut data = test_basic_data();
-        let bytes: [u8; 4] = [10, 20, 30, 40];
+        let bytes = [10, 20, 30, 40];
         let index = data.add_byte_list_from_vec(&bytes[..]).unwrap();
 
         assert_eq!(index, 0);
