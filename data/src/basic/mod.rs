@@ -13,14 +13,10 @@ use crate::data::SimpleNumber;
 
 pub type BasicNumber = SimpleNumber;
 
+use crate::instruction;
 use crate::{DataError, error::DataErrorType};
 
 const BLOCKS: usize = 3;
-const INSTRUCTION_BLOCK_INDEX: usize = 0;
-const JUMP_TABLE_BLOCK_INDEX: usize = 1;
-const DATA_BLOCK_INDEX: usize = 2;
-
-type StorageBlocks = [StorageBlock; BLOCKS];
 
 pub trait BasicDataCustom: Clone + Debug {}
 
@@ -49,11 +45,7 @@ where
         Self::new_full(vec![], StorageSettings::default())
     }
 
-    pub fn new_with_settings(
-        instruction_settings: StorageSettings,
-        jump_table_settings: StorageSettings,
-        data_settings: StorageSettings,
-    ) -> Self {
+    pub fn new_with_settings(instruction_settings: StorageSettings, jump_table_settings: StorageSettings, data_settings: StorageSettings) -> Self {
         let total_size = instruction_settings.initial_size() + jump_table_settings.initial_size() + data_settings.initial_size();
         let data = vec![BasicData::Empty; total_size];
         Self {
@@ -199,14 +191,14 @@ where
         Ok(index)
     }
 
-    fn reallocate_heap(&mut self, new_sizes: [usize; BLOCKS]) {
+    fn reallocate_heap(&mut self, new_instruction_size: usize, new_jump_table_size: usize, new_data_size: usize) {
         let ordered: [(&mut StorageBlock, usize); BLOCKS] = [
-            (&mut self.instruction_block, new_sizes[0]),
-            (&mut self.jump_table_block, new_sizes[1]),
-            (&mut self.data_block, new_sizes[2]),
+            (&mut self.instruction_block, new_instruction_size),
+            (&mut self.jump_table_block, new_jump_table_size),
+            (&mut self.data_block, new_data_size),
         ];
 
-        let new_size = new_sizes.iter().sum::<usize>();
+        let new_size = new_instruction_size + new_jump_table_size + new_data_size;
 
         let mut new_heap = vec![BasicData::Empty; new_size];
 
@@ -220,7 +212,6 @@ where
             }
             current_block_start += new_size;
         }
-        
 
         self.data = new_heap;
     }
@@ -229,7 +220,8 @@ where
 #[cfg(test)]
 mod utilities {
     use crate::{
-        BasicData, BasicGarnishDataUnit, basic::storage::{ReallocationStrategy, StorageSettings}
+        BasicData, BasicGarnishDataUnit,
+        basic::storage::{ReallocationStrategy, StorageSettings},
     };
 
     pub fn test_data() -> BasicGarnishDataUnit {
@@ -247,7 +239,7 @@ mod utilities {
 
 #[cfg(test)]
 mod tests {
-    use crate::basic::{storage::ReallocationStrategy, utilities::{test_data, test_with_data}};
+    use crate::basic::{storage::ReallocationStrategy, utilities::test_data};
 
     use super::*;
 
@@ -266,14 +258,17 @@ mod tests {
 
         let expected_data = vec![BasicData::Empty; 30];
 
-        assert_eq!(data, BasicGarnishDataUnit {
-            data_cursor: 0,
-            data: expected_data,
-            storage_settings: StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
-            instruction_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
-            jump_table_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
-            data_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
-        });
+        assert_eq!(
+            data,
+            BasicGarnishDataUnit {
+                data_cursor: 0,
+                data: expected_data,
+                storage_settings: StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+                instruction_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
+                jump_table_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
+                data_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
+            }
+        );
     }
 
     #[test]
@@ -283,18 +278,21 @@ mod tests {
         assert_eq!(index, 0);
         assert_eq!(data.data_block.cursor, 1);
         assert_eq!(data.data_block.size, 10);
-        assert_eq!(data.data, vec![
-            BasicData::Unit,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-        ]);
+        assert_eq!(
+            data.data,
+            vec![
+                BasicData::Unit,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+            ]
+        );
     }
 
     #[test]
@@ -308,18 +306,21 @@ mod tests {
         assert_eq!(index, 0);
         assert_eq!(data.instruction_block.cursor, 1);
         assert_eq!(data.instruction_block.size, 10);
-        assert_eq!(data.data, vec![
-            BasicData::Unit,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-        ]);
+        assert_eq!(
+            data.data,
+            vec![
+                BasicData::Unit,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+            ]
+        );
     }
 
     #[test]
@@ -333,18 +334,21 @@ mod tests {
         assert_eq!(index, 0);
         assert_eq!(data.jump_table_block.cursor, 1);
         assert_eq!(data.jump_table_block.size, 10);
-        assert_eq!(data.data, vec![
-            BasicData::Unit,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-            BasicData::Empty,
-        ]);
+        assert_eq!(
+            data.data,
+            vec![
+                BasicData::Unit,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
+            ]
+        );
     }
 
     #[test]
@@ -360,7 +364,7 @@ mod tests {
 
         let mut expected_data = vec![BasicData::Unit; 15];
         expected_data.resize(20, BasicData::Empty);
-        
+
         assert_eq!(data.data_size(), 15);
         assert_eq!(data.allocated_data_size(), 20);
         assert_eq!(data.data, expected_data);
@@ -379,7 +383,7 @@ mod tests {
 
         let mut expected_data = vec![BasicData::Unit; 15];
         expected_data.resize(20, BasicData::Empty);
-        
+
         assert_eq!(data.instruction_size(), 15);
         assert_eq!(data.allocated_instruction_size(), 20);
         assert_eq!(data.data, expected_data);
@@ -398,7 +402,7 @@ mod tests {
 
         let mut expected_data = vec![BasicData::Unit; 15];
         expected_data.resize(20, BasicData::Empty);
-        
+
         assert_eq!(data.jump_table_size(), 15);
         assert_eq!(data.allocated_jump_table_size(), 20);
         assert_eq!(data.data, expected_data);
@@ -411,7 +415,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         );
-        
+
         data.push_to_instruction_block(BasicData::Unit);
         data.push_to_jump_table_block(BasicData::True);
         data.push_to_data_block(BasicData::False);
@@ -420,7 +424,7 @@ mod tests {
         expected_data[0] = BasicData::Unit;
         expected_data[10] = BasicData::True;
         expected_data[20] = BasicData::False;
-        
+
         assert_eq!(data.instruction_size(), 1);
         assert_eq!(data.jump_table_size(), 1);
         assert_eq!(data.data_size(), 1);
