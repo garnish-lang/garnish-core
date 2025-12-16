@@ -26,9 +26,7 @@ pub struct BasicGarnishData<T>
 where
     T: BasicDataCustom,
 {
-    data_cursor: usize,
     data: Vec<BasicData<T>>,
-    storage_settings: StorageSettings,
     instruction_block: StorageBlock,
     jump_table_block: StorageBlock,
     data_block: StorageBlock,
@@ -48,9 +46,7 @@ where
         let total_size = instruction_settings.initial_size() + jump_table_settings.initial_size() + data_settings.initial_size();
         let data = vec![BasicData::Empty; total_size];
         Self {
-            data_cursor: 0,
             data,
-            storage_settings: data_settings.clone(),
             instruction_block: StorageBlock::new(instruction_settings.initial_size(), instruction_settings.clone()),
             jump_table_block: StorageBlock::new(jump_table_settings.initial_size(), jump_table_settings.clone()),
             data_block: StorageBlock::new(data_settings.initial_size(), data_settings.clone()),
@@ -61,9 +57,7 @@ where
         let data_cursor = data.len();
         Self::fill_data(&mut data, &storage_settings);
         Self {
-            data_cursor,
             data,
-            storage_settings,
             instruction_block: StorageBlock::default(),
             jump_table_block: StorageBlock::default(),
             data_block: StorageBlock::default(),
@@ -240,9 +234,7 @@ mod tests {
         assert_eq!(
             data,
             BasicGarnishDataUnit {
-                data_cursor: 0,
                 data: expected_data,
-                storage_settings: StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
                 instruction_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
                 jump_table_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
                 data_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
