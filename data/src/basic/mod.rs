@@ -423,7 +423,7 @@ mod tests {
     fn get_from_data_block_ensure_index() {
         let mut data = test_data();
 
-        let index = data.push_to_data_block(BasicData::True).unwrap();
+        data.push_to_data_block(BasicData::True).unwrap();
 
         let result = data.get_from_data_block_ensure_index(0).unwrap();
 
