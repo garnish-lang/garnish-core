@@ -11,11 +11,9 @@ pub use data::{BasicData, BasicDataUnitCustom};
 use crate::basic::storage::{ReallocationStrategy, StorageBlock, StorageSettings};
 use crate::data::SimpleNumber;
 
-pub type BasicNumber = SimpleNumber;
-
 use crate::{DataError, error::DataErrorType};
 
-const BLOCKS: usize = 3;
+pub type BasicNumber = SimpleNumber;
 
 pub trait BasicDataCustom: Clone + Debug {}
 
@@ -39,7 +37,7 @@ where
     T: BasicDataCustom,
 {
     pub fn new() -> Self {
-        Self::new_full(vec![], StorageSettings::default())
+        Self::new_with_settings(StorageSettings::default(), StorageSettings::default(), StorageSettings::default())
     }
 
     pub fn new_with_settings(instruction_settings: StorageSettings, jump_table_settings: StorageSettings, data_settings: StorageSettings) -> Self {
@@ -50,23 +48,6 @@ where
             instruction_block: StorageBlock::new(instruction_settings.initial_size(), instruction_settings.clone()),
             jump_table_block: StorageBlock::new(jump_table_settings.initial_size(), jump_table_settings.clone()),
             data_block: StorageBlock::new(data_settings.initial_size(), data_settings.clone()),
-        }
-    }
-
-    pub fn new_full(mut data: Vec<BasicData<T>>, storage_settings: StorageSettings) -> Self {
-        let data_cursor = data.len();
-        Self::fill_data(&mut data, &storage_settings);
-        Self {
-            data,
-            instruction_block: StorageBlock::default(),
-            jump_table_block: StorageBlock::default(),
-            data_block: StorageBlock::default(),
-        }
-    }
-
-    fn fill_data(data: &mut Vec<BasicData<T>>, settings: &StorageSettings) {
-        if data.len() < settings.initial_size() {
-            data.resize(settings.initial_size(), BasicData::Empty);
         }
     }
 
@@ -169,7 +150,7 @@ where
     }
 
     fn reallocate_heap(&mut self, new_instruction_size: usize, new_jump_table_size: usize, new_data_size: usize) {
-        let ordered: [(&mut StorageBlock, usize); BLOCKS] = [
+        let ordered= [
             (&mut self.instruction_block, new_instruction_size),
             (&mut self.jump_table_block, new_jump_table_size),
             (&mut self.data_block, new_data_size),
