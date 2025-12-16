@@ -9,59 +9,59 @@ where
         (Some(BasicData::Symbol(sym1)), Some(BasicData::Symbol(sym2))) => {
             let sym1 = BasicData::Symbol(*sym1);
             let sym2 = BasicData::Symbol(*sym2);
-            let list_index = data.push_to_data_block(BasicData::SymbolList(2));
-            data.push_to_data_block(sym1);
-            data.push_to_data_block(sym2);
+            let list_index = data.push_to_data_block(BasicData::SymbolList(2))?;
+            data.push_to_data_block(sym1)?;
+            data.push_to_data_block(sym2)?;
             Ok(list_index)
         }
         (Some(BasicData::Number(num1)), Some(BasicData::Number(num2))) => {
             let num1 = BasicData::Number(*num1);
             let num2 = BasicData::Number(*num2);
-            let list_index = data.push_to_data_block(BasicData::SymbolList(2));
-            data.push_to_data_block(num1);
-            data.push_to_data_block(num2);
+            let list_index = data.push_to_data_block(BasicData::SymbolList(2))?;
+            data.push_to_data_block(num1)?;
+            data.push_to_data_block(num2)?;
             Ok(list_index)
         }
         (Some(BasicData::Symbol(sym1)), Some(BasicData::Number(num2))) => {
             let sym1 = BasicData::Symbol(*sym1);
             let num2 = BasicData::Number(*num2);
-            let list_index = data.push_to_data_block(BasicData::SymbolList(2));
-            data.push_to_data_block(sym1);
-            data.push_to_data_block(num2);
+            let list_index = data.push_to_data_block(BasicData::SymbolList(2))?;
+            data.push_to_data_block(sym1)?;
+            data.push_to_data_block(num2)?;
             Ok(list_index)
         }
         (Some(BasicData::Number(num1)), Some(BasicData::Symbol(sym2))) => {
             let num1 = BasicData::Number(*num1);
             let sym2 = BasicData::Symbol(*sym2);
-            let list_index = data.push_to_data_block(BasicData::SymbolList(2));
-            data.push_to_data_block(num1);
-            data.push_to_data_block(sym2);
+            let list_index = data.push_to_data_block(BasicData::SymbolList(2))?;
+            data.push_to_data_block(num1)?;
+            data.push_to_data_block(sym2)?;
             Ok(list_index)
         }
         (Some(BasicData::SymbolList(size)), Some(BasicData::Symbol(sym))) => {
             let size = *size;
             let sym = *sym;
-            let list_index = data.push_to_data_block(BasicData::SymbolList(size + 1));
+            let list_index = data.push_to_data_block(BasicData::SymbolList(size + 1))?;
 
             for i in first + 1..first + size + 1 {
                 let item = data.get_from_data_block_ensure_index(i)?.clone();
-                data.push_to_data_block(item);
+                data.push_to_data_block(item)?;
             }
 
-            data.push_to_data_block(BasicData::Symbol(sym));
+            data.push_to_data_block(BasicData::Symbol(sym))?;
 
             Ok(list_index)
         }
         (Some(BasicData::Symbol(sym)), Some(BasicData::SymbolList(size))) => {
             let size = *size;
             let sym = *sym;
-            let list_index = data.push_to_data_block(BasicData::SymbolList(size + 1));
+            let list_index = data.push_to_data_block(BasicData::SymbolList(size + 1))?;
 
-            data.push_to_data_block(BasicData::Symbol(sym));
+            data.push_to_data_block(BasicData::Symbol(sym))?;
 
             for i in second + 1..second + size + 1 {
                 let item = data.get_from_data_block_ensure_index(i)?.clone();
-                data.push_to_data_block(item);
+                data.push_to_data_block(item)?;
             }
 
             Ok(list_index)
@@ -69,27 +69,27 @@ where
         (Some(BasicData::SymbolList(size)), Some(BasicData::Number(num))) => {
             let size = *size;
             let num = *num;
-            let list_index = data.push_to_data_block(BasicData::SymbolList(size + 1));
+            let list_index = data.push_to_data_block(BasicData::SymbolList(size + 1))?;
 
             for i in first + 1..first + size + 1 {
                 let item = data.get_from_data_block_ensure_index(i)?.clone();
-                data.push_to_data_block(item);
+                data.push_to_data_block(item)?;
             }
 
-            data.push_to_data_block(BasicData::Number(num));
+            data.push_to_data_block(BasicData::Number(num))?;
 
             Ok(list_index)
         }
         (Some(BasicData::Number(num)), Some(BasicData::SymbolList(size))) => {
             let size = *size;
             let num = *num;
-            let list_index = data.push_to_data_block(BasicData::SymbolList(size + 1));
+            let list_index = data.push_to_data_block(BasicData::SymbolList(size + 1))?;
 
-            data.push_to_data_block(BasicData::Number(num));
+            data.push_to_data_block(BasicData::Number(num))?;
 
             for i in second + 1..second + size + 1 {
                 let item = data.get_from_data_block_ensure_index(i)?.clone();
-                data.push_to_data_block(item);
+                data.push_to_data_block(item)?;
             }
 
             Ok(list_index)
@@ -97,21 +97,21 @@ where
         (Some(BasicData::SymbolList(size1)), Some(BasicData::SymbolList(size2))) => {
             let size1 = *size1;
             let size2 = *size2;
-            let list_index = data.push_to_data_block(BasicData::SymbolList(size1 + size2));
+            let list_index = data.push_to_data_block(BasicData::SymbolList(size1 + size2))?;
 
             for i in first + 1..first + size1 + 1 {
                 let item = data.get_from_data_block_ensure_index(i)?.clone();
-                data.push_to_data_block(item);
+                data.push_to_data_block(item)?;
             }
 
             for i in second + 1..second + size2 + 1 {
                 let item = data.get_from_data_block_ensure_index(i)?.clone();
-                data.push_to_data_block(item);
+                data.push_to_data_block(item)?;
             }
 
             Ok(list_index)
         }
-        _ => Ok(data.push_to_data_block(BasicData::Unit)),
+        _ => data.push_to_data_block(BasicData::Unit),
     }
 }
 
@@ -125,8 +125,8 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_symbol_symbol() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::Symbol(100));
-        let v2 = data.push_to_data_block(BasicData::Symbol(200));
+        let v1 = data.push_to_data_block(BasicData::Symbol(100)).unwrap();
+        let v2 = data.push_to_data_block(BasicData::Symbol(200)).unwrap();
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
@@ -149,8 +149,8 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_number_number() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::Number(100.into()));
-        let v2 = data.push_to_data_block(BasicData::Number(200.into()));
+        let v1 = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        let v2 = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
@@ -173,8 +173,8 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_symbol_number() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::Symbol(100));
-        let v2 = data.push_to_data_block(BasicData::Number(200.into()));
+        let v1 = data.push_to_data_block(BasicData::Symbol(100)).unwrap();
+        let v2 = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
@@ -197,8 +197,8 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_number_symbol() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::Number(100.into()));
-        let v2 = data.push_to_data_block(BasicData::Symbol(200));
+        let v1 = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        let v2 = data.push_to_data_block(BasicData::Symbol(200)).unwrap();
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
@@ -221,10 +221,10 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_symbol_list_symbol() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::SymbolList(2));
-        data.push_to_data_block(BasicData::Symbol(100));
-        data.push_to_data_block(BasicData::Symbol(200));
-        let v2 = data.push_to_data_block(BasicData::Symbol(300));
+        let v1 = data.push_to_data_block(BasicData::SymbolList(2)).unwrap();
+        data.push_to_data_block(BasicData::Symbol(100)).unwrap();
+        data.push_to_data_block(BasicData::Symbol(200)).unwrap();
+        let v2 = data.push_to_data_block(BasicData::Symbol(300)).unwrap();
 
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
@@ -251,10 +251,10 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_symbol_symbol_list() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::SymbolList(2));
-        data.push_to_data_block(BasicData::Symbol(100));
-        data.push_to_data_block(BasicData::Symbol(200));
-        let v2 = data.push_to_data_block(BasicData::Symbol(300));
+        let v1 = data.push_to_data_block(BasicData::SymbolList(2)).unwrap();
+        data.push_to_data_block(BasicData::Symbol(100)).unwrap();
+        data.push_to_data_block(BasicData::Symbol(200)).unwrap();
+        let v2 = data.push_to_data_block(BasicData::Symbol(300)).unwrap();
 
         let v3 = data.merge_to_symbol_list(v2, v1).unwrap();
 
@@ -281,10 +281,10 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_symbol_list_number() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::SymbolList(2));
-        data.push_to_data_block(BasicData::Symbol(100));
-        data.push_to_data_block(BasicData::Symbol(200));
-        let v2 = data.push_to_data_block(BasicData::Number(300.into()));
+        let v1 = data.push_to_data_block(BasicData::SymbolList(2)).unwrap();
+        data.push_to_data_block(BasicData::Symbol(100)).unwrap();
+        data.push_to_data_block(BasicData::Symbol(200)).unwrap();
+        let v2 = data.push_to_data_block(BasicData::Number(300.into())).unwrap();
 
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
@@ -311,10 +311,10 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_number_symbol_list() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::SymbolList(2));
-        data.push_to_data_block(BasicData::Symbol(100));
-        data.push_to_data_block(BasicData::Symbol(200));
-        let v2 = data.push_to_data_block(BasicData::Number(300.into()));
+        let v1 = data.push_to_data_block(BasicData::SymbolList(2)).unwrap();
+        data.push_to_data_block(BasicData::Symbol(100)).unwrap();
+        data.push_to_data_block(BasicData::Symbol(200)).unwrap();
+        let v2 = data.push_to_data_block(BasicData::Number(300.into())).unwrap();
 
         let v3 = data.merge_to_symbol_list(v2, v1).unwrap();
 
@@ -341,16 +341,18 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_symbol_list_symbol_list() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::SymbolList(2));
-        data.push_to_data_block(BasicData::Symbol(100));
-        data.push_to_data_block(BasicData::Symbol(200));
-        let v2 = data.push_to_data_block(BasicData::SymbolList(2));
-        data.push_to_data_block(BasicData::Symbol(300));
-        data.push_to_data_block(BasicData::Symbol(400));
+        data.data_block.settings.max_items = 100;
+        let v1 = data.push_to_data_block(BasicData::SymbolList(2)).unwrap();
+        data.push_to_data_block(BasicData::Symbol(100)).unwrap();
+        data.push_to_data_block(BasicData::Symbol(200)).unwrap();
+        let v2 = data.push_to_data_block(BasicData::SymbolList(2)).unwrap();
+        data.push_to_data_block(BasicData::Symbol(300)).unwrap();
+        data.push_to_data_block(BasicData::Symbol(400)).unwrap();
 
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
+        expected_data.data_block.settings.max_items = 100;
         let data_len = data.data.len();
         expected_data.data.resize(data_len, BasicData::Empty);
         expected_data.data.splice(
@@ -379,8 +381,8 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_invalid_left() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::Number(100.into()));
-        let v2 = data.push_to_data_block(BasicData::Expression(2));
+        let v1 = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        let v2 = data.push_to_data_block(BasicData::Expression(2)).unwrap();
 
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
@@ -402,8 +404,8 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_invalid_right() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::Number(100.into()));
-        let v2 = data.push_to_data_block(BasicData::Expression(2));
+        let v1 = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        let v2 = data.push_to_data_block(BasicData::Expression(2)).unwrap();
 
         let v3 = data.merge_to_symbol_list(v2, v1).unwrap();
 
@@ -425,8 +427,8 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_invalid_right_and_left() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::Expression(100));
-        let v2 = data.push_to_data_block(BasicData::Expression(2));
+        let v1 = data.push_to_data_block(BasicData::Expression(100)).unwrap();
+        let v2 = data.push_to_data_block(BasicData::Expression(2)).unwrap();
 
         let v3 = data.merge_to_symbol_list(v2, v1).unwrap();
 

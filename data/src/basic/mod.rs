@@ -51,25 +51,25 @@ where
         }
     }
 
-    pub fn push_to_instruction_block(&mut self, data: BasicData<T>) -> usize {
+    pub fn push_to_instruction_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
         if self.instruction_block.cursor >= self.instruction_block.size {
-            self.reallocate_heap(self.instruction_block.next_size(), self.jump_table_block.size, self.data_block.size);
+            self.reallocate_heap(self.instruction_block.next_size(), self.jump_table_block.size, self.data_block.size)?;
         }
-        Self::push_to_block(&mut self.data, &mut self.instruction_block, data)
+        Ok(Self::push_to_block(&mut self.data, &mut self.instruction_block, data))
     }
 
-    pub fn push_to_jump_table_block(&mut self, data: BasicData<T>) -> usize {
+    pub fn push_to_jump_table_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
         if self.jump_table_block.cursor >= self.jump_table_block.size {
-            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.next_size(), self.data_block.size);
+            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.next_size(), self.data_block.size)?;
         }
-        Self::push_to_block(&mut self.data, &mut self.jump_table_block, data)
+        Ok(Self::push_to_block(&mut self.data, &mut self.jump_table_block, data))
     }
 
-    pub fn push_to_data_block(&mut self, data: BasicData<T>) -> usize {
+    pub fn push_to_data_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
         if self.data_block.cursor >= self.data_block.size {
-            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.size, self.data_block.next_size());
+            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.size, self.data_block.next_size())?;
         }
-        Self::push_to_block(&mut self.data, &mut self.data_block, data)
+        Ok(Self::push_to_block(&mut self.data, &mut self.data_block, data))
     }
 
     pub fn data_size(&self) -> usize {
@@ -113,17 +113,17 @@ where
     }
 
     pub fn add_char_list_from_string(&mut self, s: impl AsRef<str>) -> Result<usize, DataError> {
-        let index = self.push_to_data_block(BasicData::CharList(s.as_ref().len()));
+        let index = self.push_to_data_block(BasicData::CharList(s.as_ref().len()))?;
         for c in s.as_ref().chars() {
-            self.push_to_data_block(BasicData::Char(c));
+            self.push_to_data_block(BasicData::Char(c))?;
         }
         Ok(index)
     }
 
     pub fn add_byte_list_from_vec(&mut self, v: impl AsRef<[u8]>) -> Result<usize, DataError> {
-        let index = self.push_to_data_block(BasicData::ByteList(v.as_ref().len()));
+        let index = self.push_to_data_block(BasicData::ByteList(v.as_ref().len()))?;
         for b in v.as_ref() {
-            self.push_to_data_block(BasicData::Byte(*b));
+            self.push_to_data_block(BasicData::Byte(*b))?;
         }
         Ok(index)
     }
@@ -135,7 +135,27 @@ where
         index
     }
 
-    fn reallocate_heap(&mut self, new_instruction_size: usize, new_jump_table_size: usize, new_data_size: usize) {
+    fn reallocate_heap(&mut self, new_instruction_size: usize, new_jump_table_size: usize, new_data_size: usize) -> Result<(), DataError> {
+        // Check if new sizes exceed max_items for each block
+        if new_instruction_size > self.instruction_block.settings.max_items() {
+            return Err(DataError::new(
+                "Instruction block size exceeds max items",
+                DataErrorType::InstructionBlockExceededMaxItems(new_instruction_size, self.instruction_block.settings.max_items()),
+            ));
+        }
+        if new_jump_table_size > self.jump_table_block.settings.max_items() {
+            return Err(DataError::new(
+                "Jump table block size exceeds max items",
+                DataErrorType::JumpTableBlockExceededMaxItems(new_jump_table_size, self.jump_table_block.settings.max_items()),
+            ));
+        }
+        if new_data_size > self.data_block.settings.max_items() {
+            return Err(DataError::new(
+                "Data block size exceeds max items",
+                DataErrorType::DataBlockExceededMaxItems(new_data_size, self.data_block.settings.max_items()),
+            ));
+        }
+
         let ordered= [
             (&mut self.instruction_block, new_instruction_size),
             (&mut self.jump_table_block, new_jump_table_size),
@@ -158,6 +178,7 @@ where
         }
 
         self.data = new_heap;
+        Ok(())
     }
 }
 
@@ -212,7 +233,7 @@ mod tests {
     #[test]
     fn push_to_data_block() {
         let mut data = test_data();
-        let index = data.push_to_data_block(BasicData::Unit);
+        let index = data.push_to_data_block(BasicData::Unit).unwrap();
         assert_eq!(index, 0);
         assert_eq!(data.data_block.cursor, 1);
         assert_eq!(data.data_block.size, 10);
@@ -240,7 +261,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         );
-        let index = data.push_to_instruction_block(BasicData::Unit);
+        let index = data.push_to_instruction_block(BasicData::Unit).unwrap();
         assert_eq!(index, 0);
         assert_eq!(data.instruction_block.cursor, 1);
         assert_eq!(data.instruction_block.size, 10);
@@ -268,7 +289,7 @@ mod tests {
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         );
-        let index = data.push_to_jump_table_block(BasicData::Unit);
+        let index = data.push_to_jump_table_block(BasicData::Unit).unwrap();
         assert_eq!(index, 0);
         assert_eq!(data.jump_table_block.cursor, 1);
         assert_eq!(data.jump_table_block.size, 10);
@@ -294,10 +315,10 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new_with_settings(
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
         );
         for _ in 0..15 {
-            data.push_to_data_block(BasicData::Unit);
+            data.push_to_data_block(BasicData::Unit).unwrap();
         }
 
         let mut expected_data = vec![BasicData::Unit; 15];
@@ -311,12 +332,12 @@ mod tests {
     #[test]
     fn instruction_block_resizes_when_pushed_past_max_size() {
         let mut data = BasicGarnishDataUnit::new_with_settings(
-            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         );
         for _ in 0..15 {
-            data.push_to_instruction_block(BasicData::Unit);
+            data.push_to_instruction_block(BasicData::Unit).unwrap();
         }
 
         let mut expected_data = vec![BasicData::Unit; 15];
@@ -331,11 +352,11 @@ mod tests {
     fn jump_table_block_resizes_when_pushed_past_max_size() {
         let mut data = BasicGarnishDataUnit::new_with_settings(
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         );
         for _ in 0..15 {
-            data.push_to_jump_table_block(BasicData::Unit);
+            data.push_to_jump_table_block(BasicData::Unit).unwrap();
         }
 
         let mut expected_data = vec![BasicData::Unit; 15];
@@ -354,9 +375,9 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         );
 
-        data.push_to_instruction_block(BasicData::Unit);
-        data.push_to_jump_table_block(BasicData::True);
-        data.push_to_data_block(BasicData::False);
+        data.push_to_instruction_block(BasicData::Unit).unwrap();
+        data.push_to_jump_table_block(BasicData::True).unwrap();
+        data.push_to_data_block(BasicData::False).unwrap();
 
         let mut expected_data = vec![BasicData::Empty; 30];
         expected_data[0] = BasicData::Unit;
@@ -376,9 +397,9 @@ mod tests {
     fn get_from_data_block_ensure_index() {
         let mut data = test_data();
 
-        let index = data.push_to_data_block(BasicData::True);
+        let index = data.push_to_data_block(BasicData::True).unwrap();
 
-        let result = data.get_from_data_block_ensure_index(index).unwrap();
+        let result = data.get_from_data_block_ensure_index(0).unwrap();
 
         assert_eq!(result, &BasicData::<()>::True);
     }
@@ -387,10 +408,79 @@ mod tests {
     fn get_from_data_block_ensure_index_index_out_of_bounds() {
         let mut data = test_data();
 
-        data.push_to_data_block(BasicData::True);
+        data.push_to_data_block(BasicData::True).unwrap();
 
         let result = data.get_from_data_block_ensure_index(10);
 
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(10))));
+    }
+
+    #[test]
+    fn push_to_data_block_exceeds_max_items() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+        );
+        
+        for _ in 0..10 {
+            data.push_to_data_block(BasicData::Unit).unwrap();
+        }
+        
+        let result = data.push_to_data_block(BasicData::Unit);
+        
+        assert_eq!(
+            result,
+            Err(DataError::new(
+                "Data block size exceeds max items",
+                DataErrorType::DataBlockExceededMaxItems(20, 10)
+            ))
+        );
+    }
+
+    #[test]
+    fn push_to_instruction_block_exceeds_max_items() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        );
+        
+        for _ in 0..10 {
+            data.push_to_instruction_block(BasicData::Unit).unwrap();
+        }
+        
+        let result = data.push_to_instruction_block(BasicData::Unit);
+        
+        assert_eq!(
+            result,
+            Err(DataError::new(
+                "Instruction block size exceeds max items",
+                DataErrorType::InstructionBlockExceededMaxItems(20, 10)
+            ))
+        );
+    }
+
+    #[test]
+    fn push_to_jump_table_block_exceeds_max_items() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        );
+        
+        for _ in 0..10 {
+            data.push_to_jump_table_block(BasicData::Unit).unwrap();
+        }
+        
+        let result = data.push_to_jump_table_block(BasicData::Unit);
+        
+        assert_eq!(
+            result,
+            Err(DataError::new(
+                "Jump table block size exceeds max items",
+                DataErrorType::JumpTableBlockExceededMaxItems(20, 10)
+            ))
+        );
     }
 }

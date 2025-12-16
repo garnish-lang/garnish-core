@@ -8,6 +8,9 @@ pub enum DataErrorType {
     InvalidDataIndex(usize),
     ExceededInitialListLength(usize),
     NotType(GarnishDataType),
+    InstructionBlockExceededMaxItems(usize, usize),
+    JumpTableBlockExceededMaxItems(usize, usize),
+    DataBlockExceededMaxItems(usize, usize),
 }
 
 /// Error implemenation for [`crate::SimpleGarnishData`].

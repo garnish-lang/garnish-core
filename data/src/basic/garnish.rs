@@ -193,63 +193,63 @@ where
     }
 
     fn add_unit(&mut self) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::Unit))
+        self.push_to_data_block(BasicData::Unit)
     }
 
     fn add_true(&mut self) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::True))
+        self.push_to_data_block(BasicData::True)
     }
 
     fn add_false(&mut self) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::False))
+        self.push_to_data_block(BasicData::False)
     }
 
     fn add_number(&mut self, value: Self::Number) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::Number(value)))
+        self.push_to_data_block(BasicData::Number(value))
     }
 
     fn add_type(&mut self, value: garnish_lang_traits::GarnishDataType) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::Type(value)))
+        self.push_to_data_block(BasicData::Type(value))
     }
 
     fn add_char(&mut self, value: Self::Char) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::Char(value)))
+        self.push_to_data_block(BasicData::Char(value))
     }
 
     fn add_byte(&mut self, value: Self::Byte) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::Byte(value)))
+        self.push_to_data_block(BasicData::Byte(value))
     }
 
     fn add_symbol(&mut self, value: Self::Symbol) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::Symbol(value)))
+        self.push_to_data_block(BasicData::Symbol(value))
     }
 
     fn add_expression(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::Expression(value)))
+        self.push_to_data_block(BasicData::Expression(value))
     }
 
     fn add_external(&mut self, value: Self::Size) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::External(value)))
+        self.push_to_data_block(BasicData::External(value))
     }
 
     fn add_pair(&mut self, value: (Self::Size, Self::Size)) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::Pair(value.0, value.1)))
+        self.push_to_data_block(BasicData::Pair(value.0, value.1))
     }
 
     fn add_concatenation(&mut self, left: Self::Size, right: Self::Size) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::Concatenation(left, right)))
+        self.push_to_data_block(BasicData::Concatenation(left, right))
     }
 
     fn add_range(&mut self, start: Self::Size, end: Self::Size) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::Range(start, end)))
+        self.push_to_data_block(BasicData::Range(start, end))
     }
 
     fn add_slice(&mut self, list: Self::Size, range: Self::Size) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::Slice(list, range)))
+        self.push_to_data_block(BasicData::Slice(list, range))
     }
 
     fn add_partial(&mut self, reciever: Self::Size, input: Self::Size) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_data_block(BasicData::Partial(reciever, input)))
+        self.push_to_data_block(BasicData::Partial(reciever, input))
     }
 
     fn merge_to_symbol_list(&mut self, first: Self::Size, second: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -257,9 +257,9 @@ where
     }
 
     fn start_list(&mut self, len: Self::Size) -> Result<Self::Size, Self::Error> {
-        let list_index = self.push_to_data_block(BasicData::List(len));
+        let list_index = self.push_to_data_block(BasicData::List(len))?;
         for _ in 0..len {
-            self.push_to_data_block(BasicData::Empty);
+            self.push_to_data_block(BasicData::Empty)?;
         }
         Ok(list_index)
     }
@@ -504,16 +504,16 @@ mod tests {
     #[test]
     fn get_data_len_with_items() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Unit);
-        data.push_to_data_block(BasicData::True);
+        data.push_to_data_block(BasicData::Unit).unwrap();
+        data.push_to_data_block(BasicData::True).unwrap();
         assert_eq!(data.get_data_len(), 2);
     }
 
     #[test]
     fn get_data_iter() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Unit);
-        data.push_to_data_block(BasicData::True);
+        data.push_to_data_block(BasicData::Unit).unwrap();
+        data.push_to_data_block(BasicData::True).unwrap();
 
         let mut iter = data.get_data_iter();
         assert_eq!(iter.next(), Some(0));
@@ -704,7 +704,7 @@ mod tests {
     #[test]
     fn get_data_type_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_data_type(0);
         assert_eq!(result, Ok(GarnishDataType::Number));
     }
@@ -712,7 +712,7 @@ mod tests {
     #[test]
     fn get_data_type_error() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_data_type(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -720,7 +720,7 @@ mod tests {
     #[test]
     fn get_number_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_number(0);
         assert_eq!(result, Ok(100.into()));
     }
@@ -728,7 +728,7 @@ mod tests {
     #[test]
     fn get_number_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_number(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -747,7 +747,7 @@ mod tests {
     #[test]
     fn get_type_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Type(GarnishDataType::Number));
+        data.push_to_data_block(BasicData::Type(GarnishDataType::Number)).unwrap();
         let result = data.get_type(0);
         assert_eq!(result, Ok(GarnishDataType::Number));
     }
@@ -755,7 +755,7 @@ mod tests {
     #[test]
     fn get_type_error() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Type(GarnishDataType::Number));
+        data.push_to_data_block(BasicData::Type(GarnishDataType::Number)).unwrap();
         let result = data.get_type(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -771,7 +771,7 @@ mod tests {
     #[test]
     fn get_char_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Char('a'));
+        data.push_to_data_block(BasicData::Char('a')).unwrap();
         let result = data.get_char(0);
         assert_eq!(result, Ok('a'));
     }
@@ -779,7 +779,7 @@ mod tests {
     #[test]
     fn get_char_not_char() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_char(0);
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Char))));
     }
@@ -787,7 +787,7 @@ mod tests {
     #[test]
     fn get_char_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Char('a'));
+        data.push_to_data_block(BasicData::Char('a')).unwrap();
         let result = data.get_char(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -803,7 +803,7 @@ mod tests {
     #[test]
     fn get_byte_not_byte() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_byte(0);
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Byte))));
     }
@@ -827,7 +827,7 @@ mod tests {
     #[test]
     fn get_symbol_not_symbol() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_symbol(0);
         assert_eq!(
             result,
@@ -846,7 +846,7 @@ mod tests {
     #[test]
     fn get_expression_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Expression(100));
+        data.push_to_data_block(BasicData::Expression(100)).unwrap();
         let result = data.get_expression(0);
         assert_eq!(result, Ok(100));
     }
@@ -854,7 +854,7 @@ mod tests {
     #[test]
     fn get_expression_not_expression() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_expression(0);
         assert_eq!(
             result,
@@ -865,7 +865,7 @@ mod tests {
     #[test]
     fn get_expression_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Expression(100));
+        data.push_to_data_block(BasicData::Expression(100)).unwrap();
         let result = data.get_expression(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -881,7 +881,7 @@ mod tests {
     #[test]
     fn get_external_not_external() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_external(0);
         assert_eq!(
             result,
@@ -900,7 +900,7 @@ mod tests {
     #[test]
     fn get_pair_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Pair(100, 200));
+        data.push_to_data_block(BasicData::Pair(100, 200)).unwrap();
         let result = data.get_pair(0);
         assert_eq!(result, Ok((100, 200)));
     }
@@ -908,7 +908,7 @@ mod tests {
     #[test]
     fn get_pair_not_pair() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_pair(0);
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Pair))));
     }
@@ -916,7 +916,7 @@ mod tests {
     #[test]
     fn get_pair_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Pair(100, 200));
+        data.push_to_data_block(BasicData::Pair(100, 200)).unwrap();
         let result = data.get_pair(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -932,7 +932,7 @@ mod tests {
     #[test]
     fn get_partial_not_partial() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_partial(0);
         assert_eq!(
             result,
@@ -951,7 +951,7 @@ mod tests {
     #[test]
     fn get_concatenation_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Concatenation(100, 200));
+        data.push_to_data_block(BasicData::Concatenation(100, 200)).unwrap();
         let result = data.get_concatenation(0);
         assert_eq!(result, Ok((100, 200)));
     }
@@ -959,7 +959,7 @@ mod tests {
     #[test]
     fn get_concatenation_not_concatenation() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_concatenation(0);
         assert_eq!(
             result,
@@ -970,7 +970,7 @@ mod tests {
     #[test]
     fn get_concatenation_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Concatenation(100, 200));
+        data.push_to_data_block(BasicData::Concatenation(100, 200)).unwrap();
         let result = data.get_concatenation(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -986,7 +986,7 @@ mod tests {
     #[test]
     fn get_range_not_range() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_range(0);
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Range))));
     }
@@ -1002,7 +1002,7 @@ mod tests {
     #[test]
     fn get_slice_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Slice(100, 200));
+        data.push_to_data_block(BasicData::Slice(100, 200)).unwrap();
         let result = data.get_slice(0);
         assert_eq!(result, Ok((100, 200)));
     }
@@ -1010,7 +1010,7 @@ mod tests {
     #[test]
     fn get_slice_not_slice() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_slice(0);
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Slice))));
     }
@@ -1018,7 +1018,7 @@ mod tests {
     #[test]
     fn get_slice_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Slice(100, 200));
+        data.push_to_data_block(BasicData::Slice(100, 200)).unwrap();
         let result = data.get_slice(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -1042,7 +1042,7 @@ mod tests {
     #[test]
     fn add_list_list_ok() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::Number(100.into()));
+        let v1 = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let list_index = data.start_list(3).unwrap();
         let list_index = data.add_to_list(list_index, v1).unwrap();
 
@@ -1061,7 +1061,7 @@ mod tests {
     #[test]
     fn add_list_list_invalid_list_index() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::Number(100.into()));
+        let v1 = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         data.start_list(3).unwrap();
         let result = data.add_to_list(10, v1);
 
@@ -1071,7 +1071,7 @@ mod tests {
     #[test]
     fn add_list_item_past_initial_length() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::Number(100.into()));
+        let v1 = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let list_index = data.start_list(3).unwrap();
         let list_index = data.add_to_list(list_index, v1).unwrap();
         let list_index = data.add_to_list(list_index, v1).unwrap();
@@ -1084,7 +1084,7 @@ mod tests {
     #[test]
     fn add_list_with_non_list() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::Number(100.into()));
+        let v1 = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         data.start_list(3).unwrap();
         let result = data.add_to_list(v1, v1);
 
@@ -1094,9 +1094,9 @@ mod tests {
     #[test]
     fn create_list() {
         let mut data = test_data();
-        let v1 = data.push_to_data_block(BasicData::Number(100.into()));
-        let v2 = data.push_to_data_block(BasicData::Number(200.into()));
-        let v3 = data.push_to_data_block(BasicData::Number(300.into()));
+        let v1 = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        let v2 = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
+        let v3 = data.push_to_data_block(BasicData::Number(300.into())).unwrap();
         let list_index = data.start_list(3).unwrap();
         data.add_to_list(list_index, v1).unwrap();
         data.add_to_list(list_index, v2).unwrap();
@@ -1120,7 +1120,7 @@ mod tests {
     #[test]
     fn get_list_len_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::List(100));
+        data.push_to_data_block(BasicData::List(100)).unwrap();
         let result = data.get_list_len(0);
         assert_eq!(result, Ok(100));
     }
@@ -1128,7 +1128,7 @@ mod tests {
     #[test]
     fn get_list_len_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::List(100));
+        data.push_to_data_block(BasicData::List(100)).unwrap();
         let result = data.get_list_len(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -1136,7 +1136,7 @@ mod tests {
     #[test]
     fn get_list_len_not_list() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into()));
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_list_len(0);
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
     }
