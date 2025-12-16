@@ -257,7 +257,7 @@ where
     }
 
     fn start_list(&mut self, len: Self::Size) -> Result<Self::Size, Self::Error> {
-        let list_index = self.push_to_data_block(BasicData::List(len))?;
+        let list_index = self.push_to_data_block(BasicData::UninitializedList(len, 0))?;
         for _ in 0..len {
             self.push_to_data_block(BasicData::Empty)?;
         }
@@ -265,43 +265,32 @@ where
     }
 
     fn add_to_list(&mut self, list_index: Self::Size, item_index: Self::Size) -> Result<Self::Size, Self::Error> {
-        let mut first_empty = None;
-        let len = self.get_from_data_block_ensure_index(list_index)?.as_list()?;
-
-        for i in 0..len {
-            let index = list_index + 1 + i;
-            if matches!(self.get_basic_data(index), Some(BasicData::Empty)) {
-                first_empty = self.get_basic_data_mut(index);
-                break;
-            }
+        let (len, count) = self.get_from_data_block_ensure_index_mut(list_index)?.as_uninitialized_list_mut()?;
+        if count >= len {
+            return Err(DataError::new("Exceeded initial list length", DataErrorType::ExceededInitialListLength(len.clone())));
         }
 
-        match first_empty {
-            Some(data) => {
-                *data = BasicData::ListItem(item_index);
-            }
-            None => return Err(DataError::new("Exceeded initial list length", DataErrorType::ExceededInitialListLength(len))),
-        }
+        let current_index = list_index + 1 + *count;
+        *count += 1;
+
+        let item = self.get_from_data_block_ensure_index_mut(current_index)?;
+        *item = BasicData::ListItem(item_index);
 
         Ok(list_index)
     }
 
     fn end_list(&mut self, list_index: Self::Size) -> Result<Self::Size, Self::Error> {
-        let mut current = self.get_data_len();
-
-        while current > 0 {
-            let item = self.get_basic_data(current);
-            match item {
-                Some(BasicData::List(_)) => {
-                    break;
-                }
-                _ => {}
-            }
-
-            current -= 1;
+        let (len, count) = self.get_from_data_block_ensure_index_mut(list_index)?.as_uninitialized_list_mut()?;
+        if count < len {
+            return Err(DataError::new("List not fully initialized", DataErrorType::NotFullyInitializedList(len.clone(), count.clone())));
         }
 
-        Ok(current)
+        let list_item = BasicData::List(len.clone());
+        
+        let item = self.get_from_data_block_ensure_index_mut(list_index)?;
+        *item = list_item;
+
+        Ok(list_index)
     }
 
     fn start_char_list(&mut self) -> Result<(), Self::Error> {
@@ -1030,7 +1019,7 @@ mod tests {
 
         assert_eq!(list_index, 0);
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::List(3);
+        expected_data.data[0] = BasicData::UninitializedList(3, 0);
         expected_data.data[1] = BasicData::Empty;
         expected_data.data[2] = BasicData::Empty;
         expected_data.data[3] = BasicData::Empty;
@@ -1049,7 +1038,7 @@ mod tests {
         assert_eq!(list_index, 1);
         let mut expected_data = test_data();
         expected_data.data[0] = BasicData::Number(100.into());
-        expected_data.data[1] = BasicData::List(3);
+        expected_data.data[1] = BasicData::UninitializedList(3, 1);
         expected_data.data[2] = BasicData::ListItem(v1);
         expected_data.data[3] = BasicData::Empty;
         expected_data.data[4] = BasicData::Empty;
@@ -1088,7 +1077,7 @@ mod tests {
         data.start_list(3).unwrap();
         let result = data.add_to_list(v1, v1);
 
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
+        assert_eq!(result, Err(DataError::not_basic_type_error()));
     }
 
     #[test]

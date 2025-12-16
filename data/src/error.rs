@@ -7,7 +7,9 @@ pub enum DataErrorType {
     Unknown,
     InvalidDataIndex(usize),
     ExceededInitialListLength(usize),
+    NotFullyInitializedList(usize, usize),
     NotType(GarnishDataType),
+    NotBasicType,
     InstructionBlockExceededMaxItems(usize, usize),
     JumpTableBlockExceededMaxItems(usize, usize),
     DataBlockExceededMaxItems(usize, usize),
@@ -27,6 +29,10 @@ impl DataError {
 
     pub fn not_type_error(expected: GarnishDataType) -> Self {
         DataError::new("Not of type", DataErrorType::NotType(expected))
+    }
+
+    pub fn not_basic_type_error() -> Self {
+        DataError::new("Not a basic type", DataErrorType::NotBasicType)
     }
 }
 

@@ -6,7 +6,6 @@ type BasicNumber = crate::data::SimpleNumber;
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub enum BasicData<T> 
 where T: crate::basic::BasicDataCustom {
-    Empty,
     Unit,
     True,
     False,
@@ -28,13 +27,15 @@ where T: crate::basic::BasicDataCustom {
     ListItem(usize),
     Concatenation(usize, usize),
     Custom(T),
+    // non garnish data
+    Empty,
+    UninitializedList(usize, usize),
 }
 
 impl<T> BasicData<T>
 where T: crate::basic::BasicDataCustom {
     pub fn get_data_type(&self) -> GarnishDataType {
         match self {
-            BasicData::Empty => GarnishDataType::Invalid,
             BasicData::Unit => GarnishDataType::Unit,
             BasicData::True => GarnishDataType::True,
             BasicData::False => GarnishDataType::False,
@@ -56,12 +57,22 @@ where T: crate::basic::BasicDataCustom {
             BasicData::ListItem(_) => GarnishDataType::List,
             BasicData::Concatenation(_, _) => GarnishDataType::Concatenation,
             BasicData::Custom(_) => GarnishDataType::Custom,
+            // non garnish data
+            BasicData::Empty => GarnishDataType::Invalid,
+            BasicData::UninitializedList(_, _) => GarnishDataType::Invalid,
         }
     }
 
     pub fn as_type(&self) -> Result<GarnishDataType, DataError> {
         match self {
             BasicData::Type(type_) => Ok(*type_),
+            _ => Err(DataError::not_type_error(GarnishDataType::Type)),
+        }
+    }
+
+    pub fn as_type_mut(&mut self) -> Result<&mut GarnishDataType, DataError> {
+        match self {
+            BasicData::Type(type_) => Ok(type_),
             _ => Err(DataError::not_type_error(GarnishDataType::Type)),
         }
     }
@@ -73,9 +84,23 @@ where T: crate::basic::BasicDataCustom {
         }
     }
 
+    pub fn as_number_mut(&mut self) -> Result<&mut BasicNumber, DataError> {
+        match self {
+            BasicData::Number(number) => Ok(number),
+            _ => Err(DataError::not_type_error(GarnishDataType::Number)),
+        }
+    }
+
     pub fn as_char(&self) -> Result<char, DataError> {
         match self {
             BasicData::Char(c) => Ok(*c),
+            _ => Err(DataError::not_type_error(GarnishDataType::Char)),
+        }
+    }
+
+    pub fn as_char_mut(&mut self) -> Result<&mut char, DataError> {
+        match self {
+            BasicData::Char(c) => Ok(c),
             _ => Err(DataError::not_type_error(GarnishDataType::Char)),
         }
     }
@@ -87,9 +112,23 @@ where T: crate::basic::BasicDataCustom {
         }
     }
 
+    pub fn as_byte_mut(&mut self) -> Result<&mut u8, DataError> {
+        match self {
+            BasicData::Byte(b) => Ok(b),
+            _ => Err(DataError::not_type_error(GarnishDataType::Byte)),
+        }
+    }
+
     pub fn as_symbol(&self) -> Result<u64, DataError> {
         match self {
             BasicData::Symbol(s) => Ok(*s),
+            _ => Err(DataError::not_type_error(GarnishDataType::Symbol)),
+        }
+    }
+
+    pub fn as_symbol_mut(&mut self) -> Result<&mut u64, DataError> {
+        match self {
+            BasicData::Symbol(s) => Ok(s),
             _ => Err(DataError::not_type_error(GarnishDataType::Symbol)),
         }
     }
@@ -101,9 +140,23 @@ where T: crate::basic::BasicDataCustom {
         }
     }
 
+    pub fn as_expression_mut(&mut self) -> Result<&mut usize, DataError> {
+        match self {
+            BasicData::Expression(e) => Ok(e),
+            _ => Err(DataError::not_type_error(GarnishDataType::Expression)),
+        }
+    }
+
     pub fn as_external(&self) -> Result<usize, DataError> {
         match self {
             BasicData::External(e) => Ok(*e),
+            _ => Err(DataError::not_type_error(GarnishDataType::External)),
+        }
+    }
+
+    pub fn as_external_mut(&mut self) -> Result<&mut usize, DataError> {
+        match self {
+            BasicData::External(e) => Ok(e),
             _ => Err(DataError::not_type_error(GarnishDataType::External)),
         }
     }
@@ -115,9 +168,23 @@ where T: crate::basic::BasicDataCustom {
         }
     }
 
+    pub fn as_pair_mut(&mut self) -> Result<(&mut usize, &mut usize), DataError> {
+        match self {
+            BasicData::Pair(left, right) => Ok((left, right)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Pair)),
+        }
+    }
+
     pub fn as_partial(&self) -> Result<(usize, usize), DataError> {
         match self {
             BasicData::Partial(left, right) => Ok((*left, *right)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Partial)),
+        }
+    }
+
+    pub fn as_partial_mut(&mut self) -> Result<(&mut usize, &mut usize), DataError> {
+        match self {
+            BasicData::Partial(left, right) => Ok((left, right)),
             _ => Err(DataError::not_type_error(GarnishDataType::Partial)),
         }
     }
@@ -129,9 +196,23 @@ where T: crate::basic::BasicDataCustom {
         }
     }
 
+    pub fn as_concatenation_mut(&mut self) -> Result<(&mut usize, &mut usize), DataError> {
+        match self {
+            BasicData::Concatenation(left, right) => Ok((left, right)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Concatenation)),
+        }
+    }
+
     pub fn as_range(&self) -> Result<(usize, usize), DataError> {
         match self {
             BasicData::Range(start, end) => Ok((*start, *end)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Range)),
+        }
+    }
+
+    pub fn as_range_mut(&mut self) -> Result<(&mut usize, &mut usize), DataError> {
+        match self {
+            BasicData::Range(start, end) => Ok((start, end)),
             _ => Err(DataError::not_type_error(GarnishDataType::Range)),
         }
     }
@@ -143,9 +224,23 @@ where T: crate::basic::BasicDataCustom {
         }
     }
 
+    pub fn as_slice_mut(&mut self) -> Result<(&mut usize, &mut usize), DataError> {
+        match self {
+            BasicData::Slice(value, range) => Ok((value, range)),
+            _ => Err(DataError::not_type_error(GarnishDataType::Slice)),
+        }
+    }
+
     pub fn as_list(&self) -> Result<usize, DataError> {
         match self {
             BasicData::List(list) => Ok(*list),
+            _ => Err(DataError::not_type_error(GarnishDataType::List)),
+        }
+    }
+
+    pub fn as_list_mut(&mut self) -> Result<&mut usize, DataError> {
+        match self {
+            BasicData::List(list) => Ok(list),
             _ => Err(DataError::not_type_error(GarnishDataType::List)),
         }
     }
@@ -154,6 +249,27 @@ where T: crate::basic::BasicDataCustom {
         match self {
             BasicData::Custom(c) => Ok(c),
             _ => Err(DataError::not_type_error(GarnishDataType::Custom)),
+        }
+    }
+
+    pub fn as_custom_mut(&mut self) -> Result<&mut T, DataError> {
+        match self {
+            BasicData::Custom(c) => Ok(c),
+            _ => Err(DataError::not_type_error(GarnishDataType::Custom)),
+        }
+    }
+
+    pub fn as_uninitialized_list(&self) -> Result<(usize, usize), DataError> {
+        match self {
+            BasicData::UninitializedList(len, index) => Ok((*len, *index)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_uninitialized_list_mut(&mut self) -> Result<(&mut usize, &mut usize), DataError> {
+        match self {
+            BasicData::UninitializedList(len, index) => Ok((len, index)),
+            _ => Err(DataError::not_basic_type_error()),
         }
     }
 }
@@ -199,6 +315,31 @@ mod tests {
     }
 
     #[test]
+    fn as_type() {
+        let data = BasicDataUnitCustom::Type(GarnishDataType::Number);
+        assert_eq!(data.as_type(), Ok(GarnishDataType::Number));
+    }
+
+    #[test]
+    fn as_type_not_type() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_type(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Type))));
+    }
+
+    #[test]
+    fn as_type_mut() {
+        let mut data = BasicDataUnitCustom::Type(GarnishDataType::Number);
+        *data.as_type_mut().unwrap() = GarnishDataType::Char;
+        assert_eq!(data.as_type(), Ok(GarnishDataType::Char));
+    }
+
+    #[test]
+    fn as_type_mut_not_type() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_type_mut(), Err(DataError::not_type_error(GarnishDataType::Type)));
+    }
+
+    #[test]
     fn as_number() {
         let data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_number(), Ok(100.into()));
@@ -211,15 +352,16 @@ mod tests {
     }
 
     #[test]
-    fn as_type() {
-        let data = BasicDataUnitCustom::Type(GarnishDataType::Number);
-        assert_eq!(data.as_type(), Ok(GarnishDataType::Number));
+    fn as_number_mut() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        *data.as_number_mut().unwrap() = 200.into();
+        assert_eq!(data.as_number(), Ok(200.into()));
     }
 
     #[test]
-    fn as_type_not_type() {
-        let data = BasicDataUnitCustom::Number(100.into());
-        assert_eq!(data.as_type(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Type))));
+    fn as_number_mut_not_number() {
+        let mut data = BasicDataUnitCustom::Symbol(100);
+        assert_eq!(data.as_number_mut(), Err(DataError::not_type_error(GarnishDataType::Number)));
     }
 
     #[test]
@@ -235,6 +377,19 @@ mod tests {
     }
 
     #[test]
+    fn as_char_mut() {
+        let mut data = BasicDataUnitCustom::Char('a');
+        *data.as_char_mut().unwrap() = 'b';
+        assert_eq!(data.as_char(), Ok('b'));
+    }
+
+    #[test]
+    fn as_char_mut_not_char() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_char_mut(), Err(DataError::not_type_error(GarnishDataType::Char)));
+    }
+
+    #[test]
     fn as_byte() {
         let data = BasicDataUnitCustom::Byte(100);
         assert_eq!(data.as_byte(), Ok(100));
@@ -244,6 +399,19 @@ mod tests {
     fn as_byte_not_byte() {
         let data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_byte(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Byte))));
+    }
+
+    #[test]
+    fn as_byte_mut() {
+        let mut data = BasicDataUnitCustom::Byte(100);
+        *data.as_byte_mut().unwrap() = 200;
+        assert_eq!(data.as_byte(), Ok(200));
+    }
+
+    #[test]
+    fn as_byte_mut_not_byte() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_byte_mut(), Err(DataError::not_type_error(GarnishDataType::Byte)));
     }
 
     #[test]
@@ -259,6 +427,19 @@ mod tests {
     }
 
     #[test]
+    fn as_symbol_mut() {
+        let mut data = BasicDataUnitCustom::Symbol(100);
+        *data.as_symbol_mut().unwrap() = 200;
+        assert_eq!(data.as_symbol(), Ok(200));
+    }
+
+    #[test]
+    fn as_symbol_mut_not_symbol() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_symbol_mut(), Err(DataError::not_type_error(GarnishDataType::Symbol)));
+    }
+
+    #[test]
     fn as_expression() {
         let data = BasicDataUnitCustom::Expression(100);
         assert_eq!(data.as_expression(), Ok(100));
@@ -268,6 +449,19 @@ mod tests {
     fn as_expression_not_expression() {
         let data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_expression(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Expression))));
+    }
+
+    #[test]
+    fn as_expression_mut() {
+        let mut data = BasicDataUnitCustom::Expression(100);
+        *data.as_expression_mut().unwrap() = 200;
+        assert_eq!(data.as_expression(), Ok(200));
+    }
+
+    #[test]
+    fn as_expression_mut_not_expression() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_expression_mut(), Err(DataError::not_type_error(GarnishDataType::Expression)));
     }
 
     #[test]
@@ -283,6 +477,19 @@ mod tests {
     }
 
     #[test]
+    fn as_external_mut() {
+        let mut data = BasicDataUnitCustom::External(100);
+        *data.as_external_mut().unwrap() = 200;
+        assert_eq!(data.as_external(), Ok(200));
+    }
+
+    #[test]
+    fn as_external_mut_not_external() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_external_mut(), Err(DataError::not_type_error(GarnishDataType::External)));
+    }
+
+    #[test]
     fn as_pair() {
         let data = BasicDataUnitCustom::Pair(100, 200);
         assert_eq!(data.as_pair(), Ok((100, 200)));
@@ -292,6 +499,21 @@ mod tests {
     fn as_pair_not_pair() {
         let data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_pair(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Pair))));
+    }
+
+    #[test]
+    fn as_pair_mut() {
+        let mut data = BasicDataUnitCustom::Pair(100, 200);
+        let (left, right) = data.as_pair_mut().unwrap();
+        *left = 300;
+        *right = 400;
+        assert_eq!(data.as_pair(), Ok((300, 400)));
+    }
+
+    #[test]
+    fn as_pair_mut_not_pair() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_pair_mut(), Err(DataError::not_type_error(GarnishDataType::Pair)));
     }
 
     #[test]
@@ -307,6 +529,21 @@ mod tests {
     }
 
     #[test]
+    fn as_partial_mut() {
+        let mut data = BasicDataUnitCustom::Partial(100, 200);
+        let (left, right) = data.as_partial_mut().unwrap();
+        *left = 300;
+        *right = 400;
+        assert_eq!(data.as_partial(), Ok((300, 400)));
+    }
+
+    #[test]
+    fn as_partial_mut_not_partial() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_partial_mut(), Err(DataError::not_type_error(GarnishDataType::Partial)));
+    }
+
+    #[test]
     fn as_concatenation() {
         let data = BasicDataUnitCustom::Concatenation(100, 200);
         assert_eq!(data.as_concatenation(), Ok((100, 200)));
@@ -316,6 +553,21 @@ mod tests {
     fn as_concatenation_not_concatenation() {
         let data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_concatenation(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Concatenation))));
+    }
+
+    #[test]
+    fn as_concatenation_mut() {
+        let mut data = BasicDataUnitCustom::Concatenation(100, 200);
+        let (left, right) = data.as_concatenation_mut().unwrap();
+        *left = 300;
+        *right = 400;
+        assert_eq!(data.as_concatenation(), Ok((300, 400)));
+    }
+
+    #[test]
+    fn as_concatenation_mut_not_concatenation() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_concatenation_mut(), Err(DataError::not_type_error(GarnishDataType::Concatenation)));
     }
 
     #[test]
@@ -331,6 +583,21 @@ mod tests {
     }
 
     #[test]
+    fn as_range_mut() {
+        let mut data = BasicDataUnitCustom::Range(100, 200);
+        let (start, end) = data.as_range_mut().unwrap();
+        *start = 300;
+        *end = 400;
+        assert_eq!(data.as_range(), Ok((300, 400)));
+    }
+
+    #[test]
+    fn as_range_mut_not_range() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_range_mut(), Err(DataError::not_type_error(GarnishDataType::Range)));
+    }
+
+    #[test]
     fn as_slice() {
         let data = BasicDataUnitCustom::Slice(100, 200);
         assert_eq!(data.as_slice(), Ok((100, 200)));
@@ -340,6 +607,21 @@ mod tests {
     fn as_slice_not_slice() {
         let data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_slice(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Slice))));
+    }
+
+    #[test]
+    fn as_slice_mut() {
+        let mut data = BasicDataUnitCustom::Slice(100, 200);
+        let (value, range) = data.as_slice_mut().unwrap();
+        *value = 300;
+        *range = 400;
+        assert_eq!(data.as_slice(), Ok((300, 400)));
+    }
+
+    #[test]
+    fn as_slice_mut_not_slice() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_slice_mut(), Err(DataError::not_type_error(GarnishDataType::Slice)));
     }
 
     #[test]
@@ -355,6 +637,19 @@ mod tests {
     }
 
     #[test]
+    fn as_list_mut() {
+        let mut data = BasicDataUnitCustom::List(100);
+        *data.as_list_mut().unwrap() = 200;
+        assert_eq!(data.as_list(), Ok(200));
+    }
+
+    #[test]
+    fn as_list_mut_not_list() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_list_mut(), Err(DataError::not_type_error(GarnishDataType::List)));
+    }
+
+    #[test]
     fn as_custom() {
         let data = BasicDataUnitCustom::Custom(());
         assert_eq!(data.as_custom(), Ok(&()));
@@ -364,5 +659,44 @@ mod tests {
     fn as_custom_not_custom() {
         let data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_custom(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Custom))));
+    }
+
+    #[test]
+    fn as_custom_mut() {
+        let mut data = BasicDataUnitCustom::Custom(());
+        let _ = data.as_custom_mut().unwrap();
+    }
+
+    #[test]
+    fn as_custom_mut_not_custom() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_custom_mut(), Err(DataError::not_type_error(GarnishDataType::Custom)));
+    }
+
+    #[test]
+    fn as_uninitialized_list() {
+        let data = BasicDataUnitCustom::UninitializedList(100, 200);
+        assert_eq!(data.as_uninitialized_list(), Ok((100, 200)));
+    }
+    
+    #[test]
+    fn as_uninitialized_list_not_uninitialized_list() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_uninitialized_list(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_uninitialized_list_mut() {
+        let mut data = BasicDataUnitCustom::UninitializedList(100, 200);
+        let (len, index) = data.as_uninitialized_list_mut().unwrap();
+        *len = 300;
+        *index = 400;
+        assert_eq!(data.as_uninitialized_list(), Ok((300, 400)));
+    }
+
+    #[test]
+    fn as_uninitialized_list_mut_not_uninitialized_list() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_uninitialized_list_mut(), Err(DataError::not_basic_type_error()));
     }
 }

@@ -112,6 +112,14 @@ where
         Ok(&self.data[true_index])
     }
 
+    pub(crate) fn get_from_data_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut BasicData<T>, DataError> {
+        if index >= self.data_block.cursor {
+            return Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(index)));
+        }
+        let true_index = self.data_block.start + index;
+        Ok(&mut self.data[true_index])
+    }
+
     pub fn add_char_list_from_string(&mut self, s: impl AsRef<str>) -> Result<usize, DataError> {
         let index = self.push_to_data_block(BasicData::CharList(s.as_ref().len()))?;
         for c in s.as_ref().chars() {
@@ -438,6 +446,48 @@ mod tests {
         let result = data.get_from_data_block_ensure_index(10);
 
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(10))));
+    }
+
+    #[test]
+    fn get_from_data_block_ensure_index_mut() {
+        let mut data = test_data();
+
+        data.push_to_data_block(BasicData::True).unwrap();
+
+        let result = data.get_from_data_block_ensure_index_mut(0).unwrap();
+
+        assert_eq!(result, &BasicData::<()>::True);
+        
+        *result = BasicData::False;
+        
+        let result_after = data.get_from_data_block_ensure_index(0).unwrap();
+        assert_eq!(result_after, &BasicData::<()>::False);
+    }
+
+    #[test]
+    fn get_from_data_block_ensure_index_mut_index_out_of_bounds() {
+        let mut data = test_data();
+
+        data.push_to_data_block(BasicData::True).unwrap();
+
+        let result = data.get_from_data_block_ensure_index_mut(10);
+
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(10))));
+    }
+
+    #[test]
+    fn get_from_data_block_ensure_index_mut_can_modify() {
+        let mut data = test_data();
+
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        data.push_to_data_block(BasicData::Number(200.into())).unwrap();
+
+        let first = data.get_from_data_block_ensure_index_mut(0).unwrap();
+        *first = BasicData::Number(300.into());
+
+        assert_eq!(data.get_from_data_block_ensure_index(0).unwrap(), &BasicData::Number(300.into()));
+        
+        assert_eq!(data.get_from_data_block_ensure_index(1).unwrap(), &BasicData::Number(200.into()));
     }
 
     #[test]
