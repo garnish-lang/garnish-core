@@ -13,7 +13,6 @@ use crate::data::SimpleNumber;
 
 pub type BasicNumber = SimpleNumber;
 
-use crate::instruction;
 use crate::{DataError, error::DataErrorType};
 
 const BLOCKS: usize = 3;
@@ -83,7 +82,7 @@ where
                 ReallocationStrategy::FixedSize(size) => self.instruction_block.size + size,
                 ReallocationStrategy::Multiplicative(multiplier) => self.instruction_block.size * multiplier,
             };
-            self.reallocate_heap([new_size, self.jump_table_block.size, self.data_block.size]);
+            self.reallocate_heap(new_size, self.jump_table_block.size, self.data_block.size);
         }
         let index = self.instruction_block.start + self.instruction_block.cursor;
         self.data[index] = data;
@@ -97,7 +96,7 @@ where
                 ReallocationStrategy::FixedSize(size) => self.jump_table_block.size + size,
                 ReallocationStrategy::Multiplicative(multiplier) => self.jump_table_block.size * multiplier,
             };
-            self.reallocate_heap([self.instruction_block.size, new_size, self.data_block.size]);
+            self.reallocate_heap(self.instruction_block.size, new_size, self.data_block.size);
         }
         let index = self.jump_table_block.start + self.jump_table_block.cursor;
         self.data[index] = data;
@@ -111,7 +110,7 @@ where
                 ReallocationStrategy::FixedSize(size) => self.data_block.size + size,
                 ReallocationStrategy::Multiplicative(multiplier) => self.data_block.size * multiplier,
             };
-            self.reallocate_heap([self.instruction_block.size, self.jump_table_block.size, new_size]);
+            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.size, new_size);
         }
         let index = self.data_block.start + self.data_block.cursor;
         self.data[index] = data;
