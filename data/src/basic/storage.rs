@@ -16,6 +16,13 @@ impl StorageBlock {
     pub fn new(size: usize, settings: StorageSettings) -> Self {
         Self { cursor: 0, size, start: 0, settings }
     }
+
+    pub fn next_size(&self) -> usize {
+        match self.settings.reallocation_strategy() {
+            ReallocationStrategy::FixedSize(size) => self.size + size,
+            ReallocationStrategy::Multiplicative(multiplier) => self.size * multiplier,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,5 +59,24 @@ impl StorageSettings {
 
     pub fn reallocation_strategy(&self) -> ReallocationStrategy {
         self.reallocation_strategy.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::basic::storage::{ReallocationStrategy, StorageBlock, StorageSettings};
+
+    #[test]
+    pub fn next_size_fixed_size() {
+        let storage = StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)));
+        let next_size = storage.next_size();
+        assert_eq!(next_size, 20);
+    }
+
+    #[test]
+    pub fn next_size_multiplicative() {
+        let storage = StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::Multiplicative(2)));
+        let next_size = storage.next_size();
+        assert_eq!(next_size, 20);
     }
 }

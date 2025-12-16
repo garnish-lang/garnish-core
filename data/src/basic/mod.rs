@@ -8,7 +8,7 @@ use std::usize;
 
 pub use data::{BasicData, BasicDataUnitCustom};
 
-use crate::basic::storage::{ReallocationStrategy, StorageBlock, StorageSettings};
+use crate::basic::storage::{StorageBlock, StorageSettings};
 use crate::data::SimpleNumber;
 
 use crate::{DataError, error::DataErrorType};
@@ -53,11 +53,7 @@ where
 
     pub fn push_to_instruction_block(&mut self, data: BasicData<T>) -> usize {
         if self.instruction_block.cursor >= self.instruction_block.size {
-            let new_size = match self.instruction_block.settings.reallocation_strategy() {
-                ReallocationStrategy::FixedSize(size) => self.instruction_block.size + size,
-                ReallocationStrategy::Multiplicative(multiplier) => self.instruction_block.size * multiplier,
-            };
-            self.reallocate_heap(new_size, self.jump_table_block.size, self.data_block.size);
+            self.reallocate_heap(self.instruction_block.next_size(), self.jump_table_block.size, self.data_block.size);
         }
         let index = self.instruction_block.start + self.instruction_block.cursor;
         self.data[index] = data;
@@ -67,11 +63,7 @@ where
 
     pub fn push_to_jump_table_block(&mut self, data: BasicData<T>) -> usize {
         if self.jump_table_block.cursor >= self.jump_table_block.size {
-            let new_size = match self.jump_table_block.settings.reallocation_strategy() {
-                ReallocationStrategy::FixedSize(size) => self.jump_table_block.size + size,
-                ReallocationStrategy::Multiplicative(multiplier) => self.jump_table_block.size * multiplier,
-            };
-            self.reallocate_heap(self.instruction_block.size, new_size, self.data_block.size);
+            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.next_size(), self.data_block.size);
         }
         let index = self.jump_table_block.start + self.jump_table_block.cursor;
         self.data[index] = data;
@@ -81,11 +73,7 @@ where
 
     pub fn push_to_data_block(&mut self, data: BasicData<T>) -> usize {
         if self.data_block.cursor >= self.data_block.size {
-            let new_size = match self.data_block.settings.reallocation_strategy() {
-                ReallocationStrategy::FixedSize(size) => self.data_block.size + size,
-                ReallocationStrategy::Multiplicative(multiplier) => self.data_block.size * multiplier,
-            };
-            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.size, new_size);
+            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.size, self.data_block.next_size());
         }
         let index = self.data_block.start + self.data_block.cursor;
         self.data[index] = data;
