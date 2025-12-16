@@ -1,3 +1,22 @@
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct StorageBlock {
+    pub(crate) cursor: usize,
+    pub(crate) size: usize,
+    pub(crate) start: usize,
+    pub(crate) settings: StorageSettings,
+}
+
+impl Default for StorageBlock {
+    fn default() -> Self {
+        Self { cursor: 0, size: 0, start: 0, settings: StorageSettings::default() }
+    }
+}
+
+impl StorageBlock {
+    pub fn new(size: usize, settings: StorageSettings) -> Self {
+        Self { cursor: 0, size, start: 0, settings }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StorageSettings {
@@ -14,7 +33,7 @@ pub enum ReallocationStrategy {
 
 impl Default for StorageSettings {
     fn default() -> Self {
-        Self { initial_size: 1000, max_items: usize::MAX, reallocation_strategy: ReallocationStrategy::Multiplicative(2) }
+        Self { initial_size: 10, max_items: usize::MAX, reallocation_strategy: ReallocationStrategy::FixedSize(10) }
     }
 }
 

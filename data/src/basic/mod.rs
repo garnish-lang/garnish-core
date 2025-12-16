@@ -7,12 +7,19 @@ use std::usize;
 
 pub use data::{BasicData, BasicDataUnitCustom};
 
-use crate::basic::storage::{ReallocationStrategy, StorageSettings};
+use crate::basic::storage::{ReallocationStrategy, StorageBlock, StorageSettings};
 use crate::data::SimpleNumber;
 
 pub type BasicNumber = SimpleNumber;
 
 use crate::{DataError, error::DataErrorType};
+
+const BLOCKS: usize = 3;
+const INSTRUCTION_BLOCK_INDEX: usize = 0;
+const JUMP_TABLE_BLOCK_INDEX: usize = 1;
+const DATA_BLOCK_INDEX: usize = 2;
+
+type StorageBlocks = [StorageBlock; BLOCKS];
 
 pub trait BasicDataCustom: Clone {}
 
@@ -26,6 +33,9 @@ where
     data_cursor: usize,
     data: Vec<BasicData<T>>,
     storage_settings: StorageSettings,
+    instruction_block: StorageBlock,
+    jump_table_block: StorageBlock,
+    data_block: StorageBlock,
 }
 
 pub type BasicGarnishDataUnit = BasicGarnishData<()>;
@@ -38,6 +48,23 @@ where
         Self::new_full(vec![], StorageSettings::default())
     }
 
+    pub fn new_with_settings(
+        instruction_settings: StorageSettings,
+        jump_table_settings: StorageSettings,
+        data_settings: StorageSettings,
+    ) -> Self {
+        let total_size = instruction_settings.initial_size() + jump_table_settings.initial_size() + data_settings.initial_size();
+        let data = vec![BasicData::Empty; total_size];
+        Self {
+            data_cursor: 0,
+            data,
+            storage_settings: data_settings.clone(),
+            instruction_block: StorageBlock::new(instruction_settings.initial_size(), instruction_settings.clone()),
+            jump_table_block: StorageBlock::new(jump_table_settings.initial_size(), jump_table_settings.clone()),
+            data_block: StorageBlock::new(data_settings.initial_size(), data_settings.clone()),
+        }
+    }
+
     pub fn new_full(mut data: Vec<BasicData<T>>, storage_settings: StorageSettings) -> Self {
         let data_cursor = data.len();
         Self::fill_data(&mut data, &storage_settings);
@@ -45,6 +72,9 @@ where
             data_cursor,
             data,
             storage_settings,
+            instruction_block: StorageBlock::default(),
+            jump_table_block: StorageBlock::default(),
+            data_block: StorageBlock::default(),
         }
     }
 
@@ -52,6 +82,51 @@ where
         if data.len() < settings.initial_size() {
             data.resize(settings.initial_size(), BasicData::Empty);
         }
+    }
+
+    pub fn push_to_data_block(&mut self, data: BasicData<T>) -> usize {
+        if self.data_block.cursor >= self.data_block.size {
+            let new_size = match self.data_block.settings.reallocation_strategy() {
+                ReallocationStrategy::FixedSize(size) => self.data_block.size + size,
+                ReallocationStrategy::Multiplicative(multiplier) => self.data_block.size * multiplier,
+            };
+            self.data.resize(new_size, BasicData::Empty);
+            self.data_block.size = new_size;
+        }
+        let index = self.data_block.cursor;
+        self.data[self.data_block.cursor] = data;
+        self.data_block.cursor += 1;
+        index
+    }
+
+    pub fn push_to_instruction_block(&mut self, data: BasicData<T>) -> usize {
+        if self.instruction_block.cursor >= self.instruction_block.size {
+            let new_size = match self.data_block.settings.reallocation_strategy() {
+                ReallocationStrategy::FixedSize(size) => self.instruction_block.size + size,
+                ReallocationStrategy::Multiplicative(multiplier) => self.instruction_block.size * multiplier,
+            };
+            self.data.resize(new_size, BasicData::Empty);
+            self.instruction_block.size = new_size;
+        }
+        let index = self.instruction_block.cursor;
+        self.data[self.instruction_block.cursor] = data;
+        self.instruction_block.cursor += 1;
+        index
+    }
+
+    pub fn push_to_jump_table_block(&mut self, data: BasicData<T>) -> usize {
+        if self.jump_table_block.cursor >= self.jump_table_block.size {
+            let new_size = match self.data_block.settings.reallocation_strategy() {
+                ReallocationStrategy::FixedSize(size) => self.jump_table_block.size + size,
+                ReallocationStrategy::Multiplicative(multiplier) => self.jump_table_block.size * multiplier,
+            };
+            self.data.resize(new_size, BasicData::Empty);
+            self.jump_table_block.size = new_size;
+        }
+        let index = self.jump_table_block.cursor;
+        self.data[self.jump_table_block.cursor] = data;
+        self.jump_table_block.cursor += 1;
+        index
     }
 
     pub fn push_basic_data(&mut self, data: BasicData<T>) -> usize {
@@ -69,6 +144,30 @@ where
         self.data[self.data_cursor] = data;
         self.data_cursor += 1;
         index
+    }
+
+    pub fn data_size(&self) -> usize {
+        self.data_block.cursor
+    }
+
+    pub fn instruction_size(&self) -> usize {
+        self.instruction_block.cursor
+    }
+
+    pub fn jump_table_size(&self) -> usize {
+        self.jump_table_block.cursor
+    }
+
+    pub fn allocated_data_size(&self) -> usize {
+        self.data_block.size
+    }
+
+    pub fn allocated_instruction_size(&self) -> usize {
+        self.instruction_block.size
+    }
+
+    pub fn allocated_jump_table_size(&self) -> usize {
+        self.jump_table_block.size
     }
 
     pub fn get_basic_data(&self, index: usize) -> Option<&BasicData<T>> {
@@ -110,7 +209,11 @@ mod utilities {
     };
 
     pub fn test_data() -> BasicGarnishDataUnit {
-        BasicGarnishDataUnit::new_full(vec![], StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)))
+        BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+        )
     }
 
     pub fn test_with_data(data: Vec<BasicData<()>>) -> BasicGarnishDataUnit {
@@ -355,24 +458,151 @@ mod tests {
     }
 
     #[test]
-    fn created_with_initial_size() {
-        let data = test_data();
-
-        assert_eq!(
-            data.data,
-            vec![
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-            ]
+    fn created_with_sizes_according_to_settings() {
+        let data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
         );
+
+        let expected_data = vec![BasicData::Empty; 30];
+
+        assert_eq!(data, BasicGarnishDataUnit {
+            data_cursor: 0,
+            data: expected_data,
+            storage_settings: StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            instruction_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
+            jump_table_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
+            data_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
+        });
+    }
+
+    #[test]
+    fn push_to_data_block() {
+        let mut data = test_data();
+        let index = data.push_to_data_block(BasicData::Unit);
+        assert_eq!(index, 0);
+        assert_eq!(data.data_block.cursor, 1);
+        assert_eq!(data.data_block.size, 10);
+        assert_eq!(data.data, vec![
+            BasicData::Unit,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+        ]);
+    }
+
+    #[test]
+    fn push_to_instruction_block() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        );
+        let index = data.push_to_instruction_block(BasicData::Unit);
+        assert_eq!(index, 0);
+        assert_eq!(data.instruction_block.cursor, 1);
+        assert_eq!(data.instruction_block.size, 10);
+        assert_eq!(data.data, vec![
+            BasicData::Unit,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+        ]);
+    }
+
+    #[test]
+    fn push_to_jump_table_block() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        );
+        let index = data.push_to_jump_table_block(BasicData::Unit);
+        assert_eq!(index, 0);
+        assert_eq!(data.jump_table_block.cursor, 1);
+        assert_eq!(data.jump_table_block.size, 10);
+        assert_eq!(data.data, vec![
+            BasicData::Unit,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
+        ]);
+    }
+
+    #[test]
+    fn data_block_resizes_when_pushed_past_max_size() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+        );
+        for _ in 0..15 {
+            data.push_to_data_block(BasicData::Unit);
+        }
+
+        let mut expected_data = vec![BasicData::Unit; 15];
+        expected_data.resize(20, BasicData::Empty);
+        
+        assert_eq!(data.data_size(), 15);
+        assert_eq!(data.allocated_data_size(), 20);
+        assert_eq!(data.data, expected_data);
+    }
+
+    #[test]
+    fn instruction_block_resizes_when_pushed_past_max_size() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        );
+        for _ in 0..15 {
+            data.push_to_instruction_block(BasicData::Unit);
+        }
+
+        let mut expected_data = vec![BasicData::Unit; 15];
+        expected_data.resize(20, BasicData::Empty);
+        
+        assert_eq!(data.instruction_size(), 15);
+        assert_eq!(data.allocated_instruction_size(), 20);
+        assert_eq!(data.data, expected_data);
+    }
+
+    #[test]
+    fn jump_table_block_resizes_when_pushed_past_max_size() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        );
+        for _ in 0..15 {
+            data.push_to_jump_table_block(BasicData::Unit);
+        }
+
+        let mut expected_data = vec![BasicData::Unit; 15];
+        expected_data.resize(20, BasicData::Empty);
+        
+        assert_eq!(data.jump_table_size(), 15);
+        assert_eq!(data.allocated_jump_table_size(), 20);
+        assert_eq!(data.data, expected_data);
     }
 
     #[test]
