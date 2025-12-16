@@ -55,30 +55,21 @@ where
         if self.instruction_block.cursor >= self.instruction_block.size {
             self.reallocate_heap(self.instruction_block.next_size(), self.jump_table_block.size, self.data_block.size);
         }
-        let index = self.instruction_block.start + self.instruction_block.cursor;
-        self.data[index] = data;
-        self.instruction_block.cursor += 1;
-        index
+        Self::push_to_block(&mut self.data, &mut self.instruction_block, data)
     }
 
     pub fn push_to_jump_table_block(&mut self, data: BasicData<T>) -> usize {
         if self.jump_table_block.cursor >= self.jump_table_block.size {
             self.reallocate_heap(self.instruction_block.size, self.jump_table_block.next_size(), self.data_block.size);
         }
-        let index = self.jump_table_block.start + self.jump_table_block.cursor;
-        self.data[index] = data;
-        self.jump_table_block.cursor += 1;
-        index
+        Self::push_to_block(&mut self.data, &mut self.jump_table_block, data)
     }
 
     pub fn push_to_data_block(&mut self, data: BasicData<T>) -> usize {
         if self.data_block.cursor >= self.data_block.size {
             self.reallocate_heap(self.instruction_block.size, self.jump_table_block.size, self.data_block.next_size());
         }
-        let index = self.data_block.start + self.data_block.cursor;
-        self.data[index] = data;
-        self.data_block.cursor += 1;
-        index
+        Self::push_to_block(&mut self.data, &mut self.data_block, data)
     }
 
     pub fn data_size(&self) -> usize {
@@ -135,6 +126,13 @@ where
             self.push_to_data_block(BasicData::Byte(*b));
         }
         Ok(index)
+    }
+
+    fn push_to_block(heap: &mut Vec<BasicData<T>>, block: &mut StorageBlock, data: BasicData<T>) -> usize {
+        let index = block.start + block.cursor;
+        heap[index] = data;
+        block.cursor += 1;
+        index
     }
 
     fn reallocate_heap(&mut self, new_instruction_size: usize, new_jump_table_size: usize, new_data_size: usize) {
