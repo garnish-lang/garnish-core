@@ -136,7 +136,6 @@ where
     }
 
     fn reallocate_heap(&mut self, new_instruction_size: usize, new_jump_table_size: usize, new_data_size: usize) -> Result<(), DataError> {
-        // Check if new sizes exceed max_items for each block
         if new_instruction_size > self.instruction_block.settings.max_items() {
             return Err(DataError::new(
                 "Instruction block size exceeds max items",
