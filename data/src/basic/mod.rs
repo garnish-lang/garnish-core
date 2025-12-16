@@ -118,23 +118,6 @@ where
         index
     }
 
-    pub fn push_basic_data(&mut self, data: BasicData<T>) -> usize {
-        if self.data_cursor >= self.data.len() {
-            match self.storage_settings.reallocation_strategy() {
-                ReallocationStrategy::FixedSize(size) => {
-                    self.data.resize(self.data_cursor + size, BasicData::Empty);
-                }
-                ReallocationStrategy::Multiplicative(multiplier) => {
-                    self.data.resize(self.data_cursor * multiplier, BasicData::Empty);
-                }
-            }
-        }
-        let index = self.data_cursor;
-        self.data[self.data_cursor] = data;
-        self.data_cursor += 1;
-        index
-    }
-
     pub fn data_size(&self) -> usize {
         self.data_block.cursor
     }
@@ -167,25 +150,26 @@ where
         self.data.get_mut(index)
     }
 
-    pub(crate) fn get_data_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
-        if index >= self.data_cursor {
+    pub(crate) fn get_from_data_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
+        if index >= self.data_block.cursor {
             return Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(index)));
         }
-        Ok(&self.data[index])
+        let true_index = self.data_block.start + index;
+        Ok(&self.data[true_index])
     }
 
     pub fn add_char_list_from_string(&mut self, s: impl AsRef<str>) -> Result<usize, DataError> {
-        let index = self.push_basic_data(BasicData::CharList(s.as_ref().len()));
+        let index = self.push_to_data_block(BasicData::CharList(s.as_ref().len()));
         for c in s.as_ref().chars() {
-            self.push_basic_data(BasicData::Char(c));
+            self.push_to_data_block(BasicData::Char(c));
         }
         Ok(index)
     }
 
     pub fn add_byte_list_from_vec(&mut self, v: impl AsRef<[u8]>) -> Result<usize, DataError> {
-        let index = self.push_basic_data(BasicData::ByteList(v.as_ref().len()));
+        let index = self.push_to_data_block(BasicData::ByteList(v.as_ref().len()));
         for b in v.as_ref() {
-            self.push_basic_data(BasicData::Byte(*b));
+            self.push_to_data_block(BasicData::Byte(*b));
         }
         Ok(index)
     }
@@ -219,7 +203,7 @@ where
 #[cfg(test)]
 mod utilities {
     use crate::{
-        BasicData, BasicGarnishDataUnit,
+        BasicGarnishDataUnit,
         basic::storage::{ReallocationStrategy, StorageSettings},
     };
 
@@ -229,10 +213,6 @@ mod utilities {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
         )
-    }
-
-    pub fn test_with_data(data: Vec<BasicData<()>>) -> BasicGarnishDataUnit {
-        BasicGarnishDataUnit::new_full(data, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)))
     }
 }
 
@@ -431,5 +411,27 @@ mod tests {
         assert_eq!(data.allocated_jump_table_size(), 10);
         assert_eq!(data.allocated_data_size(), 10);
         assert_eq!(data.data, expected_data);
+    }
+
+    #[test]
+    fn get_from_data_block_ensure_index() {
+        let mut data = test_data();
+
+        let index = data.push_to_data_block(BasicData::True);
+
+        let result = data.get_from_data_block_ensure_index(index).unwrap();
+
+        assert_eq!(result, &BasicData::<()>::True);
+    }
+
+    #[test]
+    fn get_from_data_block_ensure_index_index_out_of_bounds() {
+        let mut data = test_data();
+
+        data.push_to_data_block(BasicData::True);
+
+        let result = data.get_from_data_block_ensure_index(10);
+
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(10))));
     }
 }
