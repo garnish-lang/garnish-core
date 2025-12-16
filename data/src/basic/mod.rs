@@ -168,12 +168,12 @@ where
 
         let mut current_block_start = 0;
         for (block, new_size) in ordered {
+            for i in 0..block.cursor {
+                new_heap[current_block_start + i] = self.data[block.start + i].clone();
+            }
+
             block.start = current_block_start;
             block.size = new_size;
-
-            for i in 0..block.cursor {
-                new_heap[block.start + i] = self.data[block.start + i].clone();
-            }
             current_block_start += new_size;
         }
 
@@ -378,6 +378,32 @@ mod tests {
         data.push_to_instruction_block(BasicData::Unit).unwrap();
         data.push_to_jump_table_block(BasicData::True).unwrap();
         data.push_to_data_block(BasicData::False).unwrap();
+
+        let mut expected_data = vec![BasicData::Empty; 30];
+        expected_data[0] = BasicData::Unit;
+        expected_data[10] = BasicData::True;
+        expected_data[20] = BasicData::False;
+
+        assert_eq!(data.instruction_size(), 1);
+        assert_eq!(data.jump_table_size(), 1);
+        assert_eq!(data.data_size(), 1);
+        assert_eq!(data.allocated_instruction_size(), 10);
+        assert_eq!(data.allocated_jump_table_size(), 10);
+        assert_eq!(data.allocated_data_size(), 10);
+        assert_eq!(data.data, expected_data);
+    }
+
+    #[test]
+    fn reallocations_happen_correctly_pushing_bottom_to_top() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        );
+
+        data.push_to_data_block(BasicData::False).unwrap();
+        data.push_to_jump_table_block(BasicData::True).unwrap();
+        data.push_to_instruction_block(BasicData::Unit).unwrap();
 
         let mut expected_data = vec![BasicData::Empty; 30];
         expected_data[0] = BasicData::Unit;
