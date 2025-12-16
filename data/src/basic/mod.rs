@@ -191,9 +191,9 @@ mod utilities {
 
     pub fn test_data() -> BasicGarnishDataUnit {
         BasicGarnishDataUnit::new_with_settings(
-            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
         )
     }
 }
@@ -212,9 +212,9 @@ mod tests {
     #[test]
     fn created_with_sizes_according_to_settings() {
         let data = BasicGarnishDataUnit::new_with_settings(
-            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
-            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
-            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
         );
 
         let expected_data = vec![BasicData::Empty; 30];
@@ -223,9 +223,9 @@ mod tests {
             data,
             BasicGarnishDataUnit {
                 data: expected_data,
-                instruction_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
-                jump_table_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
-                data_block: StorageBlock::new(10, StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10))),
+                instruction_block: StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10))),
+                jump_table_block: StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10))),
+                data_block: StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10))),
             }
         );
     }

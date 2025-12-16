@@ -341,7 +341,6 @@ mod tests {
     #[test]
     fn merge_to_symbol_list_symbol_list_symbol_list() {
         let mut data = test_data();
-        data.data_block.settings.max_items = 100;
         let v1 = data.push_to_data_block(BasicData::SymbolList(2)).unwrap();
         data.push_to_data_block(BasicData::Symbol(100)).unwrap();
         data.push_to_data_block(BasicData::Symbol(200)).unwrap();
@@ -352,7 +351,6 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data_block.settings.max_items = 100;
         let data_len = data.data.len();
         expected_data.data.resize(data_len, BasicData::Empty);
         expected_data.data.splice(
