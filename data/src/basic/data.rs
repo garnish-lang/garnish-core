@@ -54,12 +54,12 @@ where T: crate::basic::BasicDataCustom {
             BasicData::Slice(_, _) => GarnishDataType::Slice,
             BasicData::Partial(_, _) => GarnishDataType::Partial,
             BasicData::List(_) => GarnishDataType::List,
-            BasicData::ListItem(_) => GarnishDataType::List,
             BasicData::Concatenation(_, _) => GarnishDataType::Concatenation,
             BasicData::Custom(_) => GarnishDataType::Custom,
             // non garnish data
             BasicData::Empty => GarnishDataType::Invalid,
             BasicData::UninitializedList(_, _) => GarnishDataType::Invalid,
+            BasicData::ListItem(_) => GarnishDataType::Invalid,
         }
     }
 
@@ -285,7 +285,6 @@ mod tests {
     #[test]
     fn get_data_type() {
         let scenarios = vec![
-            (BasicDataUnitCustom::Empty, GarnishDataType::Invalid),
             (BasicDataUnitCustom::Unit, GarnishDataType::Unit),
             (BasicDataUnitCustom::True, GarnishDataType::True),
             (BasicDataUnitCustom::False, GarnishDataType::False),
@@ -304,9 +303,12 @@ mod tests {
             (BasicDataUnitCustom::Slice(100, 200), GarnishDataType::Slice),
             (BasicDataUnitCustom::Partial(100, 200), GarnishDataType::Partial),
             (BasicDataUnitCustom::List(100), GarnishDataType::List),
-            (BasicDataUnitCustom::ListItem(100), GarnishDataType::List),
             (BasicDataUnitCustom::Concatenation(100, 200), GarnishDataType::Concatenation),
             (BasicDataUnitCustom::Custom(()), GarnishDataType::Custom),
+            // non garnish data
+            (BasicDataUnitCustom::Empty, GarnishDataType::Invalid),
+            (BasicDataUnitCustom::UninitializedList(100, 200), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::ListItem(100), GarnishDataType::Invalid),
         ];
 
         for (data, expected) in scenarios {
