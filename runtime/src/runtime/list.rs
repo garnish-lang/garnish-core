@@ -13,7 +13,7 @@ pub fn make_list<Data: GarnishData>(this: &mut Data, len: Data::Size) -> Result<
 
     this.start_list(len.clone())?;
 
-    let list_index = this.start_list(len.clone())?;
+    let mut list_index = this.start_list(len.clone())?;
     let mut count = this.get_register_len() - len.clone();
     let end = this.get_register_len();
     // look into getting this to work with a range value
@@ -23,7 +23,7 @@ pub fn make_list<Data: GarnishData>(this: &mut Data, len: Data::Size) -> Result<
             Some(r) => r,
         };
 
-        this.add_to_list(list_index.clone(), r)?;
+        list_index = this.add_to_list(list_index.clone(), r)?;
 
         count += Data::Size::one();
     }
@@ -35,7 +35,7 @@ pub fn make_list<Data: GarnishData>(this: &mut Data, len: Data::Size) -> Result<
         count += Data::Size::one();
     }
 
-    this.end_list().and_then(|r| this.push_register(r))?;
+    this.end_list(list_index).and_then(|r| this.push_register(r))?;
 
     Ok(None)
 }

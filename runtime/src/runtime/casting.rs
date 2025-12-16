@@ -80,15 +80,15 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
             let mut iter = this.get_symbol_list_iter(left.clone(), Extents::new(Data::Number::zero(), Data::Number::max_value()))?;
             let len = this.get_symbol_list_len(left.clone())?;
 
-            let list_index = this.start_list(len)?;
+            let mut list_index = this.start_list(len)?;
             while let Some(part) = iter.next() {
                 let item_index = match part {
                     SymbolListPart::Symbol(sym) => this.add_symbol(sym)?,
                     SymbolListPart::Number(num) => this.add_number(num)?,
                 };
-                this.add_to_list(list_index.clone(), item_index)?;
+                list_index = this.add_to_list(list_index.clone(), item_index)?;
             }
-            this.end_list().and_then(|r| this.push_register(r))?
+            this.end_list(list_index).and_then(|r| this.push_register(r))?
         }
         (GarnishDataType::Range, GarnishDataType::List) => {
             let (start, end) = this.get_range(left.clone())?;
@@ -96,14 +96,14 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
             let (start, end, _) = get_range(this, left)?;
             let mut count = start;
 
-            let list_index = this.start_list(len)?;
+            let mut list_index = this.start_list(len)?;
             while count <= end {
                 let addr = this.add_number(count.clone())?;
-                this.add_to_list(list_index.clone(), addr)?;
+                list_index = this.add_to_list(list_index.clone(), addr)?;
                 count = count.increment().or_num_err()?;
             }
 
-            this.end_list().and_then(|r| this.push_register(r))?
+            this.end_list(list_index).and_then(|r| this.push_register(r))?
         }
         (GarnishDataType::CharList, GarnishDataType::List) => {
             let len = this.get_char_list_len(left.clone())?;
@@ -115,13 +115,13 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
         }
         (GarnishDataType::Concatenation, GarnishDataType::List) => {
             let len = concatenation_len(this, left.clone())?;
-            let list_index = this.start_list(len)?;
+            let mut list_index = this.start_list(len)?;
             iterate_concatenation_mut(this, left, |this, _, addr| {
-                this.add_to_list(list_index.clone(), addr)?;
+                list_index = this.add_to_list(list_index.clone(), addr)?;
                 Ok(None)
             })?;
 
-            let addr = this.end_list()?;
+            let addr = this.end_list(list_index)?;
             this.push_register(addr)?;
         }
         (GarnishDataType::Slice, GarnishDataType::List) => {
@@ -131,7 +131,7 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
                 GarnishDataType::List => {
                     let len = this.get_list_len(value.clone())?;
 
-                    let list_index = this.start_list(len)?;
+                    let mut list_index = this.start_list(len)?;
 
                     let mut i = start;
 
@@ -143,11 +143,11 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
                             }
                         };
 
-                        this.add_to_list(list_index.clone(), addr)?;
+                        list_index = this.add_to_list(list_index.clone(), addr)?;
                         i = i.increment().or_num_err()?;
                     }
 
-                    this.end_list().and_then(|r| this.push_register(r))?
+                    this.end_list(list_index).and_then(|r| this.push_register(r))?
                 }
                 GarnishDataType::CharList => {
                     list_from_char_list(this, value, start, end.increment().or_num_err()?)?;
@@ -156,7 +156,7 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
                     list_from_byte_list(this, value, start, end.increment().or_num_err()?)?;
                 }
                 GarnishDataType::Concatenation => {
-                    let list_index = this.start_list(Data::number_to_size(len).or_num_err()?)?;
+                    let mut list_index = this.start_list(Data::number_to_size(len).or_num_err()?)?;
 
                     iterate_concatenation_mut(this, value, |this, current_index, addr| {
                         if current_index < start {
@@ -169,11 +169,11 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
                             return Ok(Some(addr));
                         }
 
-                        this.add_to_list(list_index.clone(), addr)?;
+                        list_index = this.add_to_list(list_index.clone(), addr)?;
                         Ok(None)
                     })?;
 
-                    let addr = this.end_list()?;
+                    let addr = this.end_list(list_index)?;
                     this.push_register(addr)?;
                 }
                 _ => push_unit(this)?,
@@ -203,19 +203,19 @@ pub(crate) fn list_from_char_list<Data: GarnishData>(this: &mut Data, byte_list_
     let len = this.get_char_list_len(byte_list_addr.clone())?;
     let mut count = start;
 
-    let list_index = this.start_list(len)?;
+    let mut list_index = this.start_list(len)?;
     while count < end {
         let c = this.get_char_list_item(byte_list_addr.clone(), count.clone())?;
         let addr = match c {
             Some(c) => this.add_char(c)?,
             None => this.add_unit()?,
         };
-        this.add_to_list(list_index.clone(), addr)?;
+        list_index = this.add_to_list(list_index.clone(), addr)?;
 
         count = count.increment().or_num_err()?;
     }
 
-    this.end_list().and_then(|r| this.push_register(r))?;
+    this.end_list(list_index).and_then(|r| this.push_register(r))?;
 
     Ok(None)
 }
@@ -224,19 +224,19 @@ pub(crate) fn list_from_byte_list<Data: GarnishData>(this: &mut Data, byte_list_
     let len = this.get_byte_list_len(byte_list_addr.clone())?;
     let mut count = start;
 
-    let list_index = this.start_list(len)?;
+    let mut list_index = this.start_list(len)?;
     while count < end {
         let c = this.get_byte_list_item(byte_list_addr.clone(), count.clone())?;
         let addr = match c {
             Some(c) => this.add_byte(c)?,
             None => this.add_unit()?,
         };
-        this.add_to_list(list_index.clone(), addr)?;
+        list_index = this.add_to_list(list_index.clone(), addr)?;
 
         count = count.increment().or_num_err()?;
     }
 
-    this.end_list().and_then(|r| this.push_register(r))?;
+    this.end_list(list_index).and_then(|r| this.push_register(r))?;
 
     Ok(None)
 }
@@ -287,7 +287,7 @@ mod tests {
             assert!([10, 11].contains(&item_index));
             Ok(list_index as i32)
         };
-        data.stub_end_list = |_| Ok(999);
+        data.stub_end_list = |_, _| Ok(999);
         data.stub_push_register = |_, i| {
             assert_eq!(i, 999);
             Ok(())

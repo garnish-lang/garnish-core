@@ -286,7 +286,7 @@ where
         Ok(list_index)
     }
 
-    fn end_list(&mut self) -> Result<Self::Size, Self::Error> {
+    fn end_list(&mut self, list_index: Self::Size) -> Result<Self::Size, Self::Error> {
         let mut current = self.get_data_len();
 
         while current > 0 {
@@ -1097,11 +1097,11 @@ mod tests {
         let v1 = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let v2 = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
         let v3 = data.push_to_data_block(BasicData::Number(300.into())).unwrap();
-        let list_index = data.start_list(3).unwrap();
-        data.add_to_list(list_index, v1).unwrap();
-        data.add_to_list(list_index, v2).unwrap();
-        data.add_to_list(list_index, v3).unwrap();
-        let list_index = data.end_list().unwrap();
+        let mut list_index = data.start_list(3).unwrap();
+        list_index = data.add_to_list(list_index, v1).unwrap();
+        list_index = data.add_to_list(list_index, v2).unwrap();
+        list_index = data.add_to_list(list_index, v3).unwrap();
+        let list_index = data.end_list(list_index).unwrap();
 
         assert_eq!(list_index, 3);
         let mut expected_data = test_data();

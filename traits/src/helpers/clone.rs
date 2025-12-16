@@ -195,11 +195,11 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
             items.push((addr, is_association));
         }
 
-        let list_index = to.start_list(len.clone())?;
+        let mut list_index = to.start_list(len.clone())?;
         for (addr, ..) in items {
-            to.add_to_list(list_index.clone(), addr)?;
+            list_index = to.add_to_list(list_index.clone(), addr)?;
         }
-        to.end_list()
+        to.end_list(list_index)
     }
 
     fn clone_expression(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {

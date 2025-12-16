@@ -214,14 +214,14 @@ where
     }
 
     pub fn add_associative_list_from(&mut self, list: Vec<(impl Into<String>, crate::data::SimpleData<T>)>) -> Result<usize, DataError> {
-        let list_index = self.start_list(list.len())?;
+        let mut list_index = self.start_list(list.len())?;
         for (key, value) in list {
             let symbol = self.parse_add_symbol(&key.into())?;
             let i = self.cache_add(value.into())?;
             let pair = self.add_pair((symbol, i))?;
-            self.add_to_list(list_index.clone(), pair)?;
+            list_index = self.add_to_list(list_index.clone(), pair)?;
         }
-        self.end_list()
+        self.end_list(list_index)
     }
 
     pub fn add_concatenation_from(
@@ -987,11 +987,11 @@ mod to_char_list {
             let d1 = runtime.add_number(10.into()).unwrap();
             let d2 = runtime.add_number(20.into()).unwrap();
             let d3 = runtime.add_number(30.into()).unwrap();
-            let list_index = runtime.start_list(3).unwrap();
-            runtime.add_to_list(list_index.clone(), d1).unwrap();
-            runtime.add_to_list(list_index.clone(), d2).unwrap();
-            runtime.add_to_list(list_index.clone(), d3).unwrap();
-            runtime.end_list().unwrap()
+            let mut list_index = runtime.start_list(3).unwrap();
+            list_index = runtime.add_to_list(list_index.clone(), d1).unwrap();
+            list_index = runtime.add_to_list(list_index.clone(), d2).unwrap();
+            list_index = runtime.add_to_list(list_index.clone(), d3).unwrap();
+            runtime.end_list(list_index).unwrap()
         })
     }
 
@@ -1003,16 +1003,16 @@ mod to_char_list {
             let d3 = runtime.add_number(30.into()).unwrap();
             let d4 = runtime.add_number(40.into()).unwrap();
 
-            let list_index = runtime.start_list(2).unwrap();
-            runtime.add_to_list(list_index.clone(), d2).unwrap();
-            runtime.add_to_list(list_index.clone(), d3).unwrap();
-            let list = runtime.end_list().unwrap();
+            let mut list_index = runtime.start_list(2).unwrap();
+            list_index = runtime.add_to_list(list_index.clone(), d2).unwrap();
+            list_index = runtime.add_to_list(list_index.clone(), d3).unwrap();
+            let list = runtime.end_list(list_index).unwrap();
 
             runtime.start_list(3).unwrap();
-            runtime.add_to_list(list_index.clone(), d1).unwrap();
-            runtime.add_to_list(list_index.clone(), list).unwrap();
-            runtime.add_to_list(list_index.clone(), d4).unwrap();
-            runtime.end_list().unwrap()
+            list_index = runtime.add_to_list(list_index.clone(), d1).unwrap();
+            list_index = runtime.add_to_list(list_index.clone(), list).unwrap();
+            list_index = runtime.add_to_list(list_index.clone(), d4).unwrap();
+            runtime.end_list(list_index).unwrap()
         })
     }
 
@@ -1063,14 +1063,14 @@ mod to_char_list {
             let d5 = runtime.add_number(50.into()).unwrap();
             let d6 = runtime.add_number(60.into()).unwrap();
 
-            let list_index = runtime.start_list(3).unwrap();
+            let mut list_index = runtime.start_list(3).unwrap();
             runtime.add_to_list(list_index.clone(), d1).unwrap();
-            runtime.add_to_list(list_index.clone(), d2).unwrap();
-            runtime.add_to_list(list_index.clone(), d3).unwrap();
-            runtime.add_to_list(list_index.clone(), d4).unwrap();
-            runtime.add_to_list(list_index.clone(), d5).unwrap();
-            runtime.add_to_list(list_index.clone(), d6).unwrap();
-            let list = runtime.end_list().unwrap();
+            list_index = runtime.add_to_list(list_index.clone(), d2).unwrap();
+            list_index = runtime.add_to_list(list_index.clone(), d3).unwrap();
+            list_index = runtime.add_to_list(list_index.clone(), d4).unwrap();
+            list_index = runtime.add_to_list(list_index.clone(), d5).unwrap();
+            list_index = runtime.add_to_list(list_index.clone(), d6).unwrap();
+            let list = runtime.end_list(list_index).unwrap();
 
             let start = runtime.add_number(2.into()).unwrap();
             let end = runtime.add_number(4.into()).unwrap();

@@ -603,8 +603,8 @@ fn create_missing_functions(
     all_functions.insert(
         "end_list",
         quote! {
-            fn end_list(&mut self) -> Result<Self::Size, Self::Error> {
-                self.#delegate_field.end_list()
+            fn end_list(&mut self, list_index: Self::Size) -> Result<Self::Size, Self::Error> {
+                self.#delegate_field.end_list(list_index)
             }
         },
     );

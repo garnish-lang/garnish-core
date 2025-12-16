@@ -274,8 +274,8 @@ fn create_garnish_data_impl(
             fn add_to_list(&mut self, list_index: Self::Size, item_index: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.add_to_list(list_index, item_index)
             }
-            fn end_list(&mut self) -> Result<Self::Size, Self::Error> {
-                self.#delegate_field.end_list()
+            fn end_list(&mut self, list_index: Self::Size) -> Result<Self::Size, Self::Error> {
+                self.#delegate_field.end_list(list_index)
             }
             fn start_char_list(&mut self) -> Result<(), Self::Error> {
                 self.#delegate_field.start_char_list()

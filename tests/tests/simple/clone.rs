@@ -355,11 +355,11 @@ mod tests {
     #[test]
     fn copy_list() {
         let mut from = SimpleGarnishData::new();
-        let list_index1 = from.start_list(3).unwrap();
-        from.add_number(SimpleNumber::Integer(100)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
-        from.add_number(SimpleNumber::Integer(200)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
-        from.add_number(SimpleNumber::Integer(300)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
-        let list_index1 = from.end_list().unwrap();
+        let mut list_index1 = from.start_list(3).unwrap();
+        list_index1 = from.add_number(SimpleNumber::Integer(100)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        list_index1 = from.add_number(SimpleNumber::Integer(200)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        list_index1 = from.add_number(SimpleNumber::Integer(300)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        let list_index1 = from.end_list(list_index1).unwrap();
 
         let mut to = SimpleGarnishData::new();
         to.add_number(SimpleNumber::Integer(10)).unwrap();
@@ -378,31 +378,30 @@ mod tests {
     #[test]
     fn copy_nested_list() {
         let mut from = SimpleGarnishData::new();
-        let list_index1 = from.start_list(3).unwrap();
+        let mut list_index1 = from.start_list(3).unwrap();
         from.add_number(SimpleNumber::Integer(100)) // 6
             .and_then(|i| from.add_to_list(list_index1, i))
             .unwrap();
-        from.add_number(SimpleNumber::Integer(200)) // 7
+        list_index1 = from.add_number(SimpleNumber::Integer(200)) // 7
             .and_then(|i| from.add_to_list(list_index1, i))
             .unwrap();
-        from.add_number(SimpleNumber::Integer(300)) // 8
+        list_index1 = from.add_number(SimpleNumber::Integer(300)) // 8
             .and_then(|i| from.add_to_list(list_index1, i))
             .unwrap();
-        let list_index1 = from.end_list().unwrap();
+        let list_index1 = from.end_list(list_index1).unwrap();
 
-        let list_index2 = from.start_list(3).unwrap(); // 9
+        let mut list_index2 = from.start_list(3).unwrap(); // 9
 
-        from.add_number(SimpleNumber::Integer(400)) // 10
+        list_index2 = from.add_number(SimpleNumber::Integer(400)) // 10
             .and_then(|i| from.add_to_list(list_index2, i))
             .unwrap();
-        from.add_number(SimpleNumber::Integer(500)) // 11
+        list_index2 = from.add_number(SimpleNumber::Integer(500)) // 11
             .and_then(|i| from.add_to_list(list_index2, i))
             .unwrap();
-        from.add_number(SimpleNumber::Integer(600)) // 12
+        list_index2 = from.add_number(SimpleNumber::Integer(600)) // 12
             .and_then(|i| from.add_to_list(list_index2, i))
             .unwrap();
-
-        let list_index2 = from.end_list().unwrap(); // 13
+        let list_index2 = from.end_list(list_index2).unwrap(); // 13
 
         let list_index3 = from.get_data_len(); // 14
         from.get_data_mut().push(SimpleData::List(vec![list_index1, list_index2], vec![]));
@@ -429,12 +428,12 @@ mod tests {
     #[test]
     fn copy_list_with_associations() {
         let mut from = SimpleGarnishData::new();
-        let list_index1 = from.start_list(3).unwrap();
+        let mut list_index1 = from.start_list(3).unwrap();
 
         let left = from.add_symbol(200).unwrap();
         let right = from.add_number(SimpleNumber::Integer(100)).unwrap();
-        from.add_pair((left, right)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
-        let list_index1 = from.end_list().unwrap();
+        list_index1 = from.add_pair((left, right)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        let list_index1 = from.end_list(list_index1).unwrap();
 
         let mut to = SimpleGarnishData::new();
         to.add_number(SimpleNumber::Integer(10)).unwrap();
@@ -455,11 +454,11 @@ mod tests {
         let d1 = from.add_number(SimpleNumber::Integer(1)).unwrap();
         let d2 = from.add_number(SimpleNumber::Integer(3)).unwrap();
         let d3 = from.add_range(d1, d2).unwrap();
-        let list_index1 = from.start_list(3).unwrap();
-        from.add_number(SimpleNumber::Integer(100)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
-        from.add_number(SimpleNumber::Integer(200)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
-        from.add_number(SimpleNumber::Integer(300)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
-        let list_index1 = from.end_list().unwrap();
+        let mut list_index1 = from.start_list(3).unwrap();
+        list_index1 = from.add_number(SimpleNumber::Integer(100)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        list_index1 = from.add_number(SimpleNumber::Integer(200)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        list_index1 = from.add_number(SimpleNumber::Integer(300)).and_then(|i| from.add_to_list(list_index1, i)).unwrap();
+        let list_index1 = from.end_list(list_index1).unwrap();
         let list_index2 = from.add_slice(list_index1, d3).unwrap();
 
         let mut to = SimpleGarnishData::new();
@@ -764,7 +763,7 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn end_list(&mut self) -> Result<Self::Size, Self::Error> {
+        fn end_list(&mut self, list_index: Self::Size) -> Result<Self::Size, Self::Error> {
             unimplemented!()
         }
 

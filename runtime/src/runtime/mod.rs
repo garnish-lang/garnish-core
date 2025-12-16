@@ -290,7 +290,7 @@ mod tests {
         pub stub_merge_to_symbol_list: fn(&mut T, first: i32, second: i32) -> Result<i32, MockError>,
         pub stub_start_list: fn(&mut T, len: i32) -> Result<i32, MockError>,
         pub stub_add_to_list: fn(&mut T, list_index: i32, item_index: i32) -> Result<i32, MockError>,
-        pub stub_end_list: fn(&mut T) -> Result<i32, MockError>,
+        pub stub_end_list: fn(&mut T, list_index: i32) -> Result<i32, MockError>,
         pub stub_start_char_list: fn(&mut T) -> Result<(), MockError>,
         pub stub_add_to_char_list: fn(&mut T, c: char) -> Result<(), MockError>,
         pub stub_end_char_list: fn(&mut T) -> Result<i32, MockError>,
@@ -446,7 +446,7 @@ mod tests {
                 stub_merge_to_symbol_list: stub_fn_2_mut,
                 stub_start_list: stub_fn_1_mut,
                 stub_add_to_list: stub_fn_2_mut,
-                stub_end_list: stub_fn_0_mut,
+                stub_end_list: stub_fn_1_mut,
                 stub_start_char_list: stub_fn_0_mut,
                 stub_add_to_char_list: stub_fn_1_mut,
                 stub_end_char_list: stub_fn_0_mut,
@@ -759,8 +759,8 @@ mod tests {
             (self.stub_add_to_list)(self.data_mut(), list_index, item_index)
         }
 
-        fn end_list(&mut self) -> Result<Self::Size, Self::Error> {
-            (self.stub_end_list)(self.data_mut())
+        fn end_list(&mut self, list_index: Self::Size) -> Result<Self::Size, Self::Error> {
+            (self.stub_end_list)(self.data_mut(), list_index)
         }
 
         fn start_char_list(&mut self) -> Result<(), Self::Error> {

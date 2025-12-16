@@ -11,11 +11,11 @@ mod tests {
         let d1 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let d2 = runtime.get_data_mut().add_number(20.into()).unwrap();
         let d3 = runtime.get_data_mut().add_number(30.into()).unwrap();
-        let list_index1 = runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(list_index1, d1).unwrap();
-        runtime.get_data_mut().add_to_list(list_index1, d2).unwrap();
-        runtime.get_data_mut().add_to_list(list_index1, d3).unwrap();
-        let list_index1 = runtime.get_data_mut().end_list().unwrap();
+        let mut list_index1 = runtime.get_data_mut().start_list(3).unwrap();
+        list_index1 = runtime.get_data_mut().add_to_list(list_index1, d1).unwrap();
+        list_index1 = runtime.get_data_mut().add_to_list(list_index1, d2).unwrap();
+        list_index1 = runtime.get_data_mut().add_to_list(list_index1, d3).unwrap();
+        let list_index1 = runtime.get_data_mut().end_list(list_index1).unwrap();
         let d5 = runtime.get_data_mut().add_number(2.into()).unwrap();
 
         runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
@@ -114,11 +114,11 @@ mod tests {
         let i8 = runtime.get_data_mut().add_number(30.into()).unwrap();
         let i9 = runtime.get_data_mut().add_pair((i7, i8)).unwrap();
 
-        let list_index1 = runtime.get_data_mut().start_list(3).unwrap();
-        runtime.get_data_mut().add_to_list(list_index1, i3).unwrap();
-        runtime.get_data_mut().add_to_list(list_index1, i6).unwrap();
-        runtime.get_data_mut().add_to_list(list_index1, i9).unwrap();
-        let i10 = runtime.get_data_mut().end_list().unwrap();
+        let mut list_index1 = runtime.get_data_mut().start_list(3).unwrap();
+        list_index1 = runtime.get_data_mut().add_to_list(list_index1, i3).unwrap();
+        list_index1 = runtime.get_data_mut().add_to_list(list_index1, i6).unwrap();
+        list_index1 = runtime.get_data_mut().add_to_list(list_index1, i9).unwrap();
+        let i10 = runtime.get_data_mut().end_list(list_index1).unwrap();
 
         let i11 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap();
 

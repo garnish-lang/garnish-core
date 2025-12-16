@@ -401,7 +401,7 @@ where
         }
     }
 
-    fn end_list(&mut self) -> Result<usize, Self::Error> {
+    fn end_list(&mut self, _list_index: Self::Size) -> Result<Self::Size, Self::Error> {
         match &mut self.current_list {
             None => Err("Not currently creating a list.".to_string())?,
             Some((items, associations)) => {
