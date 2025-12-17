@@ -318,7 +318,7 @@ where
         let associations_range = start..associations_end;
         let associations_slice = &mut self.data[associations_range];
         let mut associations_count = 0;
-        dbg!(&associations_slice);
+        
         for item in associations_slice.iter() {
             match item {
                 BasicData::Empty => {}
