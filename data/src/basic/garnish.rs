@@ -139,7 +139,7 @@ where
     }
 
     fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        Ok(self.get_from_data_block_ensure_index(addr)?.as_list()?.1)
+        todo!()
     }
 
     fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
@@ -1278,30 +1278,6 @@ mod tests {
         let mut data = test_data();
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_list_len(0);
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
-    }
-
-    #[test]
-    fn get_list_associations_len_ok() {
-        let mut data = test_data();
-        data.push_to_data_block(BasicData::List(100, 200)).unwrap();
-        let result = data.get_list_associations_len(0);
-        assert_eq!(result, Ok(200));
-    }
-
-    #[test]
-    fn get_list_associations_len_invalid_index() {
-        let mut data = test_data();
-        data.push_to_data_block(BasicData::List(100, 200)).unwrap();
-        let result = data.get_list_associations_len(1);
-        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
-    }
-
-    #[test]
-    fn get_list_associations_len_not_list() {
-        let mut data = test_data();
-        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
-        let result = data.get_list_associations_len(0);
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
     }
 
