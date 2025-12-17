@@ -321,13 +321,15 @@ where
         dbg!(&associations_slice);
         for item in associations_slice.iter() {
             match item {
-                BasicData::Empty => break,
+                BasicData::Empty => {}
                 _ => associations_count += 1,
             }
         }
         
         associations_slice.sort_by(|a, b| match (a, b) {
             (BasicData::AssociativeItem(sym1, _), BasicData::AssociativeItem(sym2, _)) => sym1.cmp(sym2),
+            (BasicData::AssociativeItem(_, _), _) => Ordering::Less,
+            (_, BasicData::AssociativeItem(_, _)) => Ordering::Greater,
             _ => Ordering::Equal,
         });
 
@@ -1226,6 +1228,52 @@ mod tests {
         expected_data.data_block.size = 20;
 
         assert_eq!(list_index, 9);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn create_list_with_some_associations() {
+        let mut data = test_data();
+        let v1 = data.push_object_to_data_block(BasicObject::Number(50.into())).unwrap();
+        let v2 = data.push_object_to_data_block(BasicObject::Pair(
+            Box::new(BasicObject::Symbol(30)),
+            Box::new(BasicObject::Number(100.into())),
+        )).unwrap();
+        let v3 = data.push_object_to_data_block(BasicObject::Pair(
+            Box::new(BasicObject::Symbol(20)),
+            Box::new(BasicObject::Number(200.into())),
+        )).unwrap();
+        let v4 = data.push_object_to_data_block(BasicObject::Number(300.into())).unwrap();
+
+        let mut list_index = data.start_list(4).unwrap();
+        list_index = data.add_to_list(list_index, v1).unwrap();
+        list_index = data.add_to_list(list_index, v2).unwrap();
+        list_index = data.add_to_list(list_index, v3).unwrap();
+        list_index = data.add_to_list(list_index, v4).unwrap();
+        let list_index = data.end_list(list_index).unwrap();
+
+        let mut expected_data = test_data();
+        expected_data.data.resize(20, BasicData::Empty);
+
+        expected_data.data[0] = BasicData::Number(50.into());
+        expected_data.data[1] = BasicData::Symbol(30);
+        expected_data.data[2] = BasicData::Number(100.into());
+        expected_data.data[3] = BasicData::Pair(1, 2);
+        expected_data.data[4] = BasicData::Symbol(20);
+        expected_data.data[5] = BasicData::Number(200.into());
+        expected_data.data[6] = BasicData::Pair(4, 5);
+        expected_data.data[7] = BasicData::Number(300.into());
+        expected_data.data[8] = BasicData::List(4, 2);
+        expected_data.data[9] = BasicData::ListItem(0);
+        expected_data.data[10] = BasicData::ListItem(3);
+        expected_data.data[11] = BasicData::ListItem(6);
+        expected_data.data[12] = BasicData::ListItem(7);
+        expected_data.data[13] = BasicData::AssociativeItem(20, 5);
+        expected_data.data[14] = BasicData::AssociativeItem(30, 2);
+        expected_data.data_block.cursor = 17;
+        expected_data.data_block.size = 20;
+
+        assert_eq!(list_index, 8);
         assert_eq!(data, expected_data);
     }
 
