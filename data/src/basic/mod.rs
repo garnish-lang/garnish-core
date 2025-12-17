@@ -2,6 +2,7 @@ mod data;
 mod garnish;
 mod merge_to_symbol_list;
 mod storage;
+mod object;
 
 use std::fmt::Debug;
 use std::usize;

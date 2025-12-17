@@ -1,9 +1,9 @@
-use garnish_lang_traits::GarnishDataType;
+use garnish_lang_traits::{GarnishDataType};
 use crate::{DataError};
 
 type BasicNumber = crate::data::SimpleNumber;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub enum BasicData<T> 
 where T: crate::basic::BasicDataCustom {
     Unit,
@@ -24,12 +24,13 @@ where T: crate::basic::BasicDataCustom {
     Slice(usize, usize),
     Partial(usize, usize),
     List(usize),
-    ListItem(usize),
     Concatenation(usize, usize),
     Custom(T),
     // non garnish data
     Empty,
     UninitializedList(usize, usize),
+    ListItem(usize),
+    AssociativeItem(u64, usize),
 }
 
 impl<T> BasicData<T>
@@ -60,6 +61,7 @@ where T: crate::basic::BasicDataCustom {
             BasicData::Empty => GarnishDataType::Invalid,
             BasicData::UninitializedList(_, _) => GarnishDataType::Invalid,
             BasicData::ListItem(_) => GarnishDataType::Invalid,
+            BasicData::AssociativeItem(_, _) => GarnishDataType::Invalid,
         }
     }
 
@@ -272,6 +274,20 @@ where T: crate::basic::BasicDataCustom {
             _ => Err(DataError::not_basic_type_error()),
         }
     }
+
+    pub fn as_associative_item(&self) -> Result<(u64, usize), DataError> {
+        match self {
+            BasicData::AssociativeItem(sym, index) => Ok((*sym, *index)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_associative_item_mut(&mut self) -> Result<(&mut u64, &mut usize), DataError> {
+        match self {
+            BasicData::AssociativeItem(sym, index) => Ok((sym, index)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
 }
 
 pub type BasicDataUnitCustom = BasicData<()>;
@@ -309,6 +325,7 @@ mod tests {
             (BasicDataUnitCustom::Empty, GarnishDataType::Invalid),
             (BasicDataUnitCustom::UninitializedList(100, 200), GarnishDataType::Invalid),
             (BasicDataUnitCustom::ListItem(100), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::AssociativeItem(100, 200), GarnishDataType::Invalid),
         ];
 
         for (data, expected) in scenarios {
@@ -700,5 +717,32 @@ mod tests {
     fn as_uninitialized_list_mut_not_uninitialized_list() {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_uninitialized_list_mut(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_associative_item() {
+        let data = BasicDataUnitCustom::AssociativeItem(100, 200);
+        assert_eq!(data.as_associative_item(), Ok((100, 200)));
+    }
+    
+    #[test]
+    fn as_associative_item_not_associative_item() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_associative_item(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_associative_item_mut() {
+        let mut data = BasicDataUnitCustom::AssociativeItem(100, 200);
+        let (sym, index) = data.as_associative_item_mut().unwrap();
+        *sym = 200;
+        *index = 300;
+        assert_eq!(data.as_associative_item(), Ok((200, 300)));
+    }
+    
+    #[test]
+    fn as_associative_item_mut_not_associative_item() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_associative_item_mut(), Err(DataError::not_basic_type_error()));
     }
 }
