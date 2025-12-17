@@ -129,10 +129,7 @@ where
     fn get_list_item(&self, list_addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
         let (len, _) = self.get_from_data_block_ensure_index(list_addr)?.as_list()?;
 
-        let index = match item_index {
-            SimpleNumber::Integer(index) => index as usize,
-            SimpleNumber::Float(index) => index as usize,
-        };
+        let index: usize = item_index.into();
 
         if index >= len {
             return Err(DataError::new("Invalid list item index", DataErrorType::InvalidListItemIndex(index, len)));
