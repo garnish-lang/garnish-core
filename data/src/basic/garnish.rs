@@ -1,5 +1,5 @@
 use crate::{
-    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list}, error::DataErrorType
+    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list}, error::DataErrorType, symbol_value
 };
 use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, SymbolListPart};
 
@@ -450,7 +450,7 @@ where
     }
 
     fn parse_symbol(from: &str) -> Result<Self::Symbol, Self::Error> {
-        todo!()
+        Ok(symbol_value(from))
     }
 
     fn parse_char(from: &str) -> Result<Self::Char, Self::Error> {
@@ -1128,5 +1128,11 @@ mod tests {
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_list_len(0);
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
+    }
+
+    #[test]
+    fn parse_symbol() {
+        let result = BasicGarnishDataUnit::parse_symbol("my_symbol").unwrap();
+        assert_eq!(result, 8904929874702161741);
     }
 }
