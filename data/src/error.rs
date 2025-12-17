@@ -6,6 +6,7 @@ use garnish_lang_traits::GarnishDataType;
 pub enum DataErrorType {
     Unknown,
     InvalidDataIndex(usize),
+    InvalidListItemIndex(usize, usize),
     ExceededInitialListLength(usize),
     NotFullyInitializedList(usize, usize),
     NotType(GarnishDataType),

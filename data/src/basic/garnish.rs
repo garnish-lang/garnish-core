@@ -1,11 +1,7 @@
 use std::cmp::Ordering;
 
 use crate::{
-    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator,
-    SymbolListPartIterator,
-    basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list},
-    error::DataErrorType,
-    symbol_value,
+    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SimpleNumber, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list}, error::DataErrorType, symbol_value
 };
 use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, SymbolListPart};
 
@@ -130,8 +126,19 @@ where
         Ok(self.get_from_data_block_ensure_index(addr)?.as_list()?.0)
     }
 
-    fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
-        todo!()
+    fn get_list_item(&self, list_addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
+        let (len, _) = self.get_from_data_block_ensure_index(list_addr)?.as_list()?;
+
+        let index = match item_index {
+            SimpleNumber::Integer(index) => index as usize,
+            SimpleNumber::Float(index) => index as usize,
+        };
+
+        if index >= len {
+            return Err(DataError::new("Invalid list item index", DataErrorType::InvalidListItemIndex(index, len)));
+        }
+        
+        Ok(Some(self.get_from_data_block_ensure_index(list_addr + 1 + index)?.as_list_item()?))
     }
 
     fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -1275,6 +1282,50 @@ mod tests {
 
         assert_eq!(list_index, 8);
         assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn get_list_item() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])).unwrap();
+        let result = data.get_list_item(3, 1.into()).unwrap();
+        assert_eq!(result, Some(1));
+    }
+
+    #[test]
+    fn get_list_item_with_float_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])).unwrap();
+        let result = data.get_list_item(3, 1.5.into()).unwrap();
+        assert_eq!(result, Some(1));
+    }
+
+    #[test]
+    fn get_list_item_invalid_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])).unwrap();
+        let result = data.get_list_item(3, 4.into());
+        assert_eq!(result, Err(DataError::new("Invalid list item index", DataErrorType::InvalidListItemIndex(4, 3))));
+    }
+
+    #[test]
+    fn get_list_item_not_list() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_list_item(0, 1.into());
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
     }
 
     #[test]
