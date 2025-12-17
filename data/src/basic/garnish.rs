@@ -725,7 +725,7 @@ mod tests {
     #[test]
     fn get_number_not_number() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Symbol(100));
+        data.push_to_data_block(BasicData::Symbol(100)).unwrap();
         let result = data.get_number(0);
         assert_eq!(
             result,
@@ -752,7 +752,7 @@ mod tests {
     #[test]
     fn get_type_not_type() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Symbol(100));
+        data.push_to_data_block(BasicData::Symbol(100)).unwrap();
         let result = data.get_type(0);
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Type))));
     }
@@ -784,7 +784,7 @@ mod tests {
     #[test]
     fn get_byte_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Byte(100));
+        data.push_to_data_block(BasicData::Byte(100)).unwrap();
         let result = data.get_byte(0);
         assert_eq!(result, Ok(100));
     }
@@ -800,7 +800,7 @@ mod tests {
     #[test]
     fn get_byte_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Byte(100));
+        data.push_to_data_block(BasicData::Byte(100)).unwrap();
         let result = data.get_byte(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -808,7 +808,7 @@ mod tests {
     #[test]
     fn get_symbol_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Symbol(100));
+        data.push_to_data_block(BasicData::Symbol(100)).unwrap();
         let result = data.get_symbol(0);
         assert_eq!(result, Ok(100));
     }
@@ -827,7 +827,7 @@ mod tests {
     #[test]
     fn get_symbol_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Symbol(100));
+        data.push_to_data_block(BasicData::Symbol(100)).unwrap();
         let result = data.get_symbol(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -862,7 +862,7 @@ mod tests {
     #[test]
     fn get_external_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::External(100));
+        data.push_to_data_block(BasicData::External(100)).unwrap();
         let result = data.get_external(0);
         assert_eq!(result, Ok(100));
     }
@@ -881,7 +881,7 @@ mod tests {
     #[test]
     fn get_external_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::External(100));
+        data.push_to_data_block(BasicData::External(100)).unwrap();
         let result = data.get_external(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -913,7 +913,7 @@ mod tests {
     #[test]
     fn get_partial_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Partial(100, 200));
+        data.push_to_data_block(BasicData::Partial(100, 200)).unwrap();
         let result = data.get_partial(0);
         assert_eq!(result, Ok((100, 200)));
     }
@@ -932,7 +932,7 @@ mod tests {
     #[test]
     fn get_partial_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Partial(100, 200));
+        data.push_to_data_block(BasicData::Partial(100, 200)).unwrap();
         let result = data.get_partial(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -967,7 +967,7 @@ mod tests {
     #[test]
     fn get_range_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Range(100, 200));
+        data.push_to_data_block(BasicData::Range(100, 200)).unwrap();
         let result = data.get_range(0);
         assert_eq!(result, Ok((100, 200)));
     }
@@ -983,7 +983,7 @@ mod tests {
     #[test]
     fn get_range_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::Range(100, 200));
+        data.push_to_data_block(BasicData::Range(100, 200)).unwrap();
         let result = data.get_range(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
