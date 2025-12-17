@@ -94,7 +94,7 @@ where
                     .into_iter()
                     .map(|obj| self.push_object_to_data_block(*obj))
                     .collect::<Result<Vec<usize>, DataError>>()?;
-                let list_index = self.push_to_data_block(BasicData::List(indicies.len()))?;
+                let list_index = self.push_to_data_block(BasicData::List(indicies.len(), 0))?;
                 for index in indicies {
                     self.push_to_data_block(BasicData::ListItem(index))?;
                 }
@@ -320,7 +320,7 @@ mod tests {
         let mut expected_data = test_data();
         expected_data.data[0] = BasicData::Number(100.into());
         expected_data.data[1] = BasicData::Number(200.into());
-        expected_data.data[2] = BasicData::List(2);
+        expected_data.data[2] = BasicData::List(2, 0);
         expected_data.data[3] = BasicData::ListItem(0);
         expected_data.data[4] = BasicData::ListItem(1);
         expected_data.data_block.cursor = 5;

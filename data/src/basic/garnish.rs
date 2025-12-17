@@ -1,5 +1,11 @@
+use std::cmp::Ordering;
+
 use crate::{
-    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list}, error::DataErrorType, symbol_value
+    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator,
+    SymbolListPartIterator,
+    basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list},
+    error::DataErrorType,
+    symbol_value,
 };
 use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, SymbolListPart};
 
@@ -121,7 +127,7 @@ where
     }
 
     fn get_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        self.get_from_data_block_ensure_index(addr)?.as_list()
+        Ok(self.get_from_data_block_ensure_index(addr)?.as_list()?.0)
     }
 
     fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
@@ -176,7 +182,11 @@ where
         todo!()
     }
 
-    fn get_symbol_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<SymbolListPart<Self::Symbol, Self::Number>>, Self::Error> {
+    fn get_symbol_list_item(
+        &self,
+        addr: Self::Size,
+        item_index: Self::Number,
+    ) -> Result<Option<SymbolListPart<Self::Symbol, Self::Number>>, Self::Error> {
         todo!()
     }
 
@@ -257,8 +267,9 @@ where
     }
 
     fn start_list(&mut self, len: Self::Size) -> Result<Self::Size, Self::Error> {
+        let allocation_size = len*2;
         let list_index = self.push_to_data_block(BasicData::UninitializedList(len, 0))?;
-        for _ in 0..len {
+        for _ in 0..allocation_size {
             self.push_to_data_block(BasicData::Empty)?;
         }
         Ok(list_index)
@@ -267,14 +278,27 @@ where
     fn add_to_list(&mut self, list_index: Self::Size, item_index: Self::Size) -> Result<Self::Size, Self::Error> {
         let (len, count) = self.get_from_data_block_ensure_index_mut(list_index)?.as_uninitialized_list_mut()?;
         if count >= len {
-            return Err(DataError::new("Exceeded initial list length", DataErrorType::ExceededInitialListLength(len.clone())));
+            return Err(DataError::new(
+                "Exceeded initial list length",
+                DataErrorType::ExceededInitialListLength(len.clone()),
+            ));
         }
 
+        let len = len.clone();
         let current_index = list_index + 1 + *count;
         *count += 1;
 
         let item = self.get_from_data_block_ensure_index_mut(current_index)?;
         *item = BasicData::ListItem(item_index);
+
+        if let BasicData::Pair(left, right) = self.get_from_data_block_ensure_index(item_index)? {
+            if let BasicData::Symbol(sym) = self.get_from_data_block_ensure_index(*left)? {
+                let paired_index = current_index + len;
+                let association_item = BasicData::<T>::AssociativeItem(sym.clone(), right.clone());
+                let item = self.get_from_data_block_ensure_index_mut(paired_index)?;
+                *item = association_item;
+            }
+        }
 
         Ok(list_index)
     }
@@ -282,11 +306,33 @@ where
     fn end_list(&mut self, list_index: Self::Size) -> Result<Self::Size, Self::Error> {
         let (len, count) = self.get_from_data_block_ensure_index_mut(list_index)?.as_uninitialized_list_mut()?;
         if count < len {
-            return Err(DataError::new("List not fully initialized", DataErrorType::NotFullyInitializedList(len.clone(), count.clone())));
+            return Err(DataError::new(
+                "List not fully initialized",
+                DataErrorType::NotFullyInitializedList(len.clone(), count.clone()),
+            ));
         }
 
-        let list_item = BasicData::List(len.clone());
+        let len = len.clone();
+        let start = list_index + 1 + len;
+        let associations_end = start + len;
+        let associations_range = start..associations_end;
+        let associations_slice = &mut self.data[associations_range];
+        let mut associations_count = 0;
+        dbg!(&associations_slice);
+        for item in associations_slice.iter() {
+            match item {
+                BasicData::Empty => break,
+                _ => associations_count += 1,
+            }
+        }
         
+        associations_slice.sort_by(|a, b| match (a, b) {
+            (BasicData::AssociativeItem(sym1, _), BasicData::AssociativeItem(sym2, _)) => sym1.cmp(sym2),
+            _ => Ordering::Equal,
+        });
+
+        let list_item = BasicData::List(len, associations_count);
+
         let item = self.get_from_data_block_ensure_index_mut(list_index)?;
         *item = list_item;
 
@@ -480,7 +526,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{BasicData, BasicGarnishDataUnit, basic::{storage::StorageSettings, utilities::{test_data}}, error::DataErrorType};
+    use crate::{
+        BasicData, BasicGarnishDataUnit,
+        basic::{object::BasicObject, storage::StorageSettings, utilities::test_data},
+        error::DataErrorType,
+    };
 
     use super::*;
 
@@ -1020,10 +1070,7 @@ mod tests {
         assert_eq!(list_index, 0);
         let mut expected_data = test_data();
         expected_data.data[0] = BasicData::UninitializedList(3, 0);
-        expected_data.data[1] = BasicData::Empty;
-        expected_data.data[2] = BasicData::Empty;
-        expected_data.data[3] = BasicData::Empty;
-        expected_data.data_block.cursor = 4;
+        expected_data.data_block.cursor = 7;
 
         assert_eq!(data, expected_data);
     }
@@ -1040,9 +1087,7 @@ mod tests {
         expected_data.data[0] = BasicData::Number(100.into());
         expected_data.data[1] = BasicData::UninitializedList(3, 1);
         expected_data.data[2] = BasicData::ListItem(v1);
-        expected_data.data[3] = BasicData::Empty;
-        expected_data.data[4] = BasicData::Empty;
-        expected_data.data_block.cursor = 5;
+        expected_data.data_block.cursor = 8;
 
         assert_eq!(data, expected_data);
     }
@@ -1067,7 +1112,13 @@ mod tests {
         let list_index = data.add_to_list(list_index, v1).unwrap();
         let result = data.add_to_list(list_index, v1);
 
-        assert_eq!(result, Err(DataError::new("Exceeded initial list length", DataErrorType::ExceededInitialListLength(3))));
+        assert_eq!(
+            result,
+            Err(DataError::new(
+                "Exceeded initial list length",
+                DataErrorType::ExceededInitialListLength(3)
+            ))
+        );
     }
 
     #[test]
@@ -1097,11 +1148,11 @@ mod tests {
         expected_data.data[0] = BasicData::Number(100.into());
         expected_data.data[1] = BasicData::Number(200.into());
         expected_data.data[2] = BasicData::Number(300.into());
-        expected_data.data[3] = BasicData::List(3);
+        expected_data.data[3] = BasicData::List(3, 0);
         expected_data.data[4] = BasicData::ListItem(v1);
         expected_data.data[5] = BasicData::ListItem(v2);
         expected_data.data[6] = BasicData::ListItem(v3);
-        expected_data.data_block.cursor = 7;
+        expected_data.data_block.cursor = 10;
 
         assert_eq!(data, expected_data);
     }
@@ -1109,7 +1160,7 @@ mod tests {
     #[test]
     fn get_list_len_ok() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::List(100)).unwrap();
+        data.push_to_data_block(BasicData::List(100, 0)).unwrap();
         let result = data.get_list_len(0);
         assert_eq!(result, Ok(100));
     }
@@ -1117,7 +1168,7 @@ mod tests {
     #[test]
     fn get_list_len_invalid_index() {
         let mut data = test_data();
-        data.push_to_data_block(BasicData::List(100)).unwrap();
+        data.push_to_data_block(BasicData::List(100, 0)).unwrap();
         let result = data.get_list_len(1);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(1))));
     }
@@ -1128,6 +1179,54 @@ mod tests {
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_list_len(0);
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
+    }
+
+    #[test]
+    fn create_list_with_associations() {
+        let mut data = test_data();
+        let v1 = data.push_object_to_data_block(BasicObject::Pair(
+            Box::new(BasicObject::Symbol(20)),
+            Box::new(BasicObject::Number(100.into())),
+        )).unwrap();
+        let v2 = data.push_object_to_data_block(BasicObject::Pair(
+            Box::new(BasicObject::Symbol(30)),
+            Box::new(BasicObject::Number(200.into())),
+        )).unwrap();
+        let v3 = data.push_object_to_data_block(BasicObject::Pair(
+            Box::new(BasicObject::Symbol(10)),
+            Box::new(BasicObject::Number(300.into())),
+        )).unwrap();
+
+        let mut list_index = data.start_list(3).unwrap();
+        list_index = data.add_to_list(list_index, v1).unwrap();
+        list_index = data.add_to_list(list_index, v2).unwrap();
+        list_index = data.add_to_list(list_index, v3).unwrap();
+        let list_index = data.end_list(list_index).unwrap();
+
+        let mut expected_data = test_data();
+        expected_data.data.resize(20, BasicData::Empty);
+
+        expected_data.data[0] = BasicData::Symbol(20);
+        expected_data.data[1] = BasicData::Number(100.into());
+        expected_data.data[2] = BasicData::Pair(0, 1);
+        expected_data.data[3] = BasicData::Symbol(30);
+        expected_data.data[4] = BasicData::Number(200.into());
+        expected_data.data[5] = BasicData::Pair(3, 4);
+        expected_data.data[6] = BasicData::Symbol(10);
+        expected_data.data[7] = BasicData::Number(300.into());
+        expected_data.data[8] = BasicData::Pair(6, 7);
+        expected_data.data[9] = BasicData::List(3, 3);
+        expected_data.data[10] = BasicData::ListItem(2);
+        expected_data.data[11] = BasicData::ListItem(5);
+        expected_data.data[12] = BasicData::ListItem(8);
+        expected_data.data[13] = BasicData::AssociativeItem(10, 7);
+        expected_data.data[14] = BasicData::AssociativeItem(20, 1);
+        expected_data.data[15] = BasicData::AssociativeItem(30, 4);
+        expected_data.data_block.cursor = 16;
+        expected_data.data_block.size = 20;
+
+        assert_eq!(list_index, 9);
+        assert_eq!(data, expected_data);
     }
 
     #[test]
