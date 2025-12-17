@@ -1,4 +1,4 @@
-use garnish_lang_traits::{GarnishDataType, SymbolListPart};
+use garnish_lang_traits::{GarnishData, GarnishDataType, SymbolListPart};
 
 use crate::{BasicData, BasicDataCustom, BasicGarnishData, BasicNumber, DataError};
 
@@ -94,10 +94,11 @@ where
                     .into_iter()
                     .map(|obj| self.push_object_to_data_block(*obj))
                     .collect::<Result<Vec<usize>, DataError>>()?;
-                let list_index = self.push_to_data_block(BasicData::List(indicies.len(), 0))?;
+                let mut list_index = self.start_list(indicies.len())?;
                 for index in indicies {
-                    self.push_to_data_block(BasicData::ListItem(index))?;
+                    list_index = self.add_to_list(list_index, index)?;
                 }
+                list_index = self.end_list(list_index)?;
                 Ok(list_index)
             }
             BasicObject::Concatenation(left, right) => {
@@ -323,8 +324,46 @@ mod tests {
         expected_data.data[2] = BasicData::List(2, 0);
         expected_data.data[3] = BasicData::ListItem(0);
         expected_data.data[4] = BasicData::ListItem(1);
-        expected_data.data_block.cursor = 5;
+        expected_data.data_block.cursor = 7;
         assert_eq!(v1, Ok(2));
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn push_list_object_with_associations() {
+        let mut data = test_data();
+        let v1 = data.push_object_to_data_block(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Pair(
+                Box::new(BasicObject::Symbol(2)),
+                Box::new(BasicObject::Number(200.into())),
+            )),
+            Box::new(BasicObject::Pair(
+                Box::new(BasicObject::Symbol(1)),
+                Box::new(BasicObject::Number(300.into())),
+            )),
+            Box::new(BasicObject::Number(400.into())),
+        ]));
+        let mut expected_data = test_data();
+        expected_data.data.resize(20, BasicData::Empty);
+        expected_data.data[0] = BasicData::Number(100.into());
+        expected_data.data[1] = BasicData::Symbol(2);
+        expected_data.data[2] = BasicData::Number(200.into());
+        expected_data.data[3] = BasicData::Pair(1, 2);
+        expected_data.data[4] = BasicData::Symbol(1);
+        expected_data.data[5] = BasicData::Number(300.into());
+        expected_data.data[6] = BasicData::Pair(4, 5);
+        expected_data.data[7] = BasicData::Number(400.into());
+        expected_data.data[8] = BasicData::List(4, 2);
+        expected_data.data[9] = BasicData::ListItem(0);
+        expected_data.data[10] = BasicData::ListItem(3);
+        expected_data.data[11] = BasicData::ListItem(6);
+        expected_data.data[12] = BasicData::ListItem(7);
+        expected_data.data[13] = BasicData::AssociativeItem(1, 5);
+        expected_data.data[14] = BasicData::AssociativeItem(2, 2);
+        expected_data.data_block.cursor = 17;
+        expected_data.data_block.size = 20;
+        assert_eq!(v1, Ok(8));
         assert_eq!(data, expected_data);
     }
 
