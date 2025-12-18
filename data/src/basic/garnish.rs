@@ -139,11 +139,11 @@ where
     }
 
     fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        unimplemented!()
     }
 
     fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
-        todo!()
+        unimplemented!()
     }
 
     fn get_list_item_with_symbol(&self, list_index: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error> {
@@ -161,7 +161,7 @@ where
     }
 
     fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-        todo!()
+        unimplemented!()
     }
 
     fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
