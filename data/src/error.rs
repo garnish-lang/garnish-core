@@ -10,6 +10,7 @@ pub enum DataErrorType {
     InvalidCharListItemIndex(usize, usize),
     ExceededInitialListLength(usize),
     NotFullyInitializedList(usize, usize),
+    NotASymbolListPart(GarnishDataType),
     NotType(GarnishDataType, GarnishDataType),
     NotAssociativeItem,
     NotBasicType,

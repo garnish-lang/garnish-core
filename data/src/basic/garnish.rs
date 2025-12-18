@@ -215,7 +215,16 @@ where
         addr: Self::Size,
         item_index: Self::Number,
     ) -> Result<Option<SymbolListPart<Self::Symbol, Self::Number>>, Self::Error> {
-        todo!()
+        let len = self.get_from_data_block_ensure_index(addr)?.as_symbol_list()?;
+        let index: usize = item_index.into();
+        if index >= len {
+            return Ok(None)
+        }
+        Ok(Some(match self.get_from_data_block_ensure_index(addr + 1 + index)? {
+            BasicData::Symbol(sym) => SymbolListPart::Symbol(sym.clone()),
+            BasicData::Number(num) => SymbolListPart::Number(num.clone()),
+            d => return Err(DataError::new("Not a symbol list part", DataErrorType::NotASymbolListPart(d.get_data_type()))),
+        }))
     }
 
     fn get_symbol_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::SymbolListPartIterator, Self::Error> {
@@ -1662,6 +1671,46 @@ mod tests {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         let result = data.get_symbol_list_len(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::SymbolList, GarnishDataType::Number))));
+    }
+
+    #[test]
+    fn get_symbol_list_item_ok_symbol() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
+        let result = data.get_symbol_list_item(0, 1.into());
+        assert_eq!(result, Ok(Some(SymbolListPart::Symbol(2))));
+    }
+
+    #[test]
+    fn get_symbol_list_item_ok_number() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Number(1.into()), SymbolListPart::Number(2.into()), SymbolListPart::Number(3.into())])).unwrap();
+        let result = data.get_symbol_list_item(0, 1.into());
+        assert_eq!(result, Ok(Some(SymbolListPart::Number(2.into()))));
+    }
+
+    #[test]
+    fn get_symbol_list_item_invalid_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
+        let result = data.get_symbol_list_item(100, 1.into());
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
+    }
+
+    #[test]
+    fn get_symbol_list_item_invalid_item_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
+        let result = data.get_symbol_list_item(0, 100.into());
+        assert_eq!(result, Ok(None));
+    }
+
+    #[test]
+    fn get_symbol_list_item_not_symbol_list() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_symbol_list_item(0, 1.into());
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::SymbolList, GarnishDataType::Number))));
     }
 
