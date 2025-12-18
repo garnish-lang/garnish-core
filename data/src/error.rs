@@ -10,6 +10,7 @@ pub enum DataErrorType {
     ExceededInitialListLength(usize),
     NotFullyInitializedList(usize, usize),
     NotType(GarnishDataType),
+    NotAssociativeItem,
     NotBasicType,
     InstructionBlockExceededMaxItems(usize, usize),
     JumpTableBlockExceededMaxItems(usize, usize),

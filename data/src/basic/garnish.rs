@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use crate::{
-    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SimpleNumber, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list}, error::DataErrorType, symbol_value
+    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SimpleNumber, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list, search::search_for_associative_item}, error::DataErrorType, symbol_value
 };
 use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, SymbolListPart};
 
@@ -153,26 +153,7 @@ where
         let association_range = association_start..association_start + associations_len;
         let association_slice = &self.data[association_range.clone()];
 
-        let mut size = association_slice.len();
-        let mut base = 0usize;
-
-        while size > 1 {
-            let half = size / 2;
-            let mid = base + half;
-
-            match &association_slice[mid] {
-                BasicData::AssociativeItem(sym1, _) => match sym1.cmp(&sym) {
-                    Ordering::Equal => return Ok(Some(association_slice[mid].as_associative_item()?.1)),
-                    Ordering::Less => {}
-                    Ordering::Greater => base = mid,
-                }
-                _ => todo!()
-            }
-
-            size -= half;
-        }
-        
-        Ok(None)
+        search_for_associative_item(association_slice, sym)
     }
 
     fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
