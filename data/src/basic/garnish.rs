@@ -169,7 +169,12 @@ where
     }
 
     fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Char>, Self::Error> {
-        todo!()
+        let len = self.get_from_data_block_ensure_index(addr)?.as_char_list()?;
+        let index: usize = item_index.into();
+        if index >= len {
+            return Err(DataError::new("Invalid char list item index", DataErrorType::InvalidCharListItemIndex(index, len)));
+        }
+        Ok(Some(self.get_from_data_block_ensure_index(addr + 1 + index)?.as_char()?))
     }
 
     fn get_char_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::CharIterator, Self::Error> {
@@ -1396,6 +1401,46 @@ mod tests {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         let result = data.get_char_list_len(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::CharList))));
+    }
+
+    #[test]
+    fn get_char_list_item_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        let result = data.get_char_list_item(0, 1.into());
+        assert_eq!(result, Ok(Some('b')));
+    }
+
+    #[test]
+    fn get_char_list_item_ok_with_float() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        let result = data.get_char_list_item(0, 1.5.into());
+        assert_eq!(result, Ok(Some('b')));
+    }
+
+    #[test]
+    fn get_char_list_item_invalid_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        let result = data.get_char_list_item(100, 0.into());
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
+    }
+
+    #[test]
+    fn get_char_list_item_invalid_item_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        let result = data.get_char_list_item(0, 100.into());
+        assert_eq!(result, Err(DataError::new("Invalid char list item index", DataErrorType::InvalidCharListItemIndex(100, 5))));
+    }
+
+    #[test]
+    fn get_char_list_item_not_char_list() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_char_list_item(0, 1.into());
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::CharList))));
     }
 
