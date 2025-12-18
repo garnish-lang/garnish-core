@@ -146,8 +146,33 @@ where
         todo!()
     }
 
-    fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error> {
-        todo!()
+    fn get_list_item_with_symbol(&self, list_index: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error> {
+        let (len, associations_len) = self.get_from_data_block_ensure_index(list_index)?.as_list()?;
+
+        let association_start= list_index + len + 1;
+        let association_range = association_start..association_start + associations_len;
+        let association_slice = &self.data[association_range.clone()];
+
+        let mut size = association_slice.len();
+        let mut base = 0usize;
+
+        while size > 1 {
+            let half = size / 2;
+            let mid = base + half;
+
+            match &association_slice[mid] {
+                BasicData::AssociativeItem(sym1, _) => match sym1.cmp(&sym) {
+                    Ordering::Equal => return Ok(Some(association_slice[mid].as_associative_item()?.1)),
+                    Ordering::Less => {}
+                    Ordering::Greater => base = mid,
+                }
+                _ => todo!()
+            }
+
+            size -= half;
+        }
+        
+        Ok(None)
     }
 
     fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
@@ -1323,6 +1348,50 @@ mod tests {
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         let result = data.get_list_item(0, 1.into());
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
+    }
+
+    #[test]
+    fn get_list_item_with_symbol_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::List(vec![
+            Box::new(BasicObject::Pair(Box::new(BasicObject::Symbol(100)), Box::new(BasicObject::Number(200.into())))),
+            Box::new(BasicObject::Pair(Box::new(BasicObject::Symbol(200)), Box::new(BasicObject::Number(300.into())))),
+            Box::new(BasicObject::Pair(Box::new(BasicObject::Symbol(300)), Box::new(BasicObject::Number(400.into())))),
+        ])).unwrap();
+        let result = data.get_list_item_with_symbol(9, 200);
+        assert_eq!(result, Ok(Some(4)));
+    }
+
+    #[test]
+    fn get_list_item_with_symbol_invalid_symbol() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::List(vec![
+            Box::new(BasicObject::Pair(Box::new(BasicObject::Symbol(100)), Box::new(BasicObject::Number(200.into())))),
+            Box::new(BasicObject::Pair(Box::new(BasicObject::Symbol(200)), Box::new(BasicObject::Number(300.into())))),
+            Box::new(BasicObject::Pair(Box::new(BasicObject::Symbol(300)), Box::new(BasicObject::Number(400.into())))),
+        ])).unwrap();
+        let result = data.get_list_item_with_symbol(9, 500);
+        assert_eq!(result, Ok(None));
+    }
+
+    #[test]
+    fn get_list_item_with_symbol_not_list() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_list_item_with_symbol(0, 100);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
+    }
+
+    #[test]
+    fn get_list_item_with_symbol_invalid_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::List(vec![
+            Box::new(BasicObject::Pair(Box::new(BasicObject::Symbol(100)), Box::new(BasicObject::Number(200.into())))),
+            Box::new(BasicObject::Pair(Box::new(BasicObject::Symbol(200)), Box::new(BasicObject::Number(300.into())))),
+            Box::new(BasicObject::Pair(Box::new(BasicObject::Symbol(300)), Box::new(BasicObject::Number(400.into())))),
+        ])).unwrap();
+        let result = data.get_list_item_with_symbol(100, 100);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
     }
 
     #[test]
