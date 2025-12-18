@@ -163,6 +163,34 @@ where T: crate::basic::BasicDataCustom {
         }
     }
 
+    pub fn as_char_list(&self) -> Result<usize, DataError> {
+        match self {
+            BasicData::CharList(l) => Ok(*l),
+            _ => Err(DataError::not_type_error(GarnishDataType::CharList)),
+        }
+    }
+
+    pub fn as_char_list_mut(&mut self) -> Result<&mut usize, DataError> {
+        match self {
+            BasicData::CharList(l) => Ok(l),
+            _ => Err(DataError::not_type_error(GarnishDataType::CharList)),
+        }
+    }
+
+    pub fn as_byte_list(&self) -> Result<usize, DataError> {
+        match self {
+            BasicData::ByteList(l) => Ok(*l),
+            _ => Err(DataError::not_type_error(GarnishDataType::ByteList)),
+        }
+    }
+
+    pub fn as_byte_list_mut(&mut self) -> Result<&mut usize, DataError> {
+        match self {
+            BasicData::ByteList(l) => Ok(l),
+            _ => Err(DataError::not_type_error(GarnishDataType::ByteList)),
+        }
+    }
+
     pub fn as_pair(&self) -> Result<(usize, usize), DataError> {
         match self {
             BasicData::Pair(left, right) => Ok((*left, *right)),
@@ -785,5 +813,55 @@ mod tests {
     fn as_list_item_mut_not_list_item() {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_list_item_mut(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_char_list() {
+        let data = BasicDataUnitCustom::CharList(100);
+        assert_eq!(data.as_char_list(), Ok(100));
+    }
+
+    #[test]
+    fn as_char_list_not_char_list() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_char_list_mut(), Err(DataError::not_type_error(GarnishDataType::CharList)));
+    }
+
+    #[test]
+    fn as_char_list_mut() {
+        let mut data = BasicDataUnitCustom::CharList(100);
+        *data.as_char_list_mut().unwrap() = 200;
+        assert_eq!(data.as_char_list(), Ok(200));
+    }
+    
+    #[test]
+    fn as_char_list_mut_not_char_list() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_char_list_mut(), Err(DataError::not_type_error(GarnishDataType::CharList)));
+    }
+
+    #[test]
+    fn as_byte_list() {
+        let data = BasicDataUnitCustom::ByteList(100);
+        assert_eq!(data.as_byte_list(), Ok(100));
+    }
+
+    #[test]
+    fn as_byte_list_not_byte_list() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_byte_list_mut(), Err(DataError::not_type_error(GarnishDataType::ByteList)));
+    }
+
+    #[test]
+    fn as_byte_list_mut() {
+        let mut data = BasicDataUnitCustom::ByteList(100);
+        *data.as_byte_list_mut().unwrap() = 200;
+        assert_eq!(data.as_byte_list(), Ok(200));
+    }
+
+    #[test]
+    fn as_byte_list_mut_not_byte_list() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_byte_list_mut(), Err(DataError::not_type_error(GarnishDataType::ByteList)));
     }
 }

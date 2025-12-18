@@ -157,7 +157,7 @@ where
     }
 
     fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-        todo!()
+        unimplemented!()
     }
 
     fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
@@ -165,7 +165,7 @@ where
     }
 
     fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.get_from_data_block_ensure_index(addr)?.as_char_list()?)
     }
 
     fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Char>, Self::Error> {
@@ -352,27 +352,27 @@ where
     }
 
     fn start_char_list(&mut self) -> Result<(), Self::Error> {
-        todo!()
+        unimplemented!()
     }
 
     fn add_to_char_list(&mut self, c: Self::Char) -> Result<(), Self::Error> {
-        todo!()
+        unimplemented!()
     }
 
     fn end_char_list(&mut self) -> Result<Self::Size, Self::Error> {
-        todo!()
+        unimplemented!()
     }
 
     fn start_byte_list(&mut self) -> Result<(), Self::Error> {
-        todo!()
+        unimplemented!()
     }
 
     fn add_to_byte_list(&mut self, c: Self::Byte) -> Result<(), Self::Error> {
-        todo!()
+        unimplemented!()
     }
 
     fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error> {
-        todo!()
+        unimplemented!()
     }
 
     fn get_register_len(&self) -> Self::Size {
@@ -1373,6 +1373,30 @@ mod tests {
         ])).unwrap();
         let result = data.get_list_item_with_symbol(100, 100);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
+    }
+    
+    #[test]
+    fn get_char_list_len_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        let result = data.get_char_list_len(0);
+        assert_eq!(result, Ok(5));
+    }
+
+    #[test]
+    fn get_char_list_len_invalid_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        let result = data.get_char_list_len(100);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
+    }
+ 
+    #[test]
+    fn get_char_list_len_not_char_list() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_char_list_len(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::CharList))));
     }
 
     #[test]
