@@ -172,7 +172,7 @@ where
         let len = self.get_from_data_block_ensure_index(list_index)?.as_char_list()?;
         let index: usize = item_index.into();
         if index >= len {
-            return Err(DataError::new("Invalid char list item index", DataErrorType::InvalidCharListItemIndex(index, len)));
+            return Ok(None)
         }
         Ok(Some(self.get_from_data_block_ensure_index(list_index + 1 + index)?.as_char()?))
     }
@@ -190,7 +190,12 @@ where
     }
 
     fn get_byte_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Byte>, Self::Error> {
-        todo!()
+        let len = self.get_from_data_block_ensure_index(addr)?.as_byte_list()?;
+        let index: usize = item_index.into();
+        if index >= len {
+            return Ok(None)
+        }
+        Ok(Some(self.get_from_data_block_ensure_index(addr + 1 + index)?.as_byte()?))
     }
 
     fn get_byte_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ByteIterator, Self::Error> {
@@ -1437,7 +1442,7 @@ mod tests {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
         let result = data.get_char_list_item(0, 100.into());
-        assert_eq!(result, Err(DataError::new("Invalid char list item index", DataErrorType::InvalidCharListItemIndex(100, 5))));
+        assert_eq!(result, Ok(None));
     }
 
     #[test]
@@ -1533,6 +1538,38 @@ mod tests {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         let result = data.get_byte_list_len(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::ByteList, GarnishDataType::Number))));
+    }
+
+    #[test]
+    fn get_byte_list_item_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        let result = data.get_byte_list_item(0, 1.into());
+        assert_eq!(result, Ok(Some(2)));
+    }
+
+    #[test]
+    fn get_byte_list_item_invalid_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        let result = data.get_byte_list_item(100, 1.into());
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
+    }
+
+    #[test]
+    fn get_byte_list_item_invalid_item_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        let result = data.get_byte_list_item(0, 100.into());
+        assert_eq!(result, Ok(None));
+    }
+
+    #[test]
+    fn get_byte_list_item_not_byte_list() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_byte_list_item(0, 1.into());
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::ByteList, GarnishDataType::Number))));
     }
 
