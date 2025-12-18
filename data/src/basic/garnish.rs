@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use crate::{
-    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SimpleNumber, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list, search::search_for_associative_item}, error::DataErrorType, symbol_value
+    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list, search::search_for_associative_item}, error::DataErrorType, symbol_value
 };
 use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, SymbolListPart};
 
@@ -207,7 +207,7 @@ where
     }
 
     fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        Ok(self.get_from_data_block_ensure_index(addr)?.as_symbol_list()?)
     }
 
     fn get_symbol_list_item(
@@ -1639,6 +1639,30 @@ mod tests {
         data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
         let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(0.into(), 10.into())).unwrap().collect();
         assert_eq!(result, vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn get_symbol_list_len_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
+        let result = data.get_symbol_list_len(0);
+        assert_eq!(result, Ok(3));
+    }
+    
+    #[test]
+    fn get_symbol_list_len_invalid_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
+        let result = data.get_symbol_list_len(100);
+        assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
+    }
+
+    #[test]
+    fn get_symbol_list_len_not_symbol_list() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_symbol_list_len(0);
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::SymbolList, GarnishDataType::Number))));
     }
 
     #[test]

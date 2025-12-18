@@ -135,6 +135,20 @@ where T: crate::basic::BasicDataCustom {
         }
     }
 
+    pub fn as_symbol_list(&self) -> Result<usize, DataError> {
+        match self {
+            BasicData::SymbolList(s) => Ok(s.clone()),
+            _ => Err(DataError::not_type_error(GarnishDataType::SymbolList, self.get_data_type())),
+        }
+    }
+
+    pub fn as_symbol_list_mut(&mut self) -> Result<&mut usize, DataError> {
+        match self {
+            BasicData::SymbolList(s) => Ok(s),
+            _ => Err(DataError::not_type_error(GarnishDataType::SymbolList, self.get_data_type())),
+        }
+    }
+
     pub fn as_expression(&self) -> Result<usize, DataError> {
         match self {
             BasicData::Expression(e) => Ok(*e),
@@ -498,6 +512,18 @@ mod tests {
     fn as_symbol_mut_not_symbol() {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_symbol_mut(), Err(DataError::not_type_error(GarnishDataType::Symbol, GarnishDataType::Number)));
+    }
+
+    #[test]
+    fn as_symbol_list() {
+        let data = BasicDataUnitCustom::SymbolList(100);
+        assert_eq!(data.as_symbol_list(), Ok(100));
+    }
+
+    #[test]
+    fn as_symbol_list_not_symbol_list() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_symbol_list(), Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::SymbolList, GarnishDataType::Number))));
     }
 
     #[test]
