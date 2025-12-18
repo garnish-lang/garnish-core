@@ -10,7 +10,7 @@ pub enum DataErrorType {
     InvalidCharListItemIndex(usize, usize),
     ExceededInitialListLength(usize),
     NotFullyInitializedList(usize, usize),
-    NotType(GarnishDataType),
+    NotType(GarnishDataType, GarnishDataType),
     NotAssociativeItem,
     NotBasicType,
     InstructionBlockExceededMaxItems(usize, usize),
@@ -30,8 +30,8 @@ impl DataError {
         DataError { message: message.to_string(), error_type }
     }
 
-    pub fn not_type_error(expected: GarnishDataType) -> Self {
-        DataError::new("Not of type", DataErrorType::NotType(expected))
+    pub fn not_type_error(expected: GarnishDataType, got: GarnishDataType) -> Self {
+        DataError::new("Not of type", DataErrorType::NotType(expected, got))
     }
 
     pub fn not_basic_type_error() -> Self {

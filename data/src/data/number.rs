@@ -84,6 +84,15 @@ macro_rules! simple_number_from {
                     }
                 }
             }
+
+            impl From<&SimpleNumber> for $x {
+                fn from(x: &SimpleNumber) -> Self {
+                    match *x {
+                        Integer(v) => v as $x,
+                        Float(v) => v as $x,
+                    }
+                }
+            }
         )*
     }
 }
@@ -112,9 +121,24 @@ macro_rules! float_to_simple {
     }
 }
 
-simple_number_from!(i8, i16, i32, i64, u8, u16, u32, u64, isize, usize, f32, f64);
+simple_number_from!(i8, i16, i32, i64, u8, u16, u32, u64, isize, f32, f64);
 integer_to_simple!(i8, i16, i32, i64, u8, u16, u32, u64, isize, usize);
 float_to_simple!(f32, f64);
+
+impl From<SimpleNumber> for usize {
+    fn from(x: SimpleNumber) -> Self {
+        match x {
+            SimpleNumber::Integer(v) => v.max(0) as usize,
+            SimpleNumber::Float(v) => v.max(0.0) as usize,
+        }
+    }
+}
+
+impl From<&SimpleNumber> for usize {
+    fn from(x: &SimpleNumber) -> Self {
+        usize::from(*x)
+    }
+}
 
 impl PartialEq for SimpleNumber {
     fn eq(&self, other: &Self) -> bool {
@@ -764,5 +788,25 @@ mod tests {
     fn bitwise_right_shift() {
         assert_eq!(Integer(10).bitwise_shift_right(Integer(2)).unwrap(), Integer(10 >> 2));
         assert!(Float(10.0).bitwise_shift_right(Float(1.0)).is_none());
+    }
+
+    #[test]
+    fn usize_from_number() {
+        assert_eq!(usize::from(Integer(10)), 10);
+    }
+
+    #[test]
+    fn usize_from_negative_number() {
+        assert_eq!(usize::from(Integer(-10)), 0);
+    }
+
+    #[test]
+    fn usize_from_float() {
+        assert_eq!(usize::from(Float(10.0)), 10);
+    }
+
+    #[test]
+    fn usize_from_negative_float() {
+        assert_eq!(usize::from(Float(-10.0)), 0);
     }
 }

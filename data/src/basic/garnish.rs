@@ -164,21 +164,25 @@ where
         unimplemented!()
     }
 
-    fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        Ok(self.get_from_data_block_ensure_index(addr)?.as_char_list()?)
+    fn get_char_list_len(&self, list_index: Self::Size) -> Result<Self::Size, Self::Error> {
+        Ok(self.get_from_data_block_ensure_index(list_index)?.as_char_list()?)
     }
 
-    fn get_char_list_item(&self, addr: Self::Size, item_index: Self::Number) -> Result<Option<Self::Char>, Self::Error> {
-        let len = self.get_from_data_block_ensure_index(addr)?.as_char_list()?;
+    fn get_char_list_item(&self, list_index: Self::Size, item_index: Self::Number) -> Result<Option<Self::Char>, Self::Error> {
+        let len = self.get_from_data_block_ensure_index(list_index)?.as_char_list()?;
         let index: usize = item_index.into();
         if index >= len {
             return Err(DataError::new("Invalid char list item index", DataErrorType::InvalidCharListItemIndex(index, len)));
         }
-        Ok(Some(self.get_from_data_block_ensure_index(addr + 1 + index)?.as_char()?))
+        Ok(Some(self.get_from_data_block_ensure_index(list_index + 1 + index)?.as_char()?))
     }
 
-    fn get_char_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::CharIterator, Self::Error> {
-        todo!()
+    fn get_char_list_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::CharIterator, Self::Error> {
+        let len = self.get_from_data_block_ensure_index(list_index)?.as_char_list()?;
+        let start: usize = list_index + 1 + usize::from(extents.start()).min(len);
+        let end: usize = list_index + 1 + (usize::from(extents.end()) + 1).min(len);
+
+        Ok(CharListIterator::new(self.data[start..end].iter().map(|c| c.as_char().unwrap()).collect()))
     }
 
     fn get_byte_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -796,7 +800,7 @@ mod tests {
         let result = data.get_number(0);
         assert_eq!(
             result,
-            Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Number)))
+            Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Number, GarnishDataType::Symbol)))
         );
     }
 
@@ -821,7 +825,7 @@ mod tests {
         let mut data = test_data();
         data.push_to_data_block(BasicData::Symbol(100)).unwrap();
         let result = data.get_type(0);
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Type))));
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Type, GarnishDataType::Symbol))));
     }
 
     #[test]
@@ -837,7 +841,7 @@ mod tests {
         let mut data = test_data();
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_char(0);
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Char))));
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Char, GarnishDataType::Number))));
     }
 
     #[test]
@@ -861,7 +865,7 @@ mod tests {
         let mut data = test_data();
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_byte(0);
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Byte))));
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Byte, GarnishDataType::Number))));
     }
 
     #[test]
@@ -887,7 +891,7 @@ mod tests {
         let result = data.get_symbol(0);
         assert_eq!(
             result,
-            Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Symbol)))
+            Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Symbol, GarnishDataType::Number)))
         );
     }
 
@@ -914,7 +918,7 @@ mod tests {
         let result = data.get_expression(0);
         assert_eq!(
             result,
-            Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Expression)))
+            Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Expression, GarnishDataType::Number)))
         );
     }
 
@@ -941,7 +945,7 @@ mod tests {
         let result = data.get_external(0);
         assert_eq!(
             result,
-            Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::External)))
+            Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::External, GarnishDataType::Number)))
         );
     }
 
@@ -966,7 +970,7 @@ mod tests {
         let mut data = test_data();
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_pair(0);
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Pair))));
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Pair, GarnishDataType::Number))));
     }
 
     #[test]
@@ -992,7 +996,7 @@ mod tests {
         let result = data.get_partial(0);
         assert_eq!(
             result,
-            Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Partial)))
+            Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Partial, GarnishDataType::Number)))
         );
     }
 
@@ -1019,7 +1023,7 @@ mod tests {
         let result = data.get_concatenation(0);
         assert_eq!(
             result,
-            Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Concatenation)))
+            Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Concatenation, GarnishDataType::Number)))
         );
     }
 
@@ -1044,7 +1048,7 @@ mod tests {
         let mut data = test_data();
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_range(0);
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Range))));
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Range, GarnishDataType::Number))));
     }
 
     #[test]
@@ -1068,7 +1072,7 @@ mod tests {
         let mut data = test_data();
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_slice(0);
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Slice))));
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Slice, GarnishDataType::Number))));
     }
 
     #[test]
@@ -1289,7 +1293,7 @@ mod tests {
         let mut data = test_data();
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let result = data.get_list_len(0);
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List, GarnishDataType::Number))));
     }
 
     #[test]
@@ -1333,7 +1337,7 @@ mod tests {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         let result = data.get_list_item(0, 1.into());
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List, GarnishDataType::Number))));
     }
 
     #[test]
@@ -1365,7 +1369,7 @@ mod tests {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         let result = data.get_list_item_with_symbol(0, 100);
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List))));
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List, GarnishDataType::Number))));
     }
 
     #[test]
@@ -1401,7 +1405,7 @@ mod tests {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         let result = data.get_char_list_len(0);
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::CharList))));
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::CharList, GarnishDataType::Number))));
     }
 
     #[test]
@@ -1441,7 +1445,71 @@ mod tests {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         let result = data.get_char_list_item(0, 1.into());
-        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::CharList))));
+        assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::CharList, GarnishDataType::Number))));
+    }
+
+    #[test]
+    fn get_char_list_iter_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        let result: Vec<char> = data.get_char_list_iter(0, Extents::new(0.into(), 4.into())).unwrap().collect();
+        assert_eq!(result, vec!['a', 'b', 'c', 'd', 'e']);
+    }
+
+    #[test]
+    fn get_char_list_iter_empty_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("".to_string())).unwrap();
+        let result: Vec<char> = data.get_char_list_iter(0, Extents::new(0.into(), 4.into())).unwrap().collect();
+        assert_eq!(result, vec![]);
+    }
+
+    #[test]
+    fn get_char_list_iter_ok_with_extents() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        let result: Vec<char> = data.get_char_list_iter(0, Extents::new(1.into(), 2.into())).unwrap().collect();
+        assert_eq!(result, vec!['b', 'c']);
+    }
+
+    #[test]
+    fn get_char_list_iter_invalid_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        let result = data.get_char_list_iter(100, Extents::new(0.into(), 5.into())).err();
+        assert_eq!(result, Some(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
+    }
+
+    #[test]
+    fn get_char_list_iter_not_char_list() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_char_list_iter(0, Extents::new(0.into(), 5.into())).err();
+        assert_eq!(result, Some(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::CharList, GarnishDataType::Number))));
+    }
+
+    #[test]
+    fn get_char_list_iter_start_negative_clamps_to_char_list_start() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        let result: Vec<char> = data.get_char_list_iter(0, Extents::new((-5).into(), 5.into())).unwrap().collect();
+        assert_eq!(result, vec!['a', 'b', 'c', 'd', 'e']);
+    }
+
+    #[test]
+    fn get_char_list_iter_start_out_of_bounds_is_empty() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        let result: Vec<char> = data.get_char_list_iter(0, Extents::new(6.into(), 10.into())).unwrap().collect();
+        assert_eq!(result, vec![]);
+    }
+
+    #[test]
+    fn get_char_list_iter_end_out_of_bounds_clamps_to_char_list_length() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        let result: Vec<char> = data.get_char_list_iter(0, Extents::new(0.into(), 10.into())).unwrap().collect();
+        assert_eq!(result, vec!['a', 'b', 'c', 'd', 'e']);
     }
 
     #[test]
