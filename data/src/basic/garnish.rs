@@ -198,8 +198,12 @@ where
         Ok(Some(self.get_from_data_block_ensure_index(addr + 1 + index)?.as_byte()?))
     }
 
-    fn get_byte_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ByteIterator, Self::Error> {
-        todo!()
+    fn get_byte_list_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ByteIterator, Self::Error> {
+        let len = self.get_from_data_block_ensure_index(list_index)?.as_byte_list()?;
+        let start: usize = list_index + 1 + usize::from(extents.start()).min(len);
+        let end: usize = list_index + 1 + (usize::from(extents.end()) + 1).min(len);
+
+        Ok(ByteListIterator::new(self.data[start..end].iter().map(|c| c.as_byte().unwrap()).collect()))
     }
 
     fn get_symbol_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -1571,6 +1575,70 @@ mod tests {
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         let result = data.get_byte_list_item(0, 1.into());
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::ByteList, GarnishDataType::Number))));
+    }
+
+    #[test]
+    fn get_byte_list_iter_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(0.into(), 4.into())).unwrap().collect();
+        assert_eq!(result, vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn get_byte_list_iter_empty_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::ByteList(vec![])).unwrap();
+        let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(0.into(), 4.into())).unwrap().collect();
+        assert_eq!(result, vec![]);
+    }
+
+    #[test]
+    fn get_byte_list_iter_ok_with_extents() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(1.into(), 2.into())).unwrap().collect();
+        assert_eq!(result, vec![2, 3]);
+    }
+
+    #[test]
+    fn get_byte_list_iter_invalid_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        let result = data.get_byte_list_iter(100, Extents::new(0.into(), 4.into())).err();
+        assert_eq!(result, Some(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
+    }
+
+    #[test]
+    fn get_byte_list_iter_not_byte_list() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_byte_list_iter(0, Extents::new(0.into(), 4.into())).err();
+        assert_eq!(result, Some(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::ByteList, GarnishDataType::Number))));
+    }
+
+    #[test]
+    fn get_byte_list_iter_start_negative_clamps_to_byte_list_start() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new((-5).into(), 5.into())).unwrap().collect();
+        assert_eq!(result, vec![1, 2, 3, 4, 5]);
+    }
+
+    #[test]
+    fn get_byte_list_iter_start_out_of_bounds_is_empty() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(6.into(), 10.into())).unwrap().collect();
+        assert_eq!(result, vec![]);
+    }
+
+    #[test]
+    fn get_byte_list_iter_end_out_of_bounds_clamps_to_byte_list_length() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(0.into(), 10.into())).unwrap().collect();
+        assert_eq!(result, vec![1, 2, 3, 4, 5]);
     }
 
     #[test]
