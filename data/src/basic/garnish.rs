@@ -227,8 +227,16 @@ where
         }))
     }
 
-    fn get_symbol_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::SymbolListPartIterator, Self::Error> {
-        todo!()
+    fn get_symbol_list_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::SymbolListPartIterator, Self::Error> {
+        let len = self.get_from_data_block_ensure_index(list_index)?.as_symbol_list()?;
+        let start: usize = list_index + 1 + usize::from(extents.start()).min(len);
+        let end: usize = list_index + 1 + (usize::from(extents.end()) + 1).min(len);
+
+        Ok(SymbolListPartIterator::new(self.data[start..end].iter().map(|c| match c {
+            BasicData::Symbol(sym) => Ok(SymbolListPart::Symbol(sym.clone())),
+            BasicData::Number(num) => Ok(SymbolListPart::Number(num.clone())),
+            d => return Err(DataError::new("Not a symbol list part", DataErrorType::NotASymbolListPart(d.get_data_type()))),
+        }).collect::<Result<Vec<SymbolListPart<u64, BasicNumber>>, DataError>>()?))
     }
 
     fn get_list_item_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
@@ -1712,6 +1720,70 @@ mod tests {
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         let result = data.get_symbol_list_item(0, 1.into());
         assert_eq!(result, Err(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::SymbolList, GarnishDataType::Number))));
+    }
+    
+    #[test]
+    fn get_symbol_list_iter_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
+        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(0.into(), 2.into())).unwrap().collect();
+        assert_eq!(result, vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)]);
+    }
+
+    #[test]
+    fn get_symbol_list_iter_empty_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![])).unwrap();
+        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(0.into(), 2.into())).unwrap().collect();
+        assert_eq!(result, vec![]);
+    }
+
+    #[test]
+    fn get_symbol_list_iter_ok_with_extents() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
+        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(1.into(), 2.into())).unwrap().collect();
+        assert_eq!(result, vec![SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)]);
+    }
+
+    #[test]
+    fn get_symbol_list_iter_invalid_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
+        let result = data.get_symbol_list_iter(100, Extents::new(0.into(), 2.into())).err();
+        assert_eq!(result, Some(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
+    }
+
+    #[test]
+    fn get_symbol_list_iter_not_symbol_list() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_symbol_list_iter(0, Extents::new(0.into(), 2.into())).err();
+        assert_eq!(result, Some(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::SymbolList, GarnishDataType::Number))));
+    }
+
+    #[test]
+    fn get_symbol_list_iter_start_negative_clamps_to_symbol_list_start() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
+        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new((-5).into(), 2.into())).unwrap().collect();
+        assert_eq!(result, vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)]);
+    }
+
+    #[test]
+    fn get_symbol_list_iter_end_out_of_bounds_clamps_to_symbol_list_length() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
+        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(0.into(), 10.into())).unwrap().collect();
+        assert_eq!(result, vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)]);
+    }
+
+    #[test]
+    fn get_symbol_list_iter_start_out_of_bounds_clamps_to_symbol_list_start() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
+        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(10.into(), 2.into())).unwrap().collect();
+        assert_eq!(result, vec![]);
     }
 
     #[test]
