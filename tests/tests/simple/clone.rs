@@ -483,7 +483,7 @@ mod tests {
 #[cfg(test)]
 #[allow(unused)]
 mod test_data_impl {
-    use garnish_lang::simple::{ByteListIterator, CharListIterator, DataError, NumberIterator, SimpleNumber, SizeIterator, SymbolListPartIterator};
+    use garnish_lang::simple::{ByteListIterator, CharListIterator, DataError, NumberIterator, SimpleDataFactory, SimpleNumber, SizeIterator, SymbolListPartIterator};
     use garnish_lang::{Extents, GarnishData, GarnishDataType, Instruction, SymbolListPart};
 
     pub struct TestData {
@@ -523,6 +523,7 @@ mod test_data_impl {
         type CharIterator = CharListIterator;
         type ByteIterator = ByteListIterator;
         type SymbolListPartIterator = SymbolListPartIterator;
+        type DataFactory = SimpleDataFactory;
 
         fn get_data_len(&self) -> Self::Size {
             unimplemented!()
@@ -867,38 +868,6 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn size_to_number(from: Self::Size) -> Self::Number {
-            unimplemented!()
-        }
-
-        fn number_to_size(from: Self::Number) -> Option<Self::Size> {
-            unimplemented!()
-        }
-
-        fn number_to_char(from: Self::Number) -> Option<Self::Char> {
-            unimplemented!()
-        }
-
-        fn number_to_byte(from: Self::Number) -> Option<Self::Byte> {
-            unimplemented!()
-        }
-
-        fn char_to_number(from: Self::Char) -> Option<Self::Number> {
-            unimplemented!()
-        }
-
-        fn char_to_byte(from: Self::Char) -> Option<Self::Byte> {
-            unimplemented!()
-        }
-
-        fn byte_to_number(from: Self::Byte) -> Option<Self::Number> {
-            unimplemented!()
-        }
-
-        fn byte_to_char(from: Self::Byte) -> Option<Self::Char> {
-            unimplemented!()
-        }
-
         fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
             unimplemented!()
         }
@@ -916,38 +885,6 @@ mod test_data_impl {
         }
 
         fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
-            unimplemented!()
-        }
-
-        fn parse_number(from: &str) -> Result<Self::Number, Self::Error> {
-            unimplemented!()
-        }
-
-        fn parse_symbol(from: &str) -> Result<Self::Symbol, Self::Error> {
-            unimplemented!()
-        }
-
-        fn parse_char(from: &str) -> Result<Self::Char, Self::Error> {
-            unimplemented!()
-        }
-
-        fn parse_byte(from: &str) -> Result<Self::Byte, Self::Error> {
-            unimplemented!()
-        }
-
-        fn parse_char_list(from: &str) -> Result<Vec<Self::Char>, Self::Error> {
-            unimplemented!()
-        }
-
-        fn parse_byte_list(from: &str) -> Result<Vec<Self::Byte>, Self::Error> {
-            unimplemented!()
-        }
-
-        fn make_size_iterator_range(min: Self::Size, max: Self::Size) -> Self::SizeIterator {
-            unimplemented!()
-        }
-
-        fn make_number_iterator_range(min: Self::Number, max: Self::Number) -> Self::NumberIterator {
             unimplemented!()
         }
     }

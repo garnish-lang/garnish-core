@@ -110,6 +110,7 @@ fn create_associated_types(delegate_field_type: &Type) -> Vec<ImplItem> {
         "CharIterator",
         "ByteIterator",
         "SymbolListPartIterator",
+        "DataFactory",
     ];
 
     let associated_types = types.iter().map(|t| Ident::new(t, proc_macro2::Span::call_site())).map(|ident| {
@@ -809,70 +810,6 @@ fn create_missing_functions(
         },
     );
     all_functions.insert(
-        "size_to_number",
-        quote! {
-            fn size_to_number(from: Self::Size) -> Self::Number {
-                <#delegate_field_type as GarnishData>::size_to_number(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "number_to_size",
-        quote! {
-            fn number_to_size(from: Self::Number) -> Option<Self::Size> {
-                <#delegate_field_type as GarnishData>::number_to_size(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "number_to_char",
-        quote! {
-            fn number_to_char(from: Self::Number) -> Option<Self::Char> {
-                <#delegate_field_type as GarnishData>::number_to_char(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "number_to_byte",
-        quote! {
-            fn number_to_byte(from: Self::Number) -> Option<Self::Byte> {
-                <#delegate_field_type as GarnishData>::number_to_byte(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "char_to_number",
-        quote! {
-            fn char_to_number(from: Self::Char) -> Option<Self::Number> {
-                <#delegate_field_type as GarnishData>::char_to_number(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "char_to_byte",
-        quote! {
-            fn char_to_byte(from: Self::Char) -> Option<Self::Byte> {
-                <#delegate_field_type as GarnishData>::char_to_byte(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "byte_to_number",
-        quote! {
-            fn byte_to_number(from: Self::Byte) -> Option<Self::Number> {
-                <#delegate_field_type as GarnishData>::byte_to_number(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "byte_to_char",
-        quote! {
-            fn byte_to_char(from: Self::Byte) -> Option<Self::Char> {
-                <#delegate_field_type as GarnishData>::byte_to_char(from)
-            }
-        },
-    );
-    all_functions.insert(
         "add_char_list_from",
         quote! {
             fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -909,54 +846,6 @@ fn create_missing_functions(
         quote! {
             fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.add_number_from(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "parse_number",
-        quote! {
-            fn parse_number(from: &str) -> Result<Self::Number, Self::Error> {
-                <#delegate_field_type as GarnishData>::parse_number(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "parse_symbol",
-        quote! {
-            fn parse_symbol(from: &str) -> Result<Self::Symbol, Self::Error> {
-                <#delegate_field_type as GarnishData>::parse_symbol(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "parse_char",
-        quote! {
-            fn parse_char(from: &str) -> Result<Self::Char, Self::Error> {
-                <#delegate_field_type as GarnishData>::parse_char(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "parse_byte",
-        quote! {
-            fn parse_byte(from: &str) -> Result<Self::Byte, Self::Error> {
-                <#delegate_field_type as GarnishData>::parse_byte(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "parse_char_list",
-        quote! {
-            fn parse_char_list(from: &str) -> Result<Vec<Self::Char>, Self::Error> {
-                <#delegate_field_type as GarnishData>::parse_char_list(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "parse_byte_list",
-        quote! {
-            fn parse_byte_list(from: &str) -> Result<Vec<Self::Byte>, Self::Error> {
-                <#delegate_field_type as GarnishData>::parse_byte_list(from)
             }
         },
     );
@@ -1008,23 +897,6 @@ fn create_missing_functions(
             }
         },
     );
-    all_functions.insert(
-        "make_size_iterator_range",
-        quote! {
-            fn make_size_iterator_range(min: Self::Size, max: Self::Size) -> Self::SizeIterator {
-                <#delegate_field_type as GarnishData>::make_size_iterator_range(min, max)
-            }
-        },
-    );
-    all_functions.insert(
-        "make_number_iterator_range",
-        quote! {
-            fn make_number_iterator_range(min: Self::Number, max: Self::Number) -> Self::NumberIterator {
-                <#delegate_field_type as GarnishData>::make_number_iterator_range(min, max)
-            }
-        },
-    );
-
     all_functions.insert(
         "resolve",
         quote! {

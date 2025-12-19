@@ -13,6 +13,7 @@ mod basic;
 
 pub use data::*;
 pub use instruction::SimpleInstruction;
+pub use runtime::SimpleDataFactory;
 pub use simple::*;
 pub use basic::*;
 

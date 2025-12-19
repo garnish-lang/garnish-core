@@ -2,7 +2,7 @@
 //! These might be removed when an iterator interface is created for reading data instead of manual indexing.
 //!
 
-use crate::{GarnishDataType, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
+use crate::{GarnishDataType, GarnishData, GarnishDataFactory, GarnishNumber, RuntimeError, TypeConstants};
 
 /// Iterates through a concatenation at the given address, calling provided 'check_fn' function for each item.
 pub fn iterate_concatenation_mut<Data: GarnishData, CheckFn>(
@@ -82,14 +82,14 @@ where
                         let mut i = Data::Size::zero();
 
                         while i < len {
-                            let sub_index = Data::size_to_number(i.clone());
+                            let sub_index = Data::DataFactory::size_to_number(i.clone());
                             let item = match this.get_list_item(r.clone(), sub_index.clone())? {
                                 None => unimplemented!("Not sure this function is used"),
                                 Some(item) => item,
                             };
                             temp_result = check_fn(
                                 this,
-                                (Data::size_to_number(index.clone())).plus(sub_index.clone()).ok_or(RuntimeError::new("Number error"))?,
+                                (Data::DataFactory::size_to_number(index.clone())).plus(sub_index.clone()).ok_or(RuntimeError::new("Number error"))?,
                                 item,
                             )?;
                             match temp_result {
@@ -100,7 +100,7 @@ where
                         index = index.clone() + len;
                     }
                     _ => {
-                        temp_result = check_fn(this, Data::size_to_number(index.clone()), r.clone())?;
+                        temp_result = check_fn(this, Data::DataFactory::size_to_number(index.clone()), r.clone())?;
                         index += Data::Size::one();
                     }
                 }

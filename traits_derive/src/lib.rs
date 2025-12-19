@@ -96,6 +96,7 @@ fn create_garnish_data_impl(
             type CharIterator = <#delegate_field_type as GarnishData>::CharIterator;
             type ByteIterator = <#delegate_field_type as GarnishData>::ByteIterator;
             type SymbolListPartIterator = <#delegate_field_type as GarnishData>::SymbolListPartIterator;
+            type DataFactory = <#delegate_field_type as GarnishData>::DataFactory;
 
             fn get_data_len(&self) -> Self::Size {
                 self.#delegate_field.get_data_len()
@@ -352,30 +353,6 @@ fn create_garnish_data_impl(
             fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
                 self.#delegate_field.get_jump_path_iter()
             }
-            fn size_to_number(from: Self::Size) -> Self::Number {
-                <#delegate_field_type as GarnishData>::size_to_number(from)
-            }
-            fn number_to_size(from: Self::Number) -> Option<Self::Size> {
-                <#delegate_field_type as GarnishData>::number_to_size(from)
-            }
-            fn number_to_char(from: Self::Number) -> Option<Self::Char> {
-                <#delegate_field_type as GarnishData>::number_to_char(from)
-            }
-            fn number_to_byte(from: Self::Number) -> Option<Self::Byte> {
-                <#delegate_field_type as GarnishData>::number_to_byte(from)
-            }
-            fn char_to_number(from: Self::Char) -> Option<Self::Number> {
-                <#delegate_field_type as GarnishData>::char_to_number(from)
-            }
-            fn char_to_byte(from: Self::Char) -> Option<Self::Byte> {
-                <#delegate_field_type as GarnishData>::char_to_byte(from)
-            }
-            fn byte_to_number(from: Self::Byte) -> Option<Self::Number> {
-                <#delegate_field_type as GarnishData>::byte_to_number(from)
-            }
-            fn byte_to_char(from: Self::Byte) -> Option<Self::Char> {
-                <#delegate_field_type as GarnishData>::byte_to_char(from)
-            }
             fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.add_char_list_from(from)
             }
@@ -390,24 +367,6 @@ fn create_garnish_data_impl(
             }
             fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.add_number_from(from)
-            }
-            fn parse_number(from: &str) -> Result<Self::Number, Self::Error> {
-                <#delegate_field_type as GarnishData>::parse_number(from)
-            }
-            fn parse_symbol(from: &str) -> Result<Self::Symbol, Self::Error> {
-                <#delegate_field_type as GarnishData>::parse_symbol(from)
-            }
-            fn parse_char(from: &str) -> Result<Self::Char, Self::Error> {
-                <#delegate_field_type as GarnishData>::parse_char(from)
-            }
-            fn parse_byte(from: &str) -> Result<Self::Byte, Self::Error> {
-                <#delegate_field_type as GarnishData>::parse_byte(from)
-            }
-            fn parse_char_list(from: &str) -> Result<Vec<Self::Char>, Self::Error> {
-                <#delegate_field_type as GarnishData>::parse_char_list(from)
-            }
-            fn parse_byte_list(from: &str) -> Result<Vec<Self::Byte>, Self::Error> {
-                <#delegate_field_type as GarnishData>::parse_byte_list(from)
             }
             fn parse_add_number(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.parse_add_number(from)
@@ -426,12 +385,6 @@ fn create_garnish_data_impl(
             }
             fn parse_add_byte_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.parse_add_byte_list(from)
-            }
-            fn make_size_iterator_range(min: Self::Size, max: Self::Size) -> Self::SizeIterator {
-                <#delegate_field_type as GarnishData>::make_size_iterator_range(min, max)
-            }
-            fn make_number_iterator_range(min: Self::Number, max: Self::Number) -> Self::NumberIterator {
-                <#delegate_field_type as GarnishData>::make_number_iterator_range(min, max)
             }
             fn resolve(&mut self, symbol: Self::Symbol) -> Result<bool, Self::Error> {
                 self.#delegate_field.resolve(symbol)

@@ -18,8 +18,8 @@ mod sideeffect;
 
 #[cfg(test)]
 pub mod testing_utilities {
-    use garnish_lang::simple::{DataError, SimpleDataRuntimeNC, SimpleGarnishData, SimpleGarnishRuntime};
-    use garnish_lang::{GarnishContext, GarnishData, GarnishDataType, GarnishRuntime, Instruction, RuntimeError};
+    use garnish_lang::simple::{DataError, SimpleDataFactory, SimpleDataRuntimeNC, SimpleGarnishData, SimpleGarnishRuntime};
+    use garnish_lang::{GarnishContext, GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime, Instruction, RuntimeError};
 
     pub const DEFERRED_VALUE: usize = 1000;
 
@@ -82,7 +82,7 @@ pub mod testing_utilities {
     }
 
     pub fn add_pair(runtime: &mut SimpleGarnishData, key: &str, value: i32) -> usize {
-        let sym_value = SimpleDataRuntimeNC::parse_symbol(key).unwrap();
+        let sym_value = SimpleDataFactory::parse_symbol(key).unwrap();
         let i1 = runtime.add_symbol(sym_value).unwrap();
         let i2 = runtime.add_number(value.into()).unwrap();
         let i3 = runtime.add_pair((i1, i2)).unwrap();
@@ -154,7 +154,7 @@ pub mod testing_utilities {
     }
 
     pub fn add_char_list(runtime: &mut SimpleGarnishData, s: &str) -> usize {
-        let chars = SimpleDataRuntimeNC::parse_char_list(s).unwrap();
+        let chars = SimpleDataFactory::parse_char_list(s).unwrap();
 
         runtime.start_char_list().unwrap();
         for c in chars {
@@ -171,7 +171,7 @@ pub mod testing_utilities {
     }
 
     pub fn add_byte_list(runtime: &mut SimpleGarnishData, s: &str) -> usize {
-        let bytes = SimpleDataRuntimeNC::parse_byte_list(s).unwrap();
+        let bytes = SimpleDataFactory::parse_byte_list(s).unwrap();
 
         runtime.start_byte_list().unwrap();
         for b in bytes {

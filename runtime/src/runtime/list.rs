@@ -4,7 +4,7 @@ use crate::runtime::range::range_len;
 use crate::runtime::utilities::get_range;
 use garnish_lang_traits::SymbolListPart;
 use garnish_lang_traits::helpers::{iterate_concatenation_mut, iterate_rev_concatenation_mut};
-use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishDataFactory, GarnishNumber, RuntimeError, TypeConstants};
 
 pub fn make_list<Data: GarnishData>(this: &mut Data, len: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     if len > this.get_register_len() {
@@ -164,7 +164,7 @@ fn index_char_list<Data: GarnishData>(
     if index < Data::Number::zero() {
         Ok(None)
     } else {
-        if index >= Data::size_to_number(this.get_char_list_len(list.clone())?) {
+        if index >= <Data as GarnishData>::DataFactory::size_to_number(this.get_char_list_len(list.clone())?) {
             Ok(None)
         } else {
             let c = this.get_char_list_item(list, index)?;
@@ -185,7 +185,7 @@ fn index_byte_list<Data: GarnishData>(
     if index < Data::Number::zero() {
         Ok(None)
     } else {
-        if index >= Data::size_to_number(this.get_byte_list_len(list.clone())?) {
+        if index >= <Data as GarnishData>::DataFactory::size_to_number(this.get_byte_list_len(list.clone())?) {
             Ok(None)
         } else {
             let c = this.get_byte_list_item(list, index)?;
@@ -206,7 +206,7 @@ fn index_symbol_list<Data: GarnishData>(
     if index < Data::Number::zero() {
         Ok(None)
     } else {
-        if index >= Data::size_to_number(this.get_symbol_list_len(list.clone())?) {
+        if index >= <Data as GarnishData>::DataFactory::size_to_number(this.get_symbol_list_len(list.clone())?) {
             Ok(None)
         } else {
             let addr = match this.get_symbol_list_item(list, index)? {
@@ -249,7 +249,7 @@ pub(crate) fn access_with_symbol<Data: GarnishData>(
                     // can't push, in case any of the items are a Link or Slice
                     let mut i = start;
                     let mut item: Option<Data::Size> = None;
-                    let length = Data::size_to_number(this.get_list_len(value.clone())?);
+                    let length = <Data as GarnishData>::DataFactory::size_to_number(this.get_list_len(value.clone())?);
 
                     let end = if end >= length {
                         length.subtract(Data::Number::one()).or_num_err()?

@@ -1,9 +1,100 @@
 use std::convert::TryInto;
 
-use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, GarnishNumber, Instruction, SymbolListPart, TypeConstants};
+use garnish_lang_traits::{Extents, GarnishData, GarnishDataFactory, GarnishDataType, GarnishNumber, Instruction, SymbolListPart, TypeConstants};
 
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
 use crate::{ByteListIterator, CharListIterator, DataError, DataIndexIterator, SimpleData, SimpleDataType, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, SymbolListPartIterator, symbol_value};
+
+/// Factory implementation for SimpleGarnishData
+pub struct SimpleDataFactory;
+
+impl GarnishDataFactory<usize, SimpleNumber, char, u8, u64, DataError, SizeIterator, NumberIterator> for SimpleDataFactory {
+    fn size_to_number(from: usize) -> SimpleNumber {
+        from.into()
+    }
+
+    fn number_to_size(from: SimpleNumber) -> Option<usize> {
+        Some(from.into())
+    }
+
+    fn number_to_char(from: SimpleNumber) -> Option<char> {
+        match from {
+            SimpleNumber::Integer(v) => match (v as u8).try_into() {
+                Ok(c) => Some(c),
+                Err(_) => None,
+            },
+            SimpleNumber::Float(_) => None,
+        }
+    }
+
+    fn number_to_byte(from: SimpleNumber) -> Option<u8> {
+        match from {
+            SimpleNumber::Integer(v) => match v.try_into() {
+                Ok(b) => Some(b),
+                Err(_) => None,
+            },
+            SimpleNumber::Float(_) => None,
+        }
+    }
+
+    fn char_to_number(from: char) -> Option<SimpleNumber> {
+        Some((from as i32).into())
+    }
+
+    fn char_to_byte(from: char) -> Option<u8> {
+        Some(from as u8)
+    }
+
+    fn byte_to_number(from: u8) -> Option<SimpleNumber> {
+        Some((from as i32).into())
+    }
+
+    fn byte_to_char(from: u8) -> Option<char> {
+        Some(from.into())
+    }
+
+    fn parse_number(from: &str) -> Result<SimpleNumber, DataError> {
+        parse_simple_number(from)
+    }
+
+    fn parse_symbol(from: &str) -> Result<u64, DataError> {
+        Ok(symbol_value(from.trim_matches(':')))
+    }
+
+    fn parse_char(from: &str) -> Result<char, DataError> {
+        let l = parse_char_list(from)?;
+        if l.len() == 1 {
+            Ok(l.chars().nth(0).unwrap())
+        } else {
+            Err(DataError::from(format!("Could not parse char from {:?}", from)))
+        }
+    }
+
+    fn parse_byte(from: &str) -> Result<u8, DataError> {
+        let l = parse_byte_list(from)?;
+        if l.len() == 1 {
+            Ok(l[0])
+        } else {
+            Err(DataError::from(format!("Could not parse byte from {:?}", from)))
+        }
+    }
+
+    fn parse_char_list(from: &str) -> Result<Vec<char>, DataError> {
+        Ok(parse_char_list(from)?.chars().collect())
+    }
+
+    fn parse_byte_list(from: &str) -> Result<Vec<u8>, DataError> {
+        parse_byte_list(from)
+    }
+
+    fn make_size_iterator_range(min: usize, max: usize) -> SizeIterator {
+        SizeIterator::new(min, max)
+    }
+
+    fn make_number_iterator_range(min: SimpleNumber, max: SimpleNumber) -> NumberIterator {
+        NumberIterator::new(min, max)
+    }
+}
 
 impl<T, A> GarnishData for SimpleGarnishData<T, A>
 where
@@ -30,6 +121,7 @@ where
     type CharIterator = CharListIterator;
     type ByteIterator = ByteListIterator;
     type SymbolListPartIterator = SymbolListPartIterator;
+    type DataFactory = SimpleDataFactory;
 
     fn get_data_len(&self) -> usize {
         self.data.len()
@@ -205,13 +297,13 @@ where
 
     fn get_list_items_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
         Ok(self.get_list_len(list_addr)
-            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
+            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::DataFactory::size_to_number(len))))
             .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
     }
 
     fn get_list_associations_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
         Ok(self.get_list_associations_len(list_addr)
-            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::size_to_number(len))))
+            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::DataFactory::size_to_number(len))))
             .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
     }
 
@@ -587,54 +679,6 @@ where
     }
 
     //
-    // Casting
-    //
-
-    fn size_to_number(from: Self::Size) -> Self::Number {
-        from.into()
-    }
-
-    fn number_to_size(from: Self::Number) -> Option<Self::Size> {
-        Some(from.into())
-    }
-
-    fn number_to_char(from: Self::Number) -> Option<Self::Char> {
-        match from {
-            SimpleNumber::Integer(v) => match (v as u8).try_into() {
-                Ok(c) => Some(c),
-                Err(_) => None,
-            },
-            SimpleNumber::Float(_) => None,
-        }
-    }
-
-    fn number_to_byte(from: Self::Number) -> Option<Self::Byte> {
-        match from {
-            SimpleNumber::Integer(v) => match v.try_into() {
-                Ok(b) => Some(b),
-                Err(_) => None,
-            },
-            SimpleNumber::Float(_) => None,
-        }
-    }
-
-    fn char_to_number(from: Self::Char) -> Option<Self::Number> {
-        Some((from as i32).into())
-    }
-
-    fn char_to_byte(from: Self::Char) -> Option<Self::Byte> {
-        Some(from as u8)
-    }
-
-    fn byte_to_number(from: Self::Byte) -> Option<Self::Number> {
-        Some((from as i32).into())
-    }
-
-    fn byte_to_char(from: Self::Byte) -> Option<Self::Char> {
-        Some(from.into())
-    }
-
-    //
     // Add Conversions
     //
 
@@ -704,60 +748,12 @@ where
         }
     }
 
-    //
-    // Parsing
-    //
-
-    fn parse_number(from: &str) -> Result<Self::Number, Self::Error> {
-        parse_simple_number(from)
-    }
-
-    fn parse_symbol(from: &str) -> Result<Self::Symbol, Self::Error> {
-        Ok(symbol_value(from.trim_matches(':')))
-    }
-
-    fn parse_char(from: &str) -> Result<Self::Char, Self::Error> {
-        let l = parse_char_list(from)?;
-        if l.len() == 1 {
-            Ok(l.chars().nth(0).unwrap())
-        } else {
-            Err(DataError::from(format!("Could not parse char from {:?}", from)))
-        }
-    }
-
-    fn parse_byte(from: &str) -> Result<Self::Byte, Self::Error> {
-        let l = parse_byte_list(from)?;
-        if l.len() == 1 {
-            Ok(l[0])
-        } else {
-            Err(DataError::from(format!("Could not parse byte from {:?}", from)))
-        }
-    }
-
-    fn parse_char_list(from: &str) -> Result<Vec<Self::Char>, Self::Error> {
-        Ok(parse_char_list(from)?.chars().collect())
-    }
-
-    fn parse_byte_list(from: &str) -> Result<Vec<Self::Byte>, Self::Error> {
-        parse_byte_list(from)
-    }
-
     // overrides
 
     fn parse_add_symbol(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
-        let sym = Self::parse_symbol(from)?;
+        let sym = Self::DataFactory::parse_symbol(from)?;
         self.data.insert_symbol(sym, from.to_string());
         self.add_symbol(sym)
-    }
-
-    // iterator factories
-
-    fn make_size_iterator_range(min: Self::Size, max: Self::Size) -> Self::SizeIterator {
-        SizeIterator::new(min, max)
-    }
-
-    fn make_number_iterator_range(min: Self::Number, max: Self::Number) -> Self::NumberIterator {
-        NumberIterator::new(min, max)
     }
 
     fn resolve(&mut self, symbol: Self::Symbol) -> Result<bool, Self::Error> {
@@ -877,35 +873,35 @@ mod tests {
 #[cfg(test)]
 mod add_data {
     mod parsing {
-        use crate::SimpleDataRuntimeNC;
-        use garnish_lang_traits::GarnishData;
+        use crate::SimpleDataFactory;
+        use garnish_lang_traits::GarnishDataFactory;
 
         #[test]
         fn symbols_are_stripped_of_colon() {
-            let s1 = SimpleDataRuntimeNC::parse_symbol(":my_symbol").unwrap();
-            let s2 = SimpleDataRuntimeNC::parse_symbol("my_symbol").unwrap();
+            let s1 = SimpleDataFactory::parse_symbol(":my_symbol").unwrap();
+            let s2 = SimpleDataFactory::parse_symbol("my_symbol").unwrap();
 
             assert_eq!(s1, s2);
         }
     }
     mod symbol_list {
-        use crate::{SimpleDataRuntimeNC, SimpleGarnishData};
-        use garnish_lang_traits::{GarnishData, GarnishDataType};
+        use crate::{SimpleDataFactory, SimpleDataRuntimeNC, SimpleGarnishData};
+        use garnish_lang_traits::{GarnishData, GarnishDataFactory, GarnishDataType};
 
         fn s1() -> u64 {
-            SimpleDataRuntimeNC::parse_symbol("symbol_one").unwrap()
+            SimpleDataFactory::parse_symbol("symbol_one").unwrap()
         }
 
         fn s2() -> u64 {
-            SimpleDataRuntimeNC::parse_symbol("symbol_two").unwrap()
+            SimpleDataFactory::parse_symbol("symbol_two").unwrap()
         }
 
         fn s3() -> u64 {
-            SimpleDataRuntimeNC::parse_symbol("symbol_three").unwrap()
+            SimpleDataFactory::parse_symbol("symbol_three").unwrap()
         }
 
         fn s4() -> u64 {
-            SimpleDataRuntimeNC::parse_symbol("symbol_four").unwrap()
+            SimpleDataFactory::parse_symbol("symbol_four").unwrap()
         }
 
         #[test]

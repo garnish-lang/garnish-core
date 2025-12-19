@@ -1,7 +1,7 @@
 use crate::build::InstructionMetadata;
 use crate::error::CompilerError;
 use crate::parse::{Definition, ParseNode};
-use garnish_lang_traits::{GarnishData, Instruction, TypeConstants};
+use garnish_lang_traits::{GarnishData, GarnishDataFactory, Instruction, TypeConstants};
 
 trait GetError<T, Data: GarnishData> {
     fn get_mut_or_error(&mut self, index: usize) -> Result<&mut T, CompilerError<Data::Error>>;
@@ -85,7 +85,7 @@ impl<Data: GarnishData> BuildNode<Data> {
             parse_node_index,
             containing_expression_jump,
             list_parent: None,
-            child_count: Data::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
+            child_count: <Data as GarnishData>::DataFactory::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
             contributes_to_list: true,
             jump_index_to_update: None,
             root_end_instruction: None,
@@ -100,7 +100,7 @@ impl<Data: GarnishData> BuildNode<Data> {
             parse_node_index,
             containing_expression_jump,
             list_parent: Some((list_parent, list_parent_definition)),
-            child_count: Data::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
+            child_count: <Data as GarnishData>::DataFactory::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
             contributes_to_list: true,
             jump_index_to_update: None,
             root_end_instruction: None,
@@ -115,7 +115,7 @@ impl<Data: GarnishData> BuildNode<Data> {
             parse_node_index,
             containing_expression_jump,
             list_parent: None,
-            child_count: Data::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
+            child_count: <Data as GarnishData>::DataFactory::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
             contributes_to_list: true,
             jump_index_to_update: None,
             root_end_instruction: None,
@@ -130,7 +130,7 @@ impl<Data: GarnishData> BuildNode<Data> {
             parse_node_index,
             containing_expression_jump,
             list_parent: None,
-            child_count: Data::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
+            child_count: <Data as GarnishData>::DataFactory::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
             contributes_to_list: true,
             jump_index_to_update: Some(jump_index),
             root_end_instruction: None,
@@ -145,7 +145,7 @@ impl<Data: GarnishData> BuildNode<Data> {
             parse_node_index,
             containing_expression_jump,
             list_parent: None,
-            child_count: Data::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
+            child_count: <Data as GarnishData>::DataFactory::make_size_iterator_range(Data::Size::zero(), Data::Size::max_value()),
             contributes_to_list: true,
             jump_index_to_update: Some(jump_index),
             root_end_instruction: Some(end_instruction),

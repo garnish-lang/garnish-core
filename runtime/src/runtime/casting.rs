@@ -5,7 +5,7 @@ use crate::runtime::error::OrNumberError;
 use crate::runtime::internals::concatenation_len;
 use crate::runtime::list::is_value_association;
 use crate::runtime::utilities::{get_range, next_ref, next_two_raw_ref, push_unit};
-use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataFactory, GarnishDataType, GarnishNumber, RuntimeError, TypeConstants};
 
 pub fn type_of<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let a = next_ref(this)?;
@@ -47,22 +47,22 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
         }
         // Primitives
         (GarnishDataType::Number, GarnishDataType::Char) => {
-            primitive_cast(this, left, Data::get_number, Data::number_to_char, Data::add_char)?;
+            primitive_cast(this, left, Data::get_number, <Data as GarnishData>::DataFactory::number_to_char, Data::add_char)?;
         }
         (GarnishDataType::Number, GarnishDataType::Byte) => {
-            primitive_cast(this, left, Data::get_number, Data::number_to_byte, Data::add_byte)?;
+            primitive_cast(this, left, Data::get_number, <Data as GarnishData>::DataFactory::number_to_byte, Data::add_byte)?;
         }
         (GarnishDataType::Char, GarnishDataType::Number) => {
-            primitive_cast(this, left, Data::get_char, Data::char_to_number, Data::add_number)?;
+            primitive_cast(this, left, Data::get_char, <Data as GarnishData>::DataFactory::char_to_number, Data::add_number)?;
         }
         (GarnishDataType::Char, GarnishDataType::Byte) => {
-            primitive_cast(this, left, Data::get_char, Data::char_to_byte, Data::add_byte)?;
+            primitive_cast(this, left, Data::get_char, <Data as GarnishData>::DataFactory::char_to_byte, Data::add_byte)?;
         }
         (GarnishDataType::Byte, GarnishDataType::Number) => {
-            primitive_cast(this, left, Data::get_byte, Data::byte_to_number, Data::add_number)?;
+            primitive_cast(this, left, Data::get_byte, <Data as GarnishData>::DataFactory::byte_to_number, Data::add_number)?;
         }
         (GarnishDataType::Byte, GarnishDataType::Char) => {
-            primitive_cast(this, left, Data::get_byte, Data::byte_to_char, Data::add_char)?;
+            primitive_cast(this, left, Data::get_byte, <Data as GarnishData>::DataFactory::byte_to_char, Data::add_char)?;
         }
         (GarnishDataType::CharList, GarnishDataType::Char) => {
             let len = this.get_char_list_len(left.clone())?;
@@ -107,11 +107,11 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
         }
         (GarnishDataType::CharList, GarnishDataType::List) => {
             let len = this.get_char_list_len(left.clone())?;
-            list_from_char_list(this, left, Data::Number::zero(), Data::size_to_number(len))?;
+            list_from_char_list(this, left, Data::Number::zero(), <Data as GarnishData>::DataFactory::size_to_number(len))?;
         }
         (GarnishDataType::ByteList, GarnishDataType::List) => {
             let len = this.get_byte_list_len(left.clone())?;
-            list_from_byte_list(this, left, Data::Number::zero(), Data::size_to_number(len))?;
+            list_from_byte_list(this, left, Data::Number::zero(), <Data as GarnishData>::DataFactory::size_to_number(len))?;
         }
         (GarnishDataType::Concatenation, GarnishDataType::List) => {
             let len = concatenation_len(this, left.clone())?;
@@ -156,7 +156,7 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
                     list_from_byte_list(this, value, start, end.increment().or_num_err()?)?;
                 }
                 GarnishDataType::Concatenation => {
-                    let mut list_index = this.start_list(Data::number_to_size(len).or_num_err()?)?;
+                    let mut list_index = this.start_list(<Data as GarnishData>::DataFactory::number_to_size(len).or_num_err()?)?;
 
                     iterate_concatenation_mut(this, value, |this, current_index, addr| {
                         if current_index < start {

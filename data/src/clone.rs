@@ -1,4 +1,5 @@
 use crate::{DataError, SimpleDataType, SimpleGarnishData};
+use garnish_lang_traits::GarnishDataFactory;
 use garnish_lang_traits::helpers::clone_data;
 
 fn clone_with_retained_data_internal<T, A>(
@@ -65,8 +66,8 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{NoCustom, SimpleData, SimpleGarnishData, SimpleNumber};
-    use garnish_lang_traits::GarnishData;
+    use crate::{NoCustom, SimpleData, SimpleDataFactory, SimpleGarnishData, SimpleNumber};
+    use garnish_lang_traits::{GarnishData, GarnishDataFactory};
 
     fn assert_default_data(data: &SimpleGarnishData) {
         assert_eq!(data.data.get(0).unwrap(), &SimpleData::Unit);
@@ -125,7 +126,7 @@ mod tests {
         data.add_number(SimpleNumber::Integer(100)).unwrap();
         data.add_number(SimpleNumber::Integer(200)).unwrap();
         let num = data.add_number(SimpleNumber::Integer(300)).unwrap();
-        let sym_data = SimpleGarnishData::<NoCustom>::parse_symbol("number").unwrap();
+        let sym_data = SimpleDataFactory::parse_symbol("number").unwrap();
         let sym = data.add_symbol(sym_data).unwrap();
         let pair = data.add_pair((sym, num)).unwrap();
 

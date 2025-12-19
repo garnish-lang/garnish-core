@@ -1,6 +1,6 @@
 use crate::runtime::error::OrNumberError;
 use crate::runtime::utilities::{get_range, next_two_raw_ref, push_boolean, push_unit};
-use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishDataType, GarnishData, GarnishDataFactory, GarnishNumber, RuntimeError, TypeConstants};
 use std::cmp::Ordering;
 
 pub fn less_than<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -119,7 +119,7 @@ where
     GetFunc: Fn(&Data, Data::Size, Data::Number) -> Result<T, Data::Error>,
     LenFunc: Fn(&Data, Data::Size) -> Result<Data::Size, Data::Error>,
 {
-    let (len1, len2) = (Data::size_to_number(len_func(this, left.clone())?), Data::size_to_number(len_func(this, right.clone())?));
+    let (len1, len2) = (<Data as GarnishData>::DataFactory::size_to_number(len_func(this, left.clone())?), <Data as GarnishData>::DataFactory::size_to_number(len_func(this, right.clone())?));
 
     let mut left_index = left_start;
     let mut right_index = right_start;

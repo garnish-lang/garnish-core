@@ -171,8 +171,8 @@ mod simple {
 #[cfg(test)]
 mod primitive {
     use crate::simple::testing_utilities::{add_char_list, create_simple_runtime};
-    use garnish_lang::simple::SimpleDataRuntimeNC;
-    use garnish_lang::{GarnishData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::simple::{SimpleDataFactory, SimpleDataRuntimeNC};
+    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn integer_to_char() {
@@ -186,7 +186,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleDataRuntimeNC::number_to_char(('a' as i32).into()).unwrap();
+        let expected = SimpleDataFactory::number_to_char(('a' as i32).into()).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_char(i).unwrap(), expected);
@@ -204,7 +204,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleDataRuntimeNC::number_to_byte(10.into()).unwrap();
+        let expected = SimpleDataFactory::number_to_byte(10.into()).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_byte(i).unwrap(), expected);
@@ -222,7 +222,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleDataRuntimeNC::char_to_number('a').unwrap();
+        let expected = SimpleDataFactory::char_to_number('a').unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), expected);
@@ -240,7 +240,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleDataRuntimeNC::char_to_byte('a').unwrap();
+        let expected = SimpleDataFactory::char_to_byte('a').unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_byte(i).unwrap(), expected);
@@ -258,7 +258,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleDataRuntimeNC::byte_to_number('a' as u8).unwrap();
+        let expected = SimpleDataFactory::byte_to_number('a' as u8).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), expected);
@@ -276,7 +276,7 @@ mod primitive {
 
         runtime.type_cast(NO_CONTEXT).unwrap();
 
-        let expected = SimpleDataRuntimeNC::byte_to_char('a' as u8).unwrap();
+        let expected = SimpleDataFactory::byte_to_char('a' as u8).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_char(i).unwrap(), expected);
@@ -334,8 +334,8 @@ mod primitive {
 #[cfg(test)]
 mod lists {
     use crate::simple::testing_utilities::{add_byte_list, add_char_list, add_list_with_start, add_range, create_simple_runtime};
-    use garnish_lang::simple::{SimpleDataRuntimeNC, symbol_value};
-    use garnish_lang::{GarnishData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::simple::{SimpleDataFactory, SimpleDataRuntimeNC, symbol_value};
+    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn range_to_list() {
@@ -373,7 +373,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
-        let expected = SimpleDataRuntimeNC::parse_char_list(input).unwrap();
+        let expected = SimpleDataFactory::parse_char_list(input).unwrap();
         let mut result = vec![];
 
         for i in 0..input.len() {
@@ -399,7 +399,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
-        let expected = SimpleDataRuntimeNC::parse_byte_list(input).unwrap();
+        let expected = SimpleDataFactory::parse_byte_list(input).unwrap();
         let mut result = vec![];
 
         for i in 0..input.len() {
@@ -458,7 +458,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
-        let expected: Vec<char> = SimpleDataRuntimeNC::parse_char_list(input).unwrap().iter().skip(2).take(6).map(|c| *c).collect();
+        let expected: Vec<char> = SimpleDataFactory::parse_char_list(input).unwrap().iter().skip(2).take(6).map(|c| *c).collect();
         let mut result = vec![];
 
         for i in 0..expected.len() {
@@ -486,7 +486,7 @@ mod lists {
         runtime.type_cast(NO_CONTEXT).unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
-        let expected: Vec<u8> = SimpleDataRuntimeNC::parse_byte_list(input).unwrap().iter().skip(2).take(6).map(|c| *c).collect();
+        let expected: Vec<u8> = SimpleDataFactory::parse_byte_list(input).unwrap().iter().skip(2).take(6).map(|c| *c).collect();
         let mut result = vec![];
 
         for i in 0..expected.len() {
@@ -635,8 +635,8 @@ mod concatenation {
 #[cfg(test)]
 mod deferred {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang::simple::SimpleDataRuntimeNC;
-    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::simple::{SimpleDataFactory, SimpleDataRuntimeNC};
+    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime, NO_CONTEXT};
 
     #[test]
     fn char_list() {
@@ -690,7 +690,7 @@ mod deferred {
 
         let d1 = runtime.get_data_mut().add_unit().unwrap();
 
-        let s = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("sym").unwrap()).unwrap();
+        let s = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("sym").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(s).unwrap();

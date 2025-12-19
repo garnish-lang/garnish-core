@@ -1,8 +1,8 @@
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang::simple::{SimpleDataRuntimeNC, SimpleNumber};
-    use garnish_lang::{EmptyContext, GarnishData, GarnishDataType, GarnishRuntime};
+    use garnish_lang::simple::{SimpleDataFactory, SimpleNumber};
+    use garnish_lang::{EmptyContext, GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn add() {
@@ -36,8 +36,8 @@ mod tests {
     fn add_with_non_numbers() {
         let mut runtime = create_simple_runtime();
 
-        runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("sym1").unwrap()).unwrap();
-        runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("sym2").unwrap()).unwrap();
+        runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("sym1").unwrap()).unwrap();
+        runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("sym2").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(1).unwrap();
         runtime.get_data_mut().push_register(2).unwrap();

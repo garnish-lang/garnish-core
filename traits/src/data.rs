@@ -87,6 +87,27 @@ impl<T> Extents<T> where T: Clone + PartialOrd + PartialEq + Debug {
     }
 }
 
+pub trait GarnishDataFactory<Size, Number, Char, Byte, Symbol, Error, SizeIterator, NumberIterator> {
+    fn size_to_number(from: Size) -> Number;
+    fn number_to_size(from: Number) -> Option<Size>;
+    fn number_to_char(from: Number) -> Option<Char>;
+    fn number_to_byte(from: Number) -> Option<Byte>;
+    fn char_to_number(from: Char) -> Option<Number>;
+    fn char_to_byte(from: Char) -> Option<Byte>;
+    fn byte_to_number(from: Byte) -> Option<Number>;
+    fn byte_to_char(from: Byte) -> Option<Char>;
+
+    fn parse_number(from: &str) -> Result<Number, Error>;
+    fn parse_symbol(from: &str) -> Result<Symbol, Error>;
+    fn parse_char(from: &str) -> Result<Char, Error>;
+    fn parse_byte(from: &str) -> Result<Byte, Error>;
+    fn parse_char_list(from: &str) -> Result<Vec<Char>, Error>;
+    fn parse_byte_list(from: &str) -> Result<Vec<Byte>, Error>;
+
+    fn make_size_iterator_range(min: Size, max: Size) -> SizeIterator;
+    fn make_number_iterator_range(min: Number, max: Number) -> NumberIterator;
+}
+
 /// Trait defining what a data access operations are required by a runtime.
 pub trait GarnishData {
     type Error: std::error::Error + 'static;
@@ -118,6 +139,7 @@ pub trait GarnishData {
     type CharIterator: Iterator<Item = Self::Char>;
     type ByteIterator: Iterator<Item = Self::Byte>;
     type SymbolListPartIterator: Iterator<Item = SymbolListPart<Self::Symbol, Self::Number>>;
+    type DataFactory: GarnishDataFactory<Self::Size, Self::Number, Self::Char, Self::Byte, Self::Symbol, Self::Error, Self::SizeIterator, Self::NumberIterator>;
 
     fn get_data_len(&self) -> Self::Size;
     fn get_data_iter(&self) -> Self::DataIndexIterator;
@@ -224,16 +246,6 @@ pub trait GarnishData {
     fn pop_jump_path(&mut self) -> Option<Self::Size>;
     fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator;
 
-    // deferred conversions
-    fn size_to_number(from: Self::Size) -> Self::Number;
-    fn number_to_size(from: Self::Number) -> Option<Self::Size>;
-    fn number_to_char(from: Self::Number) -> Option<Self::Char>;
-    fn number_to_byte(from: Self::Number) -> Option<Self::Byte>;
-    fn char_to_number(from: Self::Char) -> Option<Self::Number>;
-    fn char_to_byte(from: Self::Char) -> Option<Self::Byte>;
-    fn byte_to_number(from: Self::Byte) -> Option<Self::Number>;
-    fn byte_to_char(from: Self::Byte) -> Option<Self::Char>;
-
     // mut conversions
     fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_byte_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error>;
@@ -243,33 +255,27 @@ pub trait GarnishData {
 
     // parsing, to be moved to separate object
     // will require moving simple data to its own crate
-    fn parse_number(from: &str) -> Result<Self::Number, Self::Error>;
-    fn parse_symbol(from: &str) -> Result<Self::Symbol, Self::Error>;
-    fn parse_char(from: &str) -> Result<Self::Char, Self::Error>;
-    fn parse_byte(from: &str) -> Result<Self::Byte, Self::Error>;
-    fn parse_char_list(from: &str) -> Result<Vec<Self::Char>, Self::Error>;
-    fn parse_byte_list(from: &str) -> Result<Vec<Self::Byte>, Self::Error>;
 
     // parse and add to data
     fn parse_add_number(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
-        self.add_number(Self::parse_number(from)?)
+        self.add_number(Self::DataFactory::parse_number(from)?)
     }
 
     fn parse_add_symbol(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
-        self.add_symbol(Self::parse_symbol(from)?)
+        self.add_symbol(Self::DataFactory::parse_symbol(from)?)
     }
 
     fn parse_add_char(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
-        self.add_char(Self::parse_char(from)?)
+        self.add_char(Self::DataFactory::parse_char(from)?)
     }
 
     fn parse_add_byte(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
-        self.add_byte(Self::parse_byte(from)?)
+        self.add_byte(Self::DataFactory::parse_byte(from)?)
     }
 
     fn parse_add_char_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
         self.start_char_list()?;
-        for c in Self::parse_char_list(from)? {
+        for c in Self::DataFactory::parse_char_list(from)? {
             self.add_to_char_list(c)?;
         }
         self.end_char_list()
@@ -277,15 +283,11 @@ pub trait GarnishData {
 
     fn parse_add_byte_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
         self.start_byte_list()?;
-        for b in Self::parse_byte_list(from)? {
+        for b in Self::DataFactory::parse_byte_list(from)? {
             self.add_to_byte_list(b)?;
         }
         self.end_byte_list()
     }
-
-    // iterator factories
-    fn make_size_iterator_range(min: Self::Size, max: Self::Size) -> Self::SizeIterator;
-    fn make_number_iterator_range(min: Self::Number, max: Self::Number) -> Self::NumberIterator;
 
     // Execution checks
 

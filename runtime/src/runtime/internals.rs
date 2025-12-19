@@ -3,7 +3,7 @@ use crate::runtime::range::range_len;
 use crate::runtime::utilities::{next_ref, push_number, push_unit};
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
 use garnish_lang_traits::Instruction;
-use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataFactory, GarnishDataType, RuntimeError, TypeConstants};
 
 pub fn access_left_internal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;
@@ -86,15 +86,15 @@ pub fn access_length_internal<Data: GarnishData>(this: &mut Data) -> Result<Opti
             }
         }
         GarnishDataType::List => {
-            let len = Data::size_to_number(this.get_list_len(r)?);
+            let len = <Data as GarnishData>::DataFactory::size_to_number(this.get_list_len(r)?);
             push_number(this, len)?;
         }
         GarnishDataType::CharList => {
-            let len = Data::size_to_number(this.get_char_list_len(r)?);
+            let len = <Data as GarnishData>::DataFactory::size_to_number(this.get_char_list_len(r)?);
             push_number(this, len)?;
         }
         GarnishDataType::ByteList => {
-            let len = Data::size_to_number(this.get_byte_list_len(r)?);
+            let len = <Data as GarnishData>::DataFactory::size_to_number(this.get_byte_list_len(r)?);
             push_number(this, len)?;
         }
         GarnishDataType::Range => {
@@ -126,7 +126,7 @@ pub fn access_length_internal<Data: GarnishData>(this: &mut Data) -> Result<Opti
         }
         GarnishDataType::Concatenation => {
             let count = concatenation_len(this, r)?;
-            let addr = this.add_number(Data::size_to_number(count))?;
+            let addr = this.add_number(<Data as GarnishData>::DataFactory::size_to_number(count))?;
             this.push_register(addr)?;
         }
         t => {

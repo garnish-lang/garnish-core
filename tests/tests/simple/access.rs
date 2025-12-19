@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang::simple::SimpleDataRuntimeNC;
-    use garnish_lang::{EmptyContext, GarnishData, GarnishRuntime, Instruction};
+    use garnish_lang::{EmptyContext, GarnishData, GarnishDataFactory, GarnishRuntime, Instruction, simple::SimpleDataFactory};
 
     #[test]
     fn access_integer_to_list() {
@@ -102,15 +101,15 @@ mod tests {
     fn access_symbol_to_list() {
         let mut runtime = create_simple_runtime();
 
-        let i1 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val1").unwrap()).unwrap();
+        let i1 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val1").unwrap()).unwrap();
         let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
         let i3 = runtime.get_data_mut().add_pair((i1, i2)).unwrap();
 
-        let i4 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap();
+        let i4 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val2").unwrap()).unwrap();
         let i5 = runtime.get_data_mut().add_number(20.into()).unwrap();
         let i6 = runtime.get_data_mut().add_pair((i4, i5)).unwrap();
 
-        let i7 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val3").unwrap()).unwrap();
+        let i7 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val3").unwrap()).unwrap();
         let i8 = runtime.get_data_mut().add_number(30.into()).unwrap();
         let i9 = runtime.get_data_mut().add_pair((i7, i8)).unwrap();
 
@@ -120,7 +119,7 @@ mod tests {
         list_index1 = runtime.get_data_mut().add_to_list(list_index1, i9).unwrap();
         let i10 = runtime.get_data_mut().end_list(list_index1).unwrap();
 
-        let i11 = runtime.get_data_mut().add_symbol(SimpleDataRuntimeNC::parse_symbol("val2").unwrap()).unwrap();
+        let i11 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val2").unwrap()).unwrap();
 
         runtime.get_data_mut().push_register(i10).unwrap();
         runtime.get_data_mut().push_register(i11).unwrap();

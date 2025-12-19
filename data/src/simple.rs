@@ -820,7 +820,8 @@ mod to_byte_list {
 #[cfg(test)]
 mod to_char_list {
     use super::{NoCustom, SimpleGarnishData};
-    use garnish_lang_traits::{GarnishData, GarnishDataType};
+    use crate::SimpleDataFactory;
+    use garnish_lang_traits::{GarnishData, GarnishDataType, GarnishDataFactory};
 
     fn assert_to_char_list<Func>(expected: &str, setup: Func)
     where
@@ -912,12 +913,8 @@ mod to_char_list {
 
     #[test]
     fn symbol() {
-        let s = SimpleGarnishData::<NoCustom>::parse_symbol("my_symbol").unwrap().to_string();
-        assert_to_char_list(s.as_str(), |runtime| {
-            runtime
-                .add_symbol(SimpleGarnishData::<NoCustom>::parse_symbol("my_symbol").unwrap())
-                .unwrap()
-        })
+        let s = SimpleDataFactory::parse_symbol("my_symbol").unwrap().to_string();
+        assert_to_char_list(s.as_str(), |runtime| runtime.add_symbol(SimpleDataFactory::parse_symbol("my_symbol").unwrap()).unwrap())
     }
 
     #[test]

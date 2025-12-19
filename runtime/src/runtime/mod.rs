@@ -45,7 +45,7 @@ pub mod ops {
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, Instruction, SymbolListPart};
+    use garnish_lang_traits::{Extents, GarnishData, GarnishDataFactory, GarnishDataType, Instruction, SymbolListPart};
     use std::error::Error;
     use std::fmt::Display;
 
@@ -340,6 +340,75 @@ mod tests {
         pub stub_apply: fn(&mut T, external_value: i32, input_addr: i32) -> Result<bool, MockError>,
     }
 
+    /// Mock factory implementation for tests
+    pub struct MockDataFactory;
+
+    impl GarnishDataFactory<i32, i32, char, u8, u32, MockError, MockIterator, MockIterator> for MockDataFactory {
+        fn size_to_number(from: i32) -> i32 {
+            from
+        }
+
+        fn number_to_size(_from: i32) -> Option<i32> {
+            unimplemented!()
+        }
+
+        fn number_to_char(_from: i32) -> Option<char> {
+            unimplemented!()
+        }
+
+        fn number_to_byte(_from: i32) -> Option<u8> {
+            unimplemented!()
+        }
+
+        fn char_to_number(_from: char) -> Option<i32> {
+            unimplemented!()
+        }
+
+        fn char_to_byte(_from: char) -> Option<u8> {
+            unimplemented!()
+        }
+
+        fn byte_to_number(_from: u8) -> Option<i32> {
+            unimplemented!()
+        }
+
+        fn byte_to_char(_from: u8) -> Option<char> {
+            unimplemented!()
+        }
+
+        fn parse_number(_from: &str) -> Result<i32, MockError> {
+            unimplemented!()
+        }
+
+        fn parse_symbol(_from: &str) -> Result<u32, MockError> {
+            unimplemented!()
+        }
+
+        fn parse_char(_from: &str) -> Result<char, MockError> {
+            unimplemented!()
+        }
+
+        fn parse_byte(_from: &str) -> Result<u8, MockError> {
+            unimplemented!()
+        }
+
+        fn parse_char_list(_from: &str) -> Result<Vec<char>, MockError> {
+            unimplemented!()
+        }
+
+        fn parse_byte_list(_from: &str) -> Result<Vec<u8>, MockError> {
+            unimplemented!()
+        }
+
+        fn make_size_iterator_range(_min: i32, _max: i32) -> MockIterator {
+            unimplemented!()
+        }
+
+        fn make_number_iterator_range(_min: i32, _max: i32) -> MockIterator {
+            unimplemented!()
+        }
+    }
+
     impl MockGarnishData<BasicData> {
         pub fn new_basic_data(type_stack: Vec<GarnishDataType>) -> Self {
             let data = BasicData::new(type_stack);
@@ -522,6 +591,7 @@ mod tests {
         type CharIterator = MockCharIterator;
         type ByteIterator = MockByteIterator;
         type SymbolListPartIterator = MockSymbolListPartIterator;
+        type DataFactory = MockDataFactory;
 
         fn get_data_len(&self) -> Self::Size {
             (self.stub_get_data_len)(self.data())
@@ -863,38 +933,6 @@ mod tests {
             (self.stub_get_jump_path_iter)(self.data())
         }
 
-        fn size_to_number(from: Self::Size) -> Self::Number {
-            from
-        }
-
-        fn number_to_size(_from: Self::Number) -> Option<Self::Size> {
-            unimplemented!()
-        }
-
-        fn number_to_char(_from: Self::Number) -> Option<Self::Char> {
-            unimplemented!()
-        }
-
-        fn number_to_byte(_from: Self::Number) -> Option<Self::Byte> {
-            unimplemented!()
-        }
-
-        fn char_to_number(_from: Self::Char) -> Option<Self::Number> {
-            unimplemented!()
-        }
-
-        fn char_to_byte(_from: Self::Char) -> Option<Self::Byte> {
-            unimplemented!()
-        }
-
-        fn byte_to_number(_from: Self::Byte) -> Option<Self::Number> {
-            unimplemented!()
-        }
-
-        fn byte_to_char(_from: Self::Byte) -> Option<Self::Char> {
-            unimplemented!()
-        }
-
         fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
             (self.stub_add_char_list_from)(self.data_mut(), from)
         }
@@ -913,38 +951,6 @@ mod tests {
 
         fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
             (self.stub_add_number_from)(self.data_mut(), from)
-        }
-
-        fn parse_number(_from: &str) -> Result<Self::Number, Self::Error> {
-            unimplemented!()
-        }
-
-        fn parse_symbol(_from: &str) -> Result<Self::Symbol, Self::Error> {
-            unimplemented!()
-        }
-
-        fn parse_char(_from: &str) -> Result<Self::Char, Self::Error> {
-            unimplemented!()
-        }
-
-        fn parse_byte(_from: &str) -> Result<Self::Byte, Self::Error> {
-            unimplemented!()
-        }
-
-        fn parse_char_list(_from: &str) -> Result<Vec<Self::Char>, Self::Error> {
-            unimplemented!()
-        }
-
-        fn parse_byte_list(_from: &str) -> Result<Vec<Self::Byte>, Self::Error> {
-            unimplemented!()
-        }
-
-        fn make_size_iterator_range(_min: Self::Size, _max: Self::Size) -> Self::SizeIterator {
-            unimplemented!()
-        }
-
-        fn make_number_iterator_range(_min: Self::Number, _max: Self::Number) -> Self::NumberIterator {
-            unimplemented!()
         }
 
         fn resolve(&mut self, symbol: Self::Symbol) -> Result<bool, Self::Error> {
