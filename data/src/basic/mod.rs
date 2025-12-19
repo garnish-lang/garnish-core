@@ -9,6 +9,7 @@ use std::fmt::Debug;
 use std::usize;
 
 pub use data::{BasicData, BasicDataUnitCustom};
+pub use garnish::BasicDataFactory;
 
 use crate::basic::storage::{StorageBlock, StorageSettings};
 use crate::data::SimpleNumber;
