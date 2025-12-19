@@ -7,7 +7,7 @@ use std::cmp::Ordering;
 use crate::{
     BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, merge_to_symbol_list::merge_to_symbol_list, search::search_for_associative_item}, error::DataErrorType, symbol_value
 };
-use garnish_lang_traits::{Extents, GarnishData, GarnishDataFactory, GarnishDataType, SymbolListPart};
+use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, SymbolListPart};
 
 impl<T> GarnishData for BasicGarnishData<T>
 where
@@ -1726,13 +1726,5 @@ mod tests {
         data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
         let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(10.into(), 2.into())).unwrap().collect();
         assert_eq!(result, vec![]);
-    }
-
-    #[test]
-    fn parse_symbol() {
-        use crate::basic::garnish::BasicDataFactory;
-        use garnish_lang_traits::GarnishDataFactory;
-        let result = BasicDataFactory::parse_symbol("my_symbol").unwrap();
-        assert_eq!(result, 8904929874702161741);
     }
 }

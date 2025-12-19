@@ -69,3 +69,16 @@ impl GarnishDataFactory<usize, BasicNumber, char, u8, u64, DataError, SizeIterat
         todo!()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use garnish_lang_traits::GarnishDataFactory;
+
+    use crate::basic::garnish::factory::BasicDataFactory;
+
+    #[test]
+    fn parse_symbol() {
+        let result = BasicDataFactory::parse_symbol("my_symbol").unwrap();
+        assert_eq!(result, 8904929874702161741);
+    }
+}
