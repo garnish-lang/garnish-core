@@ -4,6 +4,7 @@ mod merge_to_symbol_list;
 mod storage;
 mod object;
 mod search;
+mod dump;
 
 use std::fmt::Debug;
 use std::usize;

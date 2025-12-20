@@ -3,7 +3,7 @@ use std::cmp::Ordering;
 use crate::{
     BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, garnish::{factory::BasicDataFactory, utils::extents_to_start_end}, merge_to_symbol_list::merge_to_symbol_list, search::search_for_associative_item}, error::DataErrorType, symbol_value
 };
-use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, SymbolListPart};
+use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, SymbolListPart, TypeConstants};
 
 impl<T> GarnishData for BasicGarnishData<T>
 where
@@ -261,13 +261,20 @@ where
         let mut stack = vec![index];
         let mut items = vec![];
 
-        while let Some(item) = stack.pop() {
-            match self.get_from_data_block_ensure_index(item)? {
+        while let Some(index) = stack.pop() {
+            match self.get_from_data_block_ensure_index(index)? {
                 BasicData::Concatenation(left, right) => {
                     stack.push(right.clone());
                     stack.push(left.clone());
                 }
-                _ => items.push(item),
+                BasicData::List(_len, _) => {
+                    let list_iter = self.get_list_item_iter(index, Extents::new(0.into(), BasicNumber::max_value()))?;
+
+                    for item in list_iter {
+                        items.push(item);
+                    }
+                }
+                _ => items.push(index),
             }
         }
 
@@ -1881,5 +1888,65 @@ mod tests {
         data.push_object_to_data_block(BasicObject::Concatenation(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into())))).unwrap();
         let result = data.get_concatenation_iter(10, Extents::new(0.into(), 3.into())).err();
         assert_eq!(result, Some(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(10))));
+    }
+
+    #[test]
+    fn get_concatenation_iter_with_list() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Concatenation(Box::new(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])), Box::new(BasicObject::Number(400.into())))).unwrap();
+        let result: Vec<usize> = data.get_concatenation_iter(11, Extents::new(0.into(), 4.into())).unwrap().collect();
+        assert_eq!(result, vec![0, 1, 2, 10]);
+    }
+
+    #[test]
+    fn get_concatenation_iter_with_list_start_out_of_bounds() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Concatenation(Box::new(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])), Box::new(BasicObject::Number(400.into())))).unwrap();
+        let result: Vec<usize> = data.get_concatenation_iter(11, Extents::new(10.into(), 4.into())).unwrap().collect();
+        assert_eq!(result, vec![]);
+    }
+
+    #[test]
+    fn get_concatenation_iter_with_list_end_out_of_bounds() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Concatenation(Box::new(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])), Box::new(BasicObject::Number(400.into())))).unwrap();
+        let result: Vec<usize> = data.get_concatenation_iter(11, Extents::new(0.into(), 10.into())).unwrap().collect();
+        assert_eq!(result, vec![0, 1, 2, 10]);
+    }
+
+    #[test]
+    fn get_concatenation_iter_with_list_start_negative_clamps_to_list_start() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Concatenation(Box::new(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])), Box::new(BasicObject::Number(400.into())))).unwrap();
+        let result: Vec<usize> = data.get_concatenation_iter(11, Extents::new((-5).into(), 4.into())).unwrap().collect();
+        assert_eq!(result, vec![0, 1, 2, 10]);
+    }
+
+    #[test]
+    fn get_concatenation_iter_with_list_end_negative_clamps_to_list_start() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Concatenation(Box::new(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])), Box::new(BasicObject::Number(400.into())))).unwrap();
+        let result: Vec<usize> = data.get_concatenation_iter(11, Extents::new(0.into(), (-5).into())).unwrap().collect();
+        assert_eq!(result, vec![]);
     }
 }

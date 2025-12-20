@@ -2,6 +2,7 @@ use crate::data::number::SimpleNumber;
 use garnish_lang_traits::{GarnishNumber, SymbolListPart};
 
 /// Custom size iterator for [`garnish_lang_traits::GarnishData`] implementation.
+#[derive(Debug)]
 pub struct SizeIterator {
     min: usize,
     max: usize,
@@ -50,6 +51,7 @@ impl DoubleEndedIterator for SizeIterator {
 }
 
 /// Custom size iterator for [`garnish_lang_traits::GarnishData`] implementation.
+#[derive(Debug)]
 pub struct NumberIterator {
     min: SimpleNumber,
     max: SimpleNumber,
@@ -97,6 +99,7 @@ impl DoubleEndedIterator for NumberIterator {
     }
 }
 
+#[derive(Debug)]
 pub struct DataIndexIterator {
     items: Vec<usize>,
     current: usize,
@@ -121,6 +124,7 @@ impl Iterator for DataIndexIterator {
     }
 }
 
+#[derive(Debug)]
 pub struct SymbolListPartIterator {
     items: Vec<SymbolListPart<u64, SimpleNumber>>,
     current: usize,
@@ -146,6 +150,7 @@ impl Iterator for SymbolListPartIterator {
     }
 }
 
+#[derive(Debug)]
 pub struct ByteListIterator {
     items: Vec<u8>,
     current: usize,
@@ -171,6 +176,7 @@ impl Iterator for ByteListIterator {
     }
 }
 
+#[derive(Debug)]
 pub struct CharListIterator {
     items: Vec<char>,
     current: usize,
