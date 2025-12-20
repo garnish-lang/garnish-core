@@ -255,8 +255,29 @@ where
         Ok(DataIndexIterator::new(items))
     }
 
-    fn get_concatenation_iter(&self, addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ConcatenationItemIterator, Self::Error> {
-        todo!()
+    fn get_concatenation_iter(&self, index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ConcatenationItemIterator, Self::Error> {
+        self.get_from_data_block_ensure_index(index)?.as_concatenation()?;
+
+        let mut stack = vec![index];
+        let mut items = vec![];
+
+        while let Some(item) = stack.pop() {
+            match self.get_from_data_block_ensure_index(item)? {
+                BasicData::Concatenation(left, right) => {
+                    stack.push(right.clone());
+                    stack.push(left.clone());
+                }
+                _ => items.push(item),
+            }
+        }
+
+        let len = items.len();
+        let start: usize = usize::from(extents.start()).min(len);
+        let end: usize = usize::from(extents.end()).min(len);
+
+        dbg!(start, end);
+
+        Ok(DataIndexIterator::new(items[start..end].to_vec()))
     }
 
     fn add_unit(&mut self) -> Result<Self::Size, Self::Error> {
@@ -1838,5 +1859,29 @@ mod tests {
         ])).unwrap();
         let result: Vec<usize> = data.get_list_item_iter(list_index, Extents::new(0.into(), (-5).into())).unwrap().collect();
         assert_eq!(result, vec![]);
+    }
+
+    #[test]
+    fn get_concatenation_iter_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Concatenation(Box::new(BasicObject::Number(1.into())), Box::new(BasicObject::Number(2.into())))).unwrap();
+        let result: Vec<usize> = data.get_concatenation_iter(2, Extents::new(0.into(), 3.into())).unwrap().collect();
+        assert_eq!(result, vec![0, 1]);
+    }
+
+    #[test]
+    fn get_concatenation_iter_not_concatenation() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_concatenation_iter(0, Extents::new(0.into(), 3.into())).err();
+        assert_eq!(result, Some(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::Concatenation, GarnishDataType::Number))));
+    }
+    
+    #[test]
+    fn get_concatenation_iter_invalid_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Concatenation(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into())))).unwrap();
+        let result = data.get_concatenation_iter(10, Extents::new(0.into(), 3.into())).err();
+        assert_eq!(result, Some(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(10))));
     }
 }
