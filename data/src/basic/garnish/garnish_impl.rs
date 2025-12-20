@@ -275,8 +275,6 @@ where
         let start: usize = usize::from(extents.start()).min(len);
         let end: usize = usize::from(extents.end()).min(len);
 
-        dbg!(start, end);
-
         Ok(DataIndexIterator::new(items[start..end].to_vec()))
     }
 
