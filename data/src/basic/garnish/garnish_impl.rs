@@ -58,7 +58,17 @@ where
     }
 
     fn pop_value_stack(&mut self) -> Option<Self::Size> {
-        todo!()
+        match self.current_value {
+            None => return None,
+            Some(index) => {
+                let (previous, value) = match self.get_from_data_block_ensure_index(index).and_then(|data| data.as_value()) {
+                    Ok((previous, value)) => (previous, value),
+                    Err(_) => return None,
+                };
+                self.current_value = previous;
+                Some(value)
+            }
+        }
     }
 
     fn get_value(&self, addr: Self::Size) -> Option<Self::Size> {
@@ -2307,6 +2317,64 @@ mod tests {
         expected_data.data[3] = BasicData::Value(Some(1), 2);
         expected_data.data_block.cursor = 4;
         expected_data.current_value = Some(3);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn pop_value_stack() {
+        let mut data = test_data();
+        let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        let value_index = data.push_to_data_block(BasicData::Value(None, index)).unwrap();
+        data.current_value = Some(value_index);
+
+        let index = data.pop_value_stack().unwrap();
+        
+        let mut expected_data = test_data();
+
+        assert_eq!(index, 0);
+        expected_data.data[0] = BasicData::Number(100.into());
+        expected_data.data[1] = BasicData::Value(None, 0);
+        expected_data.data_block.cursor = 2;
+        expected_data.current_value = None;
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn pop_value_stack_multiple() {
+        let mut data = test_data();
+        let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        let value_index= data.push_to_data_block(BasicData::Value(None, index)).unwrap();
+        let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        let value_index = data.push_to_data_block(BasicData::Value(Some(value_index), index)).unwrap();
+        data.current_value = Some(value_index);
+
+        let index = data.pop_value_stack().unwrap();
+        
+        let mut expected_data = test_data();
+
+        assert_eq!(index, 2);
+        expected_data.data[0] = BasicData::Number(100.into());
+        expected_data.data[1] = BasicData::Value(None, 0);
+        expected_data.data[2] = BasicData::Number(100.into());
+        expected_data.data[3] = BasicData::Value(Some(1), 2);
+        expected_data.data_block.cursor = 4;
+        expected_data.current_value = Some(1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn pop_value_stack_no_value() {
+        let mut data = test_data();
+        data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+
+        let index = data.pop_value_stack();
+        
+        let mut expected_data = test_data();
+
+        assert_eq!(index, None);
+        expected_data.data[0] = BasicData::Number(100.into());
+        expected_data.data_block.cursor = 1;
+        expected_data.current_value = None;
         assert_eq!(data, expected_data);
     }
 }
