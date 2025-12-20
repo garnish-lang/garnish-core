@@ -1,7 +1,7 @@
 use std::cmp::Ordering;
 
 use crate::{
-    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, garnish::factory::BasicDataFactory, merge_to_symbol_list::merge_to_symbol_list, search::search_for_associative_item}, error::DataErrorType, symbol_value
+    BasicData, BasicDataCustom, ByteListIterator, CharListIterator, DataError, DataIndexIterator, NumberIterator, SizeIterator, SymbolListPartIterator, basic::{BasicGarnishData, BasicNumber, garnish::{factory::BasicDataFactory, utils::extents_to_start_end}, merge_to_symbol_list::merge_to_symbol_list, search::search_for_associative_item}, error::DataErrorType, symbol_value
 };
 use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, SymbolListPart};
 
@@ -180,8 +180,7 @@ where
 
     fn get_char_list_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::CharIterator, Self::Error> {
         let len = self.get_from_data_block_ensure_index(list_index)?.as_char_list()?;
-        let start: usize = list_index + 1 + usize::from(extents.start()).min(len);
-        let end: usize = list_index + 1 + (usize::from(extents.end())).min(len);
+        let (start, end) = extents_to_start_end(extents, list_index, len);
 
         Ok(CharListIterator::new(self.data[start..end].iter().map(|c| c.as_char().unwrap()).collect()))
     }
@@ -201,8 +200,7 @@ where
 
     fn get_byte_list_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ByteIterator, Self::Error> {
         let len = self.get_from_data_block_ensure_index(list_index)?.as_byte_list()?;
-        let start: usize = list_index + 1 + usize::from(extents.start()).min(len);
-        let end: usize = list_index + 1 + (usize::from(extents.end())).min(len);
+        let (start, end) = extents_to_start_end(extents, list_index, len);
 
         Ok(ByteListIterator::new(self.data[start..end].iter().map(|c| c.as_byte().unwrap()).collect()))
     }
@@ -243,8 +241,7 @@ where
     fn get_list_item_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
         let len = self.get_from_data_block_ensure_index(list_index)?.as_list()?.0;
 
-        let start: usize = list_index + 1 + usize::from(extents.start()).min(len);
-        let end: usize = list_index + 1 + (usize::from(extents.end())).min(len);
+        let (start, end) = extents_to_start_end(extents, list_index, len);
         let slice = &self.data[start..end];
         let mut items = Vec::new();
 
