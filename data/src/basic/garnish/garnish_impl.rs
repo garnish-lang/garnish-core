@@ -48,7 +48,7 @@ where
     }
 
     fn get_value_stack_len(&self) -> Self::Size {
-        todo!()
+        unimplemented!()
     }
 
     fn push_value_stack(&mut self, addr: Self::Size) -> Result<(), Self::Error> {
@@ -60,11 +60,11 @@ where
     }
 
     fn get_value(&self, addr: Self::Size) -> Option<Self::Size> {
-        todo!()
+        unimplemented!()
     }
 
     fn get_value_mut(&mut self, addr: Self::Size) -> Option<&mut Self::Size> {
-        todo!()
+        unimplemented!()
     }
 
     fn get_current_value(&self) -> Option<Self::Size> {
@@ -76,7 +76,7 @@ where
     }
 
     fn get_value_iter(&self) -> Self::ValueIndexIterator {
-        todo!()
+        unimplemented!()
     }
 
     fn get_data_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
