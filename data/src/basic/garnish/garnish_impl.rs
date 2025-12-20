@@ -52,7 +52,9 @@ where
     }
 
     fn push_value_stack(&mut self, addr: Self::Size) -> Result<(), Self::Error> {
-        todo!()
+        let index = self.push_to_data_block(BasicData::Value(self.current_value.clone(), addr))?;
+        self.current_value = Some(index);
+        Ok(())
     }
 
     fn pop_value_stack(&mut self) -> Option<Self::Size> {
@@ -2274,5 +2276,37 @@ mod tests {
         .unwrap();
         let result: Vec<usize> = data.get_concatenation_iter(11, Extents::new(0.into(), (-5).into())).unwrap().collect();
         assert_eq!(result, vec![]);
+    }
+
+    #[test]
+    fn push_value_stack() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_value_stack(0).unwrap();
+        
+        let mut expected_data = test_data();
+        expected_data.data[0] = BasicData::Number(100.into());
+        expected_data.data[1] = BasicData::Value(None, 0);
+        expected_data.data_block.cursor = 2;
+        expected_data.current_value = Some(1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn push_value_stack_multiple() {
+        let mut data = test_data();
+        let index = data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_value_stack(index).unwrap();
+        let index = data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
+        data.push_value_stack(index).unwrap();
+        
+        let mut expected_data = test_data();
+        expected_data.data[0] = BasicData::Number(100.into());
+        expected_data.data[1] = BasicData::Value(None, 0);
+        expected_data.data[2] = BasicData::Number(200.into());
+        expected_data.data[3] = BasicData::Value(Some(1), 2);
+        expected_data.data_block.cursor = 4;
+        expected_data.current_value = Some(3);
+        assert_eq!(data, expected_data);
     }
 }

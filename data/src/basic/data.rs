@@ -31,6 +31,7 @@ where T: crate::basic::BasicDataCustom {
     UninitializedList(usize, usize),
     ListItem(usize),
     AssociativeItem(u64, usize),
+    Value(Option<usize>, usize),
 }
 
 impl<T> BasicData<T>
@@ -62,6 +63,7 @@ where T: crate::basic::BasicDataCustom {
             BasicData::UninitializedList(_, _) => GarnishDataType::Invalid,
             BasicData::ListItem(_) => GarnishDataType::Invalid,
             BasicData::AssociativeItem(_, _) => GarnishDataType::Invalid,
+            BasicData::Value(_, _) => GarnishDataType::Invalid,
         }
     }
 
@@ -341,6 +343,20 @@ where T: crate::basic::BasicDataCustom {
     pub fn as_list_item_mut(&mut self) -> Result<&mut usize, DataError> {
         match self {
             BasicData::ListItem(item) => Ok(item),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_value(&self) -> Result<(Option<usize>, usize), DataError> {
+        match self {
+            BasicData::Value(index, value) => Ok((*index, *value)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_value_mut(&mut self) -> Result<(&mut Option<usize>, &mut usize), DataError> {
+        match self {
+            BasicData::Value(index, value) => Ok((index, value)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
@@ -889,5 +905,32 @@ mod tests {
     fn as_byte_list_mut_not_byte_list() {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_byte_list_mut(), Err(DataError::not_type_error(GarnishDataType::ByteList, GarnishDataType::Number)));
+    }
+
+    #[test]
+    fn as_value() {
+        let data = BasicDataUnitCustom::Value(Some(100), 200);
+        assert_eq!(data.as_value(), Ok((Some(100), 200)));
+    }
+    
+    #[test]
+    fn as_value_not_value() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_value(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_value_mut() {
+        let mut data = BasicDataUnitCustom::Value(Some(100), 200);
+        let (index, value) = data.as_value_mut().unwrap();
+        *index = Some(200);
+        *value = 300;
+        assert_eq!(data.as_value(), Ok((Some(200), 300)));
+    }
+
+    #[test]
+    fn as_value_mut_not_value() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_value_mut(), Err(DataError::not_basic_type_error()));
     }
 }
