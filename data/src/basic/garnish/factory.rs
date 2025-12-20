@@ -96,7 +96,7 @@ impl GarnishDataFactory<usize, BasicNumber, char, u8, u64, DataError, SizeIterat
 mod tests {
     use garnish_lang_traits::{GarnishDataFactory, GarnishDataType};
 
-    use crate::{DataError, NumberIterator, SizeIterator, basic::garnish::factory::BasicDataFactory, error::DataErrorType};
+    use crate::{DataError, basic::garnish::factory::BasicDataFactory, error::DataErrorType};
 
     #[test]
     fn size_to_number() {
