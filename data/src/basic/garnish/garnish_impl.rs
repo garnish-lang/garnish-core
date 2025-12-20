@@ -80,11 +80,27 @@ where
     }
 
     fn get_current_value(&self) -> Option<Self::Size> {
-        todo!()
+        match self.current_value {
+            None => None,
+            Some(index) => {
+                match self.get_from_data_block_ensure_index(index).and_then(|data| data.as_value()) {
+                    Ok((_previous, value)) => Some(value),
+                    Err(_) => return None,
+                }
+            }
+        }
     }
 
     fn get_current_value_mut(&mut self) -> Option<&mut Self::Size> {
-        todo!()
+        match self.current_value {
+            None => None,
+            Some(index) => {
+                match self.get_from_data_block_ensure_index_mut(index).and_then(|data| data.as_value_mut()) {
+                    Ok((_previous, value)) => Some(value),
+                    Err(_) => return None,
+                }
+            }
+        }
     }
 
     fn get_value_iter(&self) -> Self::ValueIndexIterator {
@@ -2376,5 +2392,41 @@ mod tests {
         expected_data.data_block.cursor = 1;
         expected_data.current_value = None;
         assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn get_current_value() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_value_stack(0).unwrap();
+        let value = data.get_current_value().unwrap();
+        assert_eq!(value, 0);
+    }
+
+    #[test]
+    fn get_current_value_none() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let value = data.get_current_value();
+        assert_eq!(value, None);
+    }
+
+    #[test]
+    fn get_current_value_mut() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_value_stack(0).unwrap();
+        let value = data.get_current_value_mut().unwrap();
+        *value = 200;
+        let value = data.get_current_value().unwrap();
+        assert_eq!(value, 200);
+    }
+
+    #[test]
+    fn get_current_value_mut_none() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let value = data.get_current_value_mut();
+        assert_eq!(value, None);
     }
 }
