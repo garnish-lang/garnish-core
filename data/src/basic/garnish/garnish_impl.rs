@@ -181,7 +181,7 @@ where
     fn get_char_list_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::CharIterator, Self::Error> {
         let len = self.get_from_data_block_ensure_index(list_index)?.as_char_list()?;
         let start: usize = list_index + 1 + usize::from(extents.start()).min(len);
-        let end: usize = list_index + 1 + (usize::from(extents.end()) + 1).min(len);
+        let end: usize = list_index + 1 + (usize::from(extents.end())).min(len);
 
         Ok(CharListIterator::new(self.data[start..end].iter().map(|c| c.as_char().unwrap()).collect()))
     }
@@ -202,7 +202,7 @@ where
     fn get_byte_list_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ByteIterator, Self::Error> {
         let len = self.get_from_data_block_ensure_index(list_index)?.as_byte_list()?;
         let start: usize = list_index + 1 + usize::from(extents.start()).min(len);
-        let end: usize = list_index + 1 + (usize::from(extents.end()) + 1).min(len);
+        let end: usize = list_index + 1 + (usize::from(extents.end())).min(len);
 
         Ok(ByteListIterator::new(self.data[start..end].iter().map(|c| c.as_byte().unwrap()).collect()))
     }
@@ -231,7 +231,7 @@ where
     fn get_symbol_list_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::SymbolListPartIterator, Self::Error> {
         let len = self.get_from_data_block_ensure_index(list_index)?.as_symbol_list()?;
         let start: usize = list_index + 1 + usize::from(extents.start()).min(len);
-        let end: usize = list_index + 1 + (usize::from(extents.end()) + 1).min(len);
+        let end: usize = list_index + 1 + (usize::from(extents.end())).min(len);
 
         Ok(SymbolListPartIterator::new(self.data[start..end].iter().map(|c| match c {
             BasicData::Symbol(sym) => Ok(SymbolListPart::Symbol(sym.clone())),
@@ -1430,7 +1430,7 @@ mod tests {
     fn get_char_list_iter_ok() {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
-        let result: Vec<char> = data.get_char_list_iter(0, Extents::new(0.into(), 4.into())).unwrap().collect();
+        let result: Vec<char> = data.get_char_list_iter(0, Extents::new(0.into(), 5.into())).unwrap().collect();
         assert_eq!(result, vec!['a', 'b', 'c', 'd', 'e']);
     }
 
@@ -1446,7 +1446,7 @@ mod tests {
     fn get_char_list_iter_ok_with_extents() {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
-        let result: Vec<char> = data.get_char_list_iter(0, Extents::new(1.into(), 2.into())).unwrap().collect();
+        let result: Vec<char> = data.get_char_list_iter(0, Extents::new(1.into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec!['b', 'c']);
     }
 
@@ -1550,7 +1550,7 @@ mod tests {
     fn get_byte_list_iter_ok() {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
-        let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(0.into(), 4.into())).unwrap().collect();
+        let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(0.into(), 5.into())).unwrap().collect();
         assert_eq!(result, vec![1, 2, 3, 4, 5]);
     }
 
@@ -1566,7 +1566,7 @@ mod tests {
     fn get_byte_list_iter_ok_with_extents() {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
-        let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(1.into(), 2.into())).unwrap().collect();
+        let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(1.into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec![2, 3]);
     }
 
@@ -1678,7 +1678,7 @@ mod tests {
     fn get_symbol_list_iter_ok() {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
-        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(0.into(), 2.into())).unwrap().collect();
+        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(0.into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)]);
     }
 
@@ -1694,7 +1694,7 @@ mod tests {
     fn get_symbol_list_iter_ok_with_extents() {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
-        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(1.into(), 2.into())).unwrap().collect();
+        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(1.into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec![SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)]);
     }
 
@@ -1718,7 +1718,7 @@ mod tests {
     fn get_symbol_list_iter_start_negative_clamps_to_symbol_list_start() {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
-        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new((-5).into(), 2.into())).unwrap().collect();
+        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new((-5).into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)]);
     }
 
@@ -1734,7 +1734,7 @@ mod tests {
     fn get_symbol_list_iter_start_out_of_bounds_clamps_to_symbol_list_start() {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
-        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(10.into(), 2.into())).unwrap().collect();
+        let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(10.into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec![]);
     }
 
