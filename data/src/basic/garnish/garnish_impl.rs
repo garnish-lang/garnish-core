@@ -240,8 +240,22 @@ where
         }).collect::<Result<Vec<SymbolListPart<u64, BasicNumber>>, DataError>>()?))
     }
 
-    fn get_list_item_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
-        todo!()
+    fn get_list_item_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
+        let len = self.get_from_data_block_ensure_index(list_index)?.as_list()?.0;
+
+        let start: usize = list_index + 1 + usize::from(extents.start()).min(len);
+        let end: usize = list_index + 1 + (usize::from(extents.end())).min(len);
+        let slice = &self.data[start..end];
+        let mut items = Vec::new();
+
+        for item in slice.iter() {
+            match item {
+                BasicData::ListItem(index) => items.push(*index),
+                _ => return Err(DataError::new("Not a list item", DataErrorType::NotAListItem(item.get_data_type()))),
+            }
+        }
+
+        Ok(DataIndexIterator::new(items))
     }
 
     fn get_concatenation_iter(&self, addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ConcatenationItemIterator, Self::Error> {
@@ -1721,6 +1735,111 @@ mod tests {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::SymbolList(vec![SymbolListPart::Symbol(1), SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)])).unwrap();
         let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(10.into(), 2.into())).unwrap().collect();
+        assert_eq!(result, vec![]);
+    }
+
+    #[test]
+    fn get_list_item_iter_ok() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(400.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(500.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(600.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(700.into())).unwrap();
+        let list_index = data.push_object_to_data_block(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])).unwrap();
+        let result: Vec<usize> = data.get_list_item_iter(list_index, Extents::new(0.into(), 3.into())).unwrap().collect();
+        assert_eq!(result, vec![4, 5, 6]);
+    }
+
+    #[test]
+    fn get_list_item_iter_not_list() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_list_item_iter(0, Extents::new(0.into(), 2.into())).err();
+        assert_eq!(result, Some(DataError::new("Not of type", DataErrorType::NotType(GarnishDataType::List, GarnishDataType::Number))));
+    }
+
+    #[test]
+    fn get_list_item_iter_invalid_index() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_list_item_iter(100, Extents::new(0.into(), 2.into())).err();
+        assert_eq!(result, Some(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
+    }
+
+    #[test]
+    fn get_list_item_iter_not_list_item() {
+        let mut data = test_data();
+        let list_index = data.push_to_data_block(BasicData::List(1, 0)).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let result = data.get_list_item_iter(list_index, Extents::new(0.into(), 1.into())).err();
+        assert_eq!(result, Some(DataError::new("Not a list item", DataErrorType::NotAListItem(GarnishDataType::Number))));
+    }
+
+    #[test]
+    fn get_list_item_iter_start_negative_clamps_to_list_start() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(400.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(500.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(600.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(700.into())).unwrap();
+        let list_index = data.push_object_to_data_block(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])).unwrap();
+        let result: Vec<usize> = data.get_list_item_iter(list_index, Extents::new((-5).into(), 3.into())).unwrap().collect();
+        assert_eq!(result, vec![4, 5, 6]);
+    }
+    
+    #[test]
+    fn get_list_item_iter_end_out_of_bounds_clamps_to_list_length() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(400.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(500.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(600.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(700.into())).unwrap();
+        let list_index = data.push_object_to_data_block(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])).unwrap();
+        let result: Vec<usize> = data.get_list_item_iter(list_index, Extents::new(0.into(), 10.into())).unwrap().collect();
+        assert_eq!(result, vec![4, 5, 6]);
+    }
+    
+    #[test]
+    fn get_list_item_iter_start_out_of_bounds_clamps_to_list_end() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(400.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(500.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(600.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(700.into())).unwrap();
+        let list_index = data.push_object_to_data_block(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])).unwrap();
+        let result: Vec<usize> = data.get_list_item_iter(list_index, Extents::new(10.into(), 3.into())).unwrap().collect();
+        assert_eq!(result, vec![]);
+    }
+
+    #[test]
+    fn get_list_item_iter_end_negative_clamps_to_list_start() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(400.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(500.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(600.into())).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(700.into())).unwrap();
+        let list_index = data.push_object_to_data_block(BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(300.into())),
+        ])).unwrap();
+        let result: Vec<usize> = data.get_list_item_iter(list_index, Extents::new(0.into(), (-5).into())).unwrap().collect();
         assert_eq!(result, vec![]);
     }
 }

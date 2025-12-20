@@ -14,6 +14,7 @@ pub enum DataErrorType {
     NotType(GarnishDataType, GarnishDataType),
     NotAssociativeItem,
     NotBasicType,
+    NotAListItem(GarnishDataType),
     InstructionBlockExceededMaxItems(usize, usize),
     JumpTableBlockExceededMaxItems(usize, usize),
     DataBlockExceededMaxItems(usize, usize),
