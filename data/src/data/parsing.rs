@@ -1,5 +1,6 @@
 use crate::data::SimpleNumber;
 use crate::DataError;
+use crate::error::DataErrorType;
 use std::iter;
 use std::str::FromStr;
 
@@ -148,7 +149,7 @@ fn parse_byte_list_numbers(input: &str) -> Result<Vec<u8>, DataError> {
                 )))?,
                 SimpleNumber::Integer(v) => {
                     if v < 0 || v > u8::MAX as i32 {
-                        Err(DataError::from(format!("Number to large for byte value {:?}", current_number)))?;
+                        Err(DataError::new("Number to large for byte value", DataErrorType::NumberToLargeForByteValue(current_number.to_string())))?;
                     }
 
                     numbers.push(v as u8);
@@ -201,7 +202,7 @@ fn parse_number_internal(input: &str, default_radix: u32) -> Result<SimpleNumber
             if radix == 10 {
                 match f64::from_str(&stripped) {
                     Ok(v) => Ok(v.into()),
-                    Err(_) => Err(DataError::from(format!("Could not create SimpleNumber from string {:?}", input))),
+                    Err(e) => Err(DataError::new(e.to_string().as_str(), DataErrorType::FailedToParseFloat(input.to_string()))),
                 }
             } else {
                 Err(DataError::from(format!("Decimal values only support a radix of 10. Found {:?}", radix)))

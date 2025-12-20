@@ -17,6 +17,9 @@ pub enum DataErrorType {
     InstructionBlockExceededMaxItems(usize, usize),
     JumpTableBlockExceededMaxItems(usize, usize),
     DataBlockExceededMaxItems(usize, usize),
+    CouldNotParse(String, GarnishDataType),
+    NumberToLargeForByteValue(String),
+    FailedToParseFloat(String),
 }
 
 /// Error implemenation for [`crate::SimpleGarnishData`].
