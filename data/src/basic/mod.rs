@@ -29,6 +29,7 @@ where
     T: BasicDataCustom,
 {
     current_value: Option<usize>,
+    current_register: Option<usize>,
     data: Vec<BasicData<T>>,
     instruction_block: StorageBlock,
     jump_table_block: StorageBlock,
@@ -50,6 +51,7 @@ where
         let data = vec![BasicData::Empty; total_size];
         Self {
             current_value: None,
+            current_register: None,
             data,
             instruction_block: StorageBlock::new(instruction_settings.initial_size(), instruction_settings.clone()),
             jump_table_block: StorageBlock::new(jump_table_settings.initial_size(), jump_table_settings.clone()),
@@ -236,6 +238,7 @@ mod tests {
             data,
             BasicGarnishDataUnit {
                 current_value: None,
+                current_register: None,
                 data: expected_data,
                 instruction_block: StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10))),
                 jump_table_block: StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10))),

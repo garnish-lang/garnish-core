@@ -504,23 +504,62 @@ where
     }
 
     fn get_register_len(&self) -> Self::Size {
-        todo!()
+        let mut count = 0;
+        let mut current = self.current_register;
+        while let Some(index) = current {
+            match self.get_from_data_block_ensure_index(index) {
+                Ok(BasicData::Register(previous, value)) => {
+                    current = previous.clone();
+                    count += 1;
+                }
+                _ => break
+            }
+        }
+
+        count
     }
 
-    fn push_register(&mut self, addr: Self::Size) -> Result<(), Self::Error> {
-        todo!()
+    fn push_register(&mut self, index: Self::Size) -> Result<(), Self::Error> {
+        let index = self.push_to_data_block(BasicData::Register(self.current_register.clone(), index))?;
+        self.current_register = Some(index);
+        Ok(())
     }
 
-    fn get_register(&self, addr: Self::Size) -> Option<Self::Size> {
-        todo!()
+    fn get_register(&self, index: Self::Size) -> Option<Self::Size> {
+        let mut current = self.current_register;
+
+        let mut list = Vec::new();
+        while let Some(index) = current {
+            match self.get_from_data_block_ensure_index(index) {
+                Ok(BasicData::Register(previous, value)) => {
+                    current = previous.clone();
+                    list.push(value);
+                }
+                _ => break
+            }
+        }
+
+        list.reverse();
+
+        match list.get(index).cloned() {
+            Some(value) => Some(value.clone()),
+            None => None
+        }
     }
 
     fn pop_register(&mut self) -> Result<Option<Self::Size>, Self::Error> {
-        todo!()
+        match self.current_register {
+            Some(index) => {
+                let register = self.get_from_data_block_ensure_index(index)?.as_register()?;
+                self.current_register = register.0.clone();
+                Ok(Some(register.1.clone()))
+            }
+            None => Ok(None)
+        }
     }
 
     fn get_register_iter(&self) -> Self::RegisterIndexIterator {
-        todo!()
+        unimplemented!()
     }
 
     fn get_instruction_len(&self) -> Self::Size {
@@ -2428,5 +2467,107 @@ mod tests {
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         let value = data.get_current_value_mut();
         assert_eq!(value, None);
+    }
+
+    #[test]
+    fn push_register() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_register(0).unwrap();
+        
+        let mut expected_data = test_data();
+        expected_data.data[0] = BasicData::Number(100.into());
+        expected_data.data[1] = BasicData::Register(None, 0);
+        expected_data.data_block.cursor = 2;
+        expected_data.current_register = Some(1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn push_register_multiple() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_register(0).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
+        data.push_register(2).unwrap();
+        
+        let mut expected_data = test_data();
+        expected_data.data[0] = BasicData::Number(100.into());
+        expected_data.data[1] = BasicData::Register(None, 0);
+        expected_data.data[2] = BasicData::Number(200.into());
+        expected_data.data[3] = BasicData::Register(Some(1), 2);
+        expected_data.data_block.cursor = 4;
+        expected_data.current_register = Some(3);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn get_register() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_register(100).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
+        data.push_register(200).unwrap();
+        let register = data.get_register(1).unwrap();
+        assert_eq!(register, 200);
+    }
+
+    #[test]
+    fn get_register_last() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_register(100).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
+        data.push_register(200).unwrap();
+        let register = data.get_register(0).unwrap();
+        assert_eq!(register, 100);
+    }
+
+    #[test]
+    fn get_register_none() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_register(100).unwrap();
+        let register = data.get_register(1);
+        assert_eq!(register, None);
+    }
+
+    #[test]
+    fn pop_register() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_register(100).unwrap();
+        let register = data.pop_register().unwrap().unwrap();
+        assert_eq!(register, 100);
+    }
+
+    #[test]
+    fn pop_register_multiple() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_register(100).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
+        data.push_register(200).unwrap();
+        let register = data.pop_register().unwrap().unwrap();
+        assert_eq!(register, 200);
+    }
+
+    #[test]
+    fn pop_register_none() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let register = data.pop_register().unwrap();
+        assert_eq!(register, None);
+    }
+
+    #[test]
+    fn get_register_len() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_register(100).unwrap();
+        data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
+        data.push_register(200).unwrap();
+        let len = data.get_register_len();
+        assert_eq!(len, 2);
     }
 }
