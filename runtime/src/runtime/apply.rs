@@ -58,12 +58,11 @@ fn apply_internal<Data: GarnishData>(this: &mut Data, instruction: Instruction, 
 
             next_instruction = n;
 
-            this.push_jump_path(this.get_instruction_cursor() + Data::Size::one())?;
-
-            trace!("Pushing point to jump path {:?} + 1", this.get_instruction_cursor());
-
             trace!("Pushing to value stack {:?}", right_addr);
             this.push_value_stack(right_addr)?;
+
+            trace!("Pushing point to jump path {:?} + 1", this.get_instruction_cursor());
+            this.push_jump_path(this.get_instruction_cursor() + Data::Size::one())?;
         }
         (GarnishDataType::External, _) => {
             let external_value = this.get_external(left_addr)?;
