@@ -184,7 +184,7 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
             Some(Some(node)) => match &node.jump_index_to_update {
                 Some(index) => {
                     let jump_index = data.get_instruction_len();
-                    match data.get_jump_point_mut(index.clone()) {
+                    match data.get_from_jump_table_mut(index.clone()) {
                         Some(item) => *item = jump_index,
                         None => Err(CompilerError::new_message(format!("No jump point at {} when pulling from root stack", index)))?,
                     }
@@ -193,13 +193,13 @@ pub fn build<Data: GarnishData>(parse_root: usize, parse_tree: Vec<ParseNode>, d
                 }
                 None => {
                     let index = data.get_jump_table_len();
-                    data.push_jump_point(data.get_instruction_len())?;
+                    data.push_to_jump_table(data.get_instruction_len())?;
                     index
                 }
             },
             _ => {
                 let index = data.get_jump_table_len();
-                data.push_jump_point(data.get_instruction_len())?;
+                data.push_to_jump_table(data.get_instruction_len())?;
                 index
             }
         };
@@ -438,7 +438,7 @@ fn handle_parse_node<Data: GarnishData>(
             }
             Some(right) => {
                 let jump_index = data.get_jump_table_len();
-                data.push_jump_point(Data::Size::zero())?;
+                data.push_to_jump_table(Data::Size::zero())?;
                 let addr = data.add_expression(jump_index.clone())?;
                 data.push_instruction(Instruction::Put, Some(addr))?;
                 instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
@@ -503,7 +503,7 @@ fn handle_parse_node<Data: GarnishData>(
                             let mut new_items: Vec<(usize, BuildNode<Data>)> = vec![];
 
                             let jump_to_index = data.get_jump_table_len();
-                            data.push_jump_point(data.get_instruction_len())?;
+                            data.push_to_jump_table(data.get_instruction_len())?;
 
                             for condition in &node.conditional_items {
                                 root_stack.push(condition.node_index);
@@ -700,7 +700,7 @@ fn handle_jump_if<Data: GarnishData>(
         }
         BuildNodeState::Initialized => {
             let jump_index = data.get_jump_table_len();
-            data.push_jump_point(Data::Size::zero())?;
+            data.push_to_jump_table(Data::Size::zero())?;
 
             let right = parse_node.get_right().ok_or(CompilerError::new_message(format!("No right on {:?} definition", instruction)))?;
             match node.conditional_parent {
@@ -725,7 +725,7 @@ fn handle_jump_if<Data: GarnishData>(
                     root_stack.push(right);
 
                     let jump_to_index = data.get_jump_table_len();
-                    data.push_jump_point(data.get_instruction_len())?;
+                    data.push_to_jump_table(data.get_instruction_len())?;
 
                     nodes[right] = Some(BuildNode::new_with_jump_and_end(right, node.containing_expression_jump.clone(), jump_index.clone(), vec![(Instruction::JumpTo, Some(jump_to_index))]));
                 }
@@ -763,7 +763,7 @@ fn handle_logical_binary<Data: GarnishData>(
         }
         BuildNodeState::Initialized => {
             let jump_index = data.get_jump_table_len();
-            data.push_jump_point(Data::Size::zero())?;
+            data.push_to_jump_table(Data::Size::zero())?;
             data.push_instruction(instruction, Some(jump_index.clone()))?;
             instruction_metadata.push(InstructionMetadata::new(Some(node_index)));
 
@@ -772,7 +772,7 @@ fn handle_logical_binary<Data: GarnishData>(
             root_stack.push(right);
 
             let jump_to_index = data.get_jump_table_len();
-            data.push_jump_point(data.get_instruction_len())?;
+            data.push_to_jump_table(data.get_instruction_len())?;
 
             nodes[right] = Some(BuildNode::new_with_jump_and_end(
                 right,

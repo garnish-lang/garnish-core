@@ -24,7 +24,7 @@ mod tests {
         let i2 = runtime.get_data_mut().push_instruction(Instruction::Apply, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::EndExpression, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i1).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i1).unwrap();
 
         runtime.get_data_mut().push_register(exp1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
@@ -55,7 +55,7 @@ mod tests {
         let i2 = runtime.get_data_mut().push_instruction(Instruction::EmptyApply, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::EndExpression, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i1).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i1).unwrap();
 
         runtime.get_data_mut().push_register(exp1).unwrap();
 
@@ -85,7 +85,7 @@ mod tests {
         runtime.get_data_mut().push_instruction(Instruction::Put, Some(2)).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::EmptyApply, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(1).unwrap();
+        runtime.get_data_mut().push_to_jump_table(1).unwrap();
 
         runtime.get_data_mut().set_instruction_cursor(6).unwrap();
 
@@ -115,7 +115,7 @@ mod tests {
         let i2 = runtime.get_data_mut().push_instruction(Instruction::Reapply, Some(0)).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::EndExpression, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i1).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i1).unwrap();
 
         runtime.get_data_mut().push_register(int3).unwrap();
 

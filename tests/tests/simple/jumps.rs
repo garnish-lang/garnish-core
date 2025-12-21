@@ -86,7 +86,7 @@ mod tests {
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         let i1 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i1).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i1).unwrap();
 
         let next = runtime.jump(0).unwrap();
 
@@ -103,7 +103,7 @@ mod tests {
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(3).unwrap();
+        runtime.get_data_mut().push_to_jump_table(3).unwrap();
 
         let result = runtime.jump_if_true(0);
 
@@ -120,7 +120,7 @@ mod tests {
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(3).unwrap();
+        runtime.get_data_mut().push_to_jump_table(3).unwrap();
 
         let result = runtime.jump_if_true(0);
 
@@ -137,7 +137,7 @@ mod tests {
         let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i2).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i2).unwrap();
 
         runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
 
@@ -160,7 +160,7 @@ mod tests {
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(3).unwrap();
+        runtime.get_data_mut().push_to_jump_table(3).unwrap();
         runtime.get_data_mut().set_instruction_cursor(1).unwrap();
         runtime.get_data_mut().push_register(ua).unwrap();
 
@@ -181,7 +181,7 @@ mod tests {
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(3).unwrap();
+        runtime.get_data_mut().push_to_jump_table(3).unwrap();
         runtime.get_data_mut().set_instruction_cursor(1).unwrap();
         runtime.get_data_mut().push_register(fa).unwrap();
 
@@ -202,7 +202,7 @@ mod tests {
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(3).unwrap();
+        runtime.get_data_mut().push_to_jump_table(3).unwrap();
         runtime.get_data_mut().set_instruction_cursor(1).unwrap();
         runtime.get_data_mut().push_register(ta).unwrap();
 
@@ -223,7 +223,7 @@ mod tests {
         let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i2).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i2).unwrap();
         runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
         runtime.get_data_mut().push_register(ua).unwrap();
 
@@ -244,7 +244,7 @@ mod tests {
         let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i2).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i2).unwrap();
         runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
         runtime.get_data_mut().push_register(fa).unwrap();
 

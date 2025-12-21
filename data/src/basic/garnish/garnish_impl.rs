@@ -594,20 +594,20 @@ where
         todo!()
     }
 
-    fn push_jump_point(&mut self, index: Self::Size) -> Result<(), Self::Error> {
+    fn push_to_jump_table(&mut self, index: Self::Size) -> Result<(), Self::Error> {
         todo!()
     }
 
-    fn get_jump_point(&self, index: Self::Size) -> Option<Self::Size> {
+    fn get_from_jump_table(&self, index: Self::Size) -> Option<Self::Size> {
         todo!()
     }
 
-    fn get_jump_point_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
+    fn get_from_jump_table_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
         todo!()
     }
 
     fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
-        todo!()
+        unimplemented!()
     }
 
     fn push_jump_path(&mut self, index: Self::Size) -> Result<(), Self::Error> {

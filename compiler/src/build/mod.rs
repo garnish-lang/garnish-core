@@ -374,20 +374,20 @@ fn resolve_node<Data: GarnishData>(
         Definition::And => {
             // reserve slot for deferred operand
             slot = Some(data.get_jump_table_len());
-            data.push_jump_point(Data::Size::zero())?;
+            data.push_to_jump_table(Data::Size::zero())?;
 
             data.push_instruction(Instruction::And, Some(current_jump_index))?;
         }
         Definition::Or => {
             // reserve slot for deferred operand
             slot = Some(data.get_jump_table_len());
-            data.push_jump_point(Data::Size::zero())?;
+            data.push_to_jump_table(Data::Size::zero())?;
 
             data.push_instruction(Instruction::Or, Some(current_jump_index))?;
         }
         Definition::JumpIfTrue => {
             slot = Some(data.get_jump_table_len());
-            data.push_jump_point(Data::Size::zero())?;
+            data.push_to_jump_table(Data::Size::zero())?;
 
             data.push_instruction(Instruction::JumpIfTrue, Some(current_jump_index))?;
             if resolve_info.parent_definition != Definition::ElseJump {
@@ -396,7 +396,7 @@ fn resolve_node<Data: GarnishData>(
         }
         Definition::JumpIfFalse => {
             slot = Some(data.get_jump_table_len());
-            data.push_jump_point(Data::Size::zero())?;
+            data.push_to_jump_table(Data::Size::zero())?;
 
             data.push_instruction(Instruction::JumpIfFalse, Some(current_jump_index))?;
             if resolve_info.parent_definition != Definition::ElseJump {
@@ -467,9 +467,9 @@ pub fn build_with_data<Data: GarnishData>(
 
         match jump_from_slot {
             // updated later to allow child jumps to be pushed first
-            None => data.push_jump_point(Data::Size::zero())?,
+            None => data.push_to_jump_table(Data::Size::zero())?,
             // some deferred roots will have a slot that needs to be updated so it can be reached
-            Some(ref slot) => match data.get_jump_point_mut(slot.clone()) {
+            Some(ref slot) => match data.get_from_jump_table_mut(slot.clone()) {
                 None => implementation_error(format!(
                     "None value for node index. All nodes should resolve properly if starting from root node."
                 ))?,
@@ -577,7 +577,7 @@ pub fn build_with_data<Data: GarnishData>(
                                         data.get_jump_table_len()
                                     );
                                     let i = data.get_jump_table_len();
-                                    data.push_jump_point(Data::Size::zero())?; // this will be updated when conditional branch nod resolves
+                                    data.push_to_jump_table(Data::Size::zero())?; // this will be updated when conditional branch nod resolves
                                     conditional_stack.push(i);
                                     jump_count += Data::Size::one();
                                 }
@@ -695,7 +695,7 @@ pub fn build_with_data<Data: GarnishData>(
                                     let count = data.get_instruction_len();
                                     match conditional_stack.pop() {
                                         None => implementation_error(format!("End of conditional branch and conditional stack is empty."))?,
-                                        Some(jump_index) => match data.get_jump_point_mut(jump_index.clone()) {
+                                        Some(jump_index) => match data.get_from_jump_table_mut(jump_index.clone()) {
                                             None => implementation_error(format!(
                                                 "No value in jump table at index {:?} to update for conditional branch.",
                                                 jump_index
@@ -795,7 +795,7 @@ pub fn build_with_data<Data: GarnishData>(
 
         if jump_from_slot.is_none() {
             // new point only added above if none
-            match data.get_jump_point_mut(jump_index.clone()) {
+            match data.get_from_jump_table_mut(jump_index.clone()) {
                 None => implementation_error(format!(
                     "Failed to update jump point at index {:?} because None was returned.",
                     jump_index

@@ -905,15 +905,15 @@ mod tests {
             (self.stub_get_jump_table_len)(self.data())
         }
 
-        fn push_jump_point(&mut self, index: Self::Size) -> Result<(), Self::Error> {
+        fn push_to_jump_table(&mut self, index: Self::Size) -> Result<(), Self::Error> {
             (self.stub_push_jump_point)(self.data_mut(), index)
         }
 
-        fn get_jump_point(&self, index: Self::Size) -> Option<Self::Size> {
+        fn get_from_jump_table(&self, index: Self::Size) -> Option<Self::Size> {
             (self.stub_get_jump_point)(self.data(), index)
         }
 
-        fn get_jump_point_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
+        fn get_from_jump_table_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
             (self.stub_get_jump_point_mut)(self.data_mut(), index)
         }
 

@@ -638,16 +638,16 @@ where
         self.expression_table.len()
     }
 
-    fn push_jump_point(&mut self, index: usize) -> Result<(), Self::Error> {
+    fn push_to_jump_table(&mut self, index: usize) -> Result<(), Self::Error> {
         self.expression_table.push(index);
         Ok(())
     }
 
-    fn get_jump_point(&self, index: usize) -> Option<usize> {
+    fn get_from_jump_table(&self, index: usize) -> Option<usize> {
         self.expression_table.get(index).cloned()
     }
 
-    fn get_jump_point_mut(&mut self, index: usize) -> Option<&mut usize> {
+    fn get_from_jump_table_mut(&mut self, index: usize) -> Option<&mut usize> {
         self.expression_table.get_mut(index)
     }
 

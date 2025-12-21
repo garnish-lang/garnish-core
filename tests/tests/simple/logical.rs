@@ -14,7 +14,7 @@ mod and {
         let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i2).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i2).unwrap();
 
         runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
 
@@ -37,7 +37,7 @@ mod and {
         let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i2).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i2).unwrap();
 
         runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
 
@@ -62,7 +62,7 @@ mod and {
         let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i2).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i2).unwrap();
 
         runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
 
@@ -90,7 +90,7 @@ mod or {
         let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i2).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i2).unwrap();
 
         runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
 
@@ -115,7 +115,7 @@ mod or {
         let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i2).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i2).unwrap();
 
         runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
 
@@ -138,7 +138,7 @@ mod or {
         let i2 = runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Add, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(i2).unwrap();
+        runtime.get_data_mut().push_to_jump_table(i2).unwrap();
 
         runtime.get_data_mut().set_instruction_cursor(i1).unwrap();
 

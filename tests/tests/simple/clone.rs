@@ -840,15 +840,15 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn push_jump_point(&mut self, index: Self::Size) -> Result<(), Self::Error> {
+        fn push_to_jump_table(&mut self, index: Self::Size) -> Result<(), Self::Error> {
             unimplemented!()
         }
 
-        fn get_jump_point(&self, index: Self::Size) -> Option<Self::Size> {
+        fn get_from_jump_table(&self, index: Self::Size) -> Option<Self::Size> {
             unimplemented!()
         }
 
-        fn get_jump_point_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
+        fn get_from_jump_table_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
             unimplemented!()
         }
 

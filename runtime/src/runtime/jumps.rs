@@ -5,7 +5,7 @@ use crate::runtime::utilities::next_ref;
 use garnish_lang_traits::{GarnishDataType, GarnishData, RuntimeError};
 
 pub fn jump<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    match this.get_jump_point(index.clone()) {
+    match this.get_from_jump_table(index.clone()) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => {
             trace!("Jumping to point {:?}", point);
@@ -20,7 +20,7 @@ pub fn jump_if_true<Data: GarnishData>(
     this: &mut Data,
     index: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let point = match this.get_jump_point(index.clone()) {
+    let point = match this.get_from_jump_table(index.clone()) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => point,
     };
@@ -44,7 +44,7 @@ pub fn jump_if_false<Data: GarnishData>(
     this: &mut Data,
     index: Data::Size,
 ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
-    let point = match this.get_jump_point(index.clone()) {
+    let point = match this.get_from_jump_table(index.clone()) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(point) => point,
     };

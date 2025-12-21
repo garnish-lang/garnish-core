@@ -754,26 +754,26 @@ fn create_missing_functions(
         },
     );
     all_functions.insert(
-        "push_jump_point",
+        "push_to_jump_table",
         quote! {
-            fn push_jump_point(&mut self, index: Self::Size) -> Result<(), Self::Error> {
-                self.#delegate_field.push_jump_point(index)
+            fn push_to_jump_table(&mut self, index: Self::Size) -> Result<(), Self::Error> {
+                self.#delegate_field.push_to_jump_table(index)
             }
         },
     );
     all_functions.insert(
-        "get_jump_point",
+        "get_from_jump_table",
         quote! {
-            fn get_jump_point(&self, index: Self::Size) -> Option<Self::Size> {
-                self.#delegate_field.get_jump_point(index)
+            fn get_from_jump_table(&self, index: Self::Size) -> Option<Self::Size> {
+                self.#delegate_field.get_from_jump_table(index)
             }
         },
     );
     all_functions.insert(
-        "get_jump_point_mut",
+        "get_from_jump_table_mut",
         quote! {
-            fn get_jump_point_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
-                self.#delegate_field.get_jump_point_mut(index)
+            fn get_from_jump_table_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
+                self.#delegate_field.get_from_jump_table_mut(index)
             }
         },
     );

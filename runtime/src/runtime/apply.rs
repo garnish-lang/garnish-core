@@ -11,7 +11,7 @@ pub fn apply<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, R
 pub fn reapply<Data: GarnishData>(this: &mut Data, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let value_addr = next_ref(this)?;
 
-    let next_instruction = match this.get_jump_point(index.clone()) {
+    let next_instruction = match this.get_from_jump_table(index.clone()) {
         None => state_error(format!("No jump point at index {:?}", index))?,
         Some(i) => i,
     };
@@ -49,7 +49,7 @@ fn apply_internal<Data: GarnishData>(this: &mut Data, instruction: Instruction, 
             let expression_index = this.get_expression(left_addr)?;
 
             // Expression stores index of expression table, look up actual instruction index
-            let n = match this.get_jump_point(expression_index.clone()) {
+            let n = match this.get_from_jump_table(expression_index.clone()) {
                 None => state_error(format!("No jump point at index {:?}", expression_index))?,
                 Some(i) => i,
             };
@@ -82,7 +82,7 @@ fn apply_internal<Data: GarnishData>(this: &mut Data, instruction: Instruction, 
                     this.push_value_stack(value)?;
 
                     let expression = this.get_expression(expression)?;
-                    let n = match this.get_jump_point(expression.clone()) {
+                    let n = match this.get_from_jump_table(expression.clone()) {
                         None => state_error(format!("No jump point at index {:?}", expression))?,
                         Some(i) => i,
                     };

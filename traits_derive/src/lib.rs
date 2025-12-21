@@ -332,14 +332,14 @@ fn create_garnish_data_impl(
             fn get_jump_table_len(&self) -> Self::Size {
                 self.#delegate_field.get_jump_table_len()
             }
-            fn push_jump_point(&mut self, index: Self::Size) -> Result<(), Self::Error> {
-                self.#delegate_field.push_jump_point(index)
+            fn push_to_jump_table(&mut self, index: Self::Size) -> Result<(), Self::Error> {
+                self.#delegate_field.push_to_jump_table(index)
             }
-            fn get_jump_point(&self, index: Self::Size) -> Option<Self::Size> {
-                self.#delegate_field.get_jump_point(index)
+            fn get_from_jump_table(&self, index: Self::Size) -> Option<Self::Size> {
+                self.#delegate_field.get_from_jump_table(index)
             }
-            fn get_jump_point_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
-                self.#delegate_field.get_jump_point_mut(index)
+            fn get_from_jump_table_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
+                self.#delegate_field.get_from_jump_table_mut(index)
             }
             fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
                 self.#delegate_field.get_jump_table_iter()

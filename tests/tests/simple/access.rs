@@ -163,7 +163,7 @@ mod tests {
         runtime.get_data_mut().push_instruction(Instruction::Put, Some(3)).unwrap();
         runtime.get_data_mut().push_instruction(Instruction::Apply, None).unwrap();
 
-        runtime.get_data_mut().push_jump_point(1).unwrap();
+        runtime.get_data_mut().push_to_jump_table(1).unwrap();
 
         runtime.get_data_mut().set_instruction_cursor(7).unwrap();
 

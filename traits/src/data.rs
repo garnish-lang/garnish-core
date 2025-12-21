@@ -237,9 +237,9 @@ pub trait GarnishData {
     fn set_instruction_cursor(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
 
     fn get_jump_table_len(&self) -> Self::Size;
-    fn push_jump_point(&mut self, index: Self::Size) -> Result<(), Self::Error>;
-    fn get_jump_point(&self, index: Self::Size) -> Option<Self::Size>;
-    fn get_jump_point_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size>;
+    fn push_to_jump_table(&mut self, index: Self::Size) -> Result<(), Self::Error>;
+    fn get_from_jump_table(&self, index: Self::Size) -> Option<Self::Size>;
+    fn get_from_jump_table_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size>;
     fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator;
 
     fn push_jump_path(&mut self, index: Self::Size) -> Result<(), Self::Error>;
