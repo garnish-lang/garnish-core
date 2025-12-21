@@ -322,7 +322,7 @@ mod convert_to_char_list {
     };
 
     macro_rules! object_conversions {
-        ($( $object_test_name:ident: $object:expr => $output:literal $(with $setup:expr)? ),+ $(,)?) => {
+        ($( $object_test_name:ident: $object:expr => $output:literal $(with setup $setup:expr)? ),+ $(,)?) => {
             $(#[test]
             fn $object_test_name() {
                 let mut data = test_data();
@@ -373,7 +373,7 @@ mod convert_to_char_list {
         char: BasicObject::Char('a') => "a",
         byte: BasicObject::Byte(100) => "100",
         symbol: BasicObject::Symbol(100) => "[Symbol 100]",
-        symbol_with_string: BasicObject::Symbol(BasicDataFactory::parse_symbol("my_symbol").unwrap()) => ":my_symbol" with |data: &mut BasicGarnishData| {
+        symbol_with_string: BasicObject::Symbol(BasicDataFactory::parse_symbol("my_symbol").unwrap()) => ":my_symbol" with setup |data: &mut BasicGarnishData| {
             data.parse_add_symbol("my_symbol").unwrap();
         },
         symbol_list: BasicObject::SymbolList(vec![SymbolListPart::Symbol(100), SymbolListPart::Number(20.into())]) => "[Symbol 100] 20",
