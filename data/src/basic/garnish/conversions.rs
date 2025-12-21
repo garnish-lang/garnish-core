@@ -116,21 +116,21 @@ where
     T: BasicDataCustom,
 {
     pub(crate) fn convert_basic_data_at_to_char_list(&mut self, from: usize) -> Result<usize, DataError> {
-        start_convert_with_delegate(BasicDataDelegate::new(self), from, 0)
+        init_convert_with_delegate(BasicDataDelegate::new(self), from)
     }
 
     pub(crate) fn string_from_basic_data_at(&self, from: usize) -> Result<String, DataError> {
-        start_convert_with_delegate(StringDelegate::new(self), from, 0)
+        init_convert_with_delegate(StringDelegate::new(self), from)
     }
 }
 
-fn start_convert_with_delegate<Delegate, Output, T>(mut delegate: Delegate, from: usize, depth: usize) -> Result<Output, DataError>
+fn init_convert_with_delegate<Delegate, Output, T>(mut delegate: Delegate, from: usize) -> Result<Output, DataError>
 where
     T: BasicDataCustom,
     Delegate: ConversionDelegate<T, Output = Output>,
 {
     delegate.init()?;
-    convert_with_delegate(&mut delegate, from, depth)?;
+    convert_with_delegate(&mut delegate, from, 0)?;
     delegate.end()
 }
 
@@ -242,16 +242,21 @@ where
         }
         BasicData::Pair(left, right) => {
             let (left, right) = (left.clone(), right.clone());
-            let left_s = start_convert_with_delegate(StringDelegate::new(delegate.data()), left, depth + 1)?;
-            let right_s = start_convert_with_delegate(StringDelegate::new(delegate.data()), right, depth + 1)?;
-            let s = if depth > 0 {
-                format!("({} = {})", left_s, right_s)
-            } else {
-                format!("{} = {}", left_s, right_s)
-            };
 
-            for c in s.chars() {
-                delegate.push_char(c)?;
+            if depth > 0 {
+                delegate.push_char('(')?;
+            }
+            
+            convert_with_delegate(delegate, left, depth + 1)?;
+
+            delegate.push_char(' ')?;
+            delegate.push_char('=')?;
+            delegate.push_char(' ')?;
+
+            convert_with_delegate(delegate, right, depth + 1)?;
+            
+            if depth > 0 {
+                delegate.push_char(')')?;
             }
         }
         BasicData::Range(start, end) => {
