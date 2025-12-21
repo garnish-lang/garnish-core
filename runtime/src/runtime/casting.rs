@@ -30,9 +30,6 @@ pub fn type_cast<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size
         (l, r) if l == r => this.push_register(left)?,
 
         // Casts that defer to data object and only expect an addr to push
-        (GarnishDataType::CharList, GarnishDataType::Byte) => {
-            this.add_byte_from(left).and_then(|r| this.push_register(r))?;
-        }
         (GarnishDataType::CharList, GarnishDataType::Number) => {
             this.add_number_from(left).and_then(|r| this.push_register(r))?;
         }

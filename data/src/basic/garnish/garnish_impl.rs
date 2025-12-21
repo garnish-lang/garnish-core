@@ -653,7 +653,7 @@ where
     }
 
     fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        unimplemented!()
     }
 
     fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
