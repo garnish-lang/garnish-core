@@ -205,7 +205,7 @@ mod utilities {
 
 #[cfg(test)]
 mod tests {
-    use crate::basic::{storage::ReallocationStrategy, utilities::test_data};
+    use crate::{basic::{storage::ReallocationStrategy, utilities::test_data}, error::DataErrorType};
 
     use super::*;
 
