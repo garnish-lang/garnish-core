@@ -13,6 +13,7 @@ use std::usize;
 
 pub use data::{BasicData, BasicDataUnitCustom};
 pub use garnish::BasicDataFactory;
+pub use garnish::ConversionDelegate;
 
 use crate::basic::search::search_for_associative_item;
 use crate::basic::storage::{StorageBlock, StorageSettings};
@@ -22,9 +23,20 @@ use crate::DataError;
 
 pub type BasicNumber = SimpleNumber;
 
-pub trait BasicDataCustom: Clone + Debug {}
+pub trait BasicDataFormatter<T> where T: BasicDataCustom {
+}
 
-impl BasicDataCustom for () {}
+pub trait BasicDataCustom: Clone + Debug {
+    fn convert_custom_data_with_delegate(delegate: &mut impl ConversionDelegate<Self>, value: Self) -> Result<(), DataError>;
+}
+
+impl BasicDataCustom for () {
+    fn convert_custom_data_with_delegate(delegate: &mut impl ConversionDelegate<Self>, _value: Self) -> Result<(), DataError> {
+        delegate.push_char('(')?;
+        delegate.push_char(')')?;
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BasicGarnishData<T = ()>
@@ -252,7 +264,7 @@ mod tests {
 
     #[test]
     fn test_basic_garnish_data() {
-        BasicGarnishData::<()>::new();
+        BasicGarnishData::<()>::new().unwrap();
     }
 
     #[test]

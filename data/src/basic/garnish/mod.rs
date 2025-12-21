@@ -4,3 +4,4 @@ mod utils;
 mod conversions;
 
 pub use factory::BasicDataFactory;
+pub use conversions::ConversionDelegate;

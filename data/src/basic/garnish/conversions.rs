@@ -1,6 +1,6 @@
 use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError};
 
-trait ConversionDelegate<T>
+pub trait ConversionDelegate<T>
 where
     T: BasicDataCustom,
 {
@@ -277,7 +277,7 @@ where
             }
         }
         BasicData::Range(start, end) => {
-            let (start, end) = (start.clone(), end.clone()); 
+            let (start, end) = (start.clone(), end.clone());
             convert_with_delegate(delegate, start, depth + 1)?;
             delegate.push_char('.')?;
             delegate.push_char('.')?;
@@ -356,7 +356,9 @@ where
                 delegate.push_char(')')?;
             }
         }
-        BasicData::Custom(_) => todo!(),
+        BasicData::Custom(value) => {
+            T::convert_custom_data_with_delegate(delegate, value.clone())?;
+        }
         BasicData::Empty
         | BasicData::UninitializedList(_, _)
         | BasicData::ListItem(_)
@@ -370,12 +372,11 @@ where
 }
 
 #[cfg(test)]
-mod convert_to_char_list {
+mod tests {
     use garnish_lang_traits::{GarnishData, GarnishDataFactory, GarnishDataType, Instruction, SymbolListPart};
 
     use crate::{
-        BasicData, BasicDataFactory, BasicGarnishData,
-        basic::{object::BasicObject, utilities::test_data},
+        BasicData, BasicDataCustom, BasicDataFactory, BasicGarnishData, ConversionDelegate, DataError, basic::{object::BasicObject, utilities::test_data}
     };
 
     macro_rules! object_conversions {
@@ -456,7 +457,7 @@ mod convert_to_char_list {
         concatenation: BasicObject::Concatenation(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100 <> 200",
         list_concatenation_nested_under_pair: BasicObject::Pair(
             Box::new(BasicObject::Concatenation(
-                Box::new(BasicObject::Number(100.into())), 
+                Box::new(BasicObject::Number(100.into())),
                 Box::new(BasicObject::Number(200.into()))
             )),
             Box::new(BasicObject::List(vec![
@@ -467,11 +468,11 @@ mod convert_to_char_list {
         ) => "(100 <> 200) = (300 400 500)",
         slice_partial_under_pair: BasicObject::Pair(
             Box::new(BasicObject::Slice(
-                Box::new(BasicObject::Number(100.into())), 
+                Box::new(BasicObject::Number(100.into())),
                 Box::new(BasicObject::Number(200.into()))
             )),
             Box::new(BasicObject::Partial(
-                Box::new(BasicObject::Number(300.into())), 
+                Box::new(BasicObject::Number(300.into())),
                 Box::new(BasicObject::Number(500.into()))
             ))
         ) => "(100 ~ 200) = (300 ~ 500)",
@@ -489,4 +490,46 @@ mod convert_to_char_list {
         jump_point: BasicData::JumpPoint(0) => "",
         frame: BasicData::Frame(None, 0) => "",
     );
+    
+    #[derive(Debug, Clone)]
+    struct Foo {
+        value: String,
+    }
+
+    impl BasicDataCustom for Foo {
+        fn convert_custom_data_with_delegate(delegate: &mut impl ConversionDelegate<Self>, value: Self) -> Result<(), DataError> {
+            delegate.push_char('F')?;
+            delegate.push_char('o')?;
+            delegate.push_char('o')?;
+            delegate.push_char(' ')?;
+            delegate.push_char('=')?;
+            delegate.push_char(' ')?;
+            for c in value.value.chars() {
+                delegate.push_char(c)?;
+            }
+
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn custom_data_converted() {
+        let mut data = BasicGarnishData::<Foo>::new().unwrap();
+        let index = data
+            .push_object_to_data_block(BasicObject::Custom(Box::new(Foo {
+                value: "custom value".to_string(),
+            })))
+            .unwrap();
+        let char_list = data.convert_basic_data_at_to_char_list(index).unwrap();
+
+        let length = data.get_from_data_block_ensure_index(char_list).unwrap().as_char_list().unwrap();
+
+        let start = data.data_block.start + char_list + 1;
+        let slice = &data.data[start..start + length];
+        let result = slice.iter().map(|data| data.as_char().unwrap()).collect::<String>();
+        assert_eq!(result, "Foo = custom value");
+
+        let string = data.string_from_basic_data_at(index).unwrap();
+        assert_eq!(string, "Foo = custom value");
+    }
 }
