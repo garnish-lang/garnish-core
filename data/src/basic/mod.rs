@@ -7,12 +7,14 @@ mod object;
 mod search;
 mod storage;
 
+use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::usize;
 
 pub use data::{BasicData, BasicDataUnitCustom};
 pub use garnish::BasicDataFactory;
 
+use crate::basic::search::search_for_associative_item;
 use crate::basic::storage::{StorageBlock, StorageSettings};
 use crate::data::SimpleNumber;
 
@@ -143,7 +145,7 @@ where
         Ok(Self::push_to_block(&mut self.data, &mut self.jump_table_block, data))
     }
 
-    pub fn push_to_symbol_table_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
+    pub fn push_to_symbol_table_block(&mut self, symbol: u64, value: usize) -> Result<(), DataError> {
         if self.symbol_table_block.cursor >= self.symbol_table_block.size {
             self.reallocate_heap(
                 self.instruction_block.size,
@@ -152,7 +154,16 @@ where
                 self.data_block.size,
             )?;
         }
-        Ok(Self::push_to_block(&mut self.data, &mut self.symbol_table_block, data))
+        Self::push_to_block(&mut self.data, &mut self.symbol_table_block, BasicData::AssociativeItem(symbol, value));
+        let sort_range = &mut self.data[self.symbol_table_block.start..self.symbol_table_block.start + self.symbol_table_block.cursor];
+        sort_range.sort_by(|a, b| match (a, b) {
+            (BasicData::AssociativeItem(sym1, _), BasicData::AssociativeItem(sym2, _)) => sym1.cmp(sym2),
+            (BasicData::AssociativeItem(_, _), _) => Ordering::Less,
+            (_, BasicData::AssociativeItem(_, _)) => Ordering::Greater,
+            _ => Ordering::Equal,
+        });
+
+        Ok(())
     }
 
     pub fn push_to_data_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
@@ -396,13 +407,13 @@ mod tests {
 
         data.push_to_instruction_block(BasicData::Unit).unwrap();
         data.push_to_jump_table_block(BasicData::True).unwrap();
-        data.push_to_symbol_table_block(BasicData::False).unwrap();
+        data.push_to_symbol_table_block(100, 123).unwrap();
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
 
         let mut expected_data = vec![BasicData::Empty; 40];
         expected_data[0] = BasicData::Unit;
         expected_data[10] = BasicData::True;
-        expected_data[20] = BasicData::False;
+        expected_data[20] = BasicData::AssociativeItem(100, 123);
         expected_data[30] = BasicData::Number(100.into());
 
         assert_eq!(data.instruction_size(), 1);
@@ -426,14 +437,14 @@ mod tests {
         );
 
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
-        data.push_to_symbol_table_block(BasicData::False).unwrap();
+        data.push_to_symbol_table_block(100, 0).unwrap();
         data.push_to_jump_table_block(BasicData::True).unwrap();
         data.push_to_instruction_block(BasicData::Unit).unwrap();
 
         let mut expected_data = vec![BasicData::Empty; 40];
         expected_data[0] = BasicData::Unit;
         expected_data[10] = BasicData::True;
-        expected_data[20] = BasicData::False;
+        expected_data[20] = BasicData::AssociativeItem(100, 0);
         expected_data[30] = BasicData::Number(100.into());
 
         assert_eq!(data.instruction_size(), 1);
@@ -527,8 +538,7 @@ mod tests {
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         );
-        let index = data.push_to_symbol_table_block(BasicData::Symbol(100)).unwrap();
-        assert_eq!(index, 0);
+        data.push_to_symbol_table_block(100, 0).unwrap();
         assert_eq!(data.symbol_table_block.cursor, 1);
         assert_eq!(data.symbol_table_block.size, 10);
     }
@@ -542,12 +552,12 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         );
         for _ in 0..15 {
-            data.push_to_symbol_table_block(BasicData::Symbol(100)).unwrap();
+            data.push_to_symbol_table_block(100, 0).unwrap();
         }
 
         let mut expected_data = vec![BasicData::<()>::Empty; 40];
         for i in 20..35 {
-            expected_data[i] = BasicData::Symbol(100);
+            expected_data[i] = BasicData::AssociativeItem(100, 0);
         }
 
         assert_eq!(data.symbol_table_size(), 15);
@@ -564,10 +574,10 @@ mod tests {
         );
 
         for _ in 0..10 {
-            data.push_to_symbol_table_block(BasicData::Symbol(100)).unwrap();
+            data.push_to_symbol_table_block(100, 0).unwrap();
         }
 
-        let result = data.push_to_symbol_table_block(BasicData::Symbol(100));
+        let result = data.push_to_symbol_table_block(100, 0);
 
         assert_eq!(
             result,
@@ -576,5 +586,37 @@ mod tests {
                 DataErrorType::SymbolTableBlockExceededMaxItems(20, 10)
             ))
         );
+    }
+
+    #[test]
+    fn push_to_symbol_table_block_is_sorted() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        );
+        data.push_to_symbol_table_block(300, 0).unwrap();
+        data.push_to_symbol_table_block(600, 0).unwrap();
+        data.push_to_symbol_table_block(100, 0).unwrap();
+        data.push_to_symbol_table_block(500, 0).unwrap();
+        data.push_to_symbol_table_block(200, 0).unwrap();
+        data.push_to_symbol_table_block(400, 0).unwrap();
+
+        let mut expected_data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        );
+
+        expected_data.data[0] = BasicData::AssociativeItem(100, 0);
+        expected_data.data[1] = BasicData::AssociativeItem(200, 0);
+        expected_data.data[2] = BasicData::AssociativeItem(300, 0);
+        expected_data.data[3] = BasicData::AssociativeItem(400, 0);
+        expected_data.data[4] = BasicData::AssociativeItem(500, 0);
+        expected_data.data[5] = BasicData::AssociativeItem(600, 0);
+        expected_data.symbol_table_block.cursor = 6;
+        assert_eq!(data, expected_data);
     }
 }

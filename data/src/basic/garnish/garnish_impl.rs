@@ -667,7 +667,7 @@ where
         for c in from.chars() {
             self.push_to_data_block(BasicData::Char(c))?;
         }
-        self.push_to_symbol_table_block(BasicData::AssociativeItem(symbol, list_index))?;
+        self.push_to_symbol_table_block(symbol, list_index)?;
         Ok(symbol_index)
     }
 }
