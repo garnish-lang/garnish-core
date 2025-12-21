@@ -63,22 +63,27 @@ where
         symbol_table_settings: StorageSettings,
         data_settings: StorageSettings,
     ) -> Self {
-        let total_size = instruction_settings.initial_size()
-            + jump_table_settings.initial_size()
-            + symbol_table_settings.initial_size()
-            + data_settings.initial_size();
-        let data = vec![BasicData::Empty; total_size];
-        Self {
+        let mut this = Self {
             current_value: None,
             current_register: None,
             instruction_pointer: 0,
             current_jump_path: None,
-            data,
+            data: Vec::new(),
             instruction_block: StorageBlock::new(instruction_settings.initial_size(), instruction_settings.clone()),
             jump_table_block: StorageBlock::new(jump_table_settings.initial_size(), jump_table_settings.clone()),
             symbol_table_block: StorageBlock::new(symbol_table_settings.initial_size(), symbol_table_settings.clone()),
             data_block: StorageBlock::new(data_settings.initial_size(), data_settings.clone()),
-        }
+        };
+
+        this.reallocate_heap(
+            instruction_settings.initial_size,
+            jump_table_settings.initial_size,
+            symbol_table_settings.initial_size,
+            data_settings.initial_size,
+        )
+        .unwrap(); // temp unwrap
+
+        this
     }
 
     pub fn data_size(&self) -> usize {
@@ -181,6 +186,16 @@ where
     pub fn get_string_for_data_at(&self, index: usize) -> Result<String, DataError> {
         self.string_from_basic_data_at(index)
     }
+
+    pub fn get_symbol_string(&self, symbol: u64) -> Result<Option<String>, DataError> {
+        let search_slice = &self.data[self.symbol_table_block.start..self.symbol_table_block.start + self.symbol_table_block.cursor];
+        match search_for_associative_item(search_slice, symbol)? {
+            Some(index) => match self.get_from_data_block_ensure_index(index)?.as_char_list()? {
+                _ => Ok(Some(self.string_from_basic_data_at(index)?)),
+            },
+            None => Ok(None),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -220,7 +235,17 @@ mod utilities {
 
 #[cfg(test)]
 mod tests {
-    use crate::{BasicData, BasicGarnishData, BasicGarnishDataUnit, DataError, basic::{storage::{ReallocationStrategy, StorageBlock, StorageSettings}, utilities::test_data}, error::DataErrorType};
+    use garnish_lang_traits::GarnishDataType;
+
+    use crate::{
+        BasicData, BasicGarnishData, BasicGarnishDataUnit, DataError,
+        basic::{
+            object::BasicObject,
+            storage::{ReallocationStrategy, StorageBlock, StorageSettings},
+            utilities::test_data,
+        },
+        error::DataErrorType,
+    };
 
     #[test]
     fn test_basic_garnish_data() {
@@ -238,6 +263,18 @@ mod tests {
 
         let expected_data = vec![BasicData::Empty; 40];
 
+        let mut expected_instruction_block = StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)));
+        expected_instruction_block.start = 0;
+
+        let mut expected_jump_table_block = StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)));
+        expected_jump_table_block.start = 10;
+
+        let mut expected_symbol_table_block = StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)));
+        expected_symbol_table_block.start = 20;
+
+        let mut expected_data_block = StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)));
+        expected_data_block.start = 30;
+
         assert_eq!(
             data,
             BasicGarnishDataUnit {
@@ -246,10 +283,10 @@ mod tests {
                 current_register: None,
                 current_jump_path: None,
                 data: expected_data,
-                instruction_block: StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10))),
-                jump_table_block: StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10))),
-                symbol_table_block: StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10))),
-                data_block: StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10))),
+                instruction_block: expected_instruction_block,
+                jump_table_block: expected_jump_table_block,
+                symbol_table_block: expected_symbol_table_block,
+                data_block: expected_data_block,
             }
         );
     }
@@ -618,5 +655,83 @@ mod tests {
         expected_data.data[5] = BasicData::AssociativeItem(600, 0);
         expected_data.symbol_table_block.cursor = 6;
         assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn get_symbol_string() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        );
+        let index = data.push_object_to_data_block(BasicObject::CharList("first symbol".to_string())).unwrap();
+        data.push_to_symbol_table_block(100, index).unwrap();
+
+        let index = data
+            .push_object_to_data_block(BasicObject::CharList("second symbol".to_string()))
+            .unwrap();
+        data.push_to_symbol_table_block(50, index).unwrap();
+
+        let index = data.push_object_to_data_block(BasicObject::CharList("third symbol".to_string())).unwrap();
+        data.push_to_symbol_table_block(200, index).unwrap();
+
+        let result = data.get_symbol_string(50).unwrap();
+
+        assert_eq!(result, Some("second symbol".to_string()));
+    }
+
+    #[test]
+    fn get_symbol_string_not_found() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        );
+        let index = data.push_object_to_data_block(BasicObject::CharList("first symbol".to_string())).unwrap();
+        data.push_to_symbol_table_block(100, index).unwrap();
+
+        let index = data
+            .push_object_to_data_block(BasicObject::CharList("second symbol".to_string()))
+            .unwrap();
+        data.push_to_symbol_table_block(50, index).unwrap();
+
+        let index = data.push_object_to_data_block(BasicObject::CharList("third symbol".to_string())).unwrap();
+        data.push_to_symbol_table_block(200, index).unwrap();
+
+        let result = data.get_symbol_string(150).unwrap();
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn get_symbol_string_data_not_char_list() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        );
+        let index = data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_to_symbol_table_block(100, index).unwrap();
+
+        let index = data
+            .push_object_to_data_block(BasicObject::CharList("second symbol".to_string()))
+            .unwrap();
+        data.push_to_symbol_table_block(50, index).unwrap();
+
+        let index = data.push_object_to_data_block(BasicObject::CharList("third symbol".to_string())).unwrap();
+        data.push_to_symbol_table_block(200, index).unwrap();
+
+        let result = data.get_symbol_string(100);
+
+        assert_eq!(
+            result,
+            Err(DataError::new(
+                "Not of type",
+                DataErrorType::NotType(GarnishDataType::CharList, GarnishDataType::Number)
+            ))
+        );
     }
 }

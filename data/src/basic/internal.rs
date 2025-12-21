@@ -49,8 +49,8 @@ where
     }
 
     pub(crate) fn push_to_block(heap: &mut Vec<BasicData<T>>, block: &mut StorageBlock, data: BasicData<T>) -> usize {
-        let index = block.start + block.cursor;
-        heap[index] = data;
+        let index = block.cursor;
+        heap[block.start + index] = data;
         block.cursor += 1;
         index
     }
