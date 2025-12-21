@@ -290,10 +290,8 @@ where
             let list_s = delegate.data().string_from_basic_data_at(list)?;
             let range_s = delegate.data().string_from_basic_data_at(range)?;
 
-            dbg!(&list_s, &range_s);
             let s = format!("{} ~ {}", list_s, range_s);
 
-            dbg!(&s);
             for c in s.chars() {
                 delegate.push_char(c)?;
             }
