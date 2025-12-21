@@ -48,7 +48,7 @@ impl<T> BasicGarnishData<T>
 where
     T: BasicDataCustom,
 {
-    pub fn new() -> Self {
+    pub fn new() -> Result<Self, DataError> {
         Self::new_with_settings(
             StorageSettings::default(),
             StorageSettings::default(),
@@ -62,7 +62,7 @@ where
         jump_table_settings: StorageSettings,
         symbol_table_settings: StorageSettings,
         data_settings: StorageSettings,
-    ) -> Self {
+    ) -> Result<Self, DataError> {
         let mut this = Self {
             current_value: None,
             current_register: None,
@@ -80,10 +80,9 @@ where
             jump_table_settings.initial_size,
             symbol_table_settings.initial_size,
             data_settings.initial_size,
-        )
-        .unwrap(); // temp unwrap
+        )?; // temp unwrap
 
-        this
+        Ok(this)
     }
 
     pub fn data_size(&self) -> usize {
@@ -211,7 +210,7 @@ mod utilities {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
-        )
+        ).unwrap()
     }
 
     pub fn instruction_test_data() -> BasicGarnishDataUnit {
@@ -220,7 +219,7 @@ mod utilities {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
-        )
+        ).unwrap()
     }
 
     pub fn jump_table_test_data() -> BasicGarnishDataUnit {
@@ -229,7 +228,7 @@ mod utilities {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
-        )
+        ).unwrap()
     }
 }
 
@@ -277,7 +276,7 @@ mod tests {
 
         assert_eq!(
             data,
-            BasicGarnishDataUnit {
+            Ok(BasicGarnishDataUnit {
                 instruction_pointer: 0,
                 current_value: None,
                 current_register: None,
@@ -287,7 +286,7 @@ mod tests {
                 jump_table_block: expected_jump_table_block,
                 symbol_table_block: expected_symbol_table_block,
                 data_block: expected_data_block,
-            }
+            })
         );
     }
 
@@ -322,7 +321,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
         let index = data.push_to_instruction_block(BasicData::Unit).unwrap();
         assert_eq!(index, 0);
         assert_eq!(data.instruction_block.cursor, 1);
@@ -351,7 +350,7 @@ mod tests {
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
         let index = data.push_to_jump_table_block(BasicData::Unit).unwrap();
         assert_eq!(index, 0);
         assert_eq!(data.jump_table_block.cursor, 1);
@@ -380,7 +379,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
         for _ in 0..15 {
             data.push_to_data_block(BasicData::Unit).unwrap();
         }
@@ -400,7 +399,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
         for _ in 0..15 {
             data.push_to_instruction_block(BasicData::Unit).unwrap();
         }
@@ -420,7 +419,7 @@ mod tests {
             StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
         for _ in 0..15 {
             data.push_to_jump_table_block(BasicData::Unit).unwrap();
         }
@@ -440,7 +439,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
 
         data.push_to_instruction_block(BasicData::Unit).unwrap();
         data.push_to_jump_table_block(BasicData::True).unwrap();
@@ -471,7 +470,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
 
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         data.push_to_symbol_table_block(100, 0).unwrap();
@@ -502,7 +501,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
 
         for _ in 0..10 {
             data.push_to_data_block(BasicData::Unit).unwrap();
@@ -526,7 +525,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
 
         for _ in 0..10 {
             data.push_to_instruction_block(BasicData::Unit).unwrap();
@@ -550,7 +549,7 @@ mod tests {
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
 
         for _ in 0..10 {
             data.push_to_jump_table_block(BasicData::Unit).unwrap();
@@ -574,7 +573,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
         data.push_to_symbol_table_block(100, 0).unwrap();
         assert_eq!(data.symbol_table_block.cursor, 1);
         assert_eq!(data.symbol_table_block.size, 10);
@@ -587,7 +586,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
         for _ in 0..15 {
             data.push_to_symbol_table_block(100, 0).unwrap();
         }
@@ -608,7 +607,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
 
         for _ in 0..10 {
             data.push_to_symbol_table_block(100, 0).unwrap();
@@ -632,7 +631,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
         data.push_to_symbol_table_block(300, 0).unwrap();
         data.push_to_symbol_table_block(600, 0).unwrap();
         data.push_to_symbol_table_block(100, 0).unwrap();
@@ -645,7 +644,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
 
         expected_data.data[0] = BasicData::AssociativeItem(100, 0);
         expected_data.data[1] = BasicData::AssociativeItem(200, 0);
@@ -664,7 +663,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
         let index = data.push_object_to_data_block(BasicObject::CharList("first symbol".to_string())).unwrap();
         data.push_to_symbol_table_block(100, index).unwrap();
 
@@ -688,7 +687,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
         let index = data.push_object_to_data_block(BasicObject::CharList("first symbol".to_string())).unwrap();
         data.push_to_symbol_table_block(100, index).unwrap();
 
@@ -712,7 +711,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
-        );
+        ).unwrap();
         let index = data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         data.push_to_symbol_table_block(100, index).unwrap();
 
