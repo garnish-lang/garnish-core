@@ -277,57 +277,49 @@ where
             }
         }
         BasicData::Range(start, end) => {
-            let (start, end) = (start.clone(), end.clone());
-            let start_s = delegate.data().string_from_basic_data_at(start)?;
-            let end_s = delegate.data().string_from_basic_data_at(end)?;
-            let s = format!("{}..{}", start_s, end_s);
-            for c in s.chars() {
-                delegate.push_char(c)?;
-            }
+            let (start, end) = (start.clone(), end.clone()); 
+            convert_with_delegate(delegate, start, depth + 1)?;
+            delegate.push_char('.')?;
+            delegate.push_char('.')?;
+            convert_with_delegate(delegate, end, depth + 1)?;
         }
         BasicData::Slice(list, range) => {
             let (list, range) = (list.clone(), range.clone());
-            let list_s = delegate.data().string_from_basic_data_at(list)?;
-            let range_s = delegate.data().string_from_basic_data_at(range)?;
-
-            let s = format!("{} ~ {}", list_s, range_s);
-
-            for c in s.chars() {
-                delegate.push_char(c)?;
-            }
+            convert_with_delegate(delegate, list, depth + 1)?;
+            delegate.push_char(' ')?;
+            delegate.push_char('~')?;
+            delegate.push_char(' ')?;
+            convert_with_delegate(delegate, range, depth + 1)?;
         }
         BasicData::Partial(reciever, input) => {
             let (reciever, input) = (reciever.clone(), input.clone());
-            let reciever_s = delegate.data().string_from_basic_data_at(reciever)?;
-            let input_s = delegate.data().string_from_basic_data_at(input)?;
-            let s = format!("{} ~ {}", reciever_s, input_s);
-            for c in s.chars() {
-                delegate.push_char(c)?;
-            }
+            convert_with_delegate(delegate, reciever, depth + 1)?;
+            delegate.push_char(' ')?;
+            delegate.push_char('~')?;
+            delegate.push_char(' ')?;
+            convert_with_delegate(delegate, input, depth + 1)?;
         }
         BasicData::List(length, _) => {
-            let mut strs = vec![];
-            let range = from + 1..from + 1 + length;
+            let end = from + 1 + length;
+            let range = from + 1..end;
 
             for i in range {
                 let true_index = delegate.data().get_from_data_block_ensure_index(i)?.as_list_item()?;
-                let s = delegate.data().string_from_basic_data_at(true_index)?;
-                strs.push(s);
-            }
+                convert_with_delegate(delegate, true_index, depth + 1)?;
 
-            let s = strs.join(" ");
-            for c in s.chars() {
-                delegate.push_char(c)?;
+                if i < end - 1 {
+                    delegate.push_char(' ')?;
+                }
             }
         }
         BasicData::Concatenation(left, right) => {
             let (left, right) = (left.clone(), right.clone());
-            let left_s = delegate.data().string_from_basic_data_at(left)?;
-            let right_s = delegate.data().string_from_basic_data_at(right)?;
-            let s = format!("{} <> {}", left_s, right_s);
-            for c in s.chars() {
-                delegate.push_char(c)?;
-            }
+            convert_with_delegate(delegate, left, depth + 1)?;
+            delegate.push_char(' ')?;
+            delegate.push_char('<')?;
+            delegate.push_char('>')?;
+            delegate.push_char(' ')?;
+            convert_with_delegate(delegate, right, depth + 1)?;
         }
         BasicData::Custom(_) => todo!(),
         BasicData::Empty
