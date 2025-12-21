@@ -6,7 +6,16 @@ where
 {
     pub(crate) fn convert_basic_data_at_to_char_list(&mut self, from: usize) -> Result<usize, DataError> {
         match self.get_from_data_block_ensure_index(from)? {
-            BasicData::CharList(_) => Ok(from),
+            BasicData::CharList(length) => {
+                let start = from + 1;
+                let length = length.clone();
+                let list_index = self.push_to_data_block(BasicData::CharList(length))?;
+                for i in start..start + length {
+                    let c = self.get_from_data_block_ensure_index(i)?.as_char()?;
+                    self.push_to_data_block(BasicData::Char(c))?;
+                }
+                Ok(list_index)
+            },
             BasicData::Unit => todo!(),
             BasicData::True => todo!(),
             BasicData::False => todo!(),
@@ -47,7 +56,7 @@ mod convert_to_char_list {
     };
 
     #[test]
-    fn convert_char_list_returns_original() {
+    fn convert_char_list_clones_original() {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::CharList("abc".to_string())).unwrap();
         let char_list = data.convert_basic_data_at_to_char_list(0).unwrap();
@@ -57,8 +66,13 @@ mod convert_to_char_list {
         expected_data.data[1] = BasicData::Char('a');
         expected_data.data[2] = BasicData::Char('b');
         expected_data.data[3] = BasicData::Char('c');
-        expected_data.data_block.cursor = 4;
-        assert_eq!(char_list, 0);
+        expected_data.data[4] = BasicData::CharList(3);
+        expected_data.data[5] = BasicData::Char('a');
+        expected_data.data[6] = BasicData::Char('b');
+        expected_data.data[7] = BasicData::Char('c');
+
+        expected_data.data_block.cursor = 8;
+        assert_eq!(char_list, 4);
         assert_eq!(data, expected_data);
     }
 }
