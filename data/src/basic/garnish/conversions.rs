@@ -116,21 +116,25 @@ where
     T: BasicDataCustom,
 {
     pub(crate) fn convert_basic_data_at_to_char_list(&mut self, from: usize) -> Result<usize, DataError> {
-        let mut delegate = BasicDataDelegate::new(self);
-        delegate.init()?;
-        convert_with_delegate(&mut delegate, from)?;
-        delegate.end()
+        start_convert_with_delegate(BasicDataDelegate::new(self), from, 0)
     }
 
     pub(crate) fn string_from_basic_data_at(&self, from: usize) -> Result<String, DataError> {
-        let mut delegate = StringDelegate::new(self);
-        delegate.init()?;
-        convert_with_delegate(&mut delegate, from)?;
-        delegate.end()
+        start_convert_with_delegate(StringDelegate::new(self), from, 0)
     }
 }
 
-fn convert_with_delegate<T>(delegate: &mut impl ConversionDelegate<T>, from: usize) -> Result<(), DataError>
+fn start_convert_with_delegate<Delegate, Output, T>(mut delegate: Delegate, from: usize, depth: usize) -> Result<Output, DataError>
+where
+    T: BasicDataCustom,
+    Delegate: ConversionDelegate<T, Output = Output>,
+{
+    delegate.init()?;
+    convert_with_delegate(&mut delegate, from, depth)?;
+    delegate.end()
+}
+
+fn convert_with_delegate<T>(delegate: &mut impl ConversionDelegate<T>, from: usize, depth: usize) -> Result<(), DataError>
 where
     T: BasicDataCustom,
 {
@@ -168,7 +172,7 @@ where
             delegate.push_char(c.clone())?;
         }
         BasicData::Byte(b) => {
-            let s= b.to_string();
+            let s = b.to_string();
             for c in s.chars() {
                 delegate.push_char(c)?;
             }
@@ -181,7 +185,7 @@ where
                         delegate.push_char(c)?;
                     }
                     return Ok(());
-                },
+                }
                 None => {
                     let s = format!("[Symbol {}]", sym.to_string());
                     for c in s.chars() {
@@ -198,12 +202,12 @@ where
                 let s = delegate.data().string_from_basic_data_at(i)?;
                 strs.push(s);
             }
-            
+
             let s = strs.join(" ");
             for c in s.chars() {
                 delegate.push_char(c)?;
             }
-        },
+        }
         BasicData::Expression(jump_table_index) => {
             let s = format!("[Expression {}]", jump_table_index);
             for c in s.chars() {
@@ -238,13 +242,18 @@ where
         }
         BasicData::Pair(left, right) => {
             let (left, right) = (left.clone(), right.clone());
-            let left_s = delegate.data().string_from_basic_data_at(left)?;
-            let right_s = delegate.data().string_from_basic_data_at(right)?;
-            let s = format!("{} = {}", left_s, right_s);
+            let left_s = start_convert_with_delegate(StringDelegate::new(delegate.data()), left, depth + 1)?;
+            let right_s = start_convert_with_delegate(StringDelegate::new(delegate.data()), right, depth + 1)?;
+            let s = if depth > 0 {
+                format!("({} = {})", left_s, right_s)
+            } else {
+                format!("{} = {}", left_s, right_s)
+            };
+
             for c in s.chars() {
                 delegate.push_char(c)?;
             }
-        },
+        }
         BasicData::Range(start, end) => {
             let (start, end) = (start.clone(), end.clone());
             let start_s = delegate.data().string_from_basic_data_at(start)?;
@@ -318,7 +327,8 @@ mod convert_to_char_list {
     use garnish_lang_traits::{GarnishData, GarnishDataFactory, GarnishDataType, Instruction, SymbolListPart};
 
     use crate::{
-        BasicData, BasicDataFactory, BasicGarnishData, basic::{object::BasicObject, utilities::test_data}
+        BasicData, BasicDataFactory, BasicGarnishData,
+        basic::{object::BasicObject, utilities::test_data},
     };
 
     macro_rules! object_conversions {
@@ -382,6 +392,10 @@ mod convert_to_char_list {
         char_list_clones: BasicObject::CharList("Formatted String".to_string()) => "Formatted String",
         byte_list: BasicObject::ByteList(vec![100, 200]) => "100 200",
         pair: BasicObject::Pair(Box::new(BasicObject::CharList("value".to_string())), Box::new(BasicObject::Number(200.into()))) => "value = 200",
+        nested_pairs: BasicObject::Pair(
+            Box::new(BasicObject::Pair(Box::new(BasicObject::CharList("value".to_string())), Box::new(BasicObject::Number(200.into())))),
+            Box::new(BasicObject::Pair(Box::new(BasicObject::CharList("value2".to_string())), Box::new(BasicObject::Number(400.into()))))
+        ) => "(value = 200) = (value2 = 400)",
         range: BasicObject::Range(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100..200",
         slice: BasicObject::Slice(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100 ~ 200",
         partial: BasicObject::Partial(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100 ~ 200",
