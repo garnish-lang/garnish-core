@@ -34,6 +34,7 @@ where T: crate::basic::BasicDataCustom {
     Value(Option<usize>, usize),
     Register(Option<usize>, usize),
     Instruction(Instruction, Option<usize>),
+    JumpPoint(usize),
 }
 
 impl<T> BasicData<T>
@@ -68,6 +69,7 @@ where T: crate::basic::BasicDataCustom {
             BasicData::Value(_, _) => GarnishDataType::Invalid,
             BasicData::Register(_, _) => GarnishDataType::Invalid,
             BasicData::Instruction(_, _) => GarnishDataType::Invalid,
+            BasicData::JumpPoint(_) => GarnishDataType::Invalid,
         }
     }
 
@@ -389,6 +391,20 @@ where T: crate::basic::BasicDataCustom {
     pub fn as_instruction_mut(&mut self) -> Result<(&mut Instruction, &mut Option<usize>), DataError> {
         match self {
             BasicData::Instruction(instruction, data) => Ok((instruction, data)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_jump_point(&self) -> Result<usize, DataError> {
+        match self {
+            BasicData::JumpPoint(point) => Ok(*point),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_jump_point_mut(&mut self) -> Result<&mut usize, DataError> {
+        match self {
+            BasicData::JumpPoint(point) => Ok(point),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
@@ -1019,5 +1035,30 @@ mod tests {
     fn as_instruction_mut_not_instruction() {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_instruction_mut(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_jump_point() {
+        let data = BasicDataUnitCustom::JumpPoint(100);
+        assert_eq!(data.as_jump_point(), Ok(100));
+    }
+    
+    #[test]
+    fn as_jump_point_not_jump_point() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_jump_point(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_jump_point_mut() {
+        let mut data = BasicDataUnitCustom::JumpPoint(100);
+        *data.as_jump_point_mut().unwrap() = 200;
+        assert_eq!(data.as_jump_point(), Ok(200));
+    }
+
+    #[test]
+    fn as_jump_point_mut_not_jump_point() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_jump_point_mut(), Err(DataError::not_basic_type_error()));
     }
 }

@@ -591,19 +591,26 @@ where
     }
 
     fn get_jump_table_len(&self) -> Self::Size {
-        todo!()
+        self.jump_table_block.cursor
     }
 
     fn push_to_jump_table(&mut self, index: Self::Size) -> Result<(), Self::Error> {
-        todo!()
+        self.push_to_jump_table_block(BasicData::JumpPoint(index))?;
+        Ok(())
     }
 
     fn get_from_jump_table(&self, index: Self::Size) -> Option<Self::Size> {
-        todo!()
+        match self.get_from_jump_table_block_ensure_index(index).and_then(|data| data.as_jump_point()) {
+            Ok(point) => Some(point),
+            Err(_) => None
+        }
     }
 
     fn get_from_jump_table_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
-        todo!()
+        match self.get_from_jump_table_block_ensure_index_mut(index).and_then(|data| data.as_jump_point_mut()) {
+            Ok(point) => Some(point),
+            Err(_) => None
+        }
     }
 
     fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
@@ -619,7 +626,7 @@ where
     }
 
     fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
-        todo!()
+        unimplemented!()
     }
 
     fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -649,7 +656,7 @@ mod tests {
 
     use crate::{
         BasicData, BasicGarnishDataUnit,
-        basic::{object::BasicObject, storage::StorageSettings, utilities::{instruction_test_data, test_data}},
+        basic::{object::BasicObject, storage::StorageSettings, utilities::{instruction_test_data, jump_table_test_data, test_data}},
         error::DataErrorType,
     };
 
@@ -2658,5 +2665,48 @@ mod tests {
         data.set_instruction_cursor(2).unwrap();
         let cursor = data.get_instruction_cursor();
         assert_eq!(cursor, 2);
+    }
+
+    #[test]
+    fn get_jump_table_len() {
+        let data = jump_table_test_data();
+        let len = data.get_jump_table_len();
+        assert_eq!(len, 0);
+    }
+
+    #[test]
+    fn get_jump_table_len_multiple() {
+        let mut data = jump_table_test_data();
+        data.push_to_jump_table_block(BasicData::True).unwrap();
+        data.push_to_jump_table_block(BasicData::False).unwrap();
+        let len = data.get_jump_table_len();
+        assert_eq!(len, 2);
+    }
+
+    #[test]
+    fn get_jump_table_none() {
+        let data = jump_table_test_data();
+        let jump_table = data.get_from_jump_table(0);
+        assert_eq!(jump_table, None);
+    }
+
+    #[test]
+    fn get_from_jump_table_mut() {
+        let mut data = jump_table_test_data();
+        data.push_to_jump_table(100).unwrap();
+        data.push_to_jump_table(200).unwrap();
+        let jump_table = data.get_from_jump_table_mut(1).unwrap();
+        *jump_table = 300;
+        assert_eq!(data.get_from_jump_table(1).unwrap(), 300);
+    }
+
+    #[test]
+    fn push_to_jump_table() {
+        let mut data = jump_table_test_data();
+        data.push_to_jump_table(100).unwrap();
+        let mut expected_data = jump_table_test_data();
+        expected_data.data[0] = BasicData::JumpPoint(100);
+        expected_data.jump_table_block.cursor = 1;
+        assert_eq!(data, expected_data);
     }
 }

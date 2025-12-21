@@ -138,14 +138,22 @@ where
         Ok(&self.data[true_index])
     }
 
-    pub(crate) fn get_from_instruction_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut BasicData<T>, DataError> {
-        if index >= self.instruction_block.cursor {
-            return Err(DataError::new("Invalid instruction index", DataErrorType::InvalidInstructionIndex(index)));
+    pub(crate) fn get_from_jump_table_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
+        if index >= self.jump_table_block.cursor {
+            return Err(DataError::new("Invalid jump table index", DataErrorType::InvalidJumpTableIndex(index)));
         }
-        let true_index = self.instruction_block.start + index;
-        Ok(&mut self.data[true_index])
+        let true_index = self.jump_table_block.start + index;
+        Ok(&self.data[true_index])
     }
 
+    pub(crate) fn get_from_jump_table_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut BasicData<T>, DataError> {
+        if index >= self.jump_table_block.cursor {
+            return Err(DataError::new("Invalid jump table index", DataErrorType::InvalidJumpTableIndex(index)));
+        }
+        let true_index = self.jump_table_block.start + index;
+        Ok(&mut self.data[true_index])
+    }
+    
     pub fn add_char_list_from_string(&mut self, s: impl AsRef<str>) -> Result<usize, DataError> {
         let index = self.push_to_data_block(BasicData::CharList(s.as_ref().len()))?;
         for c in s.as_ref().chars() {
@@ -234,6 +242,14 @@ mod utilities {
         BasicGarnishDataUnit::new_with_settings(
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        )
+    }
+
+    pub fn jump_table_test_data() -> BasicGarnishDataUnit {
+        BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         )
     }

@@ -7,6 +7,7 @@ pub enum DataErrorType {
     Unknown,
     InvalidDataIndex(usize),
     InvalidInstructionIndex(usize),
+    InvalidJumpTableIndex(usize),
     InvalidListItemIndex(usize, usize),
     InvalidCharListItemIndex(usize, usize),
     ExceededInitialListLength(usize),
