@@ -303,6 +303,10 @@ where
             let end = from + 1 + length;
             let range = from + 1..end;
 
+            if depth > 0 {
+                delegate.push_char('(')?;
+            }
+
             for i in range {
                 let true_index = delegate.data().get_from_data_block_ensure_index(i)?.as_list_item()?;
                 convert_with_delegate(delegate, true_index, depth + 1)?;
@@ -311,15 +315,28 @@ where
                     delegate.push_char(' ')?;
                 }
             }
+
+            if depth > 0 {
+                delegate.push_char(')')?;
+            }
         }
         BasicData::Concatenation(left, right) => {
             let (left, right) = (left.clone(), right.clone());
+
+            if depth > 0 {
+                delegate.push_char('(')?;
+            }
+            
             convert_with_delegate(delegate, left, depth + 1)?;
             delegate.push_char(' ')?;
             delegate.push_char('<')?;
             delegate.push_char('>')?;
             delegate.push_char(' ')?;
             convert_with_delegate(delegate, right, depth + 1)?;
+
+            if depth > 0 {
+                delegate.push_char(')')?;
+            }
         }
         BasicData::Custom(_) => todo!(),
         BasicData::Empty
@@ -419,6 +436,17 @@ mod convert_to_char_list {
         partial: BasicObject::Partial(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100 ~ 200",
         list: BasicObject::List(vec![Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))]) => "100 200",
         concatenation: BasicObject::Concatenation(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100 <> 200",
+        list_concatenation_nested_under_pair: BasicObject::Pair(
+            Box::new(BasicObject::Concatenation(
+                Box::new(BasicObject::Number(100.into())), 
+                Box::new(BasicObject::Number(200.into()))
+            )),
+            Box::new(BasicObject::List(vec![
+                Box::new(BasicObject::Number(300.into())),
+                Box::new(BasicObject::Number(400.into())),
+                Box::new(BasicObject::Number(500.into())),
+            ]))
+        ) => "(100 <> 200) = (300 400 500)"
         // custom: BasicObject::Custom(Box::new(BasicObject::Number(100.into()))) => "[Custom 100]",
     );
 
