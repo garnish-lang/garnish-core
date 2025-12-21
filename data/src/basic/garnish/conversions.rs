@@ -197,13 +197,23 @@ where
         }
         BasicData::SymbolList(length) => {
             let length = length.clone();
-            let range = from + 1..from + 1 + length;
+            let end = from + 1 + length;
+            let range = from + 1..end;
+
+            if depth > 0 {
+                delegate.push_char('(')?;
+            }
+
             for i in range {
                 convert_with_delegate(delegate, i, depth + 1)?;
 
-                if i == length - 1 {
+                if i < end - 1 {
                     delegate.push_char(' ')?;
                 }
+            }
+
+            if depth > 0 {
+                delegate.push_char(')')?;
             }
         }
         BasicData::Expression(jump_table_index) => {
@@ -220,13 +230,23 @@ where
         }
         BasicData::ByteList(length) => {
             let length = length.clone();
-            let range = from + 1..from + 1 + length;
+            let end = from + 1 + length;
+            let range = from + 1..end;
+
+            if depth > 0 {
+                delegate.push_char('(')?;
+            }
+
             for i in range {
                 convert_with_delegate(delegate, i, depth + 1)?;
 
-                if i == length - 1 {
+                if i < end - 1 {
                     delegate.push_char(' ')?;
                 }
+            }
+
+            if depth > 0 {
+                delegate.push_char(')')?;
             }
         }
         BasicData::CharList(length) => {
@@ -243,7 +263,7 @@ where
             if depth > 0 {
                 delegate.push_char('(')?;
             }
-            
+
             convert_with_delegate(delegate, left, depth + 1)?;
 
             delegate.push_char(' ')?;
@@ -251,7 +271,7 @@ where
             delegate.push_char(' ')?;
 
             convert_with_delegate(delegate, right, depth + 1)?;
-            
+
             if depth > 0 {
                 delegate.push_char(')')?;
             }
@@ -389,11 +409,16 @@ mod convert_to_char_list {
             data.parse_add_symbol("my_symbol").unwrap();
         },
         symbol_list: BasicObject::SymbolList(vec![SymbolListPart::Symbol(100), SymbolListPart::Number(20.into())]) => "[Symbol 100] 20",
+        symbol_list_nested: BasicObject::Pair(
+            Box::new(BasicObject::SymbolList(vec![SymbolListPart::Symbol(100), SymbolListPart::Number(20.into())])),
+            Box::new(BasicObject::SymbolList(vec![SymbolListPart::Symbol(200), SymbolListPart::Number(30.into())]))
+        ) => "([Symbol 100] 20) = ([Symbol 200] 30)",
         expression: BasicObject::Expression(123) => "[Expression 123]",
         external: BasicObject::External(123) => "[External 123]",
         char_list_clones: BasicObject::CharList("Formatted String".to_string()) => "Formatted String",
         byte_list: BasicObject::ByteList(vec![100, 200]) => "100 200",
         byte_list_with_one_item: BasicObject::ByteList(vec![100]) => "100",
+        byte_list_nested: BasicObject::Pair(Box::new(BasicObject::ByteList(vec![50])), Box::new(BasicObject::ByteList(vec![100, 150, 200]))) => "(50) = (100 150 200)",
         pair: BasicObject::Pair(Box::new(BasicObject::CharList("value".to_string())), Box::new(BasicObject::Number(200.into()))) => "value = 200",
         nested_pairs: BasicObject::Pair(
             Box::new(BasicObject::Pair(Box::new(BasicObject::CharList("value".to_string())), Box::new(BasicObject::Number(200.into())))),
