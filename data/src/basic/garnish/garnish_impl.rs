@@ -11,7 +11,7 @@ use crate::{
     },
     error::DataErrorType,
 };
-use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, Instruction, SymbolListPart, TypeConstants};
+use garnish_lang_traits::{Extents, GarnishData, GarnishDataFactory, GarnishDataType, Instruction, SymbolListPart, TypeConstants};
 
 impl<T> GarnishData for BasicGarnishData<T>
 where
@@ -82,24 +82,20 @@ where
     fn get_current_value(&self) -> Option<Self::Size> {
         match self.current_value {
             None => None,
-            Some(index) => {
-                match self.get_from_data_block_ensure_index(index).and_then(|data| data.as_value()) {
-                    Ok((_previous, value)) => Some(value),
-                    Err(_) => return None,
-                }
-            }
+            Some(index) => match self.get_from_data_block_ensure_index(index).and_then(|data| data.as_value()) {
+                Ok((_previous, value)) => Some(value),
+                Err(_) => return None,
+            },
         }
     }
 
     fn get_current_value_mut(&mut self) -> Option<&mut Self::Size> {
         match self.current_value {
             None => None,
-            Some(index) => {
-                match self.get_from_data_block_ensure_index_mut(index).and_then(|data| data.as_value_mut()) {
-                    Ok((_previous, value)) => Some(value),
-                    Err(_) => return None,
-                }
-            }
+            Some(index) => match self.get_from_data_block_ensure_index_mut(index).and_then(|data| data.as_value_mut()) {
+                Ok((_previous, value)) => Some(value),
+                Err(_) => return None,
+            },
         }
     }
 
@@ -512,7 +508,7 @@ where
                     current = previous.clone();
                     count += 1;
                 }
-                _ => break
+                _ => break,
             }
         }
 
@@ -535,7 +531,7 @@ where
                     current = previous.clone();
                     list.push(value);
                 }
-                _ => break
+                _ => break,
             }
         }
 
@@ -543,7 +539,7 @@ where
 
         match list.get(index).cloned() {
             Some(value) => Some(value.clone()),
-            None => None
+            None => None,
         }
     }
 
@@ -554,7 +550,7 @@ where
                 self.current_register = register.0.clone();
                 Ok(Some(register.1.clone()))
             }
-            None => Ok(None)
+            None => Ok(None),
         }
     }
 
@@ -573,7 +569,7 @@ where
     fn get_instruction(&self, addr: Self::Size) -> Option<(Instruction, Option<Self::Size>)> {
         match self.get_from_instruction_block_ensure_index(addr).and_then(|data| data.as_instruction()) {
             Ok(instruction) => Some(instruction),
-            Err(_) => None
+            Err(_) => None,
         }
     }
 
@@ -602,14 +598,17 @@ where
     fn get_from_jump_table(&self, index: Self::Size) -> Option<Self::Size> {
         match self.get_from_jump_table_block_ensure_index(index).and_then(|data| data.as_jump_point()) {
             Ok(point) => Some(point),
-            Err(_) => None
+            Err(_) => None,
         }
     }
 
     fn get_from_jump_table_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
-        match self.get_from_jump_table_block_ensure_index_mut(index).and_then(|data| data.as_jump_point_mut()) {
+        match self
+            .get_from_jump_table_block_ensure_index_mut(index)
+            .and_then(|data| data.as_jump_point_mut())
+        {
             Ok(point) => Some(point),
-            Err(_) => None
+            Err(_) => None,
         }
     }
 
@@ -633,7 +632,7 @@ where
                 self.current_jump_path = previous;
                 Some(return_index)
             }
-            None => None
+            None => None,
         }
     }
 
@@ -660,6 +659,17 @@ where
     fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         todo!()
     }
+
+    fn parse_add_symbol(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        let symbol = Self::DataFactory::parse_symbol(from)?;
+        let symbol_index = self.push_to_data_block(BasicData::Symbol(symbol))?;
+        let list_index = self.push_to_data_block(BasicData::CharList(3))?;
+        for c in from.chars() {
+            self.push_to_data_block(BasicData::Char(c))?;
+        }
+        self.push_to_symbol_table_block(BasicData::AssociativeItem(symbol, list_index))?;
+        Ok(symbol_index)
+    }
 }
 
 #[cfg(test)]
@@ -667,8 +677,11 @@ mod tests {
     use garnish_lang_traits::Instruction;
 
     use crate::{
-        BasicData, BasicGarnishDataUnit,
-        basic::{object::BasicObject, storage::StorageSettings, utilities::{instruction_test_data, jump_table_test_data, test_data}},
+        BasicData,
+        basic::{
+            object::BasicObject,
+            utilities::{instruction_test_data, jump_table_test_data, test_data},
+        },
         error::DataErrorType,
     };
 
@@ -2373,7 +2386,7 @@ mod tests {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         data.push_value_stack(0).unwrap();
-        
+
         let mut expected_data = test_data();
         expected_data.data[0] = BasicData::Number(100.into());
         expected_data.data[1] = BasicData::Value(None, 0);
@@ -2389,7 +2402,7 @@ mod tests {
         data.push_value_stack(index).unwrap();
         let index = data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
         data.push_value_stack(index).unwrap();
-        
+
         let mut expected_data = test_data();
         expected_data.data[0] = BasicData::Number(100.into());
         expected_data.data[1] = BasicData::Value(None, 0);
@@ -2408,7 +2421,7 @@ mod tests {
         data.current_value = Some(value_index);
 
         let index = data.pop_value_stack().unwrap();
-        
+
         let mut expected_data = test_data();
 
         assert_eq!(index, 0);
@@ -2423,13 +2436,13 @@ mod tests {
     fn pop_value_stack_multiple() {
         let mut data = test_data();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
-        let value_index= data.push_to_data_block(BasicData::Value(None, index)).unwrap();
+        let value_index = data.push_to_data_block(BasicData::Value(None, index)).unwrap();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let value_index = data.push_to_data_block(BasicData::Value(Some(value_index), index)).unwrap();
         data.current_value = Some(value_index);
 
         let index = data.pop_value_stack().unwrap();
-        
+
         let mut expected_data = test_data();
 
         assert_eq!(index, 2);
@@ -2448,7 +2461,7 @@ mod tests {
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
 
         let index = data.pop_value_stack();
-        
+
         let mut expected_data = test_data();
 
         assert_eq!(index, None);
@@ -2499,7 +2512,7 @@ mod tests {
         let mut data = test_data();
         data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         data.push_register(0).unwrap();
-        
+
         let mut expected_data = test_data();
         expected_data.data[0] = BasicData::Number(100.into());
         expected_data.data[1] = BasicData::Register(None, 0);
@@ -2515,7 +2528,7 @@ mod tests {
         data.push_register(0).unwrap();
         data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
         data.push_register(2).unwrap();
-        
+
         let mut expected_data = test_data();
         expected_data.data[0] = BasicData::Number(100.into());
         expected_data.data[1] = BasicData::Register(None, 0);
@@ -2646,7 +2659,7 @@ mod tests {
         let instruction = data.get_instruction(10);
         assert_eq!(instruction, None);
     }
-    
+
     #[test]
     fn get_instrucion_not_instruction() {
         let mut data = test_data();
@@ -2766,5 +2779,27 @@ mod tests {
         let mut data = test_data();
         let jump_path = data.pop_jump_path();
         assert_eq!(jump_path, None);
+    }
+
+    #[test]
+    fn parse_add_symbol() {
+        let mut data = test_data();
+        let symbol = data.parse_add_symbol("100").unwrap();
+
+        let mut expected_data = test_data();
+        expected_data.data.resize(20, BasicData::Empty);
+        expected_data.data[0] = BasicData::AssociativeItem(1647482063191709432, 1);
+        expected_data.data[10] = BasicData::Symbol(1647482063191709432);
+        expected_data.data[11] = BasicData::CharList(3);
+        expected_data.data[12] = BasicData::Char('1');
+        expected_data.data[13] = BasicData::Char('0');
+        expected_data.data[14] = BasicData::Char('0');
+        expected_data.symbol_table_block.cursor = 1;
+        expected_data.symbol_table_block.size = 10;
+        expected_data.data_block.start = 10;
+        expected_data.data_block.cursor = 5;
+
+        assert_eq!(symbol, 0);
+        assert_eq!(data, expected_data);
     }
 }
