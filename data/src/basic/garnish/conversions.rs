@@ -196,16 +196,14 @@ where
             };
         }
         BasicData::SymbolList(length) => {
-            let mut strs = vec![];
+            let length = length.clone();
             let range = from + 1..from + 1 + length;
             for i in range {
-                let s = delegate.data().string_from_basic_data_at(i)?;
-                strs.push(s);
-            }
+                convert_with_delegate(delegate, i, depth + 1)?;
 
-            let s = strs.join(" ");
-            for c in s.chars() {
-                delegate.push_char(c)?;
+                if i == length - 1 {
+                    delegate.push_char(' ')?;
+                }
             }
         }
         BasicData::Expression(jump_table_index) => {
@@ -221,15 +219,14 @@ where
             }
         }
         BasicData::ByteList(length) => {
-            let mut strs = vec![];
+            let length = length.clone();
             let range = from + 1..from + 1 + length;
             for i in range {
-                let s = delegate.data().string_from_basic_data_at(i)?;
-                strs.push(s);
-            }
-            let s = strs.join(" ");
-            for c in s.chars() {
-                delegate.push_char(c)?;
+                convert_with_delegate(delegate, i, depth + 1)?;
+
+                if i == length - 1 {
+                    delegate.push_char(' ')?;
+                }
             }
         }
         BasicData::CharList(length) => {
@@ -396,6 +393,7 @@ mod convert_to_char_list {
         external: BasicObject::External(123) => "[External 123]",
         char_list_clones: BasicObject::CharList("Formatted String".to_string()) => "Formatted String",
         byte_list: BasicObject::ByteList(vec![100, 200]) => "100 200",
+        byte_list_with_one_item: BasicObject::ByteList(vec![100]) => "100",
         pair: BasicObject::Pair(Box::new(BasicObject::CharList("value".to_string())), Box::new(BasicObject::Number(200.into()))) => "value = 200",
         nested_pairs: BasicObject::Pair(
             Box::new(BasicObject::Pair(Box::new(BasicObject::CharList("value".to_string())), Box::new(BasicObject::Number(200.into())))),
