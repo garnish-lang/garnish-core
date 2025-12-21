@@ -35,6 +35,7 @@ where T: crate::basic::BasicDataCustom {
     Register(Option<usize>, usize),
     Instruction(Instruction, Option<usize>),
     JumpPoint(usize),
+    Frame(Option<usize>, usize),
 }
 
 impl<T> BasicData<T>
@@ -70,6 +71,7 @@ where T: crate::basic::BasicDataCustom {
             BasicData::Register(_, _) => GarnishDataType::Invalid,
             BasicData::Instruction(_, _) => GarnishDataType::Invalid,
             BasicData::JumpPoint(_) => GarnishDataType::Invalid,
+            BasicData::Frame(_, _) => GarnishDataType::Invalid,
         }
     }
 
@@ -405,6 +407,20 @@ where T: crate::basic::BasicDataCustom {
     pub fn as_jump_point_mut(&mut self) -> Result<&mut usize, DataError> {
         match self {
             BasicData::JumpPoint(point) => Ok(point),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_frame(&self) -> Result<(Option<usize>, usize), DataError> {
+        match self {
+            BasicData::Frame(index, frame) => Ok((*index, *frame)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_frame_mut(&mut self) -> Result<(&mut Option<usize>, &mut usize), DataError> {
+        match self {
+            BasicData::Frame(index, frame) => Ok((index, frame)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
@@ -1060,5 +1076,17 @@ mod tests {
     fn as_jump_point_mut_not_jump_point() {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_jump_point_mut(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_frame() {
+        let data = BasicDataUnitCustom::Frame(Some(100), 200);
+        assert_eq!(data.as_frame(), Ok((Some(100), 200)));
+    }
+    
+    #[test]
+    fn as_frame_not_frame() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_frame(), Err(DataError::not_basic_type_error()));
     }
 }
