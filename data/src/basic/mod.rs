@@ -16,7 +16,7 @@ pub use garnish::BasicDataFactory;
 use crate::basic::storage::{StorageBlock, StorageSettings};
 use crate::data::SimpleNumber;
 
-use crate::{DataError, error::DataErrorType};
+use crate::DataError;
 
 pub type BasicNumber = SimpleNumber;
 
