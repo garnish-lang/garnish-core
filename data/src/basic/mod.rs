@@ -189,9 +189,13 @@ where
     pub fn get_symbol_string(&self, symbol: u64) -> Result<Option<String>, DataError> {
         let search_slice = &self.data[self.symbol_table_block.start..self.symbol_table_block.start + self.symbol_table_block.cursor];
         match search_for_associative_item(search_slice, symbol)? {
-            Some(index) => match self.get_from_data_block_ensure_index(index)?.as_char_list()? {
-                _ => Ok(Some(self.string_from_basic_data_at(index)?)),
-            },
+            Some(index) => {
+                let list_length = self.get_from_data_block_ensure_index(index)?.as_char_list()?;
+                let start = self.data_block.start + index + 1;
+                let slice = &self.data[start..start + list_length];
+                let result = slice.iter().map(|data| data.as_char().unwrap()).collect::<String>();
+                Ok(Some(result))
+            }
             None => Ok(None),
         }
     }
