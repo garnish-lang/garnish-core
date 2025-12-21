@@ -61,18 +61,27 @@ where
     }
 }
 
-struct StringDelegate<'a, T> where T: BasicDataCustom {
+struct StringDelegate<'a, T>
+where
+    T: BasicDataCustom,
+{
     string: String,
     data: &'a BasicGarnishData<T>,
 }
 
-impl<'a, T> StringDelegate<'a, T> where T: BasicDataCustom {
+impl<'a, T> StringDelegate<'a, T>
+where
+    T: BasicDataCustom,
+{
     fn new(data: &'a BasicGarnishData<T>) -> Self {
         Self { string: String::new(), data }
     }
 }
 
-impl<'a, T> ConversionDelegate<T> for StringDelegate<'a, T> where T: BasicDataCustom {
+impl<'a, T> ConversionDelegate<T> for StringDelegate<'a, T>
+where
+    T: BasicDataCustom,
+{
     type Output = String;
 
     fn init(&mut self) -> Result<(), DataError> {
@@ -117,7 +126,10 @@ where
     T: BasicDataCustom,
 {
     Ok(match delegate.get_data_at(from)? {
-        BasicData::Unit => todo!(),
+        BasicData::Unit => {
+            delegate.push_char('(')?;
+            delegate.push_char(')')?;
+        },
         BasicData::True => todo!(),
         BasicData::False => todo!(),
         BasicData::Type(garnish_data_type) => todo!(),
@@ -158,32 +170,33 @@ where
 
 #[cfg(test)]
 mod convert_to_char_list {
-    use crate::{
-        BasicData,
-        basic::{object::BasicObject, utilities::test_data},
-    };
+    use crate::basic::{object::BasicObject, utilities::test_data};
 
-    #[test]
-    fn convert_char_list_clones_original() {
-        let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abc".to_string())).unwrap();
-        let char_list = data.convert_basic_data_at_to_char_list(0).unwrap();
+    macro_rules! object_conversions {
+        ($( $name:ident: $object:expr => $output:literal ),+ $(,)?) => {
+            $(#[test]
+            fn $name() {
+                let mut data = test_data();
+                data.push_object_to_data_block($object).unwrap();
+                let char_list = data.convert_basic_data_at_to_char_list(0).unwrap();
+                let expected_length = $output.len();
 
-        let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::CharList(3);
-        expected_data.data[1] = BasicData::Char('a');
-        expected_data.data[2] = BasicData::Char('b');
-        expected_data.data[3] = BasicData::Char('c');
-        expected_data.data[4] = BasicData::CharList(3);
-        expected_data.data[5] = BasicData::Char('a');
-        expected_data.data[6] = BasicData::Char('b');
-        expected_data.data[7] = BasicData::Char('c');
+                let length = data.get_from_data_block_ensure_index(char_list).unwrap().as_char_list().unwrap();
+                assert_eq!(length, expected_length);
 
-        expected_data.data_block.cursor = 8;
-        assert_eq!(char_list, 4);
-        assert_eq!(data, expected_data);
+                let start = char_list + 1;
+                let slice = &data.data[start..start + length];
+                let result = slice.iter().map(|data| data.as_char().unwrap()).collect::<String>();
+                assert_eq!(result, $output);
 
-        let string = data.string_from_basic_data_at(0).unwrap();
-        assert_eq!(string, "abc");
+                let string = data.string_from_basic_data_at(0).unwrap();
+                assert_eq!(string, $output);
+            })*
+        }
     }
+
+    object_conversions!(
+        unit: BasicObject::Unit => "()",
+        char_list_clones: BasicObject::CharList("abc".to_string()) => "abc",
+    );
 }
