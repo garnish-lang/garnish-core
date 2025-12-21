@@ -117,14 +117,6 @@ where
     T: BasicDataCustom,
 {
     Ok(match delegate.get_data_at(from)? {
-        BasicData::CharList(length) => {
-            let start = from + 1;
-            let length = length.clone();
-            for i in start..start + length {
-                let c = delegate.get_data_at(i)?.as_char()?;
-                delegate.push_char(c)?;
-            }
-        }
         BasicData::Unit => todo!(),
         BasicData::True => todo!(),
         BasicData::False => todo!(),
@@ -137,6 +129,14 @@ where
         BasicData::Expression(_) => todo!(),
         BasicData::External(_) => todo!(),
         BasicData::ByteList(_) => todo!(),
+        BasicData::CharList(length) => {
+            let start = from + 1;
+            let length = length.clone();
+            for i in start..start + length {
+                let c = delegate.get_data_at(i)?.as_char()?;
+                delegate.push_char(c)?;
+            }
+        }
         BasicData::Pair(_, _) => todo!(),
         BasicData::Range(_, _) => todo!(),
         BasicData::Slice(_, _) => todo!(),
