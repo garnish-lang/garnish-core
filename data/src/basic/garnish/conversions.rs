@@ -163,8 +163,6 @@ where
             for c in s.chars() {
                 delegate.push_char(c)?;
             }
-
-            dbg!(&s);
         }
         BasicData::Char(c) => {
             delegate.push_char(c.clone())?;
@@ -176,10 +174,22 @@ where
             }
         }
         BasicData::Symbol(sym) => {
-            let s = sym.to_string();
-            for c in s.chars() {
-                delegate.push_char(c)?;
-            }
+            match delegate.data().get_symbol_string(sym.clone())? {
+                Some(s) => {
+                    delegate.push_char(':')?;
+                    for c in s.chars() {
+                        delegate.push_char(c)?;
+                    }
+                    return Ok(());
+                },
+                None => {
+                    let s = format!("[Symbol {}]", sym.to_string());
+                    for c in s.chars() {
+                        delegate.push_char(c)?;
+                    }
+                    return Ok(());
+                }
+            };
         }
         BasicData::SymbolList(length) => {
             let mut strs = vec![];
@@ -189,7 +199,7 @@ where
                 strs.push(s);
             }
             
-            let s = strs.join(".");
+            let s = strs.join(" ");
             for c in s.chars() {
                 delegate.push_char(c)?;
             }
@@ -269,16 +279,14 @@ where
         BasicData::List(length, _) => {
             let mut strs = vec![];
             let range = from + 1..from + 1 + length;
-            dbg!(&range);
+
             for i in range {
                 let true_index = delegate.data().get_from_data_block_ensure_index(i)?.as_list_item()?;
                 let s = delegate.data().string_from_basic_data_at(true_index)?;
                 strs.push(s);
             }
 
-            dbg!(&strs);
             let s = strs.join(" ");
-            dbg!(&s);
             for c in s.chars() {
                 delegate.push_char(c)?;
             }
@@ -307,24 +315,24 @@ where
 
 #[cfg(test)]
 mod convert_to_char_list {
-    use garnish_lang_traits::{GarnishDataType, Instruction, SymbolListPart};
+    use garnish_lang_traits::{GarnishData, GarnishDataFactory, GarnishDataType, Instruction, SymbolListPart};
 
     use crate::{
-        BasicData,
-        basic::{object::BasicObject, utilities::test_data},
+        BasicData, BasicDataFactory, BasicGarnishData, basic::{object::BasicObject, utilities::test_data}
     };
 
     macro_rules! object_conversions {
-        ($( $object_test_name:ident: $object:expr => $output:literal ),+ $(,)?) => {
+        ($( $object_test_name:ident: $object:expr => $output:literal $(with $setup:expr)? ),+ $(,)?) => {
             $(#[test]
             fn $object_test_name() {
                 let mut data = test_data();
+                $($setup(&mut data);)?
                 let index = data.push_object_to_data_block($object).unwrap();
                 let char_list = data.convert_basic_data_at_to_char_list(index).unwrap();
 
                 let length = data.get_from_data_block_ensure_index(char_list).unwrap().as_char_list().unwrap();
 
-                let start = char_list + 1;
+                let start = data.data_block.start + char_list + 1;
                 let slice = &data.data[start..start + length];
                 let result = slice.iter().map(|data| data.as_char().unwrap()).collect::<String>();
                 assert_eq!(result, $output);
@@ -364,8 +372,11 @@ mod convert_to_char_list {
         number: BasicObject::Number(100.into()) => "100",
         char: BasicObject::Char('a') => "a",
         byte: BasicObject::Byte(100) => "100",
-        symbol: BasicObject::Symbol(100) => "100",
-        symbol_list: BasicObject::SymbolList(vec![SymbolListPart::Symbol(100), SymbolListPart::Number(20.into())]) => "100.20",
+        symbol: BasicObject::Symbol(100) => "[Symbol 100]",
+        symbol_with_string: BasicObject::Symbol(BasicDataFactory::parse_symbol("my_symbol").unwrap()) => ":my_symbol" with |data: &mut BasicGarnishData| {
+            data.parse_add_symbol("my_symbol").unwrap();
+        },
+        symbol_list: BasicObject::SymbolList(vec![SymbolListPart::Symbol(100), SymbolListPart::Number(20.into())]) => "[Symbol 100] 20",
         expression: BasicObject::Expression(123) => "[Expression 123]",
         external: BasicObject::External(123) => "[External 123]",
         char_list_clones: BasicObject::CharList("Formatted String".to_string()) => "Formatted String",

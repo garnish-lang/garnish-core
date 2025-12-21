@@ -27,7 +27,7 @@ pub trait BasicDataCustom: Clone + Debug {}
 impl BasicDataCustom for () {}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BasicGarnishData<T>
+pub struct BasicGarnishData<T = ()>
 where
     T: BasicDataCustom,
 {

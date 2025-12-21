@@ -663,7 +663,7 @@ where
     fn parse_add_symbol(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
         let symbol = Self::DataFactory::parse_symbol(from)?;
         let symbol_index = self.push_to_data_block(BasicData::Symbol(symbol))?;
-        let list_index = self.push_to_data_block(BasicData::CharList(3))?;
+        let list_index = self.push_to_data_block(BasicData::CharList(from.len()))?;
         for c in from.chars() {
             self.push_to_data_block(BasicData::Char(c))?;
         }
@@ -2784,20 +2784,27 @@ mod tests {
     #[test]
     fn parse_add_symbol() {
         let mut data = test_data();
-        let symbol = data.parse_add_symbol("100").unwrap();
+        let symbol = data.parse_add_symbol("my_symbol").unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.resize(20, BasicData::Empty);
-        expected_data.data[0] = BasicData::AssociativeItem(1647482063191709432, 1);
-        expected_data.data[10] = BasicData::Symbol(1647482063191709432);
-        expected_data.data[11] = BasicData::CharList(3);
-        expected_data.data[12] = BasicData::Char('1');
-        expected_data.data[13] = BasicData::Char('0');
-        expected_data.data[14] = BasicData::Char('0');
+        expected_data.data.resize(30, BasicData::Empty);
+        expected_data.data[0] = BasicData::AssociativeItem(8904929874702161741, 1);
+        expected_data.data[10] = BasicData::Symbol(8904929874702161741);
+        expected_data.data[11] = BasicData::CharList(9);
+        expected_data.data[12] = BasicData::Char('m');
+        expected_data.data[13] = BasicData::Char('y');
+        expected_data.data[14] = BasicData::Char('_');
+        expected_data.data[15] = BasicData::Char('s');
+        expected_data.data[16] = BasicData::Char('y');
+        expected_data.data[17] = BasicData::Char('m');
+        expected_data.data[18] = BasicData::Char('b');
+        expected_data.data[19] = BasicData::Char('o');
+        expected_data.data[20] = BasicData::Char('l');
         expected_data.symbol_table_block.cursor = 1;
         expected_data.symbol_table_block.size = 10;
         expected_data.data_block.start = 10;
-        expected_data.data_block.cursor = 5;
+        expected_data.data_block.size = 20;
+        expected_data.data_block.cursor = 11;
 
         assert_eq!(symbol, 0);
         assert_eq!(data, expected_data);
