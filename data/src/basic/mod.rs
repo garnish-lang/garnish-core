@@ -188,22 +188,6 @@ where
         let true_index = self.symbol_table_block.start + index;
         Ok(&mut self.data[true_index])
     }
-    
-    pub fn add_char_list_from_string(&mut self, s: impl AsRef<str>) -> Result<usize, DataError> {
-        let index = self.push_to_data_block(BasicData::CharList(s.as_ref().len()))?;
-        for c in s.as_ref().chars() {
-            self.push_to_data_block(BasicData::Char(c))?;
-        }
-        Ok(index)
-    }
-
-    pub fn add_byte_list_from_vec(&mut self, v: impl AsRef<[u8]>) -> Result<usize, DataError> {
-        let index = self.push_to_data_block(BasicData::ByteList(v.as_ref().len()))?;
-        for b in v.as_ref() {
-            self.push_to_data_block(BasicData::Byte(*b))?;
-        }
-        Ok(index)
-    }
 
     fn push_to_block(heap: &mut Vec<BasicData<T>>, block: &mut StorageBlock, data: BasicData<T>) -> usize {
         let index = block.start + block.cursor;
