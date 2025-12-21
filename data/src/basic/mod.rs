@@ -65,34 +65,6 @@ where
         }
     }
 
-    pub fn push_to_instruction_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
-        if self.instruction_block.cursor >= self.instruction_block.size {
-            self.reallocate_heap(self.instruction_block.next_size(), self.jump_table_block.size, self.symbol_table_block.size, self.data_block.size)?;
-        }
-        Ok(Self::push_to_block(&mut self.data, &mut self.instruction_block, data))
-    }
-
-    pub fn push_to_jump_table_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
-        if self.jump_table_block.cursor >= self.jump_table_block.size {
-            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.next_size(), self.symbol_table_block.size, self.data_block.size)?;
-        }
-        Ok(Self::push_to_block(&mut self.data, &mut self.jump_table_block, data))
-    }
-
-    pub fn push_to_symbol_table_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
-        if self.symbol_table_block.cursor >= self.symbol_table_block.size {
-            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.size, self.symbol_table_block.next_size(), self.data_block.size)?;
-        }
-        Ok(Self::push_to_block(&mut self.data, &mut self.symbol_table_block, data))
-    }
-
-    pub fn push_to_data_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
-        if self.data_block.cursor >= self.data_block.size {
-            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.size, self.symbol_table_block.size, self.data_block.next_size())?;
-        }
-        Ok(Self::push_to_block(&mut self.data, &mut self.data_block, data))
-    }
-
     pub fn data_size(&self) -> usize {
         self.data_block.cursor
     }
@@ -131,6 +103,34 @@ where
 
     pub fn get_basic_data_mut(&mut self, index: usize) -> Option<&mut BasicData<T>> {
         self.data.get_mut(index)
+    }
+
+    pub fn push_to_instruction_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
+        if self.instruction_block.cursor >= self.instruction_block.size {
+            self.reallocate_heap(self.instruction_block.next_size(), self.jump_table_block.size, self.symbol_table_block.size, self.data_block.size)?;
+        }
+        Ok(Self::push_to_block(&mut self.data, &mut self.instruction_block, data))
+    }
+
+    pub fn push_to_jump_table_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
+        if self.jump_table_block.cursor >= self.jump_table_block.size {
+            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.next_size(), self.symbol_table_block.size, self.data_block.size)?;
+        }
+        Ok(Self::push_to_block(&mut self.data, &mut self.jump_table_block, data))
+    }
+
+    pub fn push_to_symbol_table_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
+        if self.symbol_table_block.cursor >= self.symbol_table_block.size {
+            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.size, self.symbol_table_block.next_size(), self.data_block.size)?;
+        }
+        Ok(Self::push_to_block(&mut self.data, &mut self.symbol_table_block, data))
+    }
+
+    pub fn push_to_data_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
+        if self.data_block.cursor >= self.data_block.size {
+            self.reallocate_heap(self.instruction_block.size, self.jump_table_block.size, self.symbol_table_block.size, self.data_block.next_size())?;
+        }
+        Ok(Self::push_to_block(&mut self.data, &mut self.data_block, data))
     }
 
     pub(crate) fn get_from_data_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
