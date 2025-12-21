@@ -9,6 +9,7 @@ where
     fn push_char(&mut self, c: char) -> Result<(), DataError>;
     fn get_data_at(&self, index: usize) -> Result<&BasicData<T>, DataError>;
     fn end(self) -> Result<Self::Output, DataError>;
+    fn data(&self) -> &BasicGarnishData<T>;
 }
 
 struct BasicDataDelegate<'a, T>
@@ -59,6 +60,10 @@ where
         *list_length = self.length;
         Ok(self.list_index)
     }
+
+    fn data(&self) -> &BasicGarnishData<T> {
+        self.data
+    }
 }
 
 struct StringDelegate<'a, T>
@@ -100,6 +105,10 @@ where
     fn end(self) -> Result<Self::Output, DataError> {
         Ok(self.string)
     }
+
+    fn data(&self) -> &BasicGarnishData<T> {
+        self.data
+    }
 }
 
 impl<T> BasicGarnishData<T>
@@ -130,17 +139,85 @@ where
             delegate.push_char('(')?;
             delegate.push_char(')')?;
         }
-        BasicData::True => todo!(),
-        BasicData::False => todo!(),
-        BasicData::Type(garnish_data_type) => todo!(),
-        BasicData::Number(simple_number) => todo!(),
-        BasicData::Char(_) => todo!(),
-        BasicData::Byte(_) => todo!(),
-        BasicData::Symbol(_) => todo!(),
-        BasicData::SymbolList(_) => todo!(),
-        BasicData::Expression(_) => todo!(),
-        BasicData::External(_) => todo!(),
-        BasicData::ByteList(_) => todo!(),
+        BasicData::True => {
+            delegate.push_char('T')?;
+            delegate.push_char('r')?;
+            delegate.push_char('u')?;
+            delegate.push_char('e')?;
+        }
+        BasicData::False => {
+            delegate.push_char('F')?;
+            delegate.push_char('a')?;
+            delegate.push_char('l')?;
+            delegate.push_char('s')?;
+            delegate.push_char('e')?;
+        }
+        BasicData::Type(garnish_data_type) => {
+            let s = format!("{}", garnish_data_type);
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        }
+        BasicData::Number(simple_number) => {
+            let s = simple_number.to_string();
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+
+            dbg!(&s);
+        }
+        BasicData::Char(c) => {
+            delegate.push_char(c.clone())?;
+        }
+        BasicData::Byte(b) => {
+            let s= b.to_string();
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        }
+        BasicData::Symbol(sym) => {
+            let s = sym.to_string();
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        }
+        BasicData::SymbolList(length) => {
+            let mut strs = vec![];
+            let range = from + 1..from + 1 + length;
+            for i in range {
+                let s = delegate.data().string_from_basic_data_at(i)?;
+                strs.push(s);
+            }
+            
+            let s = strs.join(".");
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        },
+        BasicData::Expression(jump_table_index) => {
+            let s = format!("[Expression {}]", jump_table_index);
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        }
+        BasicData::External(value) => {
+            let s = format!("[External {}]", value);
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        }
+        BasicData::ByteList(length) => {
+            let mut strs = vec![];
+            let range = from + 1..from + 1 + length;
+            for i in range {
+                let s = delegate.data().string_from_basic_data_at(i)?;
+                strs.push(s);
+            }
+            let s = strs.join(" ");
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        }
         BasicData::CharList(length) => {
             let start = from + 1;
             let length = length.clone();
@@ -149,12 +226,72 @@ where
                 delegate.push_char(c)?;
             }
         }
-        BasicData::Pair(_, _) => todo!(),
-        BasicData::Range(_, _) => todo!(),
-        BasicData::Slice(_, _) => todo!(),
-        BasicData::Partial(_, _) => todo!(),
-        BasicData::List(_, _) => todo!(),
-        BasicData::Concatenation(_, _) => todo!(),
+        BasicData::Pair(left, right) => {
+            let (left, right) = (left.clone(), right.clone());
+            let left_s = delegate.data().string_from_basic_data_at(left)?;
+            let right_s = delegate.data().string_from_basic_data_at(right)?;
+            let s = format!("{} = {}", left_s, right_s);
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        },
+        BasicData::Range(start, end) => {
+            let (start, end) = (start.clone(), end.clone());
+            let start_s = delegate.data().string_from_basic_data_at(start)?;
+            let end_s = delegate.data().string_from_basic_data_at(end)?;
+            let s = format!("{}..{}", start_s, end_s);
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        }
+        BasicData::Slice(list, range) => {
+            let (list, range) = (list.clone(), range.clone());
+            let list_s = delegate.data().string_from_basic_data_at(list)?;
+            let range_s = delegate.data().string_from_basic_data_at(range)?;
+
+            dbg!(&list_s, &range_s);
+            let s = format!("{} ~ {}", list_s, range_s);
+
+            dbg!(&s);
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        }
+        BasicData::Partial(reciever, input) => {
+            let (reciever, input) = (reciever.clone(), input.clone());
+            let reciever_s = delegate.data().string_from_basic_data_at(reciever)?;
+            let input_s = delegate.data().string_from_basic_data_at(input)?;
+            let s = format!("{} ~ {}", reciever_s, input_s);
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        }
+        BasicData::List(length, _) => {
+            let mut strs = vec![];
+            let range = from + 1..from + 1 + length;
+            dbg!(&range);
+            for i in range {
+                let true_index = delegate.data().get_from_data_block_ensure_index(i)?.as_list_item()?;
+                let s = delegate.data().string_from_basic_data_at(true_index)?;
+                strs.push(s);
+            }
+
+            dbg!(&strs);
+            let s = strs.join(" ");
+            dbg!(&s);
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        }
+        BasicData::Concatenation(left, right) => {
+            let (left, right) = (left.clone(), right.clone());
+            let left_s = delegate.data().string_from_basic_data_at(left)?;
+            let right_s = delegate.data().string_from_basic_data_at(right)?;
+            let s = format!("{} <> {}", left_s, right_s);
+            for c in s.chars() {
+                delegate.push_char(c)?;
+            }
+        }
         BasicData::Custom(_) => todo!(),
         BasicData::Empty
         | BasicData::UninitializedList(_, _)
@@ -170,7 +307,7 @@ where
 
 #[cfg(test)]
 mod convert_to_char_list {
-    use garnish_lang_traits::Instruction;
+    use garnish_lang_traits::{GarnishDataType, Instruction, SymbolListPart};
 
     use crate::{
         BasicData,
@@ -182,19 +319,17 @@ mod convert_to_char_list {
             $(#[test]
             fn $object_test_name() {
                 let mut data = test_data();
-                data.push_object_to_data_block($object).unwrap();
-                let char_list = data.convert_basic_data_at_to_char_list(0).unwrap();
-                let expected_length = $output.len();
+                let index = data.push_object_to_data_block($object).unwrap();
+                let char_list = data.convert_basic_data_at_to_char_list(index).unwrap();
 
                 let length = data.get_from_data_block_ensure_index(char_list).unwrap().as_char_list().unwrap();
-                assert_eq!(length, expected_length);
 
                 let start = char_list + 1;
                 let slice = &data.data[start..start + length];
                 let result = slice.iter().map(|data| data.as_char().unwrap()).collect::<String>();
                 assert_eq!(result, $output);
 
-                let string = data.string_from_basic_data_at(0).unwrap();
+                let string = data.string_from_basic_data_at(index).unwrap();
                 assert_eq!(string, $output);
             })*
         }
@@ -205,19 +340,17 @@ mod convert_to_char_list {
             $(#[test]
             fn $data_test_name() {
                 let mut data = test_data();
-                data.push_to_data_block($object).unwrap();
-                let char_list = data.convert_basic_data_at_to_char_list(0).unwrap();
-                let expected_length = $output.len();
+                let index = data.push_to_data_block($object).unwrap();
+                let char_list = data.convert_basic_data_at_to_char_list(index).unwrap();
 
                 let length = data.get_from_data_block_ensure_index(char_list).unwrap().as_char_list().unwrap();
-                assert_eq!(length, expected_length);
 
                 let start = char_list + 1;
                 let slice = &data.data[start..start + length];
                 let result = slice.iter().map(|data| data.as_char().unwrap()).collect::<String>();
                 assert_eq!(result, $output);
 
-                let string = data.string_from_basic_data_at(0).unwrap();
+                let string = data.string_from_basic_data_at(index).unwrap();
                 assert_eq!(string, $output);
             })*
         }
@@ -225,7 +358,25 @@ mod convert_to_char_list {
 
     object_conversions!(
         unit: BasicObject::Unit => "()",
-        char_list_clones: BasicObject::CharList("abc".to_string()) => "abc",
+        true_value: BasicObject::True => "True",
+        false_value: BasicObject::False => "False",
+        type_value: BasicObject::Type(GarnishDataType::Number) => "Number",
+        number: BasicObject::Number(100.into()) => "100",
+        char: BasicObject::Char('a') => "a",
+        byte: BasicObject::Byte(100) => "100",
+        symbol: BasicObject::Symbol(100) => "100",
+        symbol_list: BasicObject::SymbolList(vec![SymbolListPart::Symbol(100), SymbolListPart::Number(20.into())]) => "100.20",
+        expression: BasicObject::Expression(123) => "[Expression 123]",
+        external: BasicObject::External(123) => "[External 123]",
+        char_list_clones: BasicObject::CharList("Formatted String".to_string()) => "Formatted String",
+        byte_list: BasicObject::ByteList(vec![100, 200]) => "100 200",
+        pair: BasicObject::Pair(Box::new(BasicObject::CharList("value".to_string())), Box::new(BasicObject::Number(200.into()))) => "value = 200",
+        range: BasicObject::Range(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100..200",
+        slice: BasicObject::Slice(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100 ~ 200",
+        partial: BasicObject::Partial(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100 ~ 200",
+        list: BasicObject::List(vec![Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))]) => "100 200",
+        concatenation: BasicObject::Concatenation(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100 <> 200",
+        // custom: BasicObject::Custom(Box::new(BasicObject::Number(100.into()))) => "[Custom 100]",
     );
 
     data_conversions!(

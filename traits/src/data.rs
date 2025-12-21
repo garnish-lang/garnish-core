@@ -1,7 +1,7 @@
 use crate::Instruction;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use std::fmt::{Debug, Display};
+use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, AddAssign, Sub, SubAssign};
 
 /// List of Garnish data types.
@@ -29,6 +29,12 @@ pub enum GarnishDataType {
     True,
     False,
     Custom,
+}
+
+impl Display for GarnishDataType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
 }
 
 /// Trait to provide constant values that a runtime will need access to.

@@ -3,7 +3,7 @@ use garnish_lang_traits::{GarnishData, GarnishDataType, SymbolListPart};
 use crate::{BasicData, BasicDataCustom, BasicGarnishData, BasicNumber, DataError};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum BasicObject<T>
+pub enum BasicObject<T = ()>
 where
     T: BasicDataCustom,
 {
