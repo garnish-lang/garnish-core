@@ -285,19 +285,37 @@ where
         }
         BasicData::Slice(list, range) => {
             let (list, range) = (list.clone(), range.clone());
+
+            if depth > 0 {
+                delegate.push_char('(')?;
+            }
+
             convert_with_delegate(delegate, list, depth + 1)?;
             delegate.push_char(' ')?;
             delegate.push_char('~')?;
             delegate.push_char(' ')?;
             convert_with_delegate(delegate, range, depth + 1)?;
+
+            if depth > 0 {
+                delegate.push_char(')')?;
+            }
         }
         BasicData::Partial(reciever, input) => {
             let (reciever, input) = (reciever.clone(), input.clone());
+
+            if depth > 0 {
+                delegate.push_char('(')?;
+            }
+
             convert_with_delegate(delegate, reciever, depth + 1)?;
             delegate.push_char(' ')?;
             delegate.push_char('~')?;
             delegate.push_char(' ')?;
             convert_with_delegate(delegate, input, depth + 1)?;
+
+            if depth > 0 {
+                delegate.push_char(')')?;
+            }
         }
         BasicData::List(length, _) => {
             let end = from + 1 + length;
@@ -326,7 +344,7 @@ where
             if depth > 0 {
                 delegate.push_char('(')?;
             }
-            
+
             convert_with_delegate(delegate, left, depth + 1)?;
             delegate.push_char(' ')?;
             delegate.push_char('<')?;
@@ -446,7 +464,17 @@ mod convert_to_char_list {
                 Box::new(BasicObject::Number(400.into())),
                 Box::new(BasicObject::Number(500.into())),
             ]))
-        ) => "(100 <> 200) = (300 400 500)"
+        ) => "(100 <> 200) = (300 400 500)",
+        slice_partial_under_pair: BasicObject::Pair(
+            Box::new(BasicObject::Slice(
+                Box::new(BasicObject::Number(100.into())), 
+                Box::new(BasicObject::Number(200.into()))
+            )),
+            Box::new(BasicObject::Partial(
+                Box::new(BasicObject::Number(300.into())), 
+                Box::new(BasicObject::Number(500.into()))
+            ))
+        ) => "(100 ~ 200) = (300 ~ 500)",
         // custom: BasicObject::Custom(Box::new(BasicObject::Number(100.into()))) => "[Custom 100]",
     );
 
