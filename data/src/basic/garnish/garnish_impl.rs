@@ -641,7 +641,7 @@ where
     }
 
     fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        self.convert_basic_data_at_to_char_list(from)
     }
 
     fn add_byte_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {

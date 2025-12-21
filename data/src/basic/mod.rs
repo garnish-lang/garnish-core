@@ -166,6 +166,10 @@ where
         }
         Ok(Self::push_to_block(&mut self.data, &mut self.data_block, data))
     }
+
+    pub fn get_string_for_data_at(&self, index: usize) -> Result<String, DataError> {
+        self.string_from_basic_data_at(index)
+    }
 }
 
 #[cfg(test)]
