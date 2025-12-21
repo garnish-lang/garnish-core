@@ -129,7 +129,7 @@ where
         BasicData::Unit => {
             delegate.push_char('(')?;
             delegate.push_char(')')?;
-        },
+        }
         BasicData::True => todo!(),
         BasicData::False => todo!(),
         BasicData::Type(garnish_data_type) => todo!(),
@@ -156,28 +156,56 @@ where
         BasicData::List(_, _) => todo!(),
         BasicData::Concatenation(_, _) => todo!(),
         BasicData::Custom(_) => todo!(),
-        BasicData::Empty => todo!(),
-        BasicData::UninitializedList(_, _) => todo!(),
-        BasicData::ListItem(_) => todo!(),
-        BasicData::AssociativeItem(_, _) => todo!(),
-        BasicData::Value(_, _) => todo!(),
-        BasicData::Register(_, _) => todo!(),
-        BasicData::Instruction(instruction, _) => todo!(),
-        BasicData::JumpPoint(_) => todo!(),
-        BasicData::Frame(_, _) => todo!(),
+        BasicData::Empty
+        | BasicData::UninitializedList(_, _)
+        | BasicData::ListItem(_)
+        | BasicData::AssociativeItem(_, _)
+        | BasicData::Value(_, _)
+        | BasicData::Register(_, _)
+        | BasicData::JumpPoint(_)
+        | BasicData::Instruction(_, _)
+        | BasicData::Frame(_, _) => {}
     })
 }
 
 #[cfg(test)]
 mod convert_to_char_list {
-    use crate::basic::{object::BasicObject, utilities::test_data};
+    use garnish_lang_traits::Instruction;
+
+    use crate::{
+        BasicData,
+        basic::{object::BasicObject, utilities::test_data},
+    };
 
     macro_rules! object_conversions {
-        ($( $name:ident: $object:expr => $output:literal ),+ $(,)?) => {
+        ($( $object_test_name:ident: $object:expr => $output:literal ),+ $(,)?) => {
             $(#[test]
-            fn $name() {
+            fn $object_test_name() {
                 let mut data = test_data();
                 data.push_object_to_data_block($object).unwrap();
+                let char_list = data.convert_basic_data_at_to_char_list(0).unwrap();
+                let expected_length = $output.len();
+
+                let length = data.get_from_data_block_ensure_index(char_list).unwrap().as_char_list().unwrap();
+                assert_eq!(length, expected_length);
+
+                let start = char_list + 1;
+                let slice = &data.data[start..start + length];
+                let result = slice.iter().map(|data| data.as_char().unwrap()).collect::<String>();
+                assert_eq!(result, $output);
+
+                let string = data.string_from_basic_data_at(0).unwrap();
+                assert_eq!(string, $output);
+            })*
+        }
+    }
+
+    macro_rules! data_conversions {
+        ($( $data_test_name:ident: $object:expr => $output:literal ),+ $(,)?) => {
+            $(#[test]
+            fn $data_test_name() {
+                let mut data = test_data();
+                data.push_to_data_block($object).unwrap();
                 let char_list = data.convert_basic_data_at_to_char_list(0).unwrap();
                 let expected_length = $output.len();
 
@@ -198,5 +226,17 @@ mod convert_to_char_list {
     object_conversions!(
         unit: BasicObject::Unit => "()",
         char_list_clones: BasicObject::CharList("abc".to_string()) => "abc",
+    );
+
+    data_conversions!(
+        empty: BasicData::Empty => "",
+        uninitialized_list: BasicData::UninitializedList(0, 0) => "",
+        list_item: BasicData::ListItem(0) => "",
+        associative_item: BasicData::AssociativeItem(0, 0) => "",
+        value: BasicData::Value(None, 0) => "",
+        register: BasicData::Register(None, 0) => "",
+        instruction: BasicData::Instruction(Instruction::Add, None) => "",
+        jump_point: BasicData::JumpPoint(0) => "",
+        frame: BasicData::Frame(None, 0) => "",
     );
 }
