@@ -173,22 +173,6 @@ where
         Ok(&mut self.data[true_index])
     }
 
-    pub(crate) fn get_from_symbol_table_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
-        if index >= self.symbol_table_block.cursor {
-            return Err(DataError::new("Invalid symbol table index", DataErrorType::InvalidSymbolTableIndex(index)));
-        }
-        let true_index = self.symbol_table_block.start + index;
-        Ok(&self.data[true_index])
-    }
-
-    pub(crate) fn get_from_symbol_table_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut BasicData<T>, DataError> {
-        if index >= self.symbol_table_block.cursor {
-            return Err(DataError::new("Invalid symbol table index", DataErrorType::InvalidSymbolTableIndex(index)));
-        }
-        let true_index = self.symbol_table_block.start + index;
-        Ok(&mut self.data[true_index])
-    }
-
     fn push_to_block(heap: &mut Vec<BasicData<T>>, block: &mut StorageBlock, data: BasicData<T>) -> usize {
         let index = block.start + block.cursor;
         heap[index] = data;
