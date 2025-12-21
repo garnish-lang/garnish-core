@@ -30,6 +30,7 @@ where
 {
     current_value: Option<usize>,
     current_register: Option<usize>,
+    instruction_pointer: usize,
     data: Vec<BasicData<T>>,
     instruction_block: StorageBlock,
     jump_table_block: StorageBlock,
@@ -52,6 +53,7 @@ where
         Self {
             current_value: None,
             current_register: None,
+            instruction_pointer: 0,
             data,
             instruction_block: StorageBlock::new(instruction_settings.initial_size(), instruction_settings.clone()),
             jump_table_block: StorageBlock::new(jump_table_settings.initial_size(), jump_table_settings.clone()),
@@ -125,6 +127,22 @@ where
             return Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(index)));
         }
         let true_index = self.data_block.start + index;
+        Ok(&mut self.data[true_index])
+    }
+
+    pub(crate) fn get_from_instruction_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
+        if index >= self.instruction_block.cursor {
+            return Err(DataError::new("Invalid instruction index", DataErrorType::InvalidInstructionIndex(index)));
+        }
+        let true_index = self.instruction_block.start + index;
+        Ok(&self.data[true_index])
+    }
+
+    pub(crate) fn get_from_instruction_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut BasicData<T>, DataError> {
+        if index >= self.instruction_block.cursor {
+            return Err(DataError::new("Invalid instruction index", DataErrorType::InvalidInstructionIndex(index)));
+        }
+        let true_index = self.instruction_block.start + index;
         Ok(&mut self.data[true_index])
     }
 
@@ -211,6 +229,14 @@ mod utilities {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
         )
     }
+
+    pub fn instruction_test_data() -> BasicGarnishDataUnit {
+        BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        )
+    }
 }
 
 #[cfg(test)]
@@ -237,6 +263,7 @@ mod tests {
         assert_eq!(
             data,
             BasicGarnishDataUnit {
+                instruction_pointer: 0,
                 current_value: None,
                 current_register: None,
                 data: expected_data,

@@ -1,4 +1,4 @@
-use garnish_lang_traits::{GarnishDataType};
+use garnish_lang_traits::{GarnishDataType, Instruction};
 use crate::{DataError};
 
 type BasicNumber = crate::data::SimpleNumber;
@@ -33,6 +33,7 @@ where T: crate::basic::BasicDataCustom {
     AssociativeItem(u64, usize),
     Value(Option<usize>, usize),
     Register(Option<usize>, usize),
+    Instruction(Instruction, Option<usize>),
 }
 
 impl<T> BasicData<T>
@@ -66,6 +67,7 @@ where T: crate::basic::BasicDataCustom {
             BasicData::AssociativeItem(_, _) => GarnishDataType::Invalid,
             BasicData::Value(_, _) => GarnishDataType::Invalid,
             BasicData::Register(_, _) => GarnishDataType::Invalid,
+            BasicData::Instruction(_, _) => GarnishDataType::Invalid,
         }
     }
 
@@ -373,6 +375,20 @@ where T: crate::basic::BasicDataCustom {
     pub fn as_register_mut(&mut self) -> Result<(&mut Option<usize>, &mut usize), DataError> {
         match self {
             BasicData::Register(index, value) => Ok((index, value)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_instruction(&self) -> Result<(Instruction, Option<usize>), DataError> {
+        match self {
+            BasicData::Instruction(instruction, data) => Ok((*instruction, *data)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_instruction_mut(&mut self) -> Result<(&mut Instruction, &mut Option<usize>), DataError> {
+        match self {
+            BasicData::Instruction(instruction, data) => Ok((instruction, data)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
@@ -975,5 +991,33 @@ mod tests {
     fn as_register_mut_not_register() {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_register_mut(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_instruction() {
+        let data = BasicDataUnitCustom::Instruction(Instruction::Add, Some(100));
+        assert_eq!(data.as_instruction(), Ok((Instruction::Add, Some(100))));
+    }
+    
+    #[test]
+    fn as_instruction_not_instruction() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_instruction(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_instruction_mut() {
+        let mut data = BasicDataUnitCustom::Instruction(Instruction::Add, Some(100));
+        let (instruction, instruction_data) = data.as_instruction_mut().unwrap();
+        *instruction = Instruction::Subtract;
+        *instruction_data = Some(200);
+        let instruction = data.as_instruction().unwrap();
+        assert_eq!(instruction, (Instruction::Subtract, Some(200)));
+    }
+
+    #[test]
+    fn as_instruction_mut_not_instruction() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_instruction_mut(), Err(DataError::not_basic_type_error()));
     }
 }

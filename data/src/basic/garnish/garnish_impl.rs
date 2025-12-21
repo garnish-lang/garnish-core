@@ -11,7 +11,7 @@ use crate::{
     },
     error::DataErrorType,
 };
-use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, SymbolListPart, TypeConstants};
+use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, Instruction, SymbolListPart, TypeConstants};
 
 impl<T> GarnishData for BasicGarnishData<T>
 where
@@ -563,27 +563,31 @@ where
     }
 
     fn get_instruction_len(&self) -> Self::Size {
-        todo!()
+        self.instruction_block.cursor
     }
 
-    fn push_instruction(&mut self, instruction: garnish_lang_traits::Instruction, data: Option<Self::Size>) -> Result<Self::Size, Self::Error> {
-        todo!()
+    fn push_instruction(&mut self, instruction: Instruction, data: Option<Self::Size>) -> Result<Self::Size, Self::Error> {
+        Ok(self.push_to_instruction_block(BasicData::Instruction(instruction, data))?)
     }
 
-    fn get_instruction(&self, addr: Self::Size) -> Option<(garnish_lang_traits::Instruction, Option<Self::Size>)> {
-        todo!()
+    fn get_instruction(&self, addr: Self::Size) -> Option<(Instruction, Option<Self::Size>)> {
+        match self.get_from_instruction_block_ensure_index(addr).and_then(|data| data.as_instruction()) {
+            Ok(instruction) => Some(instruction),
+            Err(_) => None
+        }
     }
 
     fn get_instruction_iter(&self) -> Self::InstructionIterator {
-        todo!()
+        unimplemented!()
     }
 
     fn get_instruction_cursor(&self) -> Self::Size {
-        todo!()
+        self.instruction_pointer
     }
 
     fn set_instruction_cursor(&mut self, addr: Self::Size) -> Result<(), Self::Error> {
-        todo!()
+        self.instruction_pointer = addr;
+        Ok(())
     }
 
     fn get_jump_table_len(&self) -> Self::Size {
@@ -641,9 +645,11 @@ where
 
 #[cfg(test)]
 mod tests {
+    use garnish_lang_traits::Instruction;
+
     use crate::{
         BasicData, BasicGarnishDataUnit,
-        basic::{object::BasicObject, storage::StorageSettings, utilities::test_data},
+        basic::{object::BasicObject, storage::StorageSettings, utilities::{instruction_test_data, test_data}},
         error::DataErrorType,
     };
 
@@ -2569,5 +2575,88 @@ mod tests {
         data.push_register(200).unwrap();
         let len = data.get_register_len();
         assert_eq!(len, 2);
+    }
+
+    #[test]
+    fn push_instruction() {
+        let mut data = instruction_test_data();
+        data.push_instruction(Instruction::Add, None).unwrap();
+        let mut expected_data = instruction_test_data();
+        expected_data.data[0] = BasicData::Instruction(Instruction::Add, None);
+        expected_data.instruction_block.cursor = 1;
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn get_instruction_len() {
+        let data = test_data();
+        let len = data.get_instruction_len();
+        assert_eq!(len, 0);
+    }
+
+    #[test]
+    fn get_instruction_len_multiple() {
+        let mut data = test_data();
+        data.push_instruction(Instruction::Add, None).unwrap();
+        data.push_instruction(Instruction::Subtract, None).unwrap();
+        let len = data.get_instruction_len();
+        assert_eq!(len, 2);
+    }
+
+    #[test]
+    fn get_instruction_none() {
+        let data = instruction_test_data();
+        let instruction = data.get_instruction(0);
+        assert_eq!(instruction, None);
+    }
+
+    #[test]
+    fn get_instruction_multiple() {
+        let mut data = instruction_test_data();
+        data.push_instruction(Instruction::Add, None).unwrap();
+        data.push_instruction(Instruction::Subtract, None).unwrap();
+        let instruction = data.get_instruction(1).unwrap();
+        assert_eq!(instruction, (Instruction::Subtract, None));
+    }
+
+    #[test]
+    fn get_instruction_invalid_index() {
+        let mut data = instruction_test_data();
+        data.push_instruction(Instruction::Add, None).unwrap();
+        data.push_instruction(Instruction::Subtract, None).unwrap();
+        let instruction = data.get_instruction(10);
+        assert_eq!(instruction, None);
+    }
+    
+    #[test]
+    fn get_instrucion_not_instruction() {
+        let mut data = test_data();
+        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let instruction = data.get_instruction(0);
+        assert_eq!(instruction, None);
+    }
+
+    #[test]
+    fn get_instruction_pointer() {
+        let data = instruction_test_data();
+        let cursor = data.get_instruction_cursor();
+        assert_eq!(cursor, 0);
+    }
+
+    #[test]
+    fn set_instruction_pointer() {
+        let mut data = instruction_test_data();
+        data.set_instruction_cursor(100).unwrap();
+        assert_eq!(data.instruction_pointer, 100);
+    }
+
+    #[test]
+    fn get_instruction_pointer_after_set() {
+        let mut data = instruction_test_data();
+        data.push_instruction(Instruction::Add, None).unwrap();
+        data.push_instruction(Instruction::Subtract, None).unwrap();
+        data.set_instruction_cursor(2).unwrap();
+        let cursor = data.get_instruction_cursor();
+        assert_eq!(cursor, 2);
     }
 }
