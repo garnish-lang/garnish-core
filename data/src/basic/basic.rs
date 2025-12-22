@@ -12,9 +12,6 @@ use crate::{BasicData, DataError, SimpleNumber};
 
 pub type BasicNumber = SimpleNumber;
 
-pub trait BasicDataFormatter<T> where T: BasicDataCustom {
-}
-
 pub trait BasicDataCustom: Clone + Debug + PartialEq + Eq + PartialOrd {
     fn convert_custom_data_with_delegate(_delegate: &mut impl ConversionDelegate<Self, char>, _value: Self) -> Result<(), DataError> {
         Ok(())
