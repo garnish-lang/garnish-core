@@ -22,7 +22,7 @@ where
     }
 }
 
-impl<'a, T> ConversionDelegate<T> for BasicDataDelegate<'a, T>
+impl<'a, T> ConversionDelegate<T, char> for BasicDataDelegate<'a, T>
 where
     T: BasicDataCustom,
 {
@@ -71,7 +71,7 @@ where
     }
 }
 
-impl<'a, T> ConversionDelegate<T> for StringDelegate<'a, T>
+impl<'a, T> ConversionDelegate<T, char> for StringDelegate<'a, T>
 where
     T: BasicDataCustom,
 {
@@ -115,14 +115,14 @@ where
 fn init_convert_with_delegate<Delegate, Output, T>(mut delegate: Delegate, from: usize) -> Result<Output, DataError>
 where
     T: BasicDataCustom,
-    Delegate: ConversionDelegate<T, Output = Output>,
+    Delegate: ConversionDelegate<T, char, Output = Output>,
 {
     delegate.init()?;
     convert_with_delegate(&mut delegate, from, 0)?;
     delegate.end()
 }
 
-fn convert_with_delegate<T>(delegate: &mut impl ConversionDelegate<T>, from: usize, depth: usize) -> Result<(), DataError>
+fn convert_with_delegate<T>(delegate: &mut impl ConversionDelegate<T, char>, from: usize, depth: usize) -> Result<(), DataError>
 where
     T: BasicDataCustom,
 {
@@ -459,7 +459,7 @@ mod tests {
     }
 
     impl BasicDataCustom for Foo {
-        fn convert_custom_data_with_delegate(delegate: &mut impl ConversionDelegate<Self>, value: Self) -> Result<(), DataError> {
+        fn convert_custom_data_with_delegate(delegate: &mut impl ConversionDelegate<Self, char>, value: Self) -> Result<(), DataError> {
             delegate.push_char('F')?;
             delegate.push_char('o')?;
             delegate.push_char('o')?;

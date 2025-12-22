@@ -27,11 +27,11 @@ pub trait BasicDataFormatter<T> where T: BasicDataCustom {
 }
 
 pub trait BasicDataCustom: Clone + Debug {
-    fn convert_custom_data_with_delegate(delegate: &mut impl ConversionDelegate<Self>, value: Self) -> Result<(), DataError>;
+    fn convert_custom_data_with_delegate(delegate: &mut impl ConversionDelegate<Self, char>, value: Self) -> Result<(), DataError>;
 }
 
 impl BasicDataCustom for () {
-    fn convert_custom_data_with_delegate(delegate: &mut impl ConversionDelegate<Self>, _value: Self) -> Result<(), DataError> {
+    fn convert_custom_data_with_delegate(delegate: &mut impl ConversionDelegate<Self, char>, _value: Self) -> Result<(), DataError> {
         delegate.push_char('(')?;
         delegate.push_char(')')?;
         Ok(())
