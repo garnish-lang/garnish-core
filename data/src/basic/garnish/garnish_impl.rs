@@ -514,7 +514,7 @@ where
     }
 
     fn get_instruction_iter(&self) -> Self::InstructionIterator {
-        unimplemented!()
+        SizeIterator::new(0, self.instruction_block.cursor)
     }
 
     fn get_instruction_cursor(&self) -> Self::Size {
@@ -2477,6 +2477,22 @@ mod tests {
         let data = instruction_test_data();
         let cursor = data.get_instruction_cursor();
         assert_eq!(cursor, 0);
+    }
+
+    #[test]
+    fn get_instruction_iter() {
+        let mut data = instruction_test_data();
+        data.push_instruction(Instruction::Add, None).unwrap();
+        data.push_instruction(Instruction::Subtract, None).unwrap();
+        data.push_instruction(Instruction::Multiply, None).unwrap();
+        data.push_instruction(Instruction::Divide, None).unwrap();
+
+        let mut iter = data.get_instruction_iter();
+        assert_eq!(iter.next(), Some(0));
+        assert_eq!(iter.next(), Some(1));
+        assert_eq!(iter.next(), Some(2));
+        assert_eq!(iter.next(), Some(3));
+        assert_eq!(iter.next(), None);
     }
 
     #[test]
