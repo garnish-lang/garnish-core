@@ -97,7 +97,7 @@ where
             jump_table_settings.initial_size,
             symbol_table_settings.initial_size,
             data_settings.initial_size,
-        )?; // temp unwrap
+        )?;
 
         Ok(this)
     }
@@ -217,7 +217,6 @@ where
         }
     }
 
-    // Accessor methods for private fields
     pub(crate) fn data(&self) -> &Vec<BasicData<T>> {
         &self.data
     }
