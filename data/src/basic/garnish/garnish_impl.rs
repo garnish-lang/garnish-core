@@ -448,7 +448,7 @@ where
         let mut current = self.current_register;
         while let Some(index) = current {
             match self.get_from_data_block_ensure_index(index) {
-                Ok(BasicData::Register(previous, value)) => {
+                Ok(BasicData::Register(previous, _value)) => {
                     current = previous.clone();
                     count += 1;
                 }
@@ -636,7 +636,6 @@ mod tests {
     use crate::{
         BasicData,
         basic::{
-            object::BasicObject,
             utilities::{instruction_test_data, jump_table_test_data, test_data},
         },
         error::DataErrorType,
