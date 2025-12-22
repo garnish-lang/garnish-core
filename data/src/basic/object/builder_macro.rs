@@ -188,7 +188,7 @@ mod tests {
 
     #[test]
     fn build_raw_symbol() {
-        let value: BasicObject = basic_object!(SymRaw(12345));
+        let value: BasicObject = basic_object!(SymRaw 12345);
 
         assert_eq!(value, BasicObject::Symbol(12345));
     }
@@ -199,11 +199,6 @@ mod tests {
 
         assert_eq!(value, BasicObject::Custom(Box::new(())));
     }
-
-    // #[test]
-    // fn build_symbol_list() {
-    //     let value: BasicObject = basic_object!(SymList(Symbol("my_symbol"), Number(100)));
-    // }
 
     #[test]
     fn build_external() {
