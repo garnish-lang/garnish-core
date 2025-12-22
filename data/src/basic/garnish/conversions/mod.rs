@@ -1,4 +1,6 @@
+mod bytes;
 mod string;
+mod symbol;
 
 use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError};
 
