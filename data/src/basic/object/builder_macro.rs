@@ -4,43 +4,75 @@ macro_rules! basic_object {
         basic_object!($($inner)+)
     };
     ($left:tt = $right:tt) => {
-        BasicObject::Pair(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::Pair(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+        }
     };
     ($left:tt..$right:tt) => {
-        BasicObject::Range(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::Range(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+        }
     };
     ($left:tt - $right:tt) => {
-        BasicObject::Slice(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::Slice(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+        }
     };
     ($left:tt ~ $right:tt) => {
-        BasicObject::Partial(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::Partial(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+        }
     };
     ($left:tt <> $right:tt) => {
-        BasicObject::Concatenation(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::Concatenation(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+        }
     };
     (Unit) => {
-        BasicObject::Unit
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::Unit
+        }
     };
     (True) => {
-        BasicObject::True
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::True
+        }
     };
     (False) => {
-        BasicObject::False
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::False
+        }
     };
     (Type $garnish_type:ident) => {
         {
+            use crate::basic::object::BasicObject;
             use garnish_lang_traits::GarnishDataType;
             BasicObject::Type(GarnishDataType::$garnish_type)
         }
     };
     (Char $char_value:expr) => {
-        BasicObject::Char($char_value)
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::Char($char_value)
+        }
     };
     (Byte $byte_value:expr) => {
-        BasicObject::Byte($byte_value)
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::Byte($byte_value)
+        }
     };
     (Symbol $symbol_value:expr) => {
         {
+            use crate::basic::object::BasicObject;
             use crate::basic::BasicDataFactory;
             use garnish_lang_traits::GarnishDataFactory;
             match BasicDataFactory::parse_symbol($symbol_value) {
@@ -50,27 +82,48 @@ macro_rules! basic_object {
         }
     };
     (SymRaw $symbol_value:expr) => {
-        BasicObject::Symbol($symbol_value)
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::Symbol($symbol_value)
+        }
     };
     (Number $value:expr) => {
-        BasicObject::Number($value.into())
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::Number($value.into())
+        }
     };
     (External $value:expr) => {
-        BasicObject::External($value)
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::External($value)
+        }
     };
     (Expression $value:expr) => {
-        BasicObject::Expression($value)
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::Expression($value)
+        }
     };
     (CharList $value:expr) => {
-        BasicObject::CharList($value.to_string())
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::CharList($value.to_string())
+        }
     };
     (ByteList $($value:expr),*) => {
-        BasicObject::ByteList(vec![
-            $($value),*
-        ])
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::ByteList(vec![
+                $($value),*
+            ])
+        }
     };
     (Custom $value:expr) => {
-        BasicObject::Custom(Box::new($value))
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::Custom(Box::new($value))
+        }
     };
     (@symlist_part Symbol $value:expr) => {
         {
@@ -97,10 +150,14 @@ macro_rules! basic_object {
     };
     // SymList pattern - handles both space-separated and parenthesized syntax
     (SymList()) => {
-        BasicObject::SymbolList(vec![])
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::SymbolList(vec![])
+        }
     };
     (SymList(SymRaw($first_val:expr) $(, $rest:tt $rest_val:expr)* $(,)?)) => {
         {
+            use crate::basic::object::BasicObject;
             use garnish_lang_traits::SymbolListPart;
             let mut parts = vec![SymbolListPart::Symbol($first_val)];
             $(
@@ -111,6 +168,7 @@ macro_rules! basic_object {
     };
     (SymList($first:tt $first_val:expr $(, $rest:tt $rest_val:expr)* $(,)?)) => {
         {
+            use crate::basic::object::BasicObject;
             let mut parts = vec![basic_object!(@symlist_part $first $first_val)];
             $(
                 parts.push(basic_object!(@symlist_part $rest $rest_val));
@@ -119,9 +177,12 @@ macro_rules! basic_object {
         }
     };
     ($($item:tt),+ $(,)?) => {
-        BasicObject::List(vec![
-            $(Box::new(basic_object!($item)),)*
-        ])
+        {
+            use crate::basic::object::BasicObject;
+            BasicObject::List(vec![
+                $(Box::new(basic_object!($item)),)*
+            ])
+        }
     };
 }
 

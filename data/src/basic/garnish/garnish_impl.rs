@@ -649,7 +649,8 @@ where
     }
 
     fn add_symbol_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        let sym = self.convert_basic_data_at_to_symbol(from)?;
+        self.push_to_data_block(BasicData::Symbol(sym))
     }
 
     fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
