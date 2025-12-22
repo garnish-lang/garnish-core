@@ -76,6 +76,9 @@ macro_rules! basic_object {
             $($value),*
         ])
     };
+    (Custom $value:expr) => {
+        BasicObject::Custom(Box::new($value))
+    };
 }
 
 #[cfg(test)]
@@ -147,6 +150,13 @@ mod tests {
         let value: BasicObject = basic_object!(SymRaw(12345));
 
         assert_eq!(value, BasicObject::Symbol(12345));
+    }
+
+    #[test]
+    fn build_custom() {
+        let value: BasicObject = basic_object!(Custom ());
+
+        assert_eq!(value, BasicObject::Custom(Box::new(())));
     }
 
     // #[test]
