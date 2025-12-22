@@ -683,6 +683,7 @@ mod tests {
             utilities::{instruction_test_data, jump_table_test_data, test_data},
         },
         error::DataErrorType,
+        basic_object,
     };
 
     use super::*;
@@ -1368,22 +1369,13 @@ mod tests {
     fn create_list_with_associations() {
         let mut data = test_data();
         let v1 = data
-            .push_object_to_data_block(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(20)),
-                Box::new(BasicObject::Number(100.into())),
-            ))
+            .push_object_to_data_block(basic_object!((SymRaw 20) = (Number 100)))
             .unwrap();
         let v2 = data
-            .push_object_to_data_block(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(30)),
-                Box::new(BasicObject::Number(200.into())),
-            ))
+            .push_object_to_data_block(basic_object!((SymRaw 30) = (Number 200)))
             .unwrap();
         let v3 = data
-            .push_object_to_data_block(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(10)),
-                Box::new(BasicObject::Number(300.into())),
-            ))
+            .push_object_to_data_block(basic_object!((SymRaw 10) = (Number 300)))
             .unwrap();
 
         let mut list_index = data.start_list(3).unwrap();
@@ -1421,20 +1413,14 @@ mod tests {
     #[test]
     fn create_list_with_some_associations() {
         let mut data = test_data();
-        let v1 = data.push_object_to_data_block(BasicObject::Number(50.into())).unwrap();
+        let v1 = data.push_object_to_data_block(basic_object!(Number 50)).unwrap();
         let v2 = data
-            .push_object_to_data_block(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(30)),
-                Box::new(BasicObject::Number(100.into())),
-            ))
+            .push_object_to_data_block(basic_object!((SymRaw 30) = (Number 100)))
             .unwrap();
         let v3 = data
-            .push_object_to_data_block(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(20)),
-                Box::new(BasicObject::Number(200.into())),
-            ))
+            .push_object_to_data_block(basic_object!((SymRaw 20) = (Number 200)))
             .unwrap();
-        let v4 = data.push_object_to_data_block(BasicObject::Number(300.into())).unwrap();
+        let v4 = data.push_object_to_data_block(basic_object!(Number 300)).unwrap();
 
         let mut list_index = data.start_list(4).unwrap();
         list_index = data.add_to_list(list_index, v1).unwrap();
@@ -1501,11 +1487,7 @@ mod tests {
     #[test]
     fn get_list_item() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::List(vec![
-            Box::new(BasicObject::Number(100.into())),
-            Box::new(BasicObject::Number(200.into())),
-            Box::new(BasicObject::Number(300.into())),
-        ]))
+        data.push_object_to_data_block(basic_object!((Number 100), (Number 200), (Number 300)))
         .unwrap();
         let result = data.get_list_item(3, 1.into()).unwrap();
         assert_eq!(result, Some(1));
@@ -1514,11 +1496,7 @@ mod tests {
     #[test]
     fn get_list_item_with_float_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::List(vec![
-            Box::new(BasicObject::Number(100.into())),
-            Box::new(BasicObject::Number(200.into())),
-            Box::new(BasicObject::Number(300.into())),
-        ]))
+        data.push_object_to_data_block(basic_object!((Number 100), (Number 200), (Number 300)))
         .unwrap();
         let result = data.get_list_item(3, 1.5.into()).unwrap();
         assert_eq!(result, Some(1));
@@ -1527,11 +1505,7 @@ mod tests {
     #[test]
     fn get_list_item_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::List(vec![
-            Box::new(BasicObject::Number(100.into())),
-            Box::new(BasicObject::Number(200.into())),
-            Box::new(BasicObject::Number(300.into())),
-        ]))
+        data.push_object_to_data_block(basic_object!((Number 100), (Number 200), (Number 300)))
         .unwrap();
         let result = data.get_list_item(3, 4.into());
         assert_eq!(
@@ -1543,7 +1517,7 @@ mod tests {
     #[test]
     fn get_list_item_not_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_list_item(0, 1.into());
         assert_eq!(
             result,
@@ -1557,20 +1531,11 @@ mod tests {
     #[test]
     fn get_list_item_with_symbol_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::List(vec![
-            Box::new(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(100)),
-                Box::new(BasicObject::Number(200.into())),
-            )),
-            Box::new(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(200)),
-                Box::new(BasicObject::Number(300.into())),
-            )),
-            Box::new(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(300)),
-                Box::new(BasicObject::Number(400.into())),
-            )),
-        ]))
+        data.push_object_to_data_block(basic_object!(
+            ((SymRaw 100) = (Number 200)),
+            ((SymRaw 200) = (Number 300)),
+            ((SymRaw 300) = (Number 400))
+        ))
         .unwrap();
         let result = data.get_list_item_with_symbol(9, 200);
         assert_eq!(result, Ok(Some(4)));
@@ -1579,20 +1544,11 @@ mod tests {
     #[test]
     fn get_list_item_with_symbol_invalid_symbol() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::List(vec![
-            Box::new(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(100)),
-                Box::new(BasicObject::Number(200.into())),
-            )),
-            Box::new(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(200)),
-                Box::new(BasicObject::Number(300.into())),
-            )),
-            Box::new(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(300)),
-                Box::new(BasicObject::Number(400.into())),
-            )),
-        ]))
+        data.push_object_to_data_block(basic_object!(
+            ((SymRaw 100) = (Number 200)),
+            ((SymRaw 200) = (Number 300)),
+            ((SymRaw 300) = (Number 400))
+        ))
         .unwrap();
         let result = data.get_list_item_with_symbol(9, 500);
         assert_eq!(result, Ok(None));
@@ -1601,7 +1557,7 @@ mod tests {
     #[test]
     fn get_list_item_with_symbol_not_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_list_item_with_symbol(0, 100);
         assert_eq!(
             result,
@@ -1615,20 +1571,11 @@ mod tests {
     #[test]
     fn get_list_item_with_symbol_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::List(vec![
-            Box::new(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(100)),
-                Box::new(BasicObject::Number(200.into())),
-            )),
-            Box::new(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(200)),
-                Box::new(BasicObject::Number(300.into())),
-            )),
-            Box::new(BasicObject::Pair(
-                Box::new(BasicObject::Symbol(300)),
-                Box::new(BasicObject::Number(400.into())),
-            )),
-        ]))
+        data.push_object_to_data_block(basic_object!(
+            ((SymRaw 100) = (Number 200)),
+            ((SymRaw 200) = (Number 300)),
+            ((SymRaw 300) = (Number 400))
+        ))
         .unwrap();
         let result = data.get_list_item_with_symbol(100, 100);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
@@ -1637,7 +1584,7 @@ mod tests {
     #[test]
     fn get_char_list_len_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
         let result = data.get_char_list_len(0);
         assert_eq!(result, Ok(5));
     }
@@ -1645,7 +1592,7 @@ mod tests {
     #[test]
     fn get_char_list_len_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
         let result = data.get_char_list_len(100);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
     }
@@ -1653,7 +1600,7 @@ mod tests {
     #[test]
     fn get_char_list_len_not_char_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_char_list_len(0);
         assert_eq!(
             result,
@@ -1667,7 +1614,7 @@ mod tests {
     #[test]
     fn get_char_list_item_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
         let result = data.get_char_list_item(0, 1.into());
         assert_eq!(result, Ok(Some('b')));
     }
@@ -1675,7 +1622,7 @@ mod tests {
     #[test]
     fn get_char_list_item_ok_with_float() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
         let result = data.get_char_list_item(0, 1.5.into());
         assert_eq!(result, Ok(Some('b')));
     }
@@ -1683,7 +1630,7 @@ mod tests {
     #[test]
     fn get_char_list_item_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
         let result = data.get_char_list_item(100, 0.into());
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
     }
@@ -1691,7 +1638,7 @@ mod tests {
     #[test]
     fn get_char_list_item_invalid_item_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
         let result = data.get_char_list_item(0, 100.into());
         assert_eq!(result, Ok(None));
     }
@@ -1699,7 +1646,7 @@ mod tests {
     #[test]
     fn get_char_list_item_not_char_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_char_list_item(0, 1.into());
         assert_eq!(
             result,
@@ -1713,7 +1660,7 @@ mod tests {
     #[test]
     fn get_char_list_iter_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
         let result: Vec<char> = data.get_char_list_iter(0, Extents::new(0.into(), 5.into())).unwrap().collect();
         assert_eq!(result, vec!['a', 'b', 'c', 'd', 'e']);
     }
@@ -1721,7 +1668,7 @@ mod tests {
     #[test]
     fn get_char_list_iter_empty_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "")).unwrap();
         let result: Vec<char> = data.get_char_list_iter(0, Extents::new(0.into(), 4.into())).unwrap().collect();
         assert_eq!(result, vec![]);
     }
@@ -1729,7 +1676,7 @@ mod tests {
     #[test]
     fn get_char_list_iter_ok_with_extents() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
         let result: Vec<char> = data.get_char_list_iter(0, Extents::new(1.into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec!['b', 'c']);
     }
@@ -1737,7 +1684,7 @@ mod tests {
     #[test]
     fn get_char_list_iter_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
         let result = data.get_char_list_iter(100, Extents::new(0.into(), 5.into())).err();
         assert_eq!(result, Some(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
     }
@@ -1745,7 +1692,7 @@ mod tests {
     #[test]
     fn get_char_list_iter_not_char_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_char_list_iter(0, Extents::new(0.into(), 5.into())).err();
         assert_eq!(
             result,
@@ -1759,7 +1706,7 @@ mod tests {
     #[test]
     fn get_char_list_iter_start_negative_clamps_to_char_list_start() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
         let result: Vec<char> = data.get_char_list_iter(0, Extents::new((-5).into(), 5.into())).unwrap().collect();
         assert_eq!(result, vec!['a', 'b', 'c', 'd', 'e']);
     }
@@ -1767,7 +1714,7 @@ mod tests {
     #[test]
     fn get_char_list_iter_start_out_of_bounds_is_empty() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
         let result: Vec<char> = data.get_char_list_iter(0, Extents::new(6.into(), 10.into())).unwrap().collect();
         assert_eq!(result, vec![]);
     }
@@ -1775,7 +1722,7 @@ mod tests {
     #[test]
     fn get_char_list_iter_end_out_of_bounds_clamps_to_char_list_length() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::CharList("abcde".to_string())).unwrap();
+        data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
         let result: Vec<char> = data.get_char_list_iter(0, Extents::new(0.into(), 10.into())).unwrap().collect();
         assert_eq!(result, vec!['a', 'b', 'c', 'd', 'e']);
     }
@@ -1783,7 +1730,7 @@ mod tests {
     #[test]
     fn get_byte_list_len_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        data.push_object_to_data_block(basic_object!(ByteList 1, 2, 3, 4, 5)).unwrap();
         let result = data.get_byte_list_len(0);
         assert_eq!(result, Ok(5));
     }
@@ -1791,7 +1738,7 @@ mod tests {
     #[test]
     fn get_byte_list_len_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        data.push_object_to_data_block(basic_object!(ByteList 1, 2, 3, 4, 5)).unwrap();
         let result = data.get_byte_list_len(100);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
     }
@@ -1799,7 +1746,7 @@ mod tests {
     #[test]
     fn get_byte_list_len_not_byte_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_byte_list_len(0);
         assert_eq!(
             result,
@@ -1813,7 +1760,7 @@ mod tests {
     #[test]
     fn get_byte_list_item_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        data.push_object_to_data_block(basic_object!(ByteList 1, 2, 3, 4, 5)).unwrap();
         let result = data.get_byte_list_item(0, 1.into());
         assert_eq!(result, Ok(Some(2)));
     }
@@ -1821,7 +1768,7 @@ mod tests {
     #[test]
     fn get_byte_list_item_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        data.push_object_to_data_block(basic_object!(ByteList 1, 2, 3, 4, 5)).unwrap();
         let result = data.get_byte_list_item(100, 1.into());
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
     }
@@ -1829,7 +1776,7 @@ mod tests {
     #[test]
     fn get_byte_list_item_invalid_item_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        data.push_object_to_data_block(basic_object!(ByteList 1, 2, 3, 4, 5)).unwrap();
         let result = data.get_byte_list_item(0, 100.into());
         assert_eq!(result, Ok(None));
     }
@@ -1837,7 +1784,7 @@ mod tests {
     #[test]
     fn get_byte_list_item_not_byte_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_byte_list_item(0, 1.into());
         assert_eq!(
             result,
@@ -1851,7 +1798,7 @@ mod tests {
     #[test]
     fn get_byte_list_iter_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        data.push_object_to_data_block(basic_object!(ByteList 1, 2, 3, 4, 5)).unwrap();
         let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(0.into(), 5.into())).unwrap().collect();
         assert_eq!(result, vec![1, 2, 3, 4, 5]);
     }
@@ -1859,7 +1806,7 @@ mod tests {
     #[test]
     fn get_byte_list_iter_empty_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::ByteList(vec![])).unwrap();
+        data.push_object_to_data_block(basic_object!(ByteList)).unwrap();
         let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(0.into(), 4.into())).unwrap().collect();
         assert_eq!(result, vec![]);
     }
@@ -1867,7 +1814,7 @@ mod tests {
     #[test]
     fn get_byte_list_iter_ok_with_extents() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        data.push_object_to_data_block(basic_object!(ByteList 1, 2, 3, 4, 5)).unwrap();
         let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(1.into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec![2, 3]);
     }
@@ -1875,7 +1822,7 @@ mod tests {
     #[test]
     fn get_byte_list_iter_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        data.push_object_to_data_block(basic_object!(ByteList 1, 2, 3, 4, 5)).unwrap();
         let result = data.get_byte_list_iter(100, Extents::new(0.into(), 4.into())).err();
         assert_eq!(result, Some(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
     }
@@ -1883,7 +1830,7 @@ mod tests {
     #[test]
     fn get_byte_list_iter_not_byte_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_byte_list_iter(0, Extents::new(0.into(), 4.into())).err();
         assert_eq!(
             result,
@@ -1897,7 +1844,7 @@ mod tests {
     #[test]
     fn get_byte_list_iter_start_negative_clamps_to_byte_list_start() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        data.push_object_to_data_block(basic_object!(ByteList 1, 2, 3, 4, 5)).unwrap();
         let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new((-5).into(), 5.into())).unwrap().collect();
         assert_eq!(result, vec![1, 2, 3, 4, 5]);
     }
@@ -1905,7 +1852,7 @@ mod tests {
     #[test]
     fn get_byte_list_iter_start_out_of_bounds_is_empty() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        data.push_object_to_data_block(basic_object!(ByteList 1, 2, 3, 4, 5)).unwrap();
         let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(6.into(), 10.into())).unwrap().collect();
         assert_eq!(result, vec![]);
     }
@@ -1913,7 +1860,7 @@ mod tests {
     #[test]
     fn get_byte_list_iter_end_out_of_bounds_clamps_to_byte_list_length() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::ByteList(vec![1, 2, 3, 4, 5])).unwrap();
+        data.push_object_to_data_block(basic_object!(ByteList 1, 2, 3, 4, 5)).unwrap();
         let result: Vec<u8> = data.get_byte_list_iter(0, Extents::new(0.into(), 10.into())).unwrap().collect();
         assert_eq!(result, vec![1, 2, 3, 4, 5]);
     }
@@ -1921,11 +1868,7 @@ mod tests {
     #[test]
     fn get_symbol_list_len_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![
-            SymbolListPart::Symbol(1),
-            SymbolListPart::Symbol(2),
-            SymbolListPart::Symbol(3),
-        ]))
+        data.push_object_to_data_block(basic_object!(SymList(SymRaw 1, SymRaw 2, SymRaw 3)))
         .unwrap();
         let result = data.get_symbol_list_len(0);
         assert_eq!(result, Ok(3));
@@ -1934,11 +1877,7 @@ mod tests {
     #[test]
     fn get_symbol_list_len_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![
-            SymbolListPart::Symbol(1),
-            SymbolListPart::Symbol(2),
-            SymbolListPart::Symbol(3),
-        ]))
+        data.push_object_to_data_block(basic_object!(SymList(SymRaw 1, SymRaw 2, SymRaw 3)))
         .unwrap();
         let result = data.get_symbol_list_len(100);
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
@@ -1947,7 +1886,7 @@ mod tests {
     #[test]
     fn get_symbol_list_len_not_symbol_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_symbol_list_len(0);
         assert_eq!(
             result,
@@ -1961,11 +1900,7 @@ mod tests {
     #[test]
     fn get_symbol_list_item_ok_symbol() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![
-            SymbolListPart::Symbol(1),
-            SymbolListPart::Symbol(2),
-            SymbolListPart::Symbol(3),
-        ]))
+        data.push_object_to_data_block(basic_object!(SymList(SymRaw 1, SymRaw 2, SymRaw 3)))
         .unwrap();
         let result = data.get_symbol_list_item(0, 1.into());
         assert_eq!(result, Ok(Some(SymbolListPart::Symbol(2))));
@@ -1974,11 +1909,7 @@ mod tests {
     #[test]
     fn get_symbol_list_item_ok_number() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![
-            SymbolListPart::Number(1.into()),
-            SymbolListPart::Number(2.into()),
-            SymbolListPart::Number(3.into()),
-        ]))
+        data.push_object_to_data_block(basic_object!(SymList(Number 1, Number 2, Number 3)))
         .unwrap();
         let result = data.get_symbol_list_item(0, 1.into());
         assert_eq!(result, Ok(Some(SymbolListPart::Number(2.into()))));
@@ -1987,11 +1918,7 @@ mod tests {
     #[test]
     fn get_symbol_list_item_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![
-            SymbolListPart::Symbol(1),
-            SymbolListPart::Symbol(2),
-            SymbolListPart::Symbol(3),
-        ]))
+        data.push_object_to_data_block(basic_object!(SymList(SymRaw 1, SymRaw 2, SymRaw 3)))
         .unwrap();
         let result = data.get_symbol_list_item(100, 1.into());
         assert_eq!(result, Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
@@ -2000,11 +1927,7 @@ mod tests {
     #[test]
     fn get_symbol_list_item_invalid_item_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![
-            SymbolListPart::Symbol(1),
-            SymbolListPart::Symbol(2),
-            SymbolListPart::Symbol(3),
-        ]))
+        data.push_object_to_data_block(basic_object!(SymList(SymRaw 1, SymRaw 2, SymRaw 3)))
         .unwrap();
         let result = data.get_symbol_list_item(0, 100.into());
         assert_eq!(result, Ok(None));
@@ -2013,7 +1936,7 @@ mod tests {
     #[test]
     fn get_symbol_list_item_not_symbol_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_symbol_list_item(0, 1.into());
         assert_eq!(
             result,
@@ -2027,11 +1950,7 @@ mod tests {
     #[test]
     fn get_symbol_list_iter_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![
-            SymbolListPart::Symbol(1),
-            SymbolListPart::Symbol(2),
-            SymbolListPart::Symbol(3),
-        ]))
+        data.push_object_to_data_block(basic_object!(SymList(SymRaw 1, SymRaw 2, SymRaw 3)))
         .unwrap();
         let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(0.into(), 3.into())).unwrap().collect();
         assert_eq!(
@@ -2043,7 +1962,7 @@ mod tests {
     #[test]
     fn get_symbol_list_iter_empty_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![])).unwrap();
+        data.push_object_to_data_block(basic_object!(SymList())).unwrap();
         let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(0.into(), 2.into())).unwrap().collect();
         assert_eq!(result, vec![]);
     }
@@ -2051,11 +1970,7 @@ mod tests {
     #[test]
     fn get_symbol_list_iter_ok_with_extents() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![
-            SymbolListPart::Symbol(1),
-            SymbolListPart::Symbol(2),
-            SymbolListPart::Symbol(3),
-        ]))
+        data.push_object_to_data_block(basic_object!(SymList(SymRaw 1, SymRaw 2, SymRaw 3)))
         .unwrap();
         let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(1.into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec![SymbolListPart::Symbol(2), SymbolListPart::Symbol(3)]);
@@ -2064,11 +1979,7 @@ mod tests {
     #[test]
     fn get_symbol_list_iter_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![
-            SymbolListPart::Symbol(1),
-            SymbolListPart::Symbol(2),
-            SymbolListPart::Symbol(3),
-        ]))
+        data.push_object_to_data_block(basic_object!(SymList(SymRaw 1, SymRaw 2, SymRaw 3)))
         .unwrap();
         let result = data.get_symbol_list_iter(100, Extents::new(0.into(), 2.into())).err();
         assert_eq!(result, Some(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
@@ -2077,7 +1988,7 @@ mod tests {
     #[test]
     fn get_symbol_list_iter_not_symbol_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_symbol_list_iter(0, Extents::new(0.into(), 2.into())).err();
         assert_eq!(
             result,
@@ -2091,11 +2002,7 @@ mod tests {
     #[test]
     fn get_symbol_list_iter_start_negative_clamps_to_symbol_list_start() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![
-            SymbolListPart::Symbol(1),
-            SymbolListPart::Symbol(2),
-            SymbolListPart::Symbol(3),
-        ]))
+        data.push_object_to_data_block(basic_object!(SymList(SymRaw 1, SymRaw 2, SymRaw 3)))
         .unwrap();
         let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new((-5).into(), 3.into())).unwrap().collect();
         assert_eq!(
@@ -2107,11 +2014,7 @@ mod tests {
     #[test]
     fn get_symbol_list_iter_end_out_of_bounds_clamps_to_symbol_list_length() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![
-            SymbolListPart::Symbol(1),
-            SymbolListPart::Symbol(2),
-            SymbolListPart::Symbol(3),
-        ]))
+        data.push_object_to_data_block(basic_object!(SymList(SymRaw 1, SymRaw 2, SymRaw 3)))
         .unwrap();
         let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(0.into(), 10.into())).unwrap().collect();
         assert_eq!(
@@ -2123,11 +2026,7 @@ mod tests {
     #[test]
     fn get_symbol_list_iter_start_out_of_bounds_clamps_to_symbol_list_start() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::SymbolList(vec![
-            SymbolListPart::Symbol(1),
-            SymbolListPart::Symbol(2),
-            SymbolListPart::Symbol(3),
-        ]))
+        data.push_object_to_data_block(basic_object!(SymList(SymRaw 1, SymRaw 2, SymRaw 3)))
         .unwrap();
         let result: Vec<SymbolListPart<u64, BasicNumber>> = data.get_symbol_list_iter(0, Extents::new(10.into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec![]);
@@ -2136,16 +2035,12 @@ mod tests {
     #[test]
     fn get_list_item_iter_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(400.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(500.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(600.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(700.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 400)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 500)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 600)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 700)).unwrap();
         let list_index = data
-            .push_object_to_data_block(BasicObject::List(vec![
-                Box::new(BasicObject::Number(100.into())),
-                Box::new(BasicObject::Number(200.into())),
-                Box::new(BasicObject::Number(300.into())),
-            ]))
+            .push_object_to_data_block(basic_object!((Number 100), (Number 200), (Number 300)))
             .unwrap();
         let result: Vec<usize> = data.get_list_item_iter(list_index, Extents::new(0.into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec![4, 5, 6]);
@@ -2154,7 +2049,7 @@ mod tests {
     #[test]
     fn get_list_item_iter_not_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_list_item_iter(0, Extents::new(0.into(), 2.into())).err();
         assert_eq!(
             result,
@@ -2168,7 +2063,7 @@ mod tests {
     #[test]
     fn get_list_item_iter_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_list_item_iter(100, Extents::new(0.into(), 2.into())).err();
         assert_eq!(result, Some(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(100))));
     }
@@ -2177,7 +2072,7 @@ mod tests {
     fn get_list_item_iter_not_list_item() {
         let mut data = test_data();
         let list_index = data.push_to_data_block(BasicData::List(1, 0)).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_list_item_iter(list_index, Extents::new(0.into(), 1.into())).err();
         assert_eq!(
             result,
@@ -2188,16 +2083,12 @@ mod tests {
     #[test]
     fn get_list_item_iter_start_negative_clamps_to_list_start() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(400.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(500.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(600.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(700.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 400)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 500)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 600)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 700)).unwrap();
         let list_index = data
-            .push_object_to_data_block(BasicObject::List(vec![
-                Box::new(BasicObject::Number(100.into())),
-                Box::new(BasicObject::Number(200.into())),
-                Box::new(BasicObject::Number(300.into())),
-            ]))
+            .push_object_to_data_block(basic_object!((Number 100), (Number 200), (Number 300)))
             .unwrap();
         let result: Vec<usize> = data
             .get_list_item_iter(list_index, Extents::new((-5).into(), 3.into()))
@@ -2209,16 +2100,12 @@ mod tests {
     #[test]
     fn get_list_item_iter_end_out_of_bounds_clamps_to_list_length() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(400.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(500.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(600.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(700.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 400)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 500)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 600)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 700)).unwrap();
         let list_index = data
-            .push_object_to_data_block(BasicObject::List(vec![
-                Box::new(BasicObject::Number(100.into())),
-                Box::new(BasicObject::Number(200.into())),
-                Box::new(BasicObject::Number(300.into())),
-            ]))
+            .push_object_to_data_block(basic_object!((Number 100), (Number 200), (Number 300)))
             .unwrap();
         let result: Vec<usize> = data.get_list_item_iter(list_index, Extents::new(0.into(), 10.into())).unwrap().collect();
         assert_eq!(result, vec![4, 5, 6]);
@@ -2227,16 +2114,12 @@ mod tests {
     #[test]
     fn get_list_item_iter_start_out_of_bounds_clamps_to_list_end() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(400.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(500.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(600.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(700.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 400)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 500)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 600)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 700)).unwrap();
         let list_index = data
-            .push_object_to_data_block(BasicObject::List(vec![
-                Box::new(BasicObject::Number(100.into())),
-                Box::new(BasicObject::Number(200.into())),
-                Box::new(BasicObject::Number(300.into())),
-            ]))
+            .push_object_to_data_block(basic_object!((Number 100), (Number 200), (Number 300)))
             .unwrap();
         let result: Vec<usize> = data.get_list_item_iter(list_index, Extents::new(10.into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec![]);
@@ -2245,16 +2128,12 @@ mod tests {
     #[test]
     fn get_list_item_iter_end_negative_clamps_to_list_start() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(400.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(500.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(600.into())).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(700.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 400)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 500)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 600)).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 700)).unwrap();
         let list_index = data
-            .push_object_to_data_block(BasicObject::List(vec![
-                Box::new(BasicObject::Number(100.into())),
-                Box::new(BasicObject::Number(200.into())),
-                Box::new(BasicObject::Number(300.into())),
-            ]))
+            .push_object_to_data_block(basic_object!((Number 100), (Number 200), (Number 300)))
             .unwrap();
         let result: Vec<usize> = data
             .get_list_item_iter(list_index, Extents::new(0.into(), (-5).into()))
@@ -2266,10 +2145,7 @@ mod tests {
     #[test]
     fn get_concatenation_iter_ok() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Concatenation(
-            Box::new(BasicObject::Number(1.into())),
-            Box::new(BasicObject::Number(2.into())),
-        ))
+        data.push_object_to_data_block(basic_object!((Number 1) <> (Number 2)))
         .unwrap();
         let result: Vec<usize> = data.get_concatenation_iter(2, Extents::new(0.into(), 3.into())).unwrap().collect();
         assert_eq!(result, vec![0, 1]);
@@ -2278,7 +2154,7 @@ mod tests {
     #[test]
     fn get_concatenation_iter_not_concatenation() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let result = data.get_concatenation_iter(0, Extents::new(0.into(), 3.into())).err();
         assert_eq!(
             result,
@@ -2292,10 +2168,7 @@ mod tests {
     #[test]
     fn get_concatenation_iter_invalid_index() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Concatenation(
-            Box::new(BasicObject::Number(100.into())),
-            Box::new(BasicObject::Number(200.into())),
-        ))
+        data.push_object_to_data_block(basic_object!((Number 100) <> (Number 200)))
         .unwrap();
         let result = data.get_concatenation_iter(10, Extents::new(0.into(), 3.into())).err();
         assert_eq!(result, Some(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(10))));
@@ -2304,13 +2177,8 @@ mod tests {
     #[test]
     fn get_concatenation_iter_with_list() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Concatenation(
-            Box::new(BasicObject::List(vec![
-                Box::new(BasicObject::Number(100.into())),
-                Box::new(BasicObject::Number(200.into())),
-                Box::new(BasicObject::Number(300.into())),
-            ])),
-            Box::new(BasicObject::Number(400.into())),
+        data.push_object_to_data_block(basic_object!(
+            ((Number 100), (Number 200), (Number 300)) <> (Number 400)
         ))
         .unwrap();
         let result: Vec<usize> = data.get_concatenation_iter(11, Extents::new(0.into(), 4.into())).unwrap().collect();
@@ -2320,13 +2188,8 @@ mod tests {
     #[test]
     fn get_concatenation_iter_with_list_start_out_of_bounds() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Concatenation(
-            Box::new(BasicObject::List(vec![
-                Box::new(BasicObject::Number(100.into())),
-                Box::new(BasicObject::Number(200.into())),
-                Box::new(BasicObject::Number(300.into())),
-            ])),
-            Box::new(BasicObject::Number(400.into())),
+        data.push_object_to_data_block(basic_object!(
+            ((Number 100), (Number 200), (Number 300)) <> (Number 400)
         ))
         .unwrap();
         let result: Vec<usize> = data.get_concatenation_iter(11, Extents::new(10.into(), 4.into())).unwrap().collect();
@@ -2336,13 +2199,8 @@ mod tests {
     #[test]
     fn get_concatenation_iter_with_list_end_out_of_bounds() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Concatenation(
-            Box::new(BasicObject::List(vec![
-                Box::new(BasicObject::Number(100.into())),
-                Box::new(BasicObject::Number(200.into())),
-                Box::new(BasicObject::Number(300.into())),
-            ])),
-            Box::new(BasicObject::Number(400.into())),
+        data.push_object_to_data_block(basic_object!(
+            ((Number 100), (Number 200), (Number 300)) <> (Number 400)
         ))
         .unwrap();
         let result: Vec<usize> = data.get_concatenation_iter(11, Extents::new(0.into(), 10.into())).unwrap().collect();
@@ -2352,13 +2210,8 @@ mod tests {
     #[test]
     fn get_concatenation_iter_with_list_start_negative_clamps_to_list_start() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Concatenation(
-            Box::new(BasicObject::List(vec![
-                Box::new(BasicObject::Number(100.into())),
-                Box::new(BasicObject::Number(200.into())),
-                Box::new(BasicObject::Number(300.into())),
-            ])),
-            Box::new(BasicObject::Number(400.into())),
+        data.push_object_to_data_block(basic_object!(
+            ((Number 100), (Number 200), (Number 300)) <> (Number 400)
         ))
         .unwrap();
         let result: Vec<usize> = data.get_concatenation_iter(11, Extents::new((-5).into(), 4.into())).unwrap().collect();
@@ -2368,13 +2221,8 @@ mod tests {
     #[test]
     fn get_concatenation_iter_with_list_end_negative_clamps_to_list_start() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Concatenation(
-            Box::new(BasicObject::List(vec![
-                Box::new(BasicObject::Number(100.into())),
-                Box::new(BasicObject::Number(200.into())),
-                Box::new(BasicObject::Number(300.into())),
-            ])),
-            Box::new(BasicObject::Number(400.into())),
+        data.push_object_to_data_block(basic_object!(
+            ((Number 100), (Number 200), (Number 300)) <> (Number 400)
         ))
         .unwrap();
         let result: Vec<usize> = data.get_concatenation_iter(11, Extents::new(0.into(), (-5).into())).unwrap().collect();
@@ -2384,7 +2232,7 @@ mod tests {
     #[test]
     fn push_value_stack() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.push_value_stack(0).unwrap();
 
         let mut expected_data = test_data();
@@ -2398,9 +2246,9 @@ mod tests {
     #[test]
     fn push_value_stack_multiple() {
         let mut data = test_data();
-        let index = data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        let index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.push_value_stack(index).unwrap();
-        let index = data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
+        let index = data.push_object_to_data_block(basic_object!(Number 200)).unwrap();
         data.push_value_stack(index).unwrap();
 
         let mut expected_data = test_data();
@@ -2474,7 +2322,7 @@ mod tests {
     #[test]
     fn get_current_value() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.push_value_stack(0).unwrap();
         let value = data.get_current_value().unwrap();
         assert_eq!(value, 0);
@@ -2483,7 +2331,7 @@ mod tests {
     #[test]
     fn get_current_value_none() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let value = data.get_current_value();
         assert_eq!(value, None);
     }
@@ -2491,7 +2339,7 @@ mod tests {
     #[test]
     fn get_current_value_mut() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.push_value_stack(0).unwrap();
         let value = data.get_current_value_mut().unwrap();
         *value = 200;
@@ -2502,7 +2350,7 @@ mod tests {
     #[test]
     fn get_current_value_mut_none() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let value = data.get_current_value_mut();
         assert_eq!(value, None);
     }
@@ -2510,7 +2358,7 @@ mod tests {
     #[test]
     fn push_register() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.push_register(0).unwrap();
 
         let mut expected_data = test_data();
@@ -2524,9 +2372,9 @@ mod tests {
     #[test]
     fn push_register_multiple() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.push_register(0).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 200)).unwrap();
         data.push_register(2).unwrap();
 
         let mut expected_data = test_data();
@@ -2542,9 +2390,9 @@ mod tests {
     #[test]
     fn get_register() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.push_register(100).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 200)).unwrap();
         data.push_register(200).unwrap();
         let register = data.get_register(1).unwrap();
         assert_eq!(register, 200);
@@ -2553,9 +2401,9 @@ mod tests {
     #[test]
     fn get_register_last() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.push_register(100).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 200)).unwrap();
         data.push_register(200).unwrap();
         let register = data.get_register(0).unwrap();
         assert_eq!(register, 100);
@@ -2564,7 +2412,7 @@ mod tests {
     #[test]
     fn get_register_none() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.push_register(100).unwrap();
         let register = data.get_register(1);
         assert_eq!(register, None);
@@ -2573,7 +2421,7 @@ mod tests {
     #[test]
     fn pop_register() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.push_register(100).unwrap();
         let register = data.pop_register().unwrap().unwrap();
         assert_eq!(register, 100);
@@ -2582,9 +2430,9 @@ mod tests {
     #[test]
     fn pop_register_multiple() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.push_register(100).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 200)).unwrap();
         data.push_register(200).unwrap();
         let register = data.pop_register().unwrap().unwrap();
         assert_eq!(register, 200);
@@ -2593,7 +2441,7 @@ mod tests {
     #[test]
     fn pop_register_none() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let register = data.pop_register().unwrap();
         assert_eq!(register, None);
     }
@@ -2601,9 +2449,9 @@ mod tests {
     #[test]
     fn get_register_len() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.push_register(100).unwrap();
-        data.push_object_to_data_block(BasicObject::Number(200.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 200)).unwrap();
         data.push_register(200).unwrap();
         let len = data.get_register_len();
         assert_eq!(len, 2);
@@ -2663,7 +2511,7 @@ mod tests {
     #[test]
     fn get_instrucion_not_instruction() {
         let mut data = test_data();
-        data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
+        data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let instruction = data.get_instruction(0);
         assert_eq!(instruction, None);
     }

@@ -83,7 +83,7 @@ macro_rules! basic_object {
             }
         }
     };
-    (@symlist_part SymRaw($value:expr)) => {
+    (@symlist_part SymRaw $value:expr) => {
         {
             use garnish_lang_traits::SymbolListPart;
             SymbolListPart::Symbol($value)
@@ -96,6 +96,9 @@ macro_rules! basic_object {
         }
     };
     // SymList pattern - handles both space-separated and parenthesized syntax
+    (SymList()) => {
+        BasicObject::SymbolList(vec![])
+    };
     (SymList(SymRaw($first_val:expr) $(, $rest:tt $rest_val:expr)* $(,)?)) => {
         {
             use garnish_lang_traits::SymbolListPart;
