@@ -7,6 +7,7 @@ mod merge_to_symbol_list;
 mod object;
 mod search;
 mod storage;
+mod optimize;
 
 pub use data::{BasicData, BasicDataUnitCustom};
 pub use garnish::BasicDataFactory;

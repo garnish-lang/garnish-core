@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StorageBlock {
     pub(crate) cursor: usize,
@@ -22,6 +24,10 @@ impl StorageBlock {
             ReallocationStrategy::FixedSize(size) => self.size + size,
             ReallocationStrategy::Multiplicative(multiplier) => self.size * multiplier,
         }
+    }
+
+    pub fn range(&self) -> Range<usize> {
+        self.start..self.start + self.size
     }
 }
 
