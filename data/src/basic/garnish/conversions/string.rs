@@ -450,7 +450,7 @@ mod tests {
         register: BasicData::Register(None, 0) => "",
         instruction: BasicData::Instruction(Instruction::Add, None) => "",
         jump_point: BasicData::JumpPoint(0) => "",
-        frame: BasicData::Frame(None, 0) => "",
+        frame: BasicData::Frame(None, None) => "",
     );
     
     #[derive(Debug, Clone)]

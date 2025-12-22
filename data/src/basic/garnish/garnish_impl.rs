@@ -617,16 +617,19 @@ where
     }
 
     fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
-        let index = self.push_to_data_block(BasicData::Frame(self.current_jump_path.clone(), index))?;
-        self.current_jump_path = Some(index);
+        self.push_to_data_block(BasicData::JumpPoint(index))?;
+        let frame_index = self.push_to_data_block(BasicData::Frame(self.current_frame.clone(), self.current_register.clone()))?;
+        self.current_frame = Some(frame_index);
         Ok(())
     }
 
     fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error> {
-        Ok(match self.current_jump_path {
+        Ok(match self.current_frame {
             Some(index) => {
-                let (previous, return_index) = self.get_from_data_block_ensure_index(index).and_then(|data| data.as_frame())?;
-                self.current_jump_path = previous;
+                let return_index = self.get_from_data_block_ensure_index(index - 1).and_then(|data| data.as_jump_point())?;
+                let (previous, register) = self.get_from_data_block_ensure_index(index).and_then(|data| data.as_frame())?;
+                self.current_frame = previous;
+                self.current_register = register;
                 Some(return_index)
             }
             None => None,
@@ -2583,44 +2586,101 @@ mod tests {
     #[test]
     fn push_jump_path() {
         let mut data = test_data();
+        data.current_register = Some(500);
         data.push_frame(100).unwrap();
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Frame(None, 100);
-        expected_data.current_jump_path = Some(0);
-        expected_data.data_block.cursor = 1;
+        expected_data.data[0] = BasicData::JumpPoint(100);
+        expected_data.data[1] = BasicData::Frame(None, Some(500));
+        expected_data.current_register = Some(500);
+        expected_data.current_frame = Some(1);
+        expected_data.data_block.cursor = 2;
         assert_eq!(data, expected_data);
     }
 
     #[test]
-    fn pop_jump_path() {
+    fn pop_frame() {
         let mut data = test_data();
+        data.current_register = Some(500);
         data.push_frame(100).unwrap();
         let jump_path = data.pop_frame().unwrap();
         assert_eq!(jump_path, Some(100));
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Frame(None, 100);
-        expected_data.data_block.cursor = 1;
-        expected_data.current_jump_path = None;
+        expected_data.data[0] = BasicData::JumpPoint(100);
+        expected_data.data[1] = BasicData::Frame(None, Some(500));
+        expected_data.current_register = Some(500);
+        expected_data.data_block.cursor = 2;
+        expected_data.current_frame = None;
         assert_eq!(data, expected_data);
     }
 
     #[test]
-    fn pop_jump_path_multiple() {
+    fn pop_frame_multiple() {
         let mut data = test_data();
+        data.current_register = Some(500);
         data.push_frame(100).unwrap();
         data.push_frame(200).unwrap();
         let jump_path = data.pop_frame().unwrap().unwrap();
         assert_eq!(jump_path, 200);
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Frame(None, 100);
-        expected_data.data[1] = BasicData::Frame(Some(0), 200);
-        expected_data.data_block.cursor = 2;
-        expected_data.current_jump_path = Some(0);
+        expected_data.data[0] = BasicData::JumpPoint(100);
+        expected_data.data[1] = BasicData::Frame(None, Some(500));
+        expected_data.data[2] = BasicData::JumpPoint(200);
+        expected_data.data[3] = BasicData::Frame(Some(1), Some(500));
+        expected_data.current_register = Some(500);
+        expected_data.data_block.cursor = 4;
+        expected_data.current_frame = Some(1);
         assert_eq!(data, expected_data);
     }
 
     #[test]
-    fn pop_jump_path_none() {
+    fn pop_frame_resets_register() {
+        let mut data = test_data();
+        data.push_frame(100).unwrap();
+        data.push_register(5).unwrap();
+        data.push_frame(200).unwrap();
+        data.push_register(6).unwrap();
+        data.push_register(7).unwrap();
+        data.push_frame(300).unwrap();
+        data.push_register(8).unwrap();
+        data.push_register(9).unwrap();
+
+        let mut expected_data = test_data();
+        expected_data.data.resize(20, BasicData::Empty);
+        expected_data.data[0] = BasicData::JumpPoint(100);
+        expected_data.data[1] = BasicData::Frame(None, None);
+        expected_data.data[2] = BasicData::Register(None, 5);
+        expected_data.data[3] = BasicData::JumpPoint(200);
+        expected_data.data[4] = BasicData::Frame(Some(1), Some(2));
+        expected_data.data[5] = BasicData::Register(Some(2), 6);
+        expected_data.data[6] = BasicData::Register(Some(5), 7);
+        expected_data.data[7] = BasicData::JumpPoint(300);
+        expected_data.data[8] = BasicData::Frame(Some(4), Some(6));
+        expected_data.data[9] = BasicData::Register(Some(6), 8);
+        expected_data.data[10] = BasicData::Register(Some(9), 9);
+        expected_data.current_register = Some(10);
+        expected_data.data_block.cursor = 11;
+        expected_data.data_block.size = 20;
+        expected_data.current_frame = Some(8);
+        assert_eq!(data, expected_data);
+    
+        let jump_path = data.pop_frame().unwrap();
+        assert_eq!(jump_path, Some(300));
+        assert_eq!(data.current_frame, Some(4));
+        assert_eq!(data.current_register, Some(6));
+
+        let jump_path = data.pop_frame().unwrap();
+        assert_eq!(jump_path, Some(200));
+        assert_eq!(data.current_frame, Some(1));
+        assert_eq!(data.current_register, Some(2));
+
+        let jump_path = data.pop_frame().unwrap();
+        assert_eq!(jump_path, Some(100));
+        assert_eq!(data.current_frame, None);
+        assert_eq!(data.current_register, None);
+    }
+
+    #[test]
+    fn pop_frame_none() {
         let mut data = test_data();
         let jump_path = data.pop_frame().unwrap();
         assert_eq!(jump_path, None);

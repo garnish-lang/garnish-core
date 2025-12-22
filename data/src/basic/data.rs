@@ -35,7 +35,7 @@ where T: crate::basic::BasicDataCustom {
     Register(Option<usize>, usize),
     Instruction(Instruction, Option<usize>),
     JumpPoint(usize),
-    Frame(Option<usize>, usize),
+    Frame(Option<usize>, Option<usize>),
 }
 
 impl<T> BasicData<T>
@@ -411,16 +411,16 @@ where T: crate::basic::BasicDataCustom {
         }
     }
 
-    pub fn as_frame(&self) -> Result<(Option<usize>, usize), DataError> {
+    pub fn as_frame(&self) -> Result<(Option<usize>, Option<usize>), DataError> {
         match self {
-            BasicData::Frame(index, frame) => Ok((*index, *frame)),
+            BasicData::Frame(index, register) => Ok((*index, *register)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
 
-    pub fn as_frame_mut(&mut self) -> Result<(&mut Option<usize>, &mut usize), DataError> {
+    pub fn as_frame_mut(&mut self) -> Result<(&mut Option<usize>, &mut Option<usize>), DataError> {
         match self {
-            BasicData::Frame(index, frame) => Ok((index, frame)),
+            BasicData::Frame(index, register) => Ok((index, register)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
@@ -1080,13 +1080,28 @@ mod tests {
 
     #[test]
     fn as_frame() {
-        let data = BasicDataUnitCustom::Frame(Some(100), 200);
-        assert_eq!(data.as_frame(), Ok((Some(100), 200)));
+        let data = BasicDataUnitCustom::Frame(Some(100), Some(200));
+        assert_eq!(data.as_frame(), Ok((Some(100), Some(200))));
     }
     
     #[test]
     fn as_frame_not_frame() {
         let data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_frame(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_frame_mut() {
+        let mut data = BasicDataUnitCustom::Frame(Some(100), Some(200));
+        let (index, register) = data.as_frame_mut().unwrap();
+        *index = Some(200);
+        *register = Some(300);
+        assert_eq!(data.as_frame(), Ok((Some(200), Some(300))));
+    }
+
+    #[test]
+    fn as_frame_mut_not_frame() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_frame_mut(), Err(DataError::not_basic_type_error()));
     }
 }
