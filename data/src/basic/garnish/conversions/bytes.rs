@@ -15,7 +15,7 @@ where
             BasicData::ByteList(length) => {
                 let start = from + 1;
                 let end = start + length;
-                self.data[start..end]
+                self.data()[start..end]
                     .iter()
                     .map(|c| c.as_byte())
                     .collect::<Result<Vec<u8>, DataError>>()?
@@ -23,7 +23,7 @@ where
             BasicData::CharList(length) => {
                 let start = from + 1;
                 let end = start + length;
-                self.data[start..end]
+                self.data()[start..end]
                     .iter()
                     .map(|c| c.as_char().map(|c| u32::from(c).to_le_bytes().to_vec()).unwrap_or(vec![]))
                     .flatten()
@@ -32,7 +32,7 @@ where
             BasicData::SymbolList(length) => {
                 let start = from + 1;
                 let end = start + length;
-                self.data[start..end]
+                self.data()[start..end]
                     .iter()
                     .map(|c| match c {
                         BasicData::Symbol(value) => value.to_le_bytes().to_vec(),

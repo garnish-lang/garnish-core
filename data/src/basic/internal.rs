@@ -9,43 +9,43 @@ where
     T: crate::basic::BasicDataCustom,
 {
     pub(crate) fn get_from_data_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
-        if index >= self.data_block.cursor {
+        if index >= self.data_block().cursor {
             return Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(index)));
         }
-        let true_index = self.data_block.start + index;
-        Ok(&self.data[true_index])
+        let true_index = self.data_block().start + index;
+        Ok(&self.data()[true_index])
     }
 
     pub(crate) fn get_from_data_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut BasicData<T>, DataError> {
-        if index >= self.data_block.cursor {
+        if index >= self.data_block().cursor {
             return Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(index)));
         }
-        let true_index = self.data_block.start + index;
-        Ok(&mut self.data[true_index])
+        let true_index = self.data_block().start + index;
+        Ok(&mut self.data_mut()[true_index])
     }
 
     pub(crate) fn get_from_instruction_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
-        if index >= self.instruction_block.cursor {
+        if index >= self.instruction_block().cursor {
             return Err(DataError::new("Invalid instruction index", DataErrorType::InvalidInstructionIndex(index)));
         }
-        let true_index = self.instruction_block.start + index;
-        Ok(&self.data[true_index])
+        let true_index = self.instruction_block().start + index;
+        Ok(&self.data()[true_index])
     }
 
     pub(crate) fn get_from_jump_table_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
-        if index >= self.jump_table_block.cursor {
+        if index >= self.jump_table_block().cursor {
             return Err(DataError::new("Invalid jump table index", DataErrorType::InvalidJumpTableIndex(index)));
         }
-        let true_index = self.jump_table_block.start + index;
-        Ok(&self.data[true_index])
+        let true_index = self.jump_table_block().start + index;
+        Ok(&self.data()[true_index])
     }
 
     pub(crate) fn get_from_jump_table_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut BasicData<T>, DataError> {
-        if index >= self.jump_table_block.cursor {
+        if index >= self.jump_table_block().cursor {
             return Err(DataError::new("Invalid jump table index", DataErrorType::InvalidJumpTableIndex(index)));
         }
-        let true_index = self.jump_table_block.start + index;
-        Ok(&mut self.data[true_index])
+        let true_index = self.jump_table_block().start + index;
+        Ok(&mut self.data_mut()[true_index])
     }
 
     pub(crate) fn push_to_block(heap: &mut Vec<BasicData<T>>, block: &mut StorageBlock, data: BasicData<T>) -> usize {
@@ -62,54 +62,78 @@ where
         new_symbol_table_size: usize,
         new_data_size: usize,
     ) -> Result<(), DataError> {
-        if new_instruction_size > self.instruction_block.settings.max_items() {
+        if new_instruction_size > self.instruction_block().settings.max_items() {
             return Err(DataError::new(
                 "Instruction block size exceeds max items",
-                DataErrorType::InstructionBlockExceededMaxItems(new_instruction_size, self.instruction_block.settings.max_items()),
+                DataErrorType::InstructionBlockExceededMaxItems(new_instruction_size, self.instruction_block().settings.max_items()),
             ));
         }
-        if new_jump_table_size > self.jump_table_block.settings.max_items() {
+        if new_jump_table_size > self.jump_table_block().settings.max_items() {
             return Err(DataError::new(
                 "Jump table block size exceeds max items",
-                DataErrorType::JumpTableBlockExceededMaxItems(new_jump_table_size, self.jump_table_block.settings.max_items()),
+                DataErrorType::JumpTableBlockExceededMaxItems(new_jump_table_size, self.jump_table_block().settings.max_items()),
             ));
         }
-        if new_symbol_table_size > self.symbol_table_block.settings.max_items() {
+        if new_symbol_table_size > self.symbol_table_block().settings.max_items() {
             return Err(DataError::new(
                 "Symbol table block size exceeds max items",
-                DataErrorType::SymbolTableBlockExceededMaxItems(new_symbol_table_size, self.symbol_table_block.settings.max_items()),
+                DataErrorType::SymbolTableBlockExceededMaxItems(new_symbol_table_size, self.symbol_table_block().settings.max_items()),
             ));
         }
-        if new_data_size > self.data_block.settings.max_items() {
+        if new_data_size > self.data_block().settings.max_items() {
             return Err(DataError::new(
                 "Data block size exceeds max items",
-                DataErrorType::DataBlockExceededMaxItems(new_data_size, self.data_block.settings.max_items()),
+                DataErrorType::DataBlockExceededMaxItems(new_data_size, self.data_block().settings.max_items()),
             ));
         }
 
-        let ordered = [
-            (&mut self.instruction_block, new_instruction_size),
-            (&mut self.jump_table_block, new_jump_table_size),
-            (&mut self.symbol_table_block, new_symbol_table_size),
-            (&mut self.data_block, new_data_size),
-        ];
+        let instruction_start = self.instruction_block().start;
+        let instruction_cursor = self.instruction_block().cursor;
+        let jump_table_start = self.jump_table_block().start;
+        let jump_table_cursor = self.jump_table_block().cursor;
+        let symbol_table_start = self.symbol_table_block().start;
+        let symbol_table_cursor = self.symbol_table_block().cursor;
+        let data_start = self.data_block().start;
+        let data_cursor = self.data_block().cursor;
 
         let new_size = new_instruction_size + new_jump_table_size + new_symbol_table_size + new_data_size;
 
         let mut new_heap = vec![BasicData::Empty; new_size];
 
         let mut current_block_start = 0;
-        for (block, new_size) in ordered {
-            for i in 0..block.cursor {
-                new_heap[current_block_start + i] = self.data[block.start + i].clone();
-            }
-
-            block.start = current_block_start;
-            block.size = new_size;
-            current_block_start += new_size;
+        
+        // Copy instruction block
+        for i in 0..instruction_cursor {
+            new_heap[current_block_start + i] = self.data()[instruction_start + i].clone();
         }
+        self.instruction_block_mut().start = current_block_start;
+        self.instruction_block_mut().size = new_instruction_size;
+        current_block_start += new_instruction_size;
 
-        self.data = new_heap;
+        // Copy jump table block
+        for i in 0..jump_table_cursor {
+            new_heap[current_block_start + i] = self.data()[jump_table_start + i].clone();
+        }
+        self.jump_table_block_mut().start = current_block_start;
+        self.jump_table_block_mut().size = new_jump_table_size;
+        current_block_start += new_jump_table_size;
+
+        // Copy symbol table block
+        for i in 0..symbol_table_cursor {
+            new_heap[current_block_start + i] = self.data()[symbol_table_start + i].clone();
+        }
+        self.symbol_table_block_mut().start = current_block_start;
+        self.symbol_table_block_mut().size = new_symbol_table_size;
+        current_block_start += new_symbol_table_size;
+
+        // Copy data block
+        for i in 0..data_cursor {
+            new_heap[current_block_start + i] = self.data()[data_start + i].clone();
+        }
+        self.data_block_mut().start = current_block_start;
+        self.data_block_mut().size = new_data_size;
+
+        *self.data_mut() = new_heap;
         Ok(())
     }
 }

@@ -376,8 +376,8 @@ mod tests {
 
                 let length = data.get_from_data_block_ensure_index(char_list).unwrap().as_char_list().unwrap();
 
-                let start = data.data_block.start + char_list + 1;
-                let slice = &data.data[start..start + length];
+                let start = data.data_block().start + char_list + 1;
+                let slice = &data.data()[start..start + length];
                 let result = slice.iter().map(|data| data.as_char().unwrap()).collect::<String>();
                 assert_eq!(result, $output);
 
@@ -398,7 +398,7 @@ mod tests {
                 let length = data.get_from_data_block_ensure_index(char_list).unwrap().as_char_list().unwrap();
 
                 let start = char_list + 1;
-                let slice = &data.data[start..start + length];
+                let slice = &data.data()[start..start + length];
                 let result = slice.iter().map(|data| data.as_char().unwrap()).collect::<String>();
                 assert_eq!(result, $output);
 
@@ -484,8 +484,8 @@ mod tests {
 
         let length = data.get_from_data_block_ensure_index(char_list).unwrap().as_char_list().unwrap();
 
-        let start = data.data_block.start + char_list + 1;
-        let slice = &data.data[start..start + length];
+        let start = data.data_block().start + char_list + 1;
+        let slice = &data.data()[start..start + length];
         let result = slice.iter().map(|data| data.as_char().unwrap()).collect::<String>();
         assert_eq!(result, "Foo = custom value");
 

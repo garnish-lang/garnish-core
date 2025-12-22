@@ -40,35 +40,35 @@ where
     type DataFactory = BasicDataFactory;
 
     fn get_data_len(&self) -> Self::Size {
-        self.data_block.cursor
+        self.data_block().cursor
     }
 
     fn get_data_iter(&self) -> Self::DataIndexIterator {
-        SizeIterator::new(0, self.data_block.cursor)
+        SizeIterator::new(0, self.data_block().cursor)
     }
 
     fn push_value_stack(&mut self, addr: Self::Size) -> Result<(), Self::Error> {
-        let index = self.push_to_data_block(BasicData::Value(self.current_value.clone(), addr))?;
-        self.current_value = Some(index);
+        let index = self.push_to_data_block(BasicData::Value(self.current_value().clone(), addr))?;
+        self.set_current_value(Some(index));
         Ok(())
     }
 
     fn pop_value_stack(&mut self) -> Option<Self::Size> {
-        match self.current_value {
+        match self.current_value() {
             None => return None,
             Some(index) => {
                 let (previous, value) = match self.get_from_data_block_ensure_index(index).and_then(|data| data.as_value()) {
                     Ok((previous, value)) => (previous, value),
                     Err(_) => return None,
                 };
-                self.current_value = previous;
+                self.set_current_value(previous);
                 Some(value)
             }
         }
     }
 
     fn get_current_value(&self) -> Option<Self::Size> {
-        match self.current_value {
+        match self.current_value() {
             None => None,
             Some(index) => match self.get_from_data_block_ensure_index(index).and_then(|data| data.as_value()) {
                 Ok((_previous, value)) => Some(value),
@@ -78,7 +78,7 @@ where
     }
 
     fn get_current_value_mut(&mut self) -> Option<&mut Self::Size> {
-        match self.current_value {
+        match self.current_value() {
             None => None,
             Some(index) => match self.get_from_data_block_ensure_index_mut(index).and_then(|data| data.as_value_mut()) {
                 Ok((_previous, value)) => Some(value),
@@ -160,7 +160,7 @@ where
 
         let association_start = list_index + len + 1;
         let association_range = association_start..association_start + associations_len;
-        let association_slice = &self.data[association_range.clone()];
+        let association_slice = &self.data()[association_range.clone()];
 
         search_for_associative_item(association_slice, sym)
     }
@@ -183,7 +183,7 @@ where
         let (start, end) = extents_to_start_end(extents, list_index, len);
 
         Ok(CharListIterator::new(
-            self.data[start..end].iter().map(|c| c.as_char().unwrap()).collect(),
+            self.data()[start..end].iter().map(|c| c.as_char().unwrap()).collect(),
         ))
     }
 
@@ -205,7 +205,7 @@ where
         let (start, end) = extents_to_start_end(extents, list_index, len);
 
         Ok(ByteListIterator::new(
-            self.data[start..end].iter().map(|c| c.as_byte().unwrap()).collect(),
+            self.data()[start..end].iter().map(|c| c.as_byte().unwrap()).collect(),
         ))
     }
 
@@ -241,7 +241,7 @@ where
         let end: usize = list_index + 1 + (usize::from(extents.end())).min(len);
 
         Ok(SymbolListPartIterator::new(
-            self.data[start..end]
+            self.data()[start..end]
                 .iter()
                 .map(|c| match c {
                     BasicData::Symbol(sym) => Ok(SymbolListPart::Symbol(sym.clone())),
@@ -261,7 +261,7 @@ where
         let len = self.get_from_data_block_ensure_index(list_index)?.as_list()?.0;
 
         let (start, end) = extents_to_start_end(extents, list_index, len);
-        let slice = &self.data[start..end];
+        let slice = &self.data()[start..end];
         let mut items = Vec::new();
 
         for item in slice.iter() {
@@ -418,7 +418,7 @@ where
         let start = list_index + 1 + len;
         let associations_end = start + len;
         let associations_range = start..associations_end;
-        let associations_slice = &mut self.data[associations_range];
+        let associations_slice = &mut self.data_mut()[associations_range];
         let mut associations_count = 0;
 
         for item in associations_slice.iter() {
@@ -445,7 +445,7 @@ where
 
     fn get_register_len(&self) -> Self::Size {
         let mut count = 0;
-        let mut current = self.current_register;
+        let mut current = self.current_register();
         while let Some(index) = current {
             match self.get_from_data_block_ensure_index(index) {
                 Ok(BasicData::Register(previous, _value)) => {
@@ -460,13 +460,13 @@ where
     }
 
     fn push_register(&mut self, index: Self::Size) -> Result<(), Self::Error> {
-        let index = self.push_to_data_block(BasicData::Register(self.current_register.clone(), index))?;
-        self.current_register = Some(index);
+        let index = self.push_to_data_block(BasicData::Register(self.current_register().clone(), index))?;
+        self.set_current_register(Some(index));
         Ok(())
     }
 
     fn get_register(&self, index: Self::Size) -> Option<Self::Size> {
-        let mut current = self.current_register;
+        let mut current = self.current_register();
 
         let mut list = Vec::new();
         while let Some(index) = current {
@@ -488,10 +488,10 @@ where
     }
 
     fn pop_register(&mut self) -> Result<Option<Self::Size>, Self::Error> {
-        match self.current_register {
+        match self.current_register() {
             Some(index) => {
                 let register = self.get_from_data_block_ensure_index(index)?.as_register()?;
-                self.current_register = register.0.clone();
+                self.set_current_register(register.0.clone());
                 Ok(Some(register.1.clone()))
             }
             None => Ok(None),
@@ -499,7 +499,7 @@ where
     }
 
     fn get_instruction_len(&self) -> Self::Size {
-        self.instruction_block.cursor
+        self.instruction_block().cursor
     }
 
     fn push_instruction(&mut self, instruction: Instruction, data: Option<Self::Size>) -> Result<Self::Size, Self::Error> {
@@ -514,20 +514,20 @@ where
     }
 
     fn get_instruction_iter(&self) -> Self::InstructionIterator {
-        SizeIterator::new(0, self.instruction_block.cursor)
+        SizeIterator::new(0, self.instruction_block().cursor)
     }
 
     fn get_instruction_cursor(&self) -> Self::Size {
-        self.instruction_pointer
+        self.instruction_pointer()
     }
 
     fn set_instruction_cursor(&mut self, addr: Self::Size) -> Result<(), Self::Error> {
-        self.instruction_pointer = addr;
+        self.set_instruction_pointer(addr);
         Ok(())
     }
 
     fn get_jump_table_len(&self) -> Self::Size {
-        self.jump_table_block.cursor
+        self.jump_table_block().cursor
     }
 
     fn push_to_jump_table(&mut self, index: Self::Size) -> Result<(), Self::Error> {
@@ -554,18 +554,18 @@ where
 
     fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
         self.push_to_data_block(BasicData::JumpPoint(index))?;
-        let frame_index = self.push_to_data_block(BasicData::Frame(self.current_frame.clone(), self.current_register.clone()))?;
-        self.current_frame = Some(frame_index);
+        let frame_index = self.push_to_data_block(BasicData::Frame(self.current_frame().clone(), self.current_register().clone()))?;
+        self.set_current_frame(Some(frame_index));
         Ok(())
     }
 
     fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error> {
-        Ok(match self.current_frame {
+        Ok(match self.current_frame() {
             Some(index) => {
                 let return_index = self.get_from_data_block_ensure_index(index - 1).and_then(|data| data.as_jump_point())?;
                 let (previous, register) = self.get_from_data_block_ensure_index(index).and_then(|data| data.as_frame())?;
-                self.current_frame = previous;
-                self.current_register = register;
+                self.set_current_frame(previous);
+                self.set_current_register(register);
                 Some(return_index)
             }
             None => None,
@@ -690,8 +690,8 @@ mod tests {
         data.add_unit().unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Unit;
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Unit;
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -702,8 +702,8 @@ mod tests {
         data.add_true().unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::True;
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::True;
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -714,8 +714,8 @@ mod tests {
         data.add_false().unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::False;
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::False;
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -726,8 +726,8 @@ mod tests {
         data.add_number(100.into()).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Number(100.into());
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Number(100.into());
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -738,8 +738,8 @@ mod tests {
         data.add_type(GarnishDataType::Number).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Type(GarnishDataType::Number);
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Type(GarnishDataType::Number);
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -750,8 +750,8 @@ mod tests {
         data.add_char('a').unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Char('a');
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Char('a');
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -762,8 +762,8 @@ mod tests {
         data.add_byte(100).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Byte(100);
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Byte(100);
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -774,8 +774,8 @@ mod tests {
         data.add_symbol(100).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Symbol(100);
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Symbol(100);
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -786,8 +786,8 @@ mod tests {
         data.add_expression(100).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Expression(100);
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Expression(100);
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -798,8 +798,8 @@ mod tests {
         data.add_external(100).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::External(100);
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::External(100);
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -810,8 +810,8 @@ mod tests {
         data.add_pair((100, 200)).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Pair(100, 200);
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Pair(100, 200);
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -822,8 +822,8 @@ mod tests {
         data.add_concatenation(100, 200).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Concatenation(100, 200);
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Concatenation(100, 200);
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -834,8 +834,8 @@ mod tests {
         data.add_range(100, 200).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Range(100, 200);
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Range(100, 200);
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -846,8 +846,8 @@ mod tests {
         data.add_slice(100, 200).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Slice(100, 200);
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Slice(100, 200);
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -858,8 +858,8 @@ mod tests {
         data.add_partial(100, 200).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Partial(100, 200);
-        expected_data.data_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Partial(100, 200);
+        expected_data.data_block_mut().cursor = 1;
 
         assert_eq!(data, expected_data);
     }
@@ -1247,8 +1247,8 @@ mod tests {
 
         assert_eq!(list_index, 0);
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::UninitializedList(3, 0);
-        expected_data.data_block.cursor = 7;
+        expected_data.data_mut()[0] = BasicData::UninitializedList(3, 0);
+        expected_data.data_block_mut().cursor = 7;
 
         assert_eq!(data, expected_data);
     }
@@ -1262,10 +1262,10 @@ mod tests {
 
         assert_eq!(list_index, 1);
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Number(100.into());
-        expected_data.data[1] = BasicData::UninitializedList(3, 1);
-        expected_data.data[2] = BasicData::ListItem(v1);
-        expected_data.data_block.cursor = 8;
+        expected_data.data_mut()[0] = BasicData::Number(100.into());
+        expected_data.data_mut()[1] = BasicData::UninitializedList(3, 1);
+        expected_data.data_mut()[2] = BasicData::ListItem(v1);
+        expected_data.data_block_mut().cursor = 8;
 
         assert_eq!(data, expected_data);
     }
@@ -1323,14 +1323,14 @@ mod tests {
 
         assert_eq!(list_index, 3);
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Number(100.into());
-        expected_data.data[1] = BasicData::Number(200.into());
-        expected_data.data[2] = BasicData::Number(300.into());
-        expected_data.data[3] = BasicData::List(3, 0);
-        expected_data.data[4] = BasicData::ListItem(v1);
-        expected_data.data[5] = BasicData::ListItem(v2);
-        expected_data.data[6] = BasicData::ListItem(v3);
-        expected_data.data_block.cursor = 10;
+        expected_data.data_mut()[0] = BasicData::Number(100.into());
+        expected_data.data_mut()[1] = BasicData::Number(200.into());
+        expected_data.data_mut()[2] = BasicData::Number(300.into());
+        expected_data.data_mut()[3] = BasicData::List(3, 0);
+        expected_data.data_mut()[4] = BasicData::ListItem(v1);
+        expected_data.data_mut()[5] = BasicData::ListItem(v2);
+        expected_data.data_mut()[6] = BasicData::ListItem(v3);
+        expected_data.data_block_mut().cursor = 10;
 
         assert_eq!(data, expected_data);
     }
@@ -1355,26 +1355,26 @@ mod tests {
         let list_index = data.end_list(list_index).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.resize(20, BasicData::Empty);
+        expected_data.data_mut().resize(20, BasicData::Empty);
 
-        expected_data.data[0] = BasicData::Symbol(20);
-        expected_data.data[1] = BasicData::Number(100.into());
-        expected_data.data[2] = BasicData::Pair(0, 1);
-        expected_data.data[3] = BasicData::Symbol(30);
-        expected_data.data[4] = BasicData::Number(200.into());
-        expected_data.data[5] = BasicData::Pair(3, 4);
-        expected_data.data[6] = BasicData::Symbol(10);
-        expected_data.data[7] = BasicData::Number(300.into());
-        expected_data.data[8] = BasicData::Pair(6, 7);
-        expected_data.data[9] = BasicData::List(3, 3);
-        expected_data.data[10] = BasicData::ListItem(2);
-        expected_data.data[11] = BasicData::ListItem(5);
-        expected_data.data[12] = BasicData::ListItem(8);
-        expected_data.data[13] = BasicData::AssociativeItem(10, 7);
-        expected_data.data[14] = BasicData::AssociativeItem(20, 1);
-        expected_data.data[15] = BasicData::AssociativeItem(30, 4);
-        expected_data.data_block.cursor = 16;
-        expected_data.data_block.size = 20;
+        expected_data.data_mut()[0] = BasicData::Symbol(20);
+        expected_data.data_mut()[1] = BasicData::Number(100.into());
+        expected_data.data_mut()[2] = BasicData::Pair(0, 1);
+        expected_data.data_mut()[3] = BasicData::Symbol(30);
+        expected_data.data_mut()[4] = BasicData::Number(200.into());
+        expected_data.data_mut()[5] = BasicData::Pair(3, 4);
+        expected_data.data_mut()[6] = BasicData::Symbol(10);
+        expected_data.data_mut()[7] = BasicData::Number(300.into());
+        expected_data.data_mut()[8] = BasicData::Pair(6, 7);
+        expected_data.data_mut()[9] = BasicData::List(3, 3);
+        expected_data.data_mut()[10] = BasicData::ListItem(2);
+        expected_data.data_mut()[11] = BasicData::ListItem(5);
+        expected_data.data_mut()[12] = BasicData::ListItem(8);
+        expected_data.data_mut()[13] = BasicData::AssociativeItem(10, 7);
+        expected_data.data_mut()[14] = BasicData::AssociativeItem(20, 1);
+        expected_data.data_mut()[15] = BasicData::AssociativeItem(30, 4);
+        expected_data.data_block_mut().cursor = 16;
+        expected_data.data_block_mut().size = 20;
 
         assert_eq!(list_index, 9);
         assert_eq!(data, expected_data);
@@ -1400,25 +1400,25 @@ mod tests {
         let list_index = data.end_list(list_index).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.resize(20, BasicData::Empty);
+        expected_data.data_mut().resize(20, BasicData::Empty);
 
-        expected_data.data[0] = BasicData::Number(50.into());
-        expected_data.data[1] = BasicData::Symbol(30);
-        expected_data.data[2] = BasicData::Number(100.into());
-        expected_data.data[3] = BasicData::Pair(1, 2);
-        expected_data.data[4] = BasicData::Symbol(20);
-        expected_data.data[5] = BasicData::Number(200.into());
-        expected_data.data[6] = BasicData::Pair(4, 5);
-        expected_data.data[7] = BasicData::Number(300.into());
-        expected_data.data[8] = BasicData::List(4, 2);
-        expected_data.data[9] = BasicData::ListItem(0);
-        expected_data.data[10] = BasicData::ListItem(3);
-        expected_data.data[11] = BasicData::ListItem(6);
-        expected_data.data[12] = BasicData::ListItem(7);
-        expected_data.data[13] = BasicData::AssociativeItem(20, 5);
-        expected_data.data[14] = BasicData::AssociativeItem(30, 2);
-        expected_data.data_block.cursor = 17;
-        expected_data.data_block.size = 20;
+        expected_data.data_mut()[0] = BasicData::Number(50.into());
+        expected_data.data_mut()[1] = BasicData::Symbol(30);
+        expected_data.data_mut()[2] = BasicData::Number(100.into());
+        expected_data.data_mut()[3] = BasicData::Pair(1, 2);
+        expected_data.data_mut()[4] = BasicData::Symbol(20);
+        expected_data.data_mut()[5] = BasicData::Number(200.into());
+        expected_data.data_mut()[6] = BasicData::Pair(4, 5);
+        expected_data.data_mut()[7] = BasicData::Number(300.into());
+        expected_data.data_mut()[8] = BasicData::List(4, 2);
+        expected_data.data_mut()[9] = BasicData::ListItem(0);
+        expected_data.data_mut()[10] = BasicData::ListItem(3);
+        expected_data.data_mut()[11] = BasicData::ListItem(6);
+        expected_data.data_mut()[12] = BasicData::ListItem(7);
+        expected_data.data_mut()[13] = BasicData::AssociativeItem(20, 5);
+        expected_data.data_mut()[14] = BasicData::AssociativeItem(30, 2);
+        expected_data.data_block_mut().cursor = 17;
+        expected_data.data_block_mut().size = 20;
 
         assert_eq!(list_index, 8);
         assert_eq!(data, expected_data);
@@ -2206,10 +2206,10 @@ mod tests {
         data.push_value_stack(0).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Number(100.into());
-        expected_data.data[1] = BasicData::Value(None, 0);
-        expected_data.data_block.cursor = 2;
-        expected_data.current_value = Some(1);
+        expected_data.data_mut()[0] = BasicData::Number(100.into());
+        expected_data.data_mut()[1] = BasicData::Value(None, 0);
+        expected_data.data_block_mut().cursor = 2;
+        expected_data.set_current_value(Some(1));
         assert_eq!(data, expected_data);
     }
 
@@ -2222,12 +2222,12 @@ mod tests {
         data.push_value_stack(index).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Number(100.into());
-        expected_data.data[1] = BasicData::Value(None, 0);
-        expected_data.data[2] = BasicData::Number(200.into());
-        expected_data.data[3] = BasicData::Value(Some(1), 2);
-        expected_data.data_block.cursor = 4;
-        expected_data.current_value = Some(3);
+        expected_data.data_mut()[0] = BasicData::Number(100.into());
+        expected_data.data_mut()[1] = BasicData::Value(None, 0);
+        expected_data.data_mut()[2] = BasicData::Number(200.into());
+        expected_data.data_mut()[3] = BasicData::Value(Some(1), 2);
+        expected_data.data_block_mut().cursor = 4;
+        expected_data.set_current_value(Some(3));
         assert_eq!(data, expected_data);
     }
 
@@ -2236,17 +2236,17 @@ mod tests {
         let mut data = test_data();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let value_index = data.push_to_data_block(BasicData::Value(None, index)).unwrap();
-        data.current_value = Some(value_index);
+        data.set_current_value(Some(value_index));
 
         let index = data.pop_value_stack().unwrap();
 
         let mut expected_data = test_data();
 
         assert_eq!(index, 0);
-        expected_data.data[0] = BasicData::Number(100.into());
-        expected_data.data[1] = BasicData::Value(None, 0);
-        expected_data.data_block.cursor = 2;
-        expected_data.current_value = None;
+        expected_data.data_mut()[0] = BasicData::Number(100.into());
+        expected_data.data_mut()[1] = BasicData::Value(None, 0);
+        expected_data.data_block_mut().cursor = 2;
+        expected_data.set_current_value(None);
         assert_eq!(data, expected_data);
     }
 
@@ -2257,19 +2257,19 @@ mod tests {
         let value_index = data.push_to_data_block(BasicData::Value(None, index)).unwrap();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let value_index = data.push_to_data_block(BasicData::Value(Some(value_index), index)).unwrap();
-        data.current_value = Some(value_index);
+        data.set_current_value(Some(value_index));
 
         let index = data.pop_value_stack().unwrap();
 
         let mut expected_data = test_data();
 
         assert_eq!(index, 2);
-        expected_data.data[0] = BasicData::Number(100.into());
-        expected_data.data[1] = BasicData::Value(None, 0);
-        expected_data.data[2] = BasicData::Number(100.into());
-        expected_data.data[3] = BasicData::Value(Some(1), 2);
-        expected_data.data_block.cursor = 4;
-        expected_data.current_value = Some(1);
+        expected_data.data_mut()[0] = BasicData::Number(100.into());
+        expected_data.data_mut()[1] = BasicData::Value(None, 0);
+        expected_data.data_mut()[2] = BasicData::Number(100.into());
+        expected_data.data_mut()[3] = BasicData::Value(Some(1), 2);
+        expected_data.data_block_mut().cursor = 4;
+        expected_data.set_current_value(Some(1));
         assert_eq!(data, expected_data);
     }
 
@@ -2283,9 +2283,9 @@ mod tests {
         let mut expected_data = test_data();
 
         assert_eq!(index, None);
-        expected_data.data[0] = BasicData::Number(100.into());
-        expected_data.data_block.cursor = 1;
-        expected_data.current_value = None;
+        expected_data.data_mut()[0] = BasicData::Number(100.into());
+        expected_data.data_block_mut().cursor = 1;
+        expected_data.set_current_value(None);
         assert_eq!(data, expected_data);
     }
 
@@ -2332,10 +2332,10 @@ mod tests {
         data.push_register(0).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Number(100.into());
-        expected_data.data[1] = BasicData::Register(None, 0);
-        expected_data.data_block.cursor = 2;
-        expected_data.current_register = Some(1);
+        expected_data.data_mut()[0] = BasicData::Number(100.into());
+        expected_data.data_mut()[1] = BasicData::Register(None, 0);
+        expected_data.data_block_mut().cursor = 2;
+        expected_data.set_current_register(Some(1));
         assert_eq!(data, expected_data);
     }
 
@@ -2348,12 +2348,12 @@ mod tests {
         data.push_register(2).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::Number(100.into());
-        expected_data.data[1] = BasicData::Register(None, 0);
-        expected_data.data[2] = BasicData::Number(200.into());
-        expected_data.data[3] = BasicData::Register(Some(1), 2);
-        expected_data.data_block.cursor = 4;
-        expected_data.current_register = Some(3);
+        expected_data.data_mut()[0] = BasicData::Number(100.into());
+        expected_data.data_mut()[1] = BasicData::Register(None, 0);
+        expected_data.data_mut()[2] = BasicData::Number(200.into());
+        expected_data.data_mut()[3] = BasicData::Register(Some(1), 2);
+        expected_data.data_block_mut().cursor = 4;
+        expected_data.set_current_register(Some(3));
         assert_eq!(data, expected_data);
     }
 
@@ -2432,8 +2432,8 @@ mod tests {
         let mut data = instruction_test_data();
         data.push_instruction(Instruction::Add, None).unwrap();
         let mut expected_data = instruction_test_data();
-        expected_data.data[0] = BasicData::Instruction(Instruction::Add, None);
-        expected_data.instruction_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::Instruction(Instruction::Add, None);
+        expected_data.instruction_block_mut().cursor = 1;
         assert_eq!(data, expected_data);
     }
 
@@ -2513,7 +2513,7 @@ mod tests {
     fn set_instruction_pointer() {
         let mut data = instruction_test_data();
         data.set_instruction_cursor(100).unwrap();
-        assert_eq!(data.instruction_pointer, 100);
+        assert_eq!(data.instruction_pointer(), 100);
     }
 
     #[test]
@@ -2564,57 +2564,57 @@ mod tests {
         let mut data = jump_table_test_data();
         data.push_to_jump_table(100).unwrap();
         let mut expected_data = jump_table_test_data();
-        expected_data.data[0] = BasicData::JumpPoint(100);
-        expected_data.jump_table_block.cursor = 1;
+        expected_data.data_mut()[0] = BasicData::JumpPoint(100);
+        expected_data.jump_table_block_mut().cursor = 1;
         assert_eq!(data, expected_data);
     }
 
     #[test]
     fn push_jump_path() {
         let mut data = test_data();
-        data.current_register = Some(500);
+        data.set_current_register(Some(500));
         data.push_frame(100).unwrap();
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::JumpPoint(100);
-        expected_data.data[1] = BasicData::Frame(None, Some(500));
-        expected_data.current_register = Some(500);
-        expected_data.current_frame = Some(1);
-        expected_data.data_block.cursor = 2;
+        expected_data.data_mut()[0] = BasicData::JumpPoint(100);
+        expected_data.data_mut()[1] = BasicData::Frame(None, Some(500));
+        expected_data.set_current_register(Some(500));
+        expected_data.set_current_frame(Some(1));
+        expected_data.data_block_mut().cursor = 2;
         assert_eq!(data, expected_data);
     }
 
     #[test]
     fn pop_frame() {
         let mut data = test_data();
-        data.current_register = Some(500);
+        data.set_current_register(Some(500));
         data.push_frame(100).unwrap();
         let jump_path = data.pop_frame().unwrap();
         assert_eq!(jump_path, Some(100));
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::JumpPoint(100);
-        expected_data.data[1] = BasicData::Frame(None, Some(500));
-        expected_data.current_register = Some(500);
-        expected_data.data_block.cursor = 2;
-        expected_data.current_frame = None;
+        expected_data.data_mut()[0] = BasicData::JumpPoint(100);
+        expected_data.data_mut()[1] = BasicData::Frame(None, Some(500));
+        expected_data.set_current_register(Some(500));
+        expected_data.data_block_mut().cursor = 2;
+        expected_data.set_current_frame(None);
         assert_eq!(data, expected_data);
     }
 
     #[test]
     fn pop_frame_multiple() {
         let mut data = test_data();
-        data.current_register = Some(500);
+        data.set_current_register(Some(500));
         data.push_frame(100).unwrap();
         data.push_frame(200).unwrap();
         let jump_path = data.pop_frame().unwrap().unwrap();
         assert_eq!(jump_path, 200);
         let mut expected_data = test_data();
-        expected_data.data[0] = BasicData::JumpPoint(100);
-        expected_data.data[1] = BasicData::Frame(None, Some(500));
-        expected_data.data[2] = BasicData::JumpPoint(200);
-        expected_data.data[3] = BasicData::Frame(Some(1), Some(500));
-        expected_data.current_register = Some(500);
-        expected_data.data_block.cursor = 4;
-        expected_data.current_frame = Some(1);
+        expected_data.data_mut()[0] = BasicData::JumpPoint(100);
+        expected_data.data_mut()[1] = BasicData::Frame(None, Some(500));
+        expected_data.data_mut()[2] = BasicData::JumpPoint(200);
+        expected_data.data_mut()[3] = BasicData::Frame(Some(1), Some(500));
+        expected_data.set_current_register(Some(500));
+        expected_data.data_block_mut().cursor = 4;
+        expected_data.set_current_frame(Some(1));
         assert_eq!(data, expected_data);
     }
 
@@ -2631,38 +2631,38 @@ mod tests {
         data.push_register(9).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.resize(20, BasicData::Empty);
-        expected_data.data[0] = BasicData::JumpPoint(100);
-        expected_data.data[1] = BasicData::Frame(None, None);
-        expected_data.data[2] = BasicData::Register(None, 5);
-        expected_data.data[3] = BasicData::JumpPoint(200);
-        expected_data.data[4] = BasicData::Frame(Some(1), Some(2));
-        expected_data.data[5] = BasicData::Register(Some(2), 6);
-        expected_data.data[6] = BasicData::Register(Some(5), 7);
-        expected_data.data[7] = BasicData::JumpPoint(300);
-        expected_data.data[8] = BasicData::Frame(Some(4), Some(6));
-        expected_data.data[9] = BasicData::Register(Some(6), 8);
-        expected_data.data[10] = BasicData::Register(Some(9), 9);
-        expected_data.current_register = Some(10);
-        expected_data.data_block.cursor = 11;
-        expected_data.data_block.size = 20;
-        expected_data.current_frame = Some(8);
+        expected_data.data_mut().resize(20, BasicData::Empty);
+        expected_data.data_mut()[0] = BasicData::JumpPoint(100);
+        expected_data.data_mut()[1] = BasicData::Frame(None, None);
+        expected_data.data_mut()[2] = BasicData::Register(None, 5);
+        expected_data.data_mut()[3] = BasicData::JumpPoint(200);
+        expected_data.data_mut()[4] = BasicData::Frame(Some(1), Some(2));
+        expected_data.data_mut()[5] = BasicData::Register(Some(2), 6);
+        expected_data.data_mut()[6] = BasicData::Register(Some(5), 7);
+        expected_data.data_mut()[7] = BasicData::JumpPoint(300);
+        expected_data.data_mut()[8] = BasicData::Frame(Some(4), Some(6));
+        expected_data.data_mut()[9] = BasicData::Register(Some(6), 8);
+        expected_data.data_mut()[10] = BasicData::Register(Some(9), 9);
+        expected_data.set_current_register(Some(10));
+        expected_data.data_block_mut().cursor = 11;
+        expected_data.data_block_mut().size = 20;
+        expected_data.set_current_frame(Some(8));
         assert_eq!(data, expected_data);
     
         let jump_path = data.pop_frame().unwrap();
         assert_eq!(jump_path, Some(300));
-        assert_eq!(data.current_frame, Some(4));
-        assert_eq!(data.current_register, Some(6));
+        assert_eq!(data.current_frame(), Some(4));
+        assert_eq!(data.current_register(), Some(6));
 
         let jump_path = data.pop_frame().unwrap();
         assert_eq!(jump_path, Some(200));
-        assert_eq!(data.current_frame, Some(1));
-        assert_eq!(data.current_register, Some(2));
+        assert_eq!(data.current_frame(), Some(1));
+        assert_eq!(data.current_register(), Some(2));
 
         let jump_path = data.pop_frame().unwrap();
         assert_eq!(jump_path, Some(100));
-        assert_eq!(data.current_frame, None);
-        assert_eq!(data.current_register, None);
+        assert_eq!(data.current_frame(), None);
+        assert_eq!(data.current_register(), None);
     }
 
     #[test]
@@ -2678,24 +2678,24 @@ mod tests {
         let symbol = data.parse_add_symbol("my_symbol").unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.resize(30, BasicData::Empty);
-        expected_data.data[0] = BasicData::AssociativeItem(8904929874702161741, 1);
-        expected_data.data[10] = BasicData::Symbol(8904929874702161741);
-        expected_data.data[11] = BasicData::CharList(9);
-        expected_data.data[12] = BasicData::Char('m');
-        expected_data.data[13] = BasicData::Char('y');
-        expected_data.data[14] = BasicData::Char('_');
-        expected_data.data[15] = BasicData::Char('s');
-        expected_data.data[16] = BasicData::Char('y');
-        expected_data.data[17] = BasicData::Char('m');
-        expected_data.data[18] = BasicData::Char('b');
-        expected_data.data[19] = BasicData::Char('o');
-        expected_data.data[20] = BasicData::Char('l');
-        expected_data.symbol_table_block.cursor = 1;
-        expected_data.symbol_table_block.size = 10;
-        expected_data.data_block.start = 10;
-        expected_data.data_block.size = 20;
-        expected_data.data_block.cursor = 11;
+        expected_data.data_mut().resize(30, BasicData::Empty);
+        expected_data.data_mut()[0] = BasicData::AssociativeItem(8904929874702161741, 1);
+        expected_data.data_mut()[10] = BasicData::Symbol(8904929874702161741);
+        expected_data.data_mut()[11] = BasicData::CharList(9);
+        expected_data.data_mut()[12] = BasicData::Char('m');
+        expected_data.data_mut()[13] = BasicData::Char('y');
+        expected_data.data_mut()[14] = BasicData::Char('_');
+        expected_data.data_mut()[15] = BasicData::Char('s');
+        expected_data.data_mut()[16] = BasicData::Char('y');
+        expected_data.data_mut()[17] = BasicData::Char('m');
+        expected_data.data_mut()[18] = BasicData::Char('b');
+        expected_data.data_mut()[19] = BasicData::Char('o');
+        expected_data.data_mut()[20] = BasicData::Char('l');
+        expected_data.symbol_table_block_mut().cursor = 1;
+        expected_data.symbol_table_block_mut().size = 10;
+        expected_data.data_block_mut().start = 10;
+        expected_data.data_block_mut().size = 20;
+        expected_data.data_block_mut().cursor = 11;
 
         assert_eq!(symbol, 0);
         assert_eq!(data, expected_data);
@@ -2708,68 +2708,68 @@ mod tests {
         data.add_byte_list_from(index).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.resize(60, BasicData::Empty);
-        expected_data.data[0] = BasicData::Number(100.into());
-        expected_data.data[1] = BasicData::CharList(9);
-        expected_data.data[2] = BasicData::Char('S');
-        expected_data.data[3] = BasicData::Char('o');
-        expected_data.data[4] = BasicData::Char('m');
-        expected_data.data[5] = BasicData::Char('e');
-        expected_data.data[6] = BasicData::Char(' ');
-        expected_data.data[7] = BasicData::Char('T');
-        expected_data.data[8] = BasicData::Char('e');
-        expected_data.data[9] = BasicData::Char('x');
-        expected_data.data[10] = BasicData::Char('t');
-        expected_data.data[11] = BasicData::List(2, 0);
-        expected_data.data[12] = BasicData::ListItem(0);
-        expected_data.data[13] = BasicData::ListItem(1);
-        expected_data.data[14] = BasicData::Empty;
-        expected_data.data[15] = BasicData::Empty;
-        expected_data.data[16] = BasicData::ByteList(40);
-        expected_data.data[17] = BasicData::Byte(100);
-        expected_data.data[18] = BasicData::Byte(0);
-        expected_data.data[19] = BasicData::Byte(0);
-        expected_data.data[20] = BasicData::Byte(0);
-        expected_data.data[21] = BasicData::Byte(83);
-        expected_data.data[22] = BasicData::Byte(0);
-        expected_data.data[23] = BasicData::Byte(0);
-        expected_data.data[24] = BasicData::Byte(0);
-        expected_data.data[25] = BasicData::Byte(111);
-        expected_data.data[26] = BasicData::Byte(0);
-        expected_data.data[27] = BasicData::Byte(0);
-        expected_data.data[28] = BasicData::Byte(0);
-        expected_data.data[29] = BasicData::Byte(109);
-        expected_data.data[30] = BasicData::Byte(0);
-        expected_data.data[31] = BasicData::Byte(0);
-        expected_data.data[32] = BasicData::Byte(0);
-        expected_data.data[33] = BasicData::Byte(101);
-        expected_data.data[34] = BasicData::Byte(0);
-        expected_data.data[35] = BasicData::Byte(0);
-        expected_data.data[36] = BasicData::Byte(0);
-        expected_data.data[37] = BasicData::Byte(32);
-        expected_data.data[38] = BasicData::Byte(0);
-        expected_data.data[39] = BasicData::Byte(0);
-        expected_data.data[40] = BasicData::Byte(0);
-        expected_data.data[41] = BasicData::Byte(84);
-        expected_data.data[42] = BasicData::Byte(0);
-        expected_data.data[43] = BasicData::Byte(0);
-        expected_data.data[44] = BasicData::Byte(0);
-        expected_data.data[45] = BasicData::Byte(101);
-        expected_data.data[46] = BasicData::Byte(0);
-        expected_data.data[47] = BasicData::Byte(0);
-        expected_data.data[48] = BasicData::Byte(0);
-        expected_data.data[49] = BasicData::Byte(120);
-        expected_data.data[50] = BasicData::Byte(0);
-        expected_data.data[51] = BasicData::Byte(0);
-        expected_data.data[52] = BasicData::Byte(0);
-        expected_data.data[53] = BasicData::Byte(116);
-        expected_data.data[54] = BasicData::Byte(0);
-        expected_data.data[55] = BasicData::Byte(0);
-        expected_data.data[56] = BasicData::Byte(0);
+        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut()[0] = BasicData::Number(100.into());
+        expected_data.data_mut()[1] = BasicData::CharList(9);
+        expected_data.data_mut()[2] = BasicData::Char('S');
+        expected_data.data_mut()[3] = BasicData::Char('o');
+        expected_data.data_mut()[4] = BasicData::Char('m');
+        expected_data.data_mut()[5] = BasicData::Char('e');
+        expected_data.data_mut()[6] = BasicData::Char(' ');
+        expected_data.data_mut()[7] = BasicData::Char('T');
+        expected_data.data_mut()[8] = BasicData::Char('e');
+        expected_data.data_mut()[9] = BasicData::Char('x');
+        expected_data.data_mut()[10] = BasicData::Char('t');
+        expected_data.data_mut()[11] = BasicData::List(2, 0);
+        expected_data.data_mut()[12] = BasicData::ListItem(0);
+        expected_data.data_mut()[13] = BasicData::ListItem(1);
+        expected_data.data_mut()[14] = BasicData::Empty;
+        expected_data.data_mut()[15] = BasicData::Empty;
+        expected_data.data_mut()[16] = BasicData::ByteList(40);
+        expected_data.data_mut()[17] = BasicData::Byte(100);
+        expected_data.data_mut()[18] = BasicData::Byte(0);
+        expected_data.data_mut()[19] = BasicData::Byte(0);
+        expected_data.data_mut()[20] = BasicData::Byte(0);
+        expected_data.data_mut()[21] = BasicData::Byte(83);
+        expected_data.data_mut()[22] = BasicData::Byte(0);
+        expected_data.data_mut()[23] = BasicData::Byte(0);
+        expected_data.data_mut()[24] = BasicData::Byte(0);
+        expected_data.data_mut()[25] = BasicData::Byte(111);
+        expected_data.data_mut()[26] = BasicData::Byte(0);
+        expected_data.data_mut()[27] = BasicData::Byte(0);
+        expected_data.data_mut()[28] = BasicData::Byte(0);
+        expected_data.data_mut()[29] = BasicData::Byte(109);
+        expected_data.data_mut()[30] = BasicData::Byte(0);
+        expected_data.data_mut()[31] = BasicData::Byte(0);
+        expected_data.data_mut()[32] = BasicData::Byte(0);
+        expected_data.data_mut()[33] = BasicData::Byte(101);
+        expected_data.data_mut()[34] = BasicData::Byte(0);
+        expected_data.data_mut()[35] = BasicData::Byte(0);
+        expected_data.data_mut()[36] = BasicData::Byte(0);
+        expected_data.data_mut()[37] = BasicData::Byte(32);
+        expected_data.data_mut()[38] = BasicData::Byte(0);
+        expected_data.data_mut()[39] = BasicData::Byte(0);
+        expected_data.data_mut()[40] = BasicData::Byte(0);
+        expected_data.data_mut()[41] = BasicData::Byte(84);
+        expected_data.data_mut()[42] = BasicData::Byte(0);
+        expected_data.data_mut()[43] = BasicData::Byte(0);
+        expected_data.data_mut()[44] = BasicData::Byte(0);
+        expected_data.data_mut()[45] = BasicData::Byte(101);
+        expected_data.data_mut()[46] = BasicData::Byte(0);
+        expected_data.data_mut()[47] = BasicData::Byte(0);
+        expected_data.data_mut()[48] = BasicData::Byte(0);
+        expected_data.data_mut()[49] = BasicData::Byte(120);
+        expected_data.data_mut()[50] = BasicData::Byte(0);
+        expected_data.data_mut()[51] = BasicData::Byte(0);
+        expected_data.data_mut()[52] = BasicData::Byte(0);
+        expected_data.data_mut()[53] = BasicData::Byte(116);
+        expected_data.data_mut()[54] = BasicData::Byte(0);
+        expected_data.data_mut()[55] = BasicData::Byte(0);
+        expected_data.data_mut()[56] = BasicData::Byte(0);
 
-        expected_data.data_block.cursor = 57;
-        expected_data.data_block.size = 60;
-        expected_data.data_block.start = 0;
+        expected_data.data_block_mut().cursor = 57;
+        expected_data.data_block_mut().size = 60;
+        expected_data.data_block_mut().start = 0;
 
         assert_eq!(data, expected_data);
     }
@@ -2781,20 +2781,20 @@ mod tests {
         data.add_number_from(index).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.resize(20, BasicData::Empty);
-        expected_data.data[0] = BasicData::CharList(9);
-        expected_data.data[1] = BasicData::Char('1');
-        expected_data.data[2] = BasicData::Char('2');
-        expected_data.data[3] = BasicData::Char('3');
-        expected_data.data[4] = BasicData::Char('4');
-        expected_data.data[5] = BasicData::Char('5');
-        expected_data.data[6] = BasicData::Char('6');
-        expected_data.data[7] = BasicData::Char('7');
-        expected_data.data[8] = BasicData::Char('8');
-        expected_data.data[9] = BasicData::Char('9');
-        expected_data.data[10] = BasicData::Number(123456789.into());
-        expected_data.data_block.cursor = 11;
-        expected_data.data_block.size = 20;
+        expected_data.data_mut().resize(20, BasicData::Empty);
+        expected_data.data_mut()[0] = BasicData::CharList(9);
+        expected_data.data_mut()[1] = BasicData::Char('1');
+        expected_data.data_mut()[2] = BasicData::Char('2');
+        expected_data.data_mut()[3] = BasicData::Char('3');
+        expected_data.data_mut()[4] = BasicData::Char('4');
+        expected_data.data_mut()[5] = BasicData::Char('5');
+        expected_data.data_mut()[6] = BasicData::Char('6');
+        expected_data.data_mut()[7] = BasicData::Char('7');
+        expected_data.data_mut()[8] = BasicData::Char('8');
+        expected_data.data_mut()[9] = BasicData::Char('9');
+        expected_data.data_mut()[10] = BasicData::Number(123456789.into());
+        expected_data.data_block_mut().cursor = 11;
+        expected_data.data_block_mut().size = 20;
         assert_eq!(data, expected_data);
     }
 
@@ -2805,15 +2805,15 @@ mod tests {
         data.add_number_from(index).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.resize(10, BasicData::Empty);
-        expected_data.data[0] = BasicData::CharList(5);
-        expected_data.data[1] = BasicData::Char('a');
-        expected_data.data[2] = BasicData::Char('b');
-        expected_data.data[3] = BasicData::Char('c');
-        expected_data.data[4] = BasicData::Char('d');
-        expected_data.data[5] = BasicData::Char('e');
-        expected_data.data[6] = BasicData::Unit;
-        expected_data.data_block.cursor = 7;
+        expected_data.data_mut().resize(10, BasicData::Empty);
+        expected_data.data_mut()[0] = BasicData::CharList(5);
+        expected_data.data_mut()[1] = BasicData::Char('a');
+        expected_data.data_mut()[2] = BasicData::Char('b');
+        expected_data.data_mut()[3] = BasicData::Char('c');
+        expected_data.data_mut()[4] = BasicData::Char('d');
+        expected_data.data_mut()[5] = BasicData::Char('e');
+        expected_data.data_mut()[6] = BasicData::Unit;
+        expected_data.data_block_mut().cursor = 7;
         assert_eq!(data, expected_data);
     }
 
@@ -2859,7 +2859,7 @@ mod tests {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         data.resolve(100).unwrap();
-        assert_eq!(data.data[0], BasicData::Custom(Foo { value: "resolved".to_string() }));
+        assert_eq!(data.data()[0], BasicData::Custom(Foo { value: "resolved".to_string() }));
     }
 
     #[test]
@@ -2871,7 +2871,7 @@ mod tests {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         data.apply(100, 200).unwrap();
-        assert_eq!(data.data[0], BasicData::Custom(Foo { value: "applied".to_string() }));
+        assert_eq!(data.data()[0], BasicData::Custom(Foo { value: "applied".to_string() }));
     }
     
     #[test]
@@ -2883,6 +2883,6 @@ mod tests {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         data.defer_op(Instruction::Add, (GarnishDataType::Number, 100), (GarnishDataType::Number, 200)).unwrap();
-        assert_eq!(data.data[0], BasicData::Custom(Foo { value: "deferred".to_string() }));
+        assert_eq!(data.data()[0], BasicData::Custom(Foo { value: "deferred".to_string() }));
     }
 }

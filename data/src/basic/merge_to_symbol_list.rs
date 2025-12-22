@@ -130,7 +130,7 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.splice(
+        expected_data.data_mut().splice(
             0..5,
             [
                 BasicData::Symbol(100),
@@ -140,7 +140,7 @@ mod tests {
                 BasicData::Symbol(200),
             ],
         );
-        expected_data.data_block.cursor = 5;
+        expected_data.data_block_mut().cursor = 5;
 
         assert_eq!(v3, 2);
         assert_eq!(data, expected_data);
@@ -154,7 +154,7 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.splice(
+        expected_data.data_mut().splice(
             0..5,
             [
                 BasicData::Number(100.into()),
@@ -164,7 +164,7 @@ mod tests {
                 BasicData::Number(200.into()),
             ],
         );
-        expected_data.data_block.cursor = 5;
+        expected_data.data_block_mut().cursor = 5;
 
         assert_eq!(v3, 2);
         assert_eq!(data, expected_data);
@@ -178,7 +178,7 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.splice(
+        expected_data.data_mut().splice(
             0..5,
             [
                 BasicData::Symbol(100),
@@ -188,7 +188,7 @@ mod tests {
                 BasicData::Number(200.into()),
             ],
         );
-        expected_data.data_block.cursor = 5;
+        expected_data.data_block_mut().cursor = 5;
 
         assert_eq!(v3, 2);
         assert_eq!(data, expected_data);
@@ -202,7 +202,7 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.splice(
+        expected_data.data_mut().splice(
             0..5,
             [
                 BasicData::Number(100.into()),
@@ -212,7 +212,7 @@ mod tests {
                 BasicData::Symbol(200),
             ],
         );
-        expected_data.data_block.cursor = 5;
+        expected_data.data_block_mut().cursor = 5;
 
         assert_eq!(v3, 2);
         assert_eq!(data, expected_data);
@@ -229,7 +229,7 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.splice(
+        expected_data.data_mut().splice(
             0..8,
             [
                 BasicData::SymbolList(2),
@@ -242,7 +242,7 @@ mod tests {
                 BasicData::Symbol(300),
             ],
         );
-        expected_data.data_block.cursor = 8;
+        expected_data.data_block_mut().cursor = 8;
 
         assert_eq!(v3, 4);
         assert_eq!(data, expected_data);
@@ -259,7 +259,7 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v2, v1).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.splice(
+        expected_data.data_mut().splice(
             0..8,
             [
                 BasicData::SymbolList(2),
@@ -272,7 +272,7 @@ mod tests {
                 BasicData::Symbol(200),
             ],
         );
-        expected_data.data_block.cursor = 8;
+        expected_data.data_block_mut().cursor = 8;
 
         assert_eq!(v3, 4);
         assert_eq!(data, expected_data);
@@ -289,7 +289,7 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.splice(
+        expected_data.data_mut().splice(
             0..8,
             [
                 BasicData::SymbolList(2),
@@ -302,7 +302,7 @@ mod tests {
                 BasicData::Number(300.into()),
             ],
         );
-        expected_data.data_block.cursor = 8;
+        expected_data.data_block_mut().cursor = 8;
 
         assert_eq!(v3, 4);
         assert_eq!(data, expected_data);
@@ -319,7 +319,7 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v2, v1).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.splice(
+        expected_data.data_mut().splice(
             0..8,
             [
                 BasicData::SymbolList(2),
@@ -332,7 +332,7 @@ mod tests {
                 BasicData::Symbol(200),
             ],
         );
-        expected_data.data_block.cursor = 8;
+        expected_data.data_block_mut().cursor = 8;
 
         assert_eq!(v3, 4);
         assert_eq!(data, expected_data);
@@ -351,9 +351,9 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
-        let data_len = data.data.len();
-        expected_data.data.resize(data_len, BasicData::Empty);
-        expected_data.data.splice(
+        let data_len = data.data().len();
+        expected_data.data_mut().resize(data_len, BasicData::Empty);
+        expected_data.data_mut().splice(
             0..11,
             [
                 BasicData::SymbolList(2),
@@ -369,8 +369,8 @@ mod tests {
                 BasicData::Symbol(400),
             ],
         );
-        expected_data.data_block.cursor = 11;
-        expected_data.data_block.size = data.data_block.size;
+        expected_data.data_block_mut().cursor = 11;
+        expected_data.data_block_mut().size = data.data_block().size;
 
         assert_eq!(v3, 6);
         assert_eq!(data, expected_data);
@@ -385,7 +385,7 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v1, v2).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.splice(
+        expected_data.data_mut().splice(
             0..3,
             [
                 BasicData::Number(100.into()),
@@ -393,7 +393,7 @@ mod tests {
                 BasicData::Unit,
             ],
         );
-        expected_data.data_block.cursor = 3;
+        expected_data.data_block_mut().cursor = 3;
 
         assert_eq!(v3, 2);
         assert_eq!(data, expected_data);
@@ -408,7 +408,7 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v2, v1).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.splice(
+        expected_data.data_mut().splice(
             0..3,
             [
                 BasicData::Number(100.into()),
@@ -416,7 +416,7 @@ mod tests {
                 BasicData::Unit,
             ],
         );
-        expected_data.data_block.cursor = 3;
+        expected_data.data_block_mut().cursor = 3;
 
         assert_eq!(v3, 2);
         assert_eq!(data, expected_data);
@@ -431,7 +431,7 @@ mod tests {
         let v3 = data.merge_to_symbol_list(v2, v1).unwrap();
 
         let mut expected_data = test_data();
-        expected_data.data.splice(
+        expected_data.data_mut().splice(
             0..3,
             [
                 BasicData::Expression(100),
@@ -439,7 +439,7 @@ mod tests {
                 BasicData::Unit,
             ],
         );
-        expected_data.data_block.cursor = 3;
+        expected_data.data_block_mut().cursor = 3;
 
         assert_eq!(v3, 2);
         assert_eq!(data, expected_data);
