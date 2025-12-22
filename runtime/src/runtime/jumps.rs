@@ -72,7 +72,7 @@ pub fn end_expression<Data: GarnishData>(this: &mut Data) -> Result<Option<Data:
     // store return value
     let r = next_ref(this)?;
 
-    match this.pop_jump_path() {
+    match this.pop_frame()? {
         None => {
             // no more jumps, this should be the end of the entire execution
             trace!(

@@ -786,18 +786,18 @@ fn create_missing_functions(
         },
     );
     all_functions.insert(
-        "push_jump_path",
+        "push_frame",
         quote! {
-            fn push_jump_path(&mut self, index: Self::Size) -> Result<(), Self::Error> {
-                self.#delegate_field.push_jump_path(index)
+            fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
+                self.#delegate_field.push_frame(index)
             }
         },
     );
     all_functions.insert(
-        "pop_jump_path",
+        "pop_frame",
         quote! {
-            fn pop_jump_path(&mut self) -> Option<Self::Size> {
-                self.#delegate_field.pop_jump_path()
+            fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error> {
+                self.#delegate_field.pop_frame()
             }
         },
     );

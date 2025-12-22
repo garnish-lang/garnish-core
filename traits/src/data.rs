@@ -248,8 +248,8 @@ pub trait GarnishData {
     fn get_from_jump_table_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size>;
     fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator;
 
-    fn push_jump_path(&mut self, index: Self::Size) -> Result<(), Self::Error>;
-    fn pop_jump_path(&mut self) -> Option<Self::Size>;
+    fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error>;
+    fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error>;
     fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator;
 
     // mut conversions

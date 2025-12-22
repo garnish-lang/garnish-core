@@ -344,11 +344,11 @@ fn create_garnish_data_impl(
             fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
                 self.#delegate_field.get_jump_table_iter()
             }
-            fn push_jump_path(&mut self, index: Self::Size) -> Result<(), Self::Error> {
-                self.#delegate_field.push_jump_path(index)
+            fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
+                self.#delegate_field.push_frame(index)
             }
-            fn pop_jump_path(&mut self) -> Option<Self::Size> {
-                self.#delegate_field.pop_jump_path()
+            fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error> {
+                self.#delegate_field.pop_frame()
             }
             fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
                 self.#delegate_field.get_jump_path_iter()

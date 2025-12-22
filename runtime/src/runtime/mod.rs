@@ -314,7 +314,7 @@ mod tests {
         pub stub_get_jump_point_mut: fn(&T, index: i32) -> Option<&'static mut i32>,
         pub stub_get_jump_table_iter: fn(&T) -> MockIterator,
         pub stub_push_jump_path: fn(&mut T, index: i32) -> Result<(), MockError>,
-        pub stub_pop_jump_path: fn(&mut T) -> Option<i32>,
+        pub stub_pop_jump_path: fn(&mut T) -> Result<Option<i32>, MockError>,
         pub stub_get_jump_path_iter: fn(&T) -> MockIterator,
         // stub_size_to_number: fn(&T, from: i32) -> i32,
         // stub_number_to_size: fn(&T, from: i32) -> Option<i32>,
@@ -921,11 +921,11 @@ mod tests {
             (self.stub_get_jump_table_iter)(self.data())
         }
 
-        fn push_jump_path(&mut self, index: Self::Size) -> Result<(), Self::Error> {
+        fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
             (self.stub_push_jump_path)(self.data_mut(), index)
         }
 
-        fn pop_jump_path(&mut self) -> Option<Self::Size> {
+        fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error> {
             (self.stub_pop_jump_path)(self.data_mut())
         }
 

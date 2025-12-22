@@ -655,23 +655,23 @@ where
         SizeIterator::new(0, self.expression_table.len())
     }
 
-    fn push_jump_path(&mut self, index: usize) -> Result<(), Self::Error> {
+    fn push_frame(&mut self, index: usize) -> Result<(), Self::Error> {
         let r = self.add_stack_frame(SimpleStackFrame::new(index))?;
         self.push_register(r)
     }
 
-    fn pop_jump_path(&mut self) -> Option<usize> {
+    fn pop_frame(&mut self) -> Result<Option<usize>, Self::Error> {
         while let Some(item) = self.register.pop() {
             match self.data.get(item) {
-                None => return None, // should probably be error
+                None => return Err(format!("Register address ({}) has no data", item))?,
                 Some(data) => match data {
-                    SimpleData::StackFrame(frame) => return Some(frame.return_addr()),
+                    SimpleData::StackFrame(frame) => return Ok(Some(frame.return_addr())),
                     _ => (),
                 },
             }
         }
 
-        None
+        Ok(None)
     }
 
     fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
@@ -830,25 +830,25 @@ mod tests {
 
         data.push_register(data_addr).unwrap();
         data.push_register(data_addr).unwrap();
-        data.push_jump_path(10).unwrap();
+        data.push_frame(10).unwrap();
         data.push_register(data_addr).unwrap();
         data.push_register(data_addr).unwrap();
         data.push_register(data_addr).unwrap();
-        data.push_jump_path(20).unwrap();
+        data.push_frame(20).unwrap();
         data.push_register(data_addr).unwrap();
         data.push_register(data_addr).unwrap();
 
         assert_eq!(data.register.len(), 9);
 
-        let r = data.pop_jump_path();
+        let r = data.pop_frame().unwrap();
         assert_eq!(r, Some(20));
         assert_eq!(data.register.len(), 6);
 
-        let r = data.pop_jump_path();
+        let r = data.pop_frame().unwrap();
         assert_eq!(r, Some(10));
         assert_eq!(data.register.len(), 2);
 
-        let r = data.pop_jump_path();
+        let r = data.pop_frame().unwrap();
         assert_eq!(r, None);
 
         assert_eq!(data.register.len(), 0);
@@ -862,7 +862,7 @@ mod tests {
 
         data.push_register(data_addr).unwrap();
         data.push_register(data_addr).unwrap();
-        data.push_jump_path(10).unwrap();
+        data.push_frame(10).unwrap();
 
         let result = data.pop_register();
 

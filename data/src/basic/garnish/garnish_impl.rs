@@ -616,24 +616,21 @@ where
         unimplemented!()
     }
 
-    fn push_jump_path(&mut self, index: Self::Size) -> Result<(), Self::Error> {
+    fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
         let index = self.push_to_data_block(BasicData::Frame(self.current_jump_path.clone(), index))?;
         self.current_jump_path = Some(index);
         Ok(())
     }
 
-    fn pop_jump_path(&mut self) -> Option<Self::Size> {
-        match self.current_jump_path {
+    fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error> {
+        Ok(match self.current_jump_path {
             Some(index) => {
-                let (previous, return_index) = match self.get_from_data_block_ensure_index(index).and_then(|data| data.as_frame()) {
-                    Ok(frame) => frame,
-                    Err(_) => return None,
-                };
+                let (previous, return_index) = self.get_from_data_block_ensure_index(index).and_then(|data| data.as_frame())?;
                 self.current_jump_path = previous;
                 Some(return_index)
             }
             None => None,
-        }
+        })
     }
 
     fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
@@ -2586,7 +2583,7 @@ mod tests {
     #[test]
     fn push_jump_path() {
         let mut data = test_data();
-        data.push_jump_path(100).unwrap();
+        data.push_frame(100).unwrap();
         let mut expected_data = test_data();
         expected_data.data[0] = BasicData::Frame(None, 100);
         expected_data.current_jump_path = Some(0);
@@ -2597,9 +2594,9 @@ mod tests {
     #[test]
     fn pop_jump_path() {
         let mut data = test_data();
-        data.push_jump_path(100).unwrap();
-        let jump_path = data.pop_jump_path().unwrap();
-        assert_eq!(jump_path, 100);
+        data.push_frame(100).unwrap();
+        let jump_path = data.pop_frame().unwrap();
+        assert_eq!(jump_path, Some(100));
         let mut expected_data = test_data();
         expected_data.data[0] = BasicData::Frame(None, 100);
         expected_data.data_block.cursor = 1;
@@ -2610,9 +2607,9 @@ mod tests {
     #[test]
     fn pop_jump_path_multiple() {
         let mut data = test_data();
-        data.push_jump_path(100).unwrap();
-        data.push_jump_path(200).unwrap();
-        let jump_path = data.pop_jump_path().unwrap();
+        data.push_frame(100).unwrap();
+        data.push_frame(200).unwrap();
+        let jump_path = data.pop_frame().unwrap().unwrap();
         assert_eq!(jump_path, 200);
         let mut expected_data = test_data();
         expected_data.data[0] = BasicData::Frame(None, 100);
@@ -2625,7 +2622,7 @@ mod tests {
     #[test]
     fn pop_jump_path_none() {
         let mut data = test_data();
-        let jump_path = data.pop_jump_path();
+        let jump_path = data.pop_frame().unwrap();
         assert_eq!(jump_path, None);
     }
 
