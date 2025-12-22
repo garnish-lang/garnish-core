@@ -361,10 +361,10 @@ where
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_traits::{GarnishData, GarnishDataFactory, GarnishDataType, Instruction, SymbolListPart};
+    use garnish_lang_traits::{GarnishData, Instruction};
 
     use crate::{
-        BasicData, BasicDataCustom, BasicDataFactory, BasicGarnishData, ConversionDelegate, DataError, basic::{object::BasicObject, utilities::test_data}, basic_object
+        BasicData, BasicDataCustom, BasicGarnishData, ConversionDelegate, DataError, basic::{object::BasicObject, utilities::test_data}, basic_object
     };
 
     macro_rules! object_conversions {
