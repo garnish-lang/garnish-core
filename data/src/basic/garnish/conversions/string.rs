@@ -363,9 +363,7 @@ where
 mod tests {
     use garnish_lang_traits::{GarnishData, Instruction};
 
-    use crate::{
-        BasicData, BasicDataCustom, BasicGarnishData, ConversionDelegate, DataError, basic::{object::BasicObject, utilities::test_data}, basic_object
-    };
+    use crate::{BasicData, BasicDataCustom, BasicGarnishData, ConversionDelegate, DataError, basic::utilities::test_data, basic_object};
 
     macro_rules! object_conversions {
         ($( $object_test_name:ident: $object:expr => $output:literal $(with setup $setup:expr)? ),+ $(,)?) => {
@@ -452,7 +450,7 @@ mod tests {
         jump_point: BasicData::JumpPoint(0) => "",
         frame: BasicData::Frame(None, None) => "",
     );
-    
+
     #[derive(Debug, Clone)]
     struct Foo {
         value: String,
