@@ -663,7 +663,10 @@ where
     }
 
     fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        match self.convert_basic_data_at_to_number(from)? {
+            Some(number) => self.add_number(number),
+            None => self.add_unit(),
+        }
     }
 
     fn parse_add_symbol(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
@@ -2791,6 +2794,49 @@ mod tests {
         expected_data.data_block.size = 60;
         expected_data.data_block.start = 0;
 
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn add_number_from() {
+        let mut data = test_data();
+        let index = data.push_object_to_data_block(basic_object!(CharList "123456789")).unwrap();
+        data.add_number_from(index).unwrap();
+
+        let mut expected_data = test_data();
+        expected_data.data.resize(20, BasicData::Empty);
+        expected_data.data[0] = BasicData::CharList(9);
+        expected_data.data[1] = BasicData::Char('1');
+        expected_data.data[2] = BasicData::Char('2');
+        expected_data.data[3] = BasicData::Char('3');
+        expected_data.data[4] = BasicData::Char('4');
+        expected_data.data[5] = BasicData::Char('5');
+        expected_data.data[6] = BasicData::Char('6');
+        expected_data.data[7] = BasicData::Char('7');
+        expected_data.data[8] = BasicData::Char('8');
+        expected_data.data[9] = BasicData::Char('9');
+        expected_data.data[10] = BasicData::Number(123456789.into());
+        expected_data.data_block.cursor = 11;
+        expected_data.data_block.size = 20;
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn add_number_from_invalid_number() {
+        let mut data = test_data();
+        let index = data.push_object_to_data_block(basic_object!(CharList "abcde")).unwrap();
+        data.add_number_from(index).unwrap();
+
+        let mut expected_data = test_data();
+        expected_data.data.resize(10, BasicData::Empty);
+        expected_data.data[0] = BasicData::CharList(5);
+        expected_data.data[1] = BasicData::Char('a');
+        expected_data.data[2] = BasicData::Char('b');
+        expected_data.data[3] = BasicData::Char('c');
+        expected_data.data[4] = BasicData::Char('d');
+        expected_data.data[5] = BasicData::Char('e');
+        expected_data.data[6] = BasicData::Unit;
+        expected_data.data_block.cursor = 7;
         assert_eq!(data, expected_data);
     }
 }
