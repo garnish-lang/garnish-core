@@ -52,13 +52,6 @@ macro_rules! basic_object {
     (SymRaw($symbol_value:expr)) => {
         BasicObject::Symbol($symbol_value)
     };
-    // (SymList($($part:tt),*)) => {
-    //     BasicObject::SymbolList(vec![
-    //         $(
-    //             basic_object!($part)
-    //         ),*
-    //     ])
-    // };
     (Number $value:expr) => {
         BasicObject::Number($value.into())
     };
@@ -79,6 +72,32 @@ macro_rules! basic_object {
     (Custom $value:expr) => {
         BasicObject::Custom(Box::new($value))
     };
+    (@symlist_part Symbol $value:expr) => {
+        {
+            use garnish_lang_traits::SymbolListPart;
+            use crate::basic::BasicDataFactory;
+            use garnish_lang_traits::GarnishDataFactory;
+            match BasicDataFactory::parse_symbol($value) {
+                Ok(sym) => SymbolListPart::Symbol(sym),
+                Err(_) => SymbolListPart::Symbol(0),
+            }
+        }
+    };
+    (@symlist_part Number $value:expr) => {
+        {
+            use garnish_lang_traits::SymbolListPart;
+            SymbolListPart::Number($value.into())
+        }
+    };
+    (SymList($first:tt $first_val:expr $(, $rest:tt $rest_val:expr)* $(,)?)) => {
+        {
+            let mut parts = vec![basic_object!(@symlist_part $first $first_val)];
+            $(
+                parts.push(basic_object!(@symlist_part $rest $rest_val));
+            )*
+            BasicObject::SymbolList(parts)
+        }
+    };
     ($($item:tt),+ $(,)?) => {
         BasicObject::List(vec![
             $(Box::new(basic_object!($item)),)*
@@ -88,7 +107,7 @@ macro_rules! basic_object {
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_traits::GarnishDataType;
+    use garnish_lang_traits::{GarnishDataType, SymbolListPart};
 
     use crate::basic::object::BasicObject;
 
@@ -265,6 +284,16 @@ mod tests {
             Box::new(BasicObject::Number(100.into())),
             Box::new(BasicObject::Number(200.into())),
             Box::new(BasicObject::Number(250.into()))
+        ]));
+    }
+
+    #[test]
+    fn build_symbol_list() {
+        let value: BasicObject = basic_object!(SymList(Symbol "my_symbol", Number 100));
+
+        assert_eq!(value, BasicObject::SymbolList(vec![
+            SymbolListPart::Symbol(8904929874702161741),
+            SymbolListPart::Number(100.into())
         ]));
     }
 
