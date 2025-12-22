@@ -371,6 +371,7 @@ mod tests {
         );
         expected_data.data_block_mut().cursor = 11;
         expected_data.data_block_mut().size = data.data_block().size;
+        expected_data.custom_data_block_mut().start = 20;
 
         assert_eq!(v3, 6);
         assert_eq!(data, expected_data);

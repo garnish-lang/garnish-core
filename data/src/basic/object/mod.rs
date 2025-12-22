@@ -365,6 +365,7 @@ mod tests {
         expected_data.data_mut()[14] = BasicData::AssociativeItem(2, 2);
         expected_data.data_block_mut().cursor = 17;
         expected_data.data_block_mut().size = 20;
+        expected_data.custom_data_block_mut().start = 20;
         assert_eq!(v1, Ok(8));
         assert_eq!(data, expected_data);
     }

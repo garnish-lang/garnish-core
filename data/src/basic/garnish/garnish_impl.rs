@@ -1372,6 +1372,7 @@ mod tests {
         expected_data.data_mut()[15] = BasicData::AssociativeItem(30, 4);
         expected_data.data_block_mut().cursor = 16;
         expected_data.data_block_mut().size = 20;
+        expected_data.custom_data_block_mut().start = 20;
 
         assert_eq!(list_index, 9);
         assert_eq!(data, expected_data);
@@ -1416,6 +1417,7 @@ mod tests {
         expected_data.data_mut()[14] = BasicData::AssociativeItem(30, 2);
         expected_data.data_block_mut().cursor = 17;
         expected_data.data_block_mut().size = 20;
+        expected_data.custom_data_block_mut().start = 20;
 
         assert_eq!(list_index, 8);
         assert_eq!(data, expected_data);
@@ -2643,6 +2645,7 @@ mod tests {
         expected_data.set_current_register(Some(10));
         expected_data.data_block_mut().cursor = 11;
         expected_data.data_block_mut().size = 20;
+        expected_data.custom_data_block_mut().start = 20;
         expected_data.set_current_frame(Some(8));
         assert_eq!(data, expected_data);
     
@@ -2693,6 +2696,7 @@ mod tests {
         expected_data.data_block_mut().start = 10;
         expected_data.data_block_mut().size = 20;
         expected_data.data_block_mut().cursor = 11;
+        expected_data.custom_data_block_mut().start = 30;
 
         assert_eq!(symbol, 0);
         assert_eq!(data, expected_data);
@@ -2767,6 +2771,7 @@ mod tests {
         expected_data.data_block_mut().cursor = 57;
         expected_data.data_block_mut().size = 60;
         expected_data.data_block_mut().start = 0;
+        expected_data.custom_data_block_mut().start = 60;
 
         assert_eq!(data, expected_data);
     }
@@ -2792,6 +2797,7 @@ mod tests {
         expected_data.data_mut()[10] = BasicData::Number(123456789.into());
         expected_data.data_block_mut().cursor = 11;
         expected_data.data_block_mut().size = 20;
+        expected_data.custom_data_block_mut().start = 20;
         assert_eq!(data, expected_data);
     }
 
@@ -2854,6 +2860,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         data.resolve(100).unwrap();
         assert_eq!(data.data()[0], BasicData::Custom(Foo { value: "resolved".to_string() }));
@@ -2866,6 +2873,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         data.apply(100, 200).unwrap();
         assert_eq!(data.data()[0], BasicData::Custom(Foo { value: "applied".to_string() }));
@@ -2878,6 +2886,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         data.defer_op(Instruction::Add, (GarnishDataType::Number, 100), (GarnishDataType::Number, 200)).unwrap();
         assert_eq!(data.data()[0], BasicData::Custom(Foo { value: "deferred".to_string() }));

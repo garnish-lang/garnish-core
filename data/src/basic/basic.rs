@@ -54,6 +54,7 @@ where
     jump_table_block: StorageBlock,
     symbol_table_block: StorageBlock,
     data_block: StorageBlock,
+    custom_data_block: StorageBlock,
 }
 
 pub type BasicGarnishDataUnit = BasicGarnishData<()>;
@@ -68,6 +69,7 @@ where
             StorageSettings::default(),
             StorageSettings::default(),
             StorageSettings::default(),
+            StorageSettings::default(),
         )
     }
 
@@ -76,6 +78,7 @@ where
         jump_table_settings: StorageSettings,
         symbol_table_settings: StorageSettings,
         data_settings: StorageSettings,
+        custom_data_settings: StorageSettings,
     ) -> Result<Self, DataError> {
         let mut this = Self {
             current_value: None,
@@ -87,6 +90,7 @@ where
             jump_table_block: StorageBlock::new(jump_table_settings.initial_size(), jump_table_settings.clone()),
             symbol_table_block: StorageBlock::new(symbol_table_settings.initial_size(), symbol_table_settings.clone()),
             data_block: StorageBlock::new(data_settings.initial_size(), data_settings.clone()),
+            custom_data_block: StorageBlock::new(custom_data_settings.initial_size(), custom_data_settings.clone()),
         };
 
         this.reallocate_heap(
@@ -94,6 +98,7 @@ where
             jump_table_settings.initial_size,
             symbol_table_settings.initial_size,
             data_settings.initial_size,
+            custom_data_settings.initial_size,
         )?;
 
         Ok(this)
@@ -115,6 +120,10 @@ where
         self.symbol_table_block.cursor
     }
 
+    pub fn custom_data_size(&self) -> usize {
+        self.custom_data_block.cursor
+    }
+
     pub fn allocated_data_size(&self) -> usize {
         self.data_block.size
     }
@@ -129,6 +138,10 @@ where
 
     pub fn allocated_symbol_table_size(&self) -> usize {
         self.symbol_table_block.size
+    }
+
+    pub fn allocated_custom_data_size(&self) -> usize {
+        self.custom_data_block.size
     }
 
     pub fn get_basic_data(&self, index: usize) -> Option<&BasicData<T>> {
@@ -146,6 +159,7 @@ where
                 self.jump_table_block.size,
                 self.symbol_table_block.size,
                 self.data_block.size,
+                self.custom_data_block.size,
             )?;
         }
         Ok(Self::push_to_block(&mut self.data, &mut self.instruction_block, BasicData::Instruction(instruction, data)))
@@ -158,6 +172,7 @@ where
                 self.jump_table_block.next_size(),
                 self.symbol_table_block.size,
                 self.data_block.size,
+                self.custom_data_block.size,
             )?;
         }
         Ok(Self::push_to_block(&mut self.data, &mut self.jump_table_block, BasicData::JumpPoint(index)))
@@ -170,6 +185,7 @@ where
                 self.jump_table_block.size,
                 self.symbol_table_block.next_size(),
                 self.data_block.size,
+                self.custom_data_block.size,
             )?;
         }
         Self::push_to_block(&mut self.data, &mut self.symbol_table_block, BasicData::AssociativeItem(symbol, value));
@@ -191,9 +207,27 @@ where
                 self.jump_table_block.size,
                 self.symbol_table_block.size,
                 self.data_block.next_size(),
+                self.custom_data_block.size,
             )?;
         }
         Ok(Self::push_to_block(&mut self.data, &mut self.data_block, data))
+    }
+
+    pub fn push_to_custom_data_block(&mut self, value: T) -> Result<usize, DataError> {
+        if self.custom_data_block.cursor >= self.custom_data_block.size {
+            self.reallocate_heap(
+                self.instruction_block.size,
+                self.jump_table_block.size,
+                self.symbol_table_block.size,
+                self.data_block.size,
+                self.custom_data_block.next_size(),
+            )?;
+        }
+        Ok(Self::push_to_block(&mut self.data, &mut self.custom_data_block, BasicData::Custom(value)))
+    }
+
+    pub fn get_from_custom_data_block(&self, index: usize) -> Option<T> {
+        self.get_from_custom_data_block_ensure_index(index).ok()
     }
 
     pub fn get_string_for_data_at(&self, index: usize) -> Result<String, DataError> {
@@ -250,8 +284,16 @@ where
         &mut self.symbol_table_block
     }
 
+    pub(crate) fn custom_data_block(&self) -> &StorageBlock {
+        &self.custom_data_block
+    }
+
     pub(crate) fn data_block_mut(&mut self) -> &mut StorageBlock {
         &mut self.data_block
+    }
+
+    pub(crate) fn custom_data_block_mut(&mut self) -> &mut StorageBlock {
+        &mut self.custom_data_block
     }
 
     pub(crate) fn current_value(&self) -> Option<usize> {
@@ -299,12 +341,14 @@ pub mod utilities {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap()
     }
 
     pub fn instruction_test_data() -> BasicGarnishDataUnit {
         BasicGarnishDataUnit::new_with_settings(
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
@@ -317,6 +361,7 @@ pub mod utilities {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap()
     }
 }
@@ -326,7 +371,7 @@ mod tests {
     use garnish_lang_traits::{GarnishDataType, Instruction};
 
     use crate::{
-        BasicData, BasicGarnishData, BasicGarnishDataUnit, DataError,
+        BasicData, BasicDataCustom, BasicGarnishData, BasicGarnishDataUnit, DataError,
         basic::{
             basic::utilities::test_data, object::BasicObject, storage::{ReallocationStrategy, StorageBlock, StorageSettings}
             
@@ -346,6 +391,7 @@ mod tests {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         );
 
         let expected_data = vec![BasicData::Empty; 40];
@@ -362,6 +408,9 @@ mod tests {
         let mut expected_data_block = StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)));
         expected_data_block.start = 30;
 
+        let mut expected_custom_data_block = StorageBlock::new(0, StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)));
+        expected_custom_data_block.start = 40;
+
         assert_eq!(
             data,
             Ok(BasicGarnishDataUnit {
@@ -374,6 +423,7 @@ mod tests {
                 jump_table_block: expected_jump_table_block,
                 symbol_table_block: expected_symbol_table_block,
                 data_block: expected_data_block,
+                custom_data_block: expected_custom_data_block,
             })
         );
     }
@@ -409,6 +459,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         let index = data.push_to_instruction_block(Instruction::Add, None).unwrap();
         assert_eq!(index, 0);
@@ -425,6 +476,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new_with_settings(
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
@@ -445,6 +497,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         for _ in 0..15 {
             data.push_to_data_block(BasicData::Unit).unwrap();
@@ -462,6 +515,7 @@ mod tests {
     fn instruction_block_resizes_when_pushed_past_max_size() {
         let mut data = BasicGarnishDataUnit::new_with_settings(
             StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
@@ -485,6 +539,7 @@ mod tests {
             StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         for i in 0..15 {
             data.push_to_jump_table_block(i).unwrap();
@@ -501,6 +556,7 @@ mod tests {
     #[test]
     fn reallocations_happen_correctly_pushing_top_to_bottom() {
         let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
@@ -536,6 +592,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
@@ -567,6 +624,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
         for _ in 0..10 {
@@ -588,6 +646,7 @@ mod tests {
     fn push_to_instruction_block_exceeds_max_items() {
         let mut data = BasicGarnishDataUnit::new_with_settings(
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
@@ -615,6 +674,7 @@ mod tests {
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
         for i in 0..10 {
@@ -639,6 +699,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         data.push_to_symbol_table_block(100, 0).unwrap();
         assert_eq!(data.symbol_table_block.cursor, 1);
@@ -651,6 +712,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         for _ in 0..15 {
@@ -672,6 +734,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
@@ -697,6 +760,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         data.push_to_symbol_table_block(300, 0).unwrap();
         data.push_to_symbol_table_block(600, 0).unwrap();
@@ -709,6 +773,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
@@ -729,6 +794,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         let index = data.push_object_to_data_block(BasicObject::CharList("first symbol".to_string())).unwrap();
         data.push_to_symbol_table_block(100, index).unwrap();
@@ -753,6 +819,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         let index = data.push_object_to_data_block(BasicObject::CharList("first symbol".to_string())).unwrap();
         data.push_to_symbol_table_block(100, index).unwrap();
@@ -777,6 +844,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         let index = data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         data.push_to_symbol_table_block(100, index).unwrap();
@@ -798,5 +866,30 @@ mod tests {
                 DataErrorType::NotType(GarnishDataType::CharList, GarnishDataType::Number)
             ))
         );
+    }
+
+    #[test]
+    fn push_to_custom_data_block() {
+        #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
+        struct TestCustom {
+            value: String,
+        }
+
+        impl BasicDataCustom for TestCustom {}
+
+        let mut data = BasicGarnishData::<TestCustom>::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+
+        let custom_value = TestCustom { value: "test value".to_string() };
+        let index = data.push_to_custom_data_block(custom_value.clone()).unwrap();
+
+        assert_eq!(index, 0);
+        assert_eq!(data.custom_data_size(), 1);
+        assert_eq!(data.allocated_custom_data_size(), 10);
     }
 }

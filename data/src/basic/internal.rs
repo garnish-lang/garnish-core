@@ -48,6 +48,17 @@ where
         self.data_mut()[true_index].as_jump_point_mut()
     }
 
+    pub(crate) fn get_from_custom_data_block_ensure_index(&self, index: usize) -> Result<T, DataError> {
+        if index >= self.custom_data_block().cursor {
+            return Err(DataError::new("Invalid custom data index", DataErrorType::InvalidDataIndex(index)));
+        }
+        let true_index = self.custom_data_block().start + index;
+        match &self.data()[true_index] {
+            BasicData::Custom(value) => Ok(value.clone()),
+            _ => Err(DataError::new("Not custom data", DataErrorType::NotType(garnish_lang_traits::GarnishDataType::Custom, self.data()[true_index].get_data_type()))),
+        }
+    }
+
     pub(crate) fn push_to_block(heap: &mut Vec<BasicData<T>>, block: &mut StorageBlock, data: BasicData<T>) -> usize {
         let index = block.cursor;
         heap[block.start + index] = data;
@@ -61,6 +72,7 @@ where
         new_jump_table_size: usize,
         new_symbol_table_size: usize,
         new_data_size: usize,
+        new_custom_data_size: usize,
     ) -> Result<(), DataError> {
         if new_instruction_size > self.instruction_block().settings.max_items() {
             return Err(DataError::new(
@@ -86,6 +98,12 @@ where
                 DataErrorType::DataBlockExceededMaxItems(new_data_size, self.data_block().settings.max_items()),
             ));
         }
+        if new_custom_data_size > self.custom_data_block().settings.max_items() {
+            return Err(DataError::new(
+                "Custom data block size exceeds max items",
+                DataErrorType::DataBlockExceededMaxItems(new_custom_data_size, self.custom_data_block().settings.max_items()),
+            ));
+        }
 
         let instruction_start = self.instruction_block().start;
         let instruction_cursor = self.instruction_block().cursor;
@@ -95,8 +113,10 @@ where
         let symbol_table_cursor = self.symbol_table_block().cursor;
         let data_start = self.data_block().start;
         let data_cursor = self.data_block().cursor;
+        let custom_data_start = self.custom_data_block().start;
+        let custom_data_cursor = self.custom_data_block().cursor;
 
-        let new_size = new_instruction_size + new_jump_table_size + new_symbol_table_size + new_data_size;
+        let new_size = new_instruction_size + new_jump_table_size + new_symbol_table_size + new_data_size + new_custom_data_size;
 
         let mut new_heap = vec![BasicData::Empty; new_size];
 
@@ -132,6 +152,14 @@ where
         }
         self.data_block_mut().start = current_block_start;
         self.data_block_mut().size = new_data_size;
+        current_block_start += new_data_size;
+
+        // Copy custom data block
+        for i in 0..custom_data_cursor {
+            new_heap[current_block_start + i] = self.data()[custom_data_start + i].clone();
+        }
+        self.custom_data_block_mut().start = current_block_start;
+        self.custom_data_block_mut().size = new_custom_data_size;
 
         *self.data_mut() = new_heap;
         Ok(())
@@ -141,6 +169,7 @@ where
 #[cfg(test)]
 mod tests {
     use crate::basic::utilities::test_data;
+    use crate::basic::BasicGarnishData;
     use crate::error::DataErrorType;
     use crate::{BasicData, DataError};
 
@@ -206,5 +235,64 @@ mod tests {
         assert_eq!(data.get_from_data_block_ensure_index(0).unwrap(), &BasicData::Number(300.into()));
 
         assert_eq!(data.get_from_data_block_ensure_index(1).unwrap(), &BasicData::Number(200.into()));
+    }
+
+    #[test]
+    fn get_from_custom_data_block() {
+        #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
+        struct TestCustom {
+            value: String,
+        }
+
+        impl crate::basic::BasicDataCustom for TestCustom {}
+
+        let mut data = BasicGarnishData::<TestCustom>::new_with_settings(
+            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+            crate::basic::storage::StorageSettings::new(10, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+
+        let custom_value1 = TestCustom { value: "first".to_string() };
+        let custom_value2 = TestCustom { value: "second".to_string() };
+
+        let index1 = data.push_to_custom_data_block(custom_value1.clone()).unwrap();
+        let index2 = data.push_to_custom_data_block(custom_value2.clone()).unwrap();
+
+        assert_eq!(index1, 0);
+        assert_eq!(index2, 1);
+
+        let retrieved1 = data.get_from_custom_data_block(index1).unwrap();
+        let retrieved2 = data.get_from_custom_data_block(index2).unwrap();
+
+        assert_eq!(retrieved1, custom_value1);
+        assert_eq!(retrieved2, custom_value2);
+
+        // Test that None is returned for invalid index
+        let invalid_result = data.get_from_custom_data_block(10);
+        assert_eq!(invalid_result, None);
+    }
+
+    #[test]
+    fn get_from_custom_data_block_index_out_of_bounds() {
+        #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
+        struct TestCustom {
+            value: String,
+        }
+
+        impl crate::basic::BasicDataCustom for TestCustom {}
+
+        let data = BasicGarnishData::<TestCustom>::new_with_settings(
+            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+            crate::basic::storage::StorageSettings::new(10, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+
+        let result = data.get_from_custom_data_block(10);
+
+        assert_eq!(result, None);
     }
 }
