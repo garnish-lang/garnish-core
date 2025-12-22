@@ -645,7 +645,12 @@ where
     }
 
     fn add_byte_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
-        todo!()
+        let bytes = self.convert_basic_data_at_to_bytes(from)?;
+        self.push_to_data_block(BasicData::ByteList(bytes.len()))?;
+        for byte in bytes {
+            self.push_to_data_block(BasicData::Byte(byte))?;
+        }
+        Ok(from)
     }
 
     fn add_symbol_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
