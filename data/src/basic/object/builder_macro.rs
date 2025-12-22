@@ -34,6 +34,27 @@ macro_rules! basic_object {
     (SymRaw($symbol_value:expr)) => {
         BasicObject::Symbol($symbol_value)
     };
+    // (SymList($($part:tt),*)) => {
+    //     BasicObject::SymbolList(vec![
+    //         $(
+    //             basic_object!($part)
+    //         ),*
+    //     ])
+    // };
+    (External($value:expr)) => {
+        BasicObject::External($value)
+    };
+    (Expression($value:expr)) => {
+        BasicObject::Expression($value)
+    };
+    (CharList($value:expr)) => {
+        BasicObject::CharList($value.to_string())
+    };
+    (ByteList($($value:expr),*)) => {
+        BasicObject::ByteList(vec![
+            $($value),*
+        ])
+    };
 }
 
 #[cfg(test)]
@@ -98,5 +119,38 @@ mod tests {
         let value: BasicObject = basic_object!(SymRaw(12345));
 
         assert_eq!(value, BasicObject::Symbol(12345));
+    }
+
+    // #[test]
+    // fn build_symbol_list() {
+    //     let value: BasicObject = basic_object!(SymList(Symbol("my_symbol"), Number(100)));
+    // }
+
+    #[test]
+    fn build_external() {
+        let value: BasicObject = basic_object!(External(10));
+
+        assert_eq!(value, BasicObject::External(10));
+    }
+
+    #[test]
+    fn build_expression() {
+        let value: BasicObject = basic_object!(Expression(10));
+
+        assert_eq!(value, BasicObject::Expression(10));
+    }
+
+    #[test]
+    fn build_char_list() {
+        let value: BasicObject = basic_object!(CharList("value"));
+
+        assert_eq!(value, BasicObject::CharList("value".to_string()));
+    }
+
+    #[test]
+    fn build_byte_list() {
+        let value: BasicObject = basic_object!(ByteList(100, 200, 250));
+
+        assert_eq!(value, BasicObject::ByteList(vec![100, 200, 250]));
     }
 }
