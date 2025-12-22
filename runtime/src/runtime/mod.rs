@@ -230,14 +230,10 @@ mod tests {
         pub data: T,
         pub stub_get_data_len: fn(&T) -> i32,
         pub stub_get_data_iter: fn(&T) -> MockIterator,
-        pub stub_get_value_stack_len: fn(&T) -> i32,
         pub stub_push_value_stack: fn(&mut T, addr: i32) -> Result<(), MockError>,
         pub stub_pop_value_stack: fn(&mut T) -> Option<i32>,
-        pub stub_get_value: fn(&T, addr: i32) -> Option<i32>,
-        pub stub_get_value_mut: fn(&T, addr: i32) -> Option<&'static mut i32>,
         pub stub_get_current_value: fn(&T) -> Option<i32>,
         pub stub_get_current_value_mut: fn(&T) -> Option<&'static mut i32>,
-        pub stub_get_value_iter: fn(&T) -> MockIterator,
         pub stub_get_data_type: fn(&T, addr: i32) -> Result<GarnishDataType, MockError>,
         pub stub_get_number: fn(&T, addr: i32) -> Result<i32, MockError>,
         pub stub_get_type: fn(&T, addr: i32) -> Result<GarnishDataType, MockError>,
@@ -253,11 +249,7 @@ mod tests {
         pub stub_get_partial: fn(&T, addr: i32) -> Result<(i32, i32), MockError>,
         pub stub_get_list_len: fn(&T, addr: i32) -> Result<i32, MockError>,
         pub stub_get_list_item: fn(&T, list_addr: i32, item_addr: i32) -> Result<Option<i32>, MockError>,
-        pub stub_get_list_associations_len: fn(&T, addr: i32) -> Result<i32, MockError>,
-        pub stub_get_list_association: fn(&T, list_addr: i32, item_addr: i32) -> Result<Option<i32>, MockError>,
         pub stub_get_list_item_with_symbol: fn(&T, list_addr: i32, sym: u32) -> Result<Option<i32>, MockError>,
-        pub stub_get_list_items_iter: fn(&T, list_addr: i32) -> MockIterator,
-        pub stub_get_list_associations_iter: fn(&T, list_addr: i32) -> MockIterator,
         pub stub_get_char_list_len: fn(&T, addr: i32) -> Result<i32, MockError>,
         pub stub_get_char_list_item: fn(&T, addr: i32, item_index: i32) -> Result<Option<char>, MockError>,
         pub stub_get_char_list_iter: fn(&T, list_addr: i32) -> MockCharIterator,
@@ -291,17 +283,10 @@ mod tests {
         pub stub_start_list: fn(&mut T, len: i32) -> Result<i32, MockError>,
         pub stub_add_to_list: fn(&mut T, list_index: i32, item_index: i32) -> Result<i32, MockError>,
         pub stub_end_list: fn(&mut T, list_index: i32) -> Result<i32, MockError>,
-        pub stub_start_char_list: fn(&mut T) -> Result<(), MockError>,
-        pub stub_add_to_char_list: fn(&mut T, c: char) -> Result<(), MockError>,
-        pub stub_end_char_list: fn(&mut T) -> Result<i32, MockError>,
-        pub stub_start_byte_list: fn(&mut T) -> Result<(), MockError>,
-        pub stub_add_to_byte_list: fn(&mut T, c: u8) -> Result<(), MockError>,
-        pub stub_end_byte_list: fn(&mut T) -> Result<i32, MockError>,
         pub stub_get_register_len: fn(&T) -> i32,
         pub stub_push_register: fn(&mut T, addr: i32) -> Result<(), MockError>,
         pub stub_get_register: fn(&T, addr: i32) -> Option<i32>,
         pub stub_pop_register: fn(&mut T) -> Result<Option<i32>, MockError>,
-        pub stub_get_register_iter: fn(&T) -> MockIterator,
         pub stub_get_instruction_len: fn(&T) -> i32,
         pub stub_push_instruction: fn(&mut T, instruction: Instruction, data: Option<i32>) -> Result<i32, MockError>,
         pub stub_get_instruction: fn(&T, addr: i32) -> Option<(Instruction, Option<i32>)>,
@@ -312,10 +297,8 @@ mod tests {
         pub stub_push_jump_point: fn(&mut T, index: i32) -> Result<(), MockError>,
         pub stub_get_jump_point: fn(&T, index: i32) -> Option<i32>,
         pub stub_get_jump_point_mut: fn(&T, index: i32) -> Option<&'static mut i32>,
-        pub stub_get_jump_table_iter: fn(&T) -> MockIterator,
         pub stub_push_jump_path: fn(&mut T, index: i32) -> Result<(), MockError>,
         pub stub_pop_jump_path: fn(&mut T) -> Result<Option<i32>, MockError>,
-        pub stub_get_jump_path_iter: fn(&T) -> MockIterator,
         // stub_size_to_number: fn(&T, from: i32) -> i32,
         // stub_number_to_size: fn(&T, from: i32) -> Option<i32>,
         // stub_number_to_char: fn(&T, from: i32) -> Option<char>,
@@ -327,7 +310,6 @@ mod tests {
         pub stub_add_char_list_from: fn(&mut T, from: i32) -> Result<i32, MockError>,
         pub stub_add_byte_list_from: fn(&mut T, from: i32) -> Result<i32, MockError>,
         pub stub_add_symbol_from: fn(&mut T, from: i32) -> Result<i32, MockError>,
-        pub stub_add_byte_from: fn(&mut T, from: i32) -> Result<i32, MockError>,
         pub stub_add_number_from: fn(&mut T, from: i32) -> Result<i32, MockError>,
         // stub_parse_number: fn(&T, from: &str) -> Result<i32, MockError>,
         // stub_parse_symbol: fn(&T, from: &str) -> Result<u32, MockError>,
@@ -455,14 +437,10 @@ mod tests {
                 data: Default::default(),
                 stub_get_data_len: stub_fn_0,
                 stub_get_data_iter: stub_fn_0,
-                stub_get_value_stack_len: stub_fn_0,
                 stub_push_value_stack: stub_fn_1_mut,
                 stub_pop_value_stack: stub_fn_0_mut,
-                stub_get_value: stub_fn_1,
-                stub_get_value_mut: stub_fn_1,
                 stub_get_current_value: stub_fn_0,
                 stub_get_current_value_mut: stub_fn_0,
-                stub_get_value_iter: stub_fn_0,
                 stub_get_data_type: stub_fn_1,
                 stub_get_number: stub_fn_1,
                 stub_get_type: stub_fn_1,
@@ -478,11 +456,7 @@ mod tests {
                 stub_get_partial: stub_fn_1,
                 stub_get_list_len: stub_fn_1,
                 stub_get_list_item: stub_fn_2,
-                stub_get_list_associations_len: stub_fn_1,
-                stub_get_list_association: stub_fn_2,
                 stub_get_list_item_with_symbol: stub_fn_2,
-                stub_get_list_items_iter: stub_fn_1,
-                stub_get_list_associations_iter: stub_fn_1,
                 stub_get_char_list_len: stub_fn_1,
                 stub_get_char_list_item: stub_fn_2,
                 stub_get_char_list_iter: stub_fn_1,
@@ -516,17 +490,10 @@ mod tests {
                 stub_start_list: stub_fn_1_mut,
                 stub_add_to_list: stub_fn_2_mut,
                 stub_end_list: stub_fn_1_mut,
-                stub_start_char_list: stub_fn_0_mut,
-                stub_add_to_char_list: stub_fn_1_mut,
-                stub_end_char_list: stub_fn_0_mut,
-                stub_start_byte_list: stub_fn_0_mut,
-                stub_add_to_byte_list: stub_fn_1_mut,
-                stub_end_byte_list: stub_fn_0_mut,
                 stub_get_register_len: stub_fn_0,
                 stub_push_register: stub_fn_1_mut,
                 stub_get_register: stub_fn_1,
                 stub_pop_register: stub_fn_0_mut,
-                stub_get_register_iter: stub_fn_0,
                 stub_get_instruction_len: stub_fn_0,
                 stub_push_instruction: stub_fn_2_mut,
                 stub_get_instruction: stub_fn_1,
@@ -537,10 +504,8 @@ mod tests {
                 stub_push_jump_point: stub_fn_1_mut,
                 stub_get_jump_point: stub_fn_1,
                 stub_get_jump_point_mut: stub_fn_1,
-                stub_get_jump_table_iter: stub_fn_0,
                 stub_push_jump_path: stub_fn_1_mut,
                 stub_pop_jump_path: stub_fn_0_mut,
-                stub_get_jump_path_iter: stub_fn_0,
                 // stub_size_to_number: stub_fn_1,
                 // stub_number_to_size: stub_fn_1,
                 // stub_number_to_char: stub_fn_1,
@@ -552,7 +517,6 @@ mod tests {
                 stub_add_char_list_from: stub_fn_1_mut,
                 stub_add_byte_list_from: stub_fn_1_mut,
                 stub_add_symbol_from: stub_fn_1_mut,
-                stub_add_byte_from: stub_fn_1_mut,
                 stub_add_number_from: stub_fn_1_mut,
                 // stub_parse_number: stub_parse_fn,
                 // stub_parse_symbol: stub_parse_fn,
@@ -601,10 +565,6 @@ mod tests {
             (self.stub_get_data_iter)(self.data())
         }
 
-        fn get_value_stack_len(&self) -> Self::Size {
-            (self.stub_get_value_stack_len)(self.data())
-        }
-
         fn push_value_stack(&mut self, addr: Self::Size) -> Result<(), Self::Error> {
             (self.stub_push_value_stack)(self.data_mut(), addr)
         }
@@ -613,24 +573,12 @@ mod tests {
             (self.stub_pop_value_stack)(self.data_mut())
         }
 
-        fn get_value(&self, addr: Self::Size) -> Option<Self::Size> {
-            (self.stub_get_value)(self.data(), addr)
-        }
-
-        fn get_value_mut(&mut self, addr: Self::Size) -> Option<&mut Self::Size> {
-            (self.stub_get_value_mut)(self.data_mut(), addr)
-        }
-
         fn get_current_value(&self) -> Option<Self::Size> {
             (self.stub_get_current_value)(self.data())
         }
 
         fn get_current_value_mut(&mut self) -> Option<&mut Self::Size> {
             (self.stub_get_current_value_mut)(self.data_mut())
-        }
-
-        fn get_value_iter(&self) -> Self::ValueIndexIterator {
-            (self.stub_get_value_iter)(self.data())
         }
 
         fn get_data_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
@@ -693,24 +641,8 @@ mod tests {
             (self.stub_get_list_item)(self.data(), list_addr, item_addr)
         }
 
-        fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-            (self.stub_get_list_associations_len)(self.data(), addr)
-        }
-
-        fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
-            (self.stub_get_list_association)(self.data(), list_addr, item_addr)
-        }
-
         fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error> {
             (self.stub_get_list_item_with_symbol)(self.data(), list_addr, sym)
-        }
-
-        fn get_list_items_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-            Ok((self.stub_get_list_items_iter)(self.data(), list_addr))
-        }
-
-        fn get_list_associations_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-            Ok((self.stub_get_list_associations_iter)(self.data(), list_addr))
         }
 
         fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -833,30 +765,6 @@ mod tests {
             (self.stub_end_list)(self.data_mut(), list_index)
         }
 
-        fn start_char_list(&mut self) -> Result<(), Self::Error> {
-            (self.stub_start_char_list)(self.data_mut())
-        }
-
-        fn add_to_char_list(&mut self, c: Self::Char) -> Result<(), Self::Error> {
-            (self.stub_add_to_char_list)(self.data_mut(), c)
-        }
-
-        fn end_char_list(&mut self) -> Result<Self::Size, Self::Error> {
-            (self.stub_end_char_list)(self.data_mut())
-        }
-
-        fn start_byte_list(&mut self) -> Result<(), Self::Error> {
-            (self.stub_start_byte_list)(self.data_mut())
-        }
-
-        fn add_to_byte_list(&mut self, c: Self::Byte) -> Result<(), Self::Error> {
-            (self.stub_add_to_byte_list)(self.data_mut(), c)
-        }
-
-        fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error> {
-            (self.stub_end_byte_list)(self.data_mut())
-        }
-
         fn get_register_len(&self) -> Self::Size {
             (self.stub_get_register_len)(self.data())
         }
@@ -871,10 +779,6 @@ mod tests {
 
         fn pop_register(&mut self) -> Result<Option<Self::Size>, Self::Error> {
             (self.stub_pop_register)(self.data_mut())
-        }
-
-        fn get_register_iter(&self) -> Self::RegisterIndexIterator {
-            (self.stub_get_register_iter)(self.data())
         }
 
         fn get_instruction_len(&self) -> Self::Size {
@@ -917,20 +821,12 @@ mod tests {
             (self.stub_get_jump_point_mut)(self.data_mut(), index)
         }
 
-        fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
-            (self.stub_get_jump_table_iter)(self.data())
-        }
-
         fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
             (self.stub_push_jump_path)(self.data_mut(), index)
         }
 
         fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error> {
             (self.stub_pop_jump_path)(self.data_mut())
-        }
-
-        fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
-            (self.stub_get_jump_path_iter)(self.data())
         }
 
         fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -945,12 +841,16 @@ mod tests {
             (self.stub_add_symbol_from)(self.data_mut(), from)
         }
 
-        fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
-            (self.stub_add_byte_from)(self.data_mut(), from)
-        }
-
         fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
             (self.stub_add_number_from)(self.data_mut(), from)
+        }
+
+        fn parse_add_char_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+            unimplemented!()
+        }
+
+        fn parse_add_byte_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+            unimplemented!()
         }
 
         fn resolve(&mut self, symbol: Self::Symbol) -> Result<bool, Self::Error> {

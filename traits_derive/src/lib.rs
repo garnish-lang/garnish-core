@@ -104,29 +104,17 @@ fn create_garnish_data_impl(
             fn get_data_iter(&self) -> Self::DataIndexIterator {
                 self.#delegate_field.get_data_iter()
             }
-            fn get_value_stack_len(&self) -> Self::Size {
-                self.#delegate_field.get_value_stack_len()
-            }
             fn push_value_stack(&mut self, addr: Self::Size) -> Result<(), Self::Error> {
                 self.#delegate_field.push_value_stack(addr)
             }
             fn pop_value_stack(&mut self) -> Option<Self::Size> {
                 self.#delegate_field.pop_value_stack()
             }
-            fn get_value(&self, addr: Self::Size) -> Option<Self::Size> {
-                self.#delegate_field.get_value(addr)
-            }
-            fn get_value_mut(&mut self, addr: Self::Size) -> Option<&mut Self::Size> {
-                self.#delegate_field.get_value_mut(addr)
-            }
             fn get_current_value(&self) -> Option<Self::Size> {
                 self.#delegate_field.get_current_value()
             }
             fn get_current_value_mut(&mut self) -> Option<&mut Self::Size> {
                 self.#delegate_field.get_current_value_mut()
-            }
-            fn get_value_iter(&self) -> Self::ValueIndexIterator {
-                self.#delegate_field.get_value_iter()
             }
             fn get_data_type(&self, addr: Self::Size) -> Result<#library::GarnishDataType, Self::Error> {
                 self.#delegate_field.get_data_type(addr)
@@ -173,20 +161,8 @@ fn create_garnish_data_impl(
             fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
                 self.#delegate_field.get_list_item(list_addr, item_addr)
             }
-            fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-                self.#delegate_field.get_list_associations_len(addr)
-            }
-            fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
-                self.#delegate_field.get_list_association(list_addr, item_addr)
-            }
             fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error> {
                 self.#delegate_field.get_list_item_with_symbol(list_addr, sym)
-            }
-            fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-                self.#delegate_field.get_list_items_iter(list_addr, extents)
-            }
-            fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-                self.#delegate_field.get_list_associations_iter(list_addr, extents)
             }
             fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.get_char_list_len(addr)
@@ -278,24 +254,6 @@ fn create_garnish_data_impl(
             fn end_list(&mut self, list_index: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.end_list(list_index)
             }
-            fn start_char_list(&mut self) -> Result<(), Self::Error> {
-                self.#delegate_field.start_char_list()
-            }
-            fn add_to_char_list(&mut self, c: Self::Char) -> Result<(), Self::Error> {
-                self.#delegate_field.add_to_char_list(c)
-            }
-            fn end_char_list(&mut self) -> Result<Self::Size, Self::Error> {
-                self.#delegate_field.end_char_list()
-            }
-            fn start_byte_list(&mut self) -> Result<(), Self::Error> {
-                self.#delegate_field.start_byte_list()
-            }
-            fn add_to_byte_list(&mut self, c: Self::Byte) -> Result<(), Self::Error> {
-                self.#delegate_field.add_to_byte_list(c)
-            }
-            fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error> {
-                self.#delegate_field.end_byte_list()
-            }
             fn get_register_len(&self) -> Self::Size {
                 self.#delegate_field.get_register_len()
             }
@@ -307,9 +265,6 @@ fn create_garnish_data_impl(
             }
             fn pop_register(&mut self) -> Result<Option<Self::Size>, Self::Error> {
                 self.#delegate_field.pop_register()
-            }
-            fn get_register_iter(&self) -> Self::RegisterIndexIterator {
-                self.#delegate_field.get_register_iter()
             }
             fn get_instruction_len(&self) -> Self::Size {
                 self.#delegate_field.get_instruction_len()
@@ -341,17 +296,11 @@ fn create_garnish_data_impl(
             fn get_from_jump_table_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
                 self.#delegate_field.get_from_jump_table_mut(index)
             }
-            fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
-                self.#delegate_field.get_jump_table_iter()
-            }
             fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
                 self.#delegate_field.push_frame(index)
             }
             fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error> {
                 self.#delegate_field.pop_frame()
-            }
-            fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
-                self.#delegate_field.get_jump_path_iter()
             }
             fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.add_char_list_from(from)
@@ -361,9 +310,6 @@ fn create_garnish_data_impl(
             }
             fn add_symbol_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.add_symbol_from(from)
-            }
-            fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
-                self.#delegate_field.add_byte_from(from)
             }
             fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.add_number_from(from)

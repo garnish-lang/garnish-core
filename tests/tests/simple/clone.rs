@@ -533,10 +533,6 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_value_stack_len(&self) -> Self::Size {
-            unimplemented!()
-        }
-
         fn push_value_stack(&mut self, addr: Self::Size) -> Result<(), Self::Error> {
             unimplemented!()
         }
@@ -545,23 +541,11 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_value(&self, addr: Self::Size) -> Option<Self::Size> {
-            unimplemented!()
-        }
-
-        fn get_value_mut(&mut self, addr: Self::Size) -> Option<&mut Self::Size> {
-            unimplemented!()
-        }
-
         fn get_current_value(&self) -> Option<Self::Size> {
             unimplemented!()
         }
 
         fn get_current_value_mut(&mut self) -> Option<&mut Self::Size> {
-            unimplemented!()
-        }
-
-        fn get_value_iter(&self) -> Self::ValueIndexIterator {
             unimplemented!()
         }
 
@@ -625,23 +609,7 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-            unimplemented!()
-        }
-
-        fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
-            unimplemented!()
-        }
-
         fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error> {
-            unimplemented!()
-        }
-
-        fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-            unimplemented!()
-        }
-
-        fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
             unimplemented!()
         }
 
@@ -768,30 +736,6 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn start_char_list(&mut self) -> Result<(), Self::Error> {
-            unimplemented!()
-        }
-
-        fn add_to_char_list(&mut self, c: Self::Char) -> Result<(), Self::Error> {
-            unimplemented!()
-        }
-
-        fn end_char_list(&mut self) -> Result<Self::Size, Self::Error> {
-            unimplemented!()
-        }
-
-        fn start_byte_list(&mut self) -> Result<(), Self::Error> {
-            unimplemented!()
-        }
-
-        fn add_to_byte_list(&mut self, c: Self::Byte) -> Result<(), Self::Error> {
-            unimplemented!()
-        }
-
-        fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error> {
-            unimplemented!()
-        }
-
         fn get_register_len(&self) -> Self::Size {
             unimplemented!()
         }
@@ -805,10 +749,6 @@ mod test_data_impl {
         }
 
         fn pop_register(&mut self) -> Result<Option<Self::Size>, Self::Error> {
-            unimplemented!()
-        }
-
-        fn get_register_iter(&self) -> Self::RegisterIndexIterator {
             unimplemented!()
         }
 
@@ -852,19 +792,11 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
-            unimplemented!()
-        }
-
         fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
             unimplemented!()
         }
 
         fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error> {
-            unimplemented!()
-        }
-
-        fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
             unimplemented!()
         }
 
@@ -880,11 +812,15 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
+        fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
             unimplemented!()
         }
 
-        fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
+        fn parse_add_char_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+            unimplemented!()
+        }
+
+        fn parse_add_byte_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
             unimplemented!()
         }
     }

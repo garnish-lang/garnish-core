@@ -146,14 +146,6 @@ fn create_missing_functions(
         },
     );
     all_functions.insert(
-        "get_value_stack_len",
-        quote! {
-            fn get_value_stack_len(&self) -> Self::Size {
-                self.#delegate_field.get_value_stack_len()
-            }
-        },
-    );
-    all_functions.insert(
         "push_value_stack",
         quote! {
             fn push_value_stack(&mut self, addr: Self::Size) -> Result<(), Self::Error> {
@@ -170,22 +162,6 @@ fn create_missing_functions(
         },
     );
     all_functions.insert(
-        "get_value",
-        quote! {
-            fn get_value(&self, addr: Self::Size) -> Option<Self::Size> {
-                self.#delegate_field.get_value(addr)
-            }
-        },
-    );
-    all_functions.insert(
-        "get_value_mut",
-        quote! {
-            fn get_value_mut(&mut self, addr: Self::Size) -> Option<&mut Self::Size> {
-                self.#delegate_field.get_value_mut(addr)
-            }
-        },
-    );
-    all_functions.insert(
         "get_current_value",
         quote! {
             fn get_current_value(&self) -> Option<Self::Size> {
@@ -198,14 +174,6 @@ fn create_missing_functions(
         quote! {
             fn get_current_value_mut(&mut self) -> Option<&mut Self::Size> {
                 self.#delegate_field.get_current_value_mut()
-            }
-        },
-    );
-    all_functions.insert(
-        "get_value_iter",
-        quote! {
-            fn get_value_iter(&self) -> Self::ValueIndexIterator {
-                self.#delegate_field.get_value_iter()
             }
         },
     );
@@ -330,42 +298,10 @@ fn create_missing_functions(
         },
     );
     all_functions.insert(
-        "get_list_associations_len",
-        quote! {
-            fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-                self.#delegate_field.get_list_associations_len(addr)
-            }
-        },
-    );
-    all_functions.insert(
-        "get_list_association",
-        quote! {
-            fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
-                self.#delegate_field.get_list_association(list_addr, item_addr)
-            }
-        },
-    );
-    all_functions.insert(
         "get_list_item_with_symbol",
         quote! {
             fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error> {
                 self.#delegate_field.get_list_item_with_symbol(list_addr, sym)
-            }
-        },
-    );
-    all_functions.insert(
-        "get_list_items_iter",
-        quote! {
-            fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-                self.#delegate_field.get_list_items_iter(list_addr, extents)
-            }
-        },
-    );
-    all_functions.insert(
-        "get_list_associations_iter",
-        quote! {
-            fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-                self.#delegate_field.get_list_associations_iter(list_addr, extents)
             }
         },
     );
@@ -610,54 +546,6 @@ fn create_missing_functions(
         },
     );
     all_functions.insert(
-        "start_char_list",
-        quote! {
-            fn start_char_list(&mut self) -> Result<(), Self::Error> {
-                self.#delegate_field.start_char_list()
-            }
-        },
-    );
-    all_functions.insert(
-        "add_to_char_list",
-        quote! {
-            fn add_to_char_list(&mut self, c: Self::Char) -> Result<(), Self::Error> {
-                self.#delegate_field.add_to_char_list(c)
-            }
-        },
-    );
-    all_functions.insert(
-        "end_char_list",
-        quote! {
-            fn end_char_list(&mut self) -> Result<Self::Size, Self::Error> {
-                self.#delegate_field.end_char_list()
-            }
-        },
-    );
-    all_functions.insert(
-        "start_byte_list",
-        quote! {
-            fn start_byte_list(&mut self) -> Result<(), Self::Error> {
-                self.#delegate_field.start_byte_list()
-            }
-        },
-    );
-    all_functions.insert(
-        "add_to_byte_list",
-        quote! {
-            fn add_to_byte_list(&mut self, c: Self::Byte) -> Result<(), Self::Error> {
-                self.#delegate_field.add_to_byte_list(c)
-            }
-        },
-    );
-    all_functions.insert(
-        "end_byte_list",
-        quote! {
-            fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error> {
-                self.#delegate_field.end_byte_list()
-            }
-        },
-    );
-    all_functions.insert(
         "get_register_len",
         quote! {
             fn get_register_len(&self) -> Self::Size {
@@ -686,14 +574,6 @@ fn create_missing_functions(
         quote! {
             fn pop_register(&mut self) -> Result<Option<Self::Size>, Self::Error> {
                 self.#delegate_field.pop_register()
-            }
-        },
-    );
-    all_functions.insert(
-        "get_register_iter",
-        quote! {
-            fn get_register_iter(&self) -> Self::RegisterIndexIterator {
-                self.#delegate_field.get_register_iter()
             }
         },
     );
@@ -778,14 +658,6 @@ fn create_missing_functions(
         },
     );
     all_functions.insert(
-        "get_jump_table_iter",
-        quote! {
-            fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
-                self.#delegate_field.get_jump_table_iter()
-            }
-        },
-    );
-    all_functions.insert(
         "push_frame",
         quote! {
             fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
@@ -798,14 +670,6 @@ fn create_missing_functions(
         quote! {
             fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error> {
                 self.#delegate_field.pop_frame()
-            }
-        },
-    );
-    all_functions.insert(
-        "get_jump_path_iter",
-        quote! {
-            fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
-                self.#delegate_field.get_jump_path_iter()
             }
         },
     );
@@ -830,14 +694,6 @@ fn create_missing_functions(
         quote! {
             fn add_symbol_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
                 self.#delegate_field.add_symbol_from(from)
-            }
-        },
-    );
-    all_functions.insert(
-        "add_byte_from",
-        quote! {
-            fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
-                self.#delegate_field.add_byte_from(from)
             }
         },
     );

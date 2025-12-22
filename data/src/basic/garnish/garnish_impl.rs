@@ -47,10 +47,6 @@ where
         SizeIterator::new(0, self.data_block.cursor)
     }
 
-    fn get_value_stack_len(&self) -> Self::Size {
-        unimplemented!()
-    }
-
     fn push_value_stack(&mut self, addr: Self::Size) -> Result<(), Self::Error> {
         let index = self.push_to_data_block(BasicData::Value(self.current_value.clone(), addr))?;
         self.current_value = Some(index);
@@ -71,14 +67,6 @@ where
         }
     }
 
-    fn get_value(&self, addr: Self::Size) -> Option<Self::Size> {
-        unimplemented!()
-    }
-
-    fn get_value_mut(&mut self, addr: Self::Size) -> Option<&mut Self::Size> {
-        unimplemented!()
-    }
-
     fn get_current_value(&self) -> Option<Self::Size> {
         match self.current_value {
             None => None,
@@ -97,10 +85,6 @@ where
                 Err(_) => return None,
             },
         }
-    }
-
-    fn get_value_iter(&self) -> Self::ValueIndexIterator {
-        unimplemented!()
     }
 
     fn get_data_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error> {
@@ -171,14 +155,6 @@ where
         Ok(Some(self.get_from_data_block_ensure_index(list_addr + 1 + index)?.as_list_item()?))
     }
 
-    fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
-        unimplemented!()
-    }
-
-    fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error> {
-        unimplemented!()
-    }
-
     fn get_list_item_with_symbol(&self, list_index: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error> {
         let (len, associations_len) = self.get_from_data_block_ensure_index(list_index)?.as_list()?;
 
@@ -187,14 +163,6 @@ where
         let association_slice = &self.data[association_range.clone()];
 
         search_for_associative_item(association_slice, sym)
-    }
-
-    fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-        unimplemented!()
-    }
-
-    fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-        unimplemented!()
     }
 
     fn get_char_list_len(&self, list_index: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -475,30 +443,6 @@ where
         Ok(list_index)
     }
 
-    fn start_char_list(&mut self) -> Result<(), Self::Error> {
-        unimplemented!()
-    }
-
-    fn add_to_char_list(&mut self, c: Self::Char) -> Result<(), Self::Error> {
-        unimplemented!()
-    }
-
-    fn end_char_list(&mut self) -> Result<Self::Size, Self::Error> {
-        unimplemented!()
-    }
-
-    fn start_byte_list(&mut self) -> Result<(), Self::Error> {
-        unimplemented!()
-    }
-
-    fn add_to_byte_list(&mut self, c: Self::Byte) -> Result<(), Self::Error> {
-        unimplemented!()
-    }
-
-    fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error> {
-        unimplemented!()
-    }
-
     fn get_register_len(&self) -> Self::Size {
         let mut count = 0;
         let mut current = self.current_register;
@@ -552,10 +496,6 @@ where
             }
             None => Ok(None),
         }
-    }
-
-    fn get_register_iter(&self) -> Self::RegisterIndexIterator {
-        unimplemented!()
     }
 
     fn get_instruction_len(&self) -> Self::Size {
@@ -612,10 +552,6 @@ where
         }
     }
 
-    fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
-        unimplemented!()
-    }
-
     fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
         self.push_to_data_block(BasicData::JumpPoint(index))?;
         let frame_index = self.push_to_data_block(BasicData::Frame(self.current_frame.clone(), self.current_register.clone()))?;
@@ -636,10 +572,6 @@ where
         })
     }
 
-    fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
-        unimplemented!()
-    }
-
     fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         self.convert_basic_data_at_to_char_list(from)
     }
@@ -658,15 +590,31 @@ where
         self.push_to_data_block(BasicData::Symbol(sym))
     }
 
-    fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
-        unimplemented!()
-    }
-
     fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         match self.convert_basic_data_at_to_number(from)? {
             Some(number) => self.add_number(number),
             None => self.add_unit(),
         }
+    }
+
+    fn parse_add_char_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        let chars = Self::DataFactory::parse_char_list(from)?;
+        let len = chars.len();
+        let list_index = self.push_to_data_block(BasicData::CharList(len))?;
+        for c in chars {
+            self.push_to_data_block(BasicData::Char(c))?;
+        }
+        Ok(list_index)
+    }
+
+    fn parse_add_byte_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        let bytes = Self::DataFactory::parse_byte_list(from)?;
+        let len = bytes.len();
+        let list_index = self.push_to_data_block(BasicData::ByteList(len))?;
+        for b in bytes {
+            self.push_to_data_block(BasicData::Byte(b))?;
+        }
+        Ok(list_index)
     }
 
     fn parse_add_symbol(&mut self, from: &str) -> Result<Self::Size, Self::Error> {

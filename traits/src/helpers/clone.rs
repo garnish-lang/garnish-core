@@ -82,12 +82,11 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
     }
 
     fn clone_char_list(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {
+        // Clone char list by iterating and converting to string, then using parse_add_char_list
         let iter = from.get_char_list_iter(addr.clone(), Extents::new(Data::Number::zero(), Data::Number::max_value()))?;
-        to.start_char_list()?;
-        for i in iter {
-            to.add_to_char_list(i)?;
-        }
-        to.end_char_list()
+        let chars: Vec<Data::Char> = iter.collect();
+        let s: String = chars.into_iter().map(|c| format!("{}", c)).collect();
+        to.parse_add_char_list(&s)
     }
 
     fn clone_byte(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {
@@ -95,12 +94,13 @@ pub trait GarnishCloneHandler<Data: GarnishData> {
     }
 
     fn clone_byte_list(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {
+        // Clone byte list by iterating and manually building the structure
         let iter = from.get_byte_list_iter(addr.clone(), Extents::new(Data::Number::zero(), Data::Number::max_value()))?;
-        to.start_byte_list()?;
-        for i in iter {
-            to.add_to_byte_list(i)?;
-        }
-        to.end_byte_list()
+        let bytes: Vec<Data::Byte> = iter.collect();
+        // Build byte list manually: create header then add bytes
+        // Use parse_add_byte_list by converting bytes to string representation
+        let s = format!("[{}]", bytes.iter().map(|b| b.to_string()).collect::<Vec<_>>().join(", "));
+        to.parse_add_byte_list(&s)
     }
 
     fn clone_symbol(&mut self, addr: Data::Size, from: &Data, to: &mut Data) -> Result<Data::Size, Data::Error> {

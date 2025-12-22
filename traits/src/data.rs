@@ -150,14 +150,10 @@ pub trait GarnishData {
     fn get_data_len(&self) -> Self::Size;
     fn get_data_iter(&self) -> Self::DataIndexIterator;
 
-    fn get_value_stack_len(&self) -> Self::Size;
     fn push_value_stack(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
     fn pop_value_stack(&mut self) -> Option<Self::Size>;
-    fn get_value(&self, addr: Self::Size) -> Option<Self::Size>;
-    fn get_value_mut(&mut self, addr: Self::Size) -> Option<&mut Self::Size>;
     fn get_current_value(&self) -> Option<Self::Size>;
     fn get_current_value_mut(&mut self) -> Option<&mut Self::Size>;
-    fn get_value_iter(&self) -> Self::ValueIndexIterator;
 
     fn get_data_type(&self, addr: Self::Size) -> Result<GarnishDataType, Self::Error>;
 
@@ -176,8 +172,6 @@ pub trait GarnishData {
 
     fn get_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
     fn get_list_item(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error>;
-    fn get_list_associations_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn get_list_association(&self, list_addr: Self::Size, item_addr: Self::Number) -> Result<Option<Self::Size>, Self::Error>;
     fn get_list_item_with_symbol(&self, list_addr: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error>;
 
     fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error>;
@@ -192,8 +186,6 @@ pub trait GarnishData {
     fn get_char_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::CharIterator, Self::Error>;
     fn get_byte_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ByteIterator, Self::Error>;
     fn get_symbol_list_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::SymbolListPartIterator, Self::Error>;
-    fn get_list_items_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error>;
-    fn get_list_associations_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error>;
     fn get_list_item_iter(&self, list_addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error>;
     fn get_concatenation_iter(&self, addr: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ConcatenationItemIterator, Self::Error>;
 
@@ -220,19 +212,10 @@ pub trait GarnishData {
     fn add_to_list(&mut self, list_index: Self::Size, item_index: Self::Size) -> Result<Self::Size, Self::Error>;
     fn end_list(&mut self, list_index: Self::Size) -> Result<Self::Size, Self::Error>;
 
-    fn start_char_list(&mut self) -> Result<(), Self::Error>;
-    fn add_to_char_list(&mut self, c: Self::Char) -> Result<(), Self::Error>;
-    fn end_char_list(&mut self) -> Result<Self::Size, Self::Error>;
-
-    fn start_byte_list(&mut self) -> Result<(), Self::Error>;
-    fn add_to_byte_list(&mut self, c: Self::Byte) -> Result<(), Self::Error>;
-    fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error>;
-
     fn get_register_len(&self) -> Self::Size;
     fn push_register(&mut self, addr: Self::Size) -> Result<(), Self::Error>;
     fn get_register(&self, addr: Self::Size) -> Option<Self::Size>;
     fn pop_register(&mut self) -> Result<Option<Self::Size>, Self::Error>;
-    fn get_register_iter(&self) -> Self::RegisterIndexIterator;
 
     fn get_instruction_len(&self) -> Self::Size;
     fn push_instruction(&mut self, instruction: Instruction, data: Option<Self::Size>) -> Result<Self::Size, Self::Error>;
@@ -246,17 +229,14 @@ pub trait GarnishData {
     fn push_to_jump_table(&mut self, index: Self::Size) -> Result<(), Self::Error>;
     fn get_from_jump_table(&self, index: Self::Size) -> Option<Self::Size>;
     fn get_from_jump_table_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size>;
-    fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator;
 
     fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error>;
     fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error>;
-    fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator;
 
     // mut conversions
     fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_byte_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_symbol_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error>;
-    fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error>;
     fn add_number_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error>;
 
     // parsing, to be moved to separate object
@@ -279,21 +259,8 @@ pub trait GarnishData {
         self.add_byte(Self::DataFactory::parse_byte(from)?)
     }
 
-    fn parse_add_char_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
-        self.start_char_list()?;
-        for c in Self::DataFactory::parse_char_list(from)? {
-            self.add_to_char_list(c)?;
-        }
-        self.end_char_list()
-    }
-
-    fn parse_add_byte_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
-        self.start_byte_list()?;
-        for b in Self::DataFactory::parse_byte_list(from)? {
-            self.add_to_byte_list(b)?;
-        }
-        self.end_byte_list()
-    }
+    fn parse_add_char_list(&mut self, from: &str) -> Result<Self::Size, Self::Error>;
+    fn parse_add_byte_list(&mut self, from: &str) -> Result<Self::Size, Self::Error>;
 
     // Execution checks
 

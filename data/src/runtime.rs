@@ -131,10 +131,6 @@ where
         SizeIterator::new(0, self.data.len())
     }
 
-    fn get_value_stack_len(&self) -> usize {
-        self.values.len()
-    }
-
     fn push_value_stack(&mut self, addr: usize) -> Result<(), Self::Error> {
         self.values.push(addr);
         Ok(())
@@ -144,24 +140,12 @@ where
         self.values.pop()
     }
 
-    fn get_value(&self, index: usize) -> Option<usize> {
-        self.values.get(index).cloned()
-    }
-
-    fn get_value_mut(&mut self, index: usize) -> Option<&mut usize> {
-        self.values.get_mut(index)
-    }
-
     fn get_current_value(&self) -> Option<usize> {
         self.values.last().cloned()
     }
 
     fn get_current_value_mut(&mut self) -> Option<&mut usize> {
         self.values.last_mut()
-    }
-
-    fn get_value_iter(&self) -> Self::ValueIndexIterator {
-        SizeIterator::new(0, self.values.len())
     }
 
     fn get_data_type(&self, index: usize) -> Result<GarnishDataType, Self::Error> {
@@ -232,22 +216,8 @@ where
         }
     }
 
-    fn get_list_associations_len(&self, index: usize) -> Result<usize, Self::Error> {
-        Ok(self.get(index)?.as_list()?.1.len())
-    }
-
-    fn get_list_association(&self, list_index: usize, item_index: SimpleNumber) -> Result<Option<usize>, Self::Error> {
-        match item_index {
-            SimpleNumber::Integer(item_index) => match self.get(list_index)?.as_list()?.1.get(item_index as usize) {
-                None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
-                Some(v) => Ok(Some(*v)),
-            },
-            SimpleNumber::Float(_) => Err(DataError::from("Cannot index list with decimal value.".to_string())), // should return None
-        }
-    }
-
     fn get_list_item_with_symbol(&self, list_addr: usize, sym: u64) -> Result<Option<usize>, Self::Error> {
-        let associations_len = self.get_list_associations_len(list_addr)?;
+        let associations_len = SimpleGarnishData::get_list_associations_len(self, list_addr)?;
 
         if associations_len == 0 {
             return Ok(None);
@@ -258,7 +228,7 @@ where
 
         loop {
             // check to make sure item has same symbol
-            match self.get_list_association(list_addr, i.into())? {
+            match SimpleGarnishData::get_list_association(self, list_addr, i.into())? {
                 None => {}
                 Some(association_ref) => match self.get_data_type(association_ref)? {
                     GarnishDataType::Pair => {
@@ -293,18 +263,6 @@ where
                 return Ok(None);
             }
         }
-    }
-
-    fn get_list_items_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-        Ok(self.get_list_len(list_addr)
-            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::DataFactory::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
-    }
-
-    fn get_list_associations_iter(&self, list_addr: Self::Size, _extents: Extents<Self::Number>) -> Result<Self::ListIndexIterator, Self::Error> {
-        Ok(self.get_list_associations_len(list_addr)
-            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), Self::DataFactory::size_to_number(len))))
-            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
     }
 
     fn get_char_list_len(&self, addr: Self::Size) -> Result<Self::Size, Self::Error> {
@@ -524,60 +482,6 @@ where
         }
     }
 
-    fn start_char_list(&mut self) -> Result<(), Self::Error> {
-        self.current_char_list = Some(String::new());
-        Ok(())
-    }
-
-    fn add_to_char_list(&mut self, c: Self::Char) -> Result<(), Self::Error> {
-        match &mut self.current_char_list {
-            None => Err("Attempting to add to unstarted char list.".to_string())?,
-            Some(s) => s.push(c),
-        }
-
-        Ok(())
-    }
-
-    fn end_char_list(&mut self) -> Result<Self::Size, Self::Error> {
-        let data = match &self.current_char_list {
-            None => Err("Attempting to end unstarted char list.".to_string())?,
-            Some(s) => SimpleData::CharList(s.clone()),
-        };
-
-        let addr = self.cache_add(data)?;
-
-        self.current_char_list = None;
-
-        Ok(addr)
-    }
-
-    fn start_byte_list(&mut self) -> Result<(), Self::Error> {
-        self.current_byte_list = Some(Vec::new());
-        Ok(())
-    }
-
-    fn add_to_byte_list(&mut self, c: Self::Byte) -> Result<(), Self::Error> {
-        match &mut self.current_byte_list {
-            None => Err("Attempting to add to unstarted byte list.".to_string())?,
-            Some(l) => l.push(c),
-        }
-
-        Ok(())
-    }
-
-    fn end_byte_list(&mut self) -> Result<Self::Size, Self::Error> {
-        let data = match &self.current_byte_list {
-            None => Err("Attempting to end unstarted byte list.".to_string())?,
-            Some(l) => SimpleData::ByteList(l.clone()),
-        };
-
-        let addr = self.cache_add(data)?;
-
-        self.current_byte_list = None;
-
-        Ok(addr)
-    }
-
     fn get_register_len(&self) -> Self::Size {
         self.register.len()
     }
@@ -602,10 +506,6 @@ where
                 },
             },
         }
-    }
-
-    fn get_register_iter(&self) -> Self::RegisterIndexIterator {
-        SizeIterator::new(0, self.register.len())
     }
 
     fn get_instruction_len(&self) -> usize {
@@ -651,10 +551,6 @@ where
         self.expression_table.get_mut(index)
     }
 
-    fn get_jump_table_iter(&self) -> Self::JumpTableIndexIterator {
-        SizeIterator::new(0, self.expression_table.len())
-    }
-
     fn push_frame(&mut self, index: usize) -> Result<(), Self::Error> {
         let r = self.add_stack_frame(SimpleStackFrame::new(index))?;
         self.push_register(r)
@@ -674,25 +570,21 @@ where
         Ok(None)
     }
 
-    fn get_jump_path_iter(&self) -> Self::JumpPathIndexIterator {
-        unimplemented!() // not sure whether this function is needed currently unused by core
-    }
-
     //
     // Add Conversions
     //
 
     fn add_char_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
-        self.start_char_list()?;
+        SimpleGarnishData::start_char_list(self)?;
         self.add_to_current_char_list(from, 0)?;
-        self.end_char_list()
+        SimpleGarnishData::end_char_list(self)
     }
 
     fn add_byte_list_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
         match self.get_data_type(from)? {
             GarnishDataType::Unit => {
-                self.start_byte_list()?;
-                self.end_byte_list()
+                SimpleGarnishData::start_byte_list(self)?;
+                SimpleGarnishData::end_byte_list(self)
             }
             t => Err(DataError::from(format!("No cast to ByteList available for {:?}", t))),
         }
@@ -709,24 +601,6 @@ where
                 }
                 t => Err(DataError::from(format!("Found {:?} instead of CharList after creating a CharList.", t))),
             },
-        }
-    }
-
-    fn add_byte_from(&mut self, from: Self::Size) -> Result<Self::Size, Self::Error> {
-        match self.get_data_type(from)? {
-            GarnishDataType::CharList => {
-                let iter = self.get_char_list_iter(from, Extents::new(SimpleNumber::zero(), SimpleNumber::max_value()))?;
-                let mut s = String::new();
-                for c in iter {
-                    s.push(c);
-                }
-
-                match s.parse::<u8>() {
-                    Ok(v) => self.add_byte(v),
-                    Err(_) => self.add_unit(),
-                }
-            }
-            _ => self.add_unit(),
         }
     }
 
@@ -750,6 +624,22 @@ where
 
     // overrides
 
+    fn parse_add_char_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        SimpleGarnishData::start_char_list(self)?;
+        for c in Self::DataFactory::parse_char_list(from)? {
+            SimpleGarnishData::add_to_char_list(self, c)?;
+        }
+        SimpleGarnishData::end_char_list(self)
+    }
+
+    fn parse_add_byte_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        SimpleGarnishData::start_byte_list(self)?;
+        for b in Self::DataFactory::parse_byte_list(from)? {
+            SimpleGarnishData::add_to_byte_list(self, b)?;
+        }
+        SimpleGarnishData::end_byte_list(self)
+    }
+
     fn parse_add_symbol(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
         let sym = Self::DataFactory::parse_symbol(from)?;
         self.data.insert_symbol(sym, from.to_string());
@@ -762,6 +652,139 @@ where
 
     fn defer_op(&mut self, operation: Instruction, left: (GarnishDataType, Self::Size), right: (GarnishDataType, Self::Size)) -> Result<bool, Self::Error> {
         (self.op_handler)(self, operation, left, right)
+    }
+}
+
+// Non-trait implementations for removed trait functions
+impl<T, A> SimpleGarnishData<T, A>
+where
+    T: SimpleDataType,
+    A: Default,
+{
+    pub fn get_value_stack_len(&self) -> usize {
+        self.values.len()
+    }
+
+    pub fn get_value(&self, index: usize) -> Option<usize> {
+        self.values.get(index).cloned()
+    }
+
+    pub fn get_value_mut(&mut self, index: usize) -> Option<&mut usize> {
+        self.values.get_mut(index)
+    }
+
+    pub fn get_value_iter(&self) -> SizeIterator {
+        SizeIterator::new(0, self.values.len())
+    }
+
+    pub fn get_list_associations_len(&self, index: usize) -> Result<usize, DataError> {
+        Ok(self.get(index)?.as_list()?.1.len())
+    }
+
+    pub fn get_list_association(&self, list_index: usize, item_index: SimpleNumber) -> Result<Option<usize>, DataError> {
+        match item_index {
+            SimpleNumber::Integer(item_index) => match self.get(list_index)?.as_list()?.1.get(item_index as usize) {
+                None => Err(format!("No list item at index {:?} for list at addr {:?}", item_index, list_index))?,
+                Some(v) => Ok(Some(*v)),
+            },
+            SimpleNumber::Float(_) => Err(DataError::from("Cannot index list with decimal value.".to_string())), // should return None
+        }
+    }
+
+    pub fn get_list_items_iter(&self, list_addr: usize, _extents: Extents<SimpleNumber>) -> Result<NumberIterator, DataError> {
+        Ok(self.get_list_len(list_addr)
+            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), SimpleDataFactory::size_to_number(len))))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
+    }
+
+    pub fn get_list_associations_iter(&self, list_addr: usize, _extents: Extents<SimpleNumber>) -> Result<NumberIterator, DataError> {
+        Ok(self.get_list_associations_len(list_addr)
+            .and_then(|len| Ok(NumberIterator::new(SimpleNumber::Integer(0), SimpleDataFactory::size_to_number(len))))
+            .unwrap_or(NumberIterator::new(SimpleNumber::Integer(0), SimpleNumber::Integer(0))))
+    }
+
+    pub fn start_char_list(&mut self) -> Result<(), DataError> {
+        self.current_char_list = Some(String::new());
+        Ok(())
+    }
+
+    pub fn add_to_char_list(&mut self, c: char) -> Result<(), DataError> {
+        match &mut self.current_char_list {
+            None => Err("Attempting to add to unstarted char list.".to_string())?,
+            Some(s) => s.push(c),
+        }
+
+        Ok(())
+    }
+
+    pub fn end_char_list(&mut self) -> Result<usize, DataError> {
+        let data = match &self.current_char_list {
+            None => Err("Attempting to end unstarted char list.".to_string())?,
+            Some(s) => SimpleData::CharList(s.clone()),
+        };
+
+        let addr = self.cache_add(data)?;
+
+        self.current_char_list = None;
+
+        Ok(addr)
+    }
+
+    pub fn start_byte_list(&mut self) -> Result<(), DataError> {
+        self.current_byte_list = Some(Vec::new());
+        Ok(())
+    }
+
+    pub fn add_to_byte_list(&mut self, c: u8) -> Result<(), DataError> {
+        match &mut self.current_byte_list {
+            None => Err("Attempting to add to unstarted byte list.".to_string())?,
+            Some(l) => l.push(c),
+        }
+
+        Ok(())
+    }
+
+    pub fn end_byte_list(&mut self) -> Result<usize, DataError> {
+        let data = match &self.current_byte_list {
+            None => Err("Attempting to end unstarted byte list.".to_string())?,
+            Some(l) => SimpleData::ByteList(l.clone()),
+        };
+
+        let addr = self.cache_add(data)?;
+
+        self.current_byte_list = None;
+
+        Ok(addr)
+    }
+
+    pub fn get_register_iter(&self) -> SizeIterator {
+        SizeIterator::new(0, self.register.len())
+    }
+
+    pub fn get_jump_table_iter(&self) -> SizeIterator {
+        SizeIterator::new(0, self.expression_table.len())
+    }
+
+    pub fn get_jump_path_iter(&self) -> SizeIterator {
+        unimplemented!() // not sure whether this function is needed currently unused by core
+    }
+
+    pub fn add_byte_from(&mut self, from: usize) -> Result<usize, DataError> {
+        match self.get_data_type(from)? {
+            GarnishDataType::CharList => {
+                let iter = self.get_char_list_iter(from, Extents::new(SimpleNumber::zero(), SimpleNumber::max_value()))?;
+                let mut s = String::new();
+                for c in iter {
+                    s.push(c);
+                }
+
+                match s.parse::<u8>() {
+                    Ok(v) => self.add_byte(v),
+                    Err(_) => self.add_unit(),
+                }
+            }
+            _ => self.add_unit(),
+        }
     }
 }
 
