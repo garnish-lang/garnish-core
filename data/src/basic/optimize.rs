@@ -55,8 +55,7 @@ where
     pub(crate) fn push_clone_data_from(&mut self, from: usize) -> Result<usize, DataError> {
         match self.get_from_data_block_ensure_index(from)? {
             BasicData::Unit => {
-                let data = self.get_from_data_block_ensure_index(from)?.clone();
-                self.push_to_data_block(data)
+                self.push_to_data_block(BasicData::Unit)
             }
             _ => todo!(),
         }
