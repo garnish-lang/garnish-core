@@ -62,7 +62,24 @@ where
 
                 bytes
             }
-            _ => vec![],
+            BasicData::Type(_)
+            | BasicData::Expression(_)
+            | BasicData::External(_)
+            | BasicData::Pair(_, _)
+            | BasicData::Range(_, _)
+            | BasicData::Slice(_, _)
+            | BasicData::Partial(_, _)
+            | BasicData::Concatenation(_, _)
+            | BasicData::Custom(_)
+            | BasicData::Empty
+            | BasicData::UninitializedList(_, _)
+            | BasicData::ListItem(_)
+            | BasicData::AssociativeItem(_, _)
+            | BasicData::Value(_, _)
+            | BasicData::Register(_, _)
+            | BasicData::Instruction(_, _)
+            | BasicData::JumpPoint(_)
+            | BasicData::Frame(_, _) => vec![],
         })
     }
 }
