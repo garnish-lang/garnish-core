@@ -2720,4 +2720,77 @@ mod tests {
         assert_eq!(symbol, 0);
         assert_eq!(data, expected_data);
     }
+
+    #[test]
+    fn add_byte_list_from() {
+        let mut data = test_data();
+        let index = data.push_object_to_data_block(basic_object!((Number 100), (CharList "Some Text"))).unwrap();
+        data.add_byte_list_from(index).unwrap();
+
+        let mut expected_data = test_data();
+        expected_data.data.resize(60, BasicData::Empty);
+        expected_data.data[0] = BasicData::Number(100.into());
+        expected_data.data[1] = BasicData::CharList(9);
+        expected_data.data[2] = BasicData::Char('S');
+        expected_data.data[3] = BasicData::Char('o');
+        expected_data.data[4] = BasicData::Char('m');
+        expected_data.data[5] = BasicData::Char('e');
+        expected_data.data[6] = BasicData::Char(' ');
+        expected_data.data[7] = BasicData::Char('T');
+        expected_data.data[8] = BasicData::Char('e');
+        expected_data.data[9] = BasicData::Char('x');
+        expected_data.data[10] = BasicData::Char('t');
+        expected_data.data[11] = BasicData::List(2, 0);
+        expected_data.data[12] = BasicData::ListItem(0);
+        expected_data.data[13] = BasicData::ListItem(1);
+        expected_data.data[14] = BasicData::Empty;
+        expected_data.data[15] = BasicData::Empty;
+        expected_data.data[16] = BasicData::ByteList(40);
+        expected_data.data[17] = BasicData::Byte(100);
+        expected_data.data[18] = BasicData::Byte(0);
+        expected_data.data[19] = BasicData::Byte(0);
+        expected_data.data[20] = BasicData::Byte(0);
+        expected_data.data[21] = BasicData::Byte(83);
+        expected_data.data[22] = BasicData::Byte(0);
+        expected_data.data[23] = BasicData::Byte(0);
+        expected_data.data[24] = BasicData::Byte(0);
+        expected_data.data[25] = BasicData::Byte(111);
+        expected_data.data[26] = BasicData::Byte(0);
+        expected_data.data[27] = BasicData::Byte(0);
+        expected_data.data[28] = BasicData::Byte(0);
+        expected_data.data[29] = BasicData::Byte(109);
+        expected_data.data[30] = BasicData::Byte(0);
+        expected_data.data[31] = BasicData::Byte(0);
+        expected_data.data[32] = BasicData::Byte(0);
+        expected_data.data[33] = BasicData::Byte(101);
+        expected_data.data[34] = BasicData::Byte(0);
+        expected_data.data[35] = BasicData::Byte(0);
+        expected_data.data[36] = BasicData::Byte(0);
+        expected_data.data[37] = BasicData::Byte(32);
+        expected_data.data[38] = BasicData::Byte(0);
+        expected_data.data[39] = BasicData::Byte(0);
+        expected_data.data[40] = BasicData::Byte(0);
+        expected_data.data[41] = BasicData::Byte(84);
+        expected_data.data[42] = BasicData::Byte(0);
+        expected_data.data[43] = BasicData::Byte(0);
+        expected_data.data[44] = BasicData::Byte(0);
+        expected_data.data[45] = BasicData::Byte(101);
+        expected_data.data[46] = BasicData::Byte(0);
+        expected_data.data[47] = BasicData::Byte(0);
+        expected_data.data[48] = BasicData::Byte(0);
+        expected_data.data[49] = BasicData::Byte(120);
+        expected_data.data[50] = BasicData::Byte(0);
+        expected_data.data[51] = BasicData::Byte(0);
+        expected_data.data[52] = BasicData::Byte(0);
+        expected_data.data[53] = BasicData::Byte(116);
+        expected_data.data[54] = BasicData::Byte(0);
+        expected_data.data[55] = BasicData::Byte(0);
+        expected_data.data[56] = BasicData::Byte(0);
+
+        expected_data.data_block.cursor = 57;
+        expected_data.data_block.size = 60;
+        expected_data.data_block.start = 0;
+
+        assert_eq!(data, expected_data);
+    }
 }
