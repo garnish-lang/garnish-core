@@ -79,6 +79,11 @@ macro_rules! basic_object {
     (Custom $value:expr) => {
         BasicObject::Custom(Box::new($value))
     };
+    ($($item:tt),+ $(,)?) => {
+        BasicObject::List(vec![
+            $(Box::new(basic_object!($item)),)*
+        ])
+    };
 }
 
 #[cfg(test)]
@@ -250,5 +255,26 @@ mod tests {
         let value: BasicObject = basic_object!((Number 10) <> (Number 20));
 
         assert_eq!(value, BasicObject::Concatenation(Box::new(BasicObject::Number(10.into())), Box::new(BasicObject::Number(20.into()))));
+    }
+
+    #[test]
+    fn build_list() {
+        let value: BasicObject = basic_object!((Number 100), (Number 200), (Number 250));
+
+        assert_eq!(value, BasicObject::List(vec![
+            Box::new(BasicObject::Number(100.into())),
+            Box::new(BasicObject::Number(200.into())),
+            Box::new(BasicObject::Number(250.into()))
+        ]));
+    }
+
+    #[test]
+    fn build_list_with_byte_list() {
+        let value: BasicObject = basic_object!((ByteList 100, 200, 250), (Number 100));
+
+        assert_eq!(value, BasicObject::List(vec![
+            Box::new(BasicObject::ByteList(vec![100, 200, 250])),
+            Box::new(BasicObject::Number(100.into())),
+        ]));
     }
 }
