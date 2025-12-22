@@ -49,6 +49,7 @@ where
     current_register: Option<usize>,
     instruction_pointer: usize,
     current_frame: Option<usize>,
+    data_retention_count: usize,
     data: Vec<BasicData<T>>,
     instruction_block: StorageBlock,
     jump_table_block: StorageBlock,
@@ -85,6 +86,7 @@ where
             current_register: None,
             instruction_pointer: 0,
             current_frame: None,
+            data_retention_count: 0,
             data: Vec::new(),
             instruction_block: StorageBlock::new(instruction_settings.initial_size(), instruction_settings.clone()),
             jump_table_block: StorageBlock::new(jump_table_settings.initial_size(), jump_table_settings.clone()),
@@ -144,12 +146,28 @@ where
         self.custom_data_block.size
     }
 
+    pub fn total_allocated_size(&self) -> usize {
+        self.instruction_block.size + self.jump_table_block.size + self.symbol_table_block.size + self.data_block.size + self.custom_data_block.size
+    }
+
     pub fn get_basic_data(&self, index: usize) -> Option<&BasicData<T>> {
         self.data.get(index)
     }
 
     pub fn get_basic_data_mut(&mut self, index: usize) -> Option<&mut BasicData<T>> {
         self.data.get_mut(index)
+    }
+
+    pub fn data_retention_count(&self) -> usize {
+        self.data_retention_count
+    }
+
+    pub fn retain_all_current_data(&mut self) {
+        self.data_retention_count = self.data_block().cursor;
+    }
+
+    pub fn set_data_retention_count(&mut self, count: usize) {
+        self.data_retention_count = count;
     }
 
     pub fn push_to_instruction_block(&mut self, instruction: Instruction, data: Option<usize>) -> Result<usize, DataError> {
@@ -418,6 +436,7 @@ mod tests {
                 current_value: None,
                 current_register: None,
                 current_frame: None,
+                data_retention_count: 0,
                 data: expected_data,
                 instruction_block: expected_instruction_block,
                 jump_table_block: expected_jump_table_block,
