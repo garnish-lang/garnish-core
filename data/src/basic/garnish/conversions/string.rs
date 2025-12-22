@@ -439,7 +439,6 @@ mod tests {
         concatenation: basic_object!((Number 100) <> (Number 200)) => "100 <> 200",
         list_concatenation_nested_under_pair: basic_object!(((Number 100) <> (Number 200)) = ((Number 300), (Number 400), (Number 500))) => "(100 <> 200) = (300 400 500)",
         slice_partial_under_pair: basic_object!(((Number 100) - (Number 200)) = ((Number 300) ~ (Number 500))) => "(100 ~ 200) = (300 ~ 500)",
-        // custom: basic_object!(Custom (BasicObject::Number(100.into()))) => "[Custom 100]",
     );
 
     data_conversions!(
