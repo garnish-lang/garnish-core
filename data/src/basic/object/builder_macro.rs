@@ -6,6 +6,9 @@ macro_rules! basic_object {
     ($left:tt = $right:tt) => {
         BasicObject::Pair(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
     };
+    ($left:tt..$right:tt) => {
+        BasicObject::Range(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+    };
     (Unit) => {
         BasicObject::Unit
     };
@@ -200,5 +203,12 @@ mod tests {
             Box::new(BasicObject::CharList("hello".to_string())),
             Box::new(BasicObject::Number(42.into()))
         ));
+    }
+
+    #[test]
+    fn build_range() {
+        let value: BasicObject = basic_object!((Number 10) .. (Number 20));
+
+        assert_eq!(value, BasicObject::Range(Box::new(BasicObject::Number(10.into())), Box::new(BasicObject::Number(20.into()))));
     }
 }
