@@ -9,6 +9,15 @@ macro_rules! basic_object {
     ($left:tt..$right:tt) => {
         BasicObject::Range(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
     };
+    ($left:tt - $right:tt) => {
+        BasicObject::Slice(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+    };
+    ($left:tt ~ $right:tt) => {
+        BasicObject::Partial(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+    };
+    ($left:tt <> $right:tt) => {
+        BasicObject::Concatenation(Box::new(basic_object!($left)), Box::new(basic_object!($right)))
+    };
     (Unit) => {
         BasicObject::Unit
     };
@@ -207,8 +216,29 @@ mod tests {
 
     #[test]
     fn build_range() {
-        let value: BasicObject = basic_object!((Number 10) .. (Number 20));
+        let value: BasicObject = basic_object!((Number 10)..(Number 20));
 
         assert_eq!(value, BasicObject::Range(Box::new(BasicObject::Number(10.into())), Box::new(BasicObject::Number(20.into()))));
+    }
+
+    #[test]
+    fn build_slice() {
+        let value: BasicObject = basic_object!((Number 10) - (Number 20));
+
+        assert_eq!(value, BasicObject::Slice(Box::new(BasicObject::Number(10.into())), Box::new(BasicObject::Number(20.into()))));
+    }
+
+    #[test]
+    fn build_partial() {
+        let value: BasicObject = basic_object!((Number 10) ~ (Number 20));
+
+        assert_eq!(value, BasicObject::Partial(Box::new(BasicObject::Number(10.into())), Box::new(BasicObject::Number(20.into()))));
+    }
+
+    #[test]
+    fn build_concatenation() {
+        let value: BasicObject = basic_object!((Number 10) <> (Number 20));
+
+        assert_eq!(value, BasicObject::Concatenation(Box::new(BasicObject::Number(10.into())), Box::new(BasicObject::Number(20.into()))));
     }
 }
