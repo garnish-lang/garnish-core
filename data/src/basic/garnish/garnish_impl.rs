@@ -627,6 +627,23 @@ where
         self.push_to_symbol_table_block(symbol, list_index)?;
         Ok(symbol_index)
     }
+
+    fn apply(&mut self, external_value: Self::Size, input_addr: Self::Size) -> Result<bool, Self::Error> {
+        T::apply(self, external_value, input_addr)
+    }
+
+    fn defer_op(
+            &mut self,
+            operation: Instruction,
+            left: (GarnishDataType, Self::Size),
+            right: (GarnishDataType, Self::Size),
+        ) -> Result<bool, Self::Error> {
+        T::defer_op(self, operation, left, right)
+    }
+
+    fn resolve(&mut self, symbol: Self::Symbol) -> Result<bool, Self::Error> {
+        T::resolve(self, symbol)
+    }
 }
 
 #[cfg(test)]
@@ -634,12 +651,9 @@ mod tests {
     use garnish_lang_traits::Instruction;
 
     use crate::{
-        BasicData,
-        basic::{
-            utilities::{instruction_test_data, jump_table_test_data, test_data},
-        },
-        error::DataErrorType,
-        basic_object,
+        BasicData, basic::{
+            storage::{ReallocationStrategy, StorageSettings}, utilities::{instruction_test_data, jump_table_test_data, test_data}
+        }, basic_object, error::DataErrorType
     };
 
     use super::*;
@@ -2801,5 +2815,74 @@ mod tests {
         expected_data.data[6] = BasicData::Unit;
         expected_data.data_block.cursor = 7;
         assert_eq!(data, expected_data);
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
+    struct Foo {
+        value: String,
+    }
+
+    impl BasicDataCustom for Foo {
+        fn resolve(data: &mut BasicGarnishData<Self>, _symbol: u64) -> Result<bool, DataError> {
+            data.push_object_to_data_block(basic_object!(Custom Foo {
+                value: "resolved".to_string(),
+            }))?;
+            Ok(true)
+        }
+    
+        fn apply(data: &mut BasicGarnishData<Self>, _external_value: usize, _input_addr: usize) -> Result<bool, DataError> {
+            data.push_object_to_data_block(basic_object!(Custom Foo {
+                value: "applied".to_string(),
+            }))?;
+            Ok(true)
+        }
+    
+        fn defer_op(
+            data: &mut BasicGarnishData<Self>,
+            _operation: Instruction,
+            _left: (GarnishDataType, usize),
+            _right: (GarnishDataType, usize),
+        ) -> Result<bool, DataError> {
+            data.push_object_to_data_block(basic_object!(Custom Foo {
+                value: "deferred".to_string(),
+            }))?;
+            Ok(true)
+        }
+    }
+
+    #[test]
+    fn custom_data_resolved() {
+        let mut data = BasicGarnishData::<Foo>::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+        data.resolve(100).unwrap();
+        assert_eq!(data.data[0], BasicData::Custom(Foo { value: "resolved".to_string() }));
+    }
+
+    #[test]
+    fn custom_data_applied() {
+        let mut data = BasicGarnishData::<Foo>::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+        data.apply(100, 200).unwrap();
+        assert_eq!(data.data[0], BasicData::Custom(Foo { value: "applied".to_string() }));
+    }
+    
+    #[test]
+    fn custom_data_deferred() {
+        let mut data = BasicGarnishData::<Foo>::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+        data.defer_op(Instruction::Add, (GarnishDataType::Number, 100), (GarnishDataType::Number, 200)).unwrap();
+        assert_eq!(data.data[0], BasicData::Custom(Foo { value: "deferred".to_string() }));
     }
 }

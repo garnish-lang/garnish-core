@@ -1,11 +1,11 @@
 use garnish_lang_traits::{GarnishDataType, Instruction};
-use crate::{DataError};
+use crate::{BasicDataCustom, DataError};
 
 type BasicNumber = crate::data::SimpleNumber;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
 pub enum BasicData<T> 
-where T: crate::basic::BasicDataCustom {
+where T: BasicDataCustom {
     Unit,
     True,
     False,
@@ -39,7 +39,7 @@ where T: crate::basic::BasicDataCustom {
 }
 
 impl<T> BasicData<T>
-where T: crate::basic::BasicDataCustom {
+where T: BasicDataCustom {
     pub fn get_data_type(&self) -> GarnishDataType {
         match self {
             BasicData::Unit => GarnishDataType::Unit,

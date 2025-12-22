@@ -14,6 +14,8 @@ use std::usize;
 pub use data::{BasicData, BasicDataUnitCustom};
 pub use garnish::BasicDataFactory;
 pub use garnish::ConversionDelegate;
+use garnish_lang_traits::GarnishDataType;
+use garnish_lang_traits::Instruction;
 
 use crate::basic::search::search_for_associative_item;
 use crate::basic::storage::{StorageBlock, StorageSettings};
@@ -26,8 +28,24 @@ pub type BasicNumber = SimpleNumber;
 pub trait BasicDataFormatter<T> where T: BasicDataCustom {
 }
 
-pub trait BasicDataCustom: Clone + Debug {
-    fn convert_custom_data_with_delegate(delegate: &mut impl ConversionDelegate<Self, char>, value: Self) -> Result<(), DataError>;
+pub trait BasicDataCustom: Clone + Debug + PartialEq + Eq + PartialOrd {
+    fn convert_custom_data_with_delegate(_delegate: &mut impl ConversionDelegate<Self, char>, _value: Self) -> Result<(), DataError> {
+        Ok(())
+    }
+    fn resolve(_data: &mut BasicGarnishData<Self>, _symbol: u64) -> Result<bool, DataError> {
+        Ok(false)
+    }
+    fn apply(_data: &mut BasicGarnishData<Self>, _external_value: usize, _input_addr: usize) -> Result<bool, DataError> {
+        Ok(false)
+    }
+    fn defer_op(
+        _data: &mut BasicGarnishData<Self>,
+        _operation: Instruction,
+        _left: (GarnishDataType, usize),
+        _right: (GarnishDataType, usize),
+    ) -> Result<bool, DataError> {
+        Ok(false)
+    }
 }
 
 impl BasicDataCustom for () {

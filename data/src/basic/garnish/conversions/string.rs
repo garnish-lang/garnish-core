@@ -451,7 +451,7 @@ mod tests {
         frame: BasicData::Frame(None, None) => "",
     );
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
     struct Foo {
         value: String,
     }
