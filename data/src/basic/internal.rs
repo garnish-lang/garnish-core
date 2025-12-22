@@ -24,28 +24,28 @@ where
         Ok(&mut self.data_mut()[true_index])
     }
 
-    pub(crate) fn get_from_instruction_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
+    pub(crate) fn get_from_instruction_block_ensure_index(&self, index: usize) -> Result<(garnish_lang_traits::Instruction, Option<usize>), DataError> {
         if index >= self.instruction_block().cursor {
             return Err(DataError::new("Invalid instruction index", DataErrorType::InvalidInstructionIndex(index)));
         }
         let true_index = self.instruction_block().start + index;
-        Ok(&self.data()[true_index])
+        self.data()[true_index].as_instruction()
     }
 
-    pub(crate) fn get_from_jump_table_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
+    pub(crate) fn get_from_jump_table_block_ensure_index(&self, index: usize) -> Result<usize, DataError> {
         if index >= self.jump_table_block().cursor {
             return Err(DataError::new("Invalid jump table index", DataErrorType::InvalidJumpTableIndex(index)));
         }
         let true_index = self.jump_table_block().start + index;
-        Ok(&self.data()[true_index])
+        self.data()[true_index].as_jump_point()
     }
 
-    pub(crate) fn get_from_jump_table_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut BasicData<T>, DataError> {
+    pub(crate) fn get_from_jump_table_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut usize, DataError> {
         if index >= self.jump_table_block().cursor {
             return Err(DataError::new("Invalid jump table index", DataErrorType::InvalidJumpTableIndex(index)));
         }
         let true_index = self.jump_table_block().start + index;
-        Ok(&mut self.data_mut()[true_index])
+        self.data_mut()[true_index].as_jump_point_mut()
     }
 
     pub(crate) fn push_to_block(heap: &mut Vec<BasicData<T>>, block: &mut StorageBlock, data: BasicData<T>) -> usize {

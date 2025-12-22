@@ -139,7 +139,7 @@ where
         self.data.get_mut(index)
     }
 
-    pub fn push_to_instruction_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
+    pub fn push_to_instruction_block(&mut self, instruction: Instruction, data: Option<usize>) -> Result<usize, DataError> {
         if self.instruction_block.cursor >= self.instruction_block.size {
             self.reallocate_heap(
                 self.instruction_block.next_size(),
@@ -148,10 +148,10 @@ where
                 self.data_block.size,
             )?;
         }
-        Ok(Self::push_to_block(&mut self.data, &mut self.instruction_block, data))
+        Ok(Self::push_to_block(&mut self.data, &mut self.instruction_block, BasicData::Instruction(instruction, data)))
     }
 
-    pub fn push_to_jump_table_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
+    pub fn push_to_jump_table_block(&mut self, index: usize) -> Result<usize, DataError> {
         if self.jump_table_block.cursor >= self.jump_table_block.size {
             self.reallocate_heap(
                 self.instruction_block.size,
@@ -160,7 +160,7 @@ where
                 self.data_block.size,
             )?;
         }
-        Ok(Self::push_to_block(&mut self.data, &mut self.jump_table_block, data))
+        Ok(Self::push_to_block(&mut self.data, &mut self.jump_table_block, BasicData::JumpPoint(index)))
     }
 
     pub fn push_to_symbol_table_block(&mut self, symbol: u64, value: usize) -> Result<(), DataError> {
@@ -323,7 +323,7 @@ pub mod utilities {
 
 #[cfg(test)]
 mod tests {
-    use garnish_lang_traits::GarnishDataType;
+    use garnish_lang_traits::{GarnishDataType, Instruction};
 
     use crate::{
         BasicData, BasicGarnishData, BasicGarnishDataUnit, DataError,
@@ -410,24 +410,13 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
-        let index = data.push_to_instruction_block(BasicData::Unit).unwrap();
+        let index = data.push_to_instruction_block(Instruction::Add, None).unwrap();
         assert_eq!(index, 0);
-        assert_eq!(data.instruction_block.cursor, 1);
-        assert_eq!(data.instruction_block.size, 10);
+        assert_eq!(data.instruction_block().cursor, 1);
+        assert_eq!(data.instruction_block().size, 10);
         assert_eq!(
-            data.data,
-            vec![
-                BasicData::Unit,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-            ]
+            data.data()[0],
+            BasicData::Instruction(Instruction::Add, None)
         );
     }
 
@@ -439,24 +428,13 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
-        let index = data.push_to_jump_table_block(BasicData::Unit).unwrap();
+        let index = data.push_to_jump_table_block(100).unwrap();
         assert_eq!(index, 0);
-        assert_eq!(data.jump_table_block.cursor, 1);
-        assert_eq!(data.jump_table_block.size, 10);
+        assert_eq!(data.jump_table_block().cursor, 1);
+        assert_eq!(data.jump_table_block().size, 10);
         assert_eq!(
-            data.data,
-            vec![
-                BasicData::Unit,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-                BasicData::Empty,
-            ]
+            data.data()[0],
+            BasicData::JumpPoint(100)
         );
     }
 
@@ -489,10 +467,10 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         for _ in 0..15 {
-            data.push_to_instruction_block(BasicData::Unit).unwrap();
+            data.push_to_instruction_block(Instruction::Add, None).unwrap();
         }
 
-        let mut expected_data = vec![BasicData::Unit; 15];
+        let mut expected_data = vec![BasicData::Instruction(Instruction::Add, None); 15];
         expected_data.resize(20, BasicData::Empty);
 
         assert_eq!(data.instruction_size(), 15);
@@ -508,11 +486,11 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
-        for _ in 0..15 {
-            data.push_to_jump_table_block(BasicData::Unit).unwrap();
+        for i in 0..15 {
+            data.push_to_jump_table_block(i).unwrap();
         }
 
-        let mut expected_data = vec![BasicData::Unit; 15];
+        let mut expected_data: Vec<BasicData<()>> = (0..15).map(|i| BasicData::JumpPoint(i)).collect();
         expected_data.resize(20, BasicData::Empty);
 
         assert_eq!(data.jump_table_size(), 15);
@@ -529,14 +507,14 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
-        data.push_to_instruction_block(BasicData::Unit).unwrap();
-        data.push_to_jump_table_block(BasicData::True).unwrap();
+        data.push_to_instruction_block(Instruction::Add, None).unwrap();
+        data.push_to_jump_table_block(200).unwrap();
         data.push_to_symbol_table_block(100, 123).unwrap();
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
 
         let mut expected_data = vec![BasicData::Empty; 40];
-        expected_data[0] = BasicData::Unit;
-        expected_data[10] = BasicData::True;
+        expected_data[0] = BasicData::Instruction(Instruction::Add, None);
+        expected_data[10] = BasicData::JumpPoint(200);
         expected_data[20] = BasicData::AssociativeItem(100, 123);
         expected_data[30] = BasicData::Number(100.into());
 
@@ -562,12 +540,12 @@ mod tests {
 
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         data.push_to_symbol_table_block(100, 0).unwrap();
-        data.push_to_jump_table_block(BasicData::True).unwrap();
-        data.push_to_instruction_block(BasicData::Unit).unwrap();
+        data.push_to_jump_table_block(200).unwrap();
+        data.push_to_instruction_block(Instruction::Add, None).unwrap();
 
         let mut expected_data = vec![BasicData::Empty; 40];
-        expected_data[0] = BasicData::Unit;
-        expected_data[10] = BasicData::True;
+        expected_data[0] = BasicData::Instruction(Instruction::Add, None);
+        expected_data[10] = BasicData::JumpPoint(200);
         expected_data[20] = BasicData::AssociativeItem(100, 0);
         expected_data[30] = BasicData::Number(100.into());
 
@@ -616,10 +594,10 @@ mod tests {
         ).unwrap();
 
         for _ in 0..10 {
-            data.push_to_instruction_block(BasicData::Unit).unwrap();
+            data.push_to_instruction_block(Instruction::Add, None).unwrap();
         }
 
-        let result = data.push_to_instruction_block(BasicData::Unit);
+        let result = data.push_to_instruction_block(Instruction::Add, None);
 
         assert_eq!(
             result,
@@ -639,11 +617,11 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
-        for _ in 0..10 {
-            data.push_to_jump_table_block(BasicData::Unit).unwrap();
+        for i in 0..10 {
+            data.push_to_jump_table_block(i).unwrap();
         }
 
-        let result = data.push_to_jump_table_block(BasicData::Unit);
+        let result = data.push_to_jump_table_block(10);
 
         assert_eq!(
             result,

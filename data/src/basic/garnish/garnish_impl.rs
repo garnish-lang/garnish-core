@@ -503,11 +503,11 @@ where
     }
 
     fn push_instruction(&mut self, instruction: Instruction, data: Option<Self::Size>) -> Result<Self::Size, Self::Error> {
-        Ok(self.push_to_instruction_block(BasicData::Instruction(instruction, data))?)
+        self.push_to_instruction_block(instruction, data)
     }
 
     fn get_instruction(&self, addr: Self::Size) -> Option<(Instruction, Option<Self::Size>)> {
-        match self.get_from_instruction_block_ensure_index(addr).and_then(|data| data.as_instruction()) {
+        match self.get_from_instruction_block_ensure_index(addr) {
             Ok(instruction) => Some(instruction),
             Err(_) => None,
         }
@@ -531,22 +531,19 @@ where
     }
 
     fn push_to_jump_table(&mut self, index: Self::Size) -> Result<(), Self::Error> {
-        self.push_to_jump_table_block(BasicData::JumpPoint(index))?;
+        self.push_to_jump_table_block(index)?;
         Ok(())
     }
 
     fn get_from_jump_table(&self, index: Self::Size) -> Option<Self::Size> {
-        match self.get_from_jump_table_block_ensure_index(index).and_then(|data| data.as_jump_point()) {
+        match self.get_from_jump_table_block_ensure_index(index) {
             Ok(point) => Some(point),
             Err(_) => None,
         }
     }
 
     fn get_from_jump_table_mut(&mut self, index: Self::Size) -> Option<&mut Self::Size> {
-        match self
-            .get_from_jump_table_block_ensure_index_mut(index)
-            .and_then(|data| data.as_jump_point_mut())
-        {
+        match self.get_from_jump_table_block_ensure_index_mut(index) {
             Ok(point) => Some(point),
             Err(_) => None,
         }
@@ -2536,8 +2533,8 @@ mod tests {
     #[test]
     fn get_jump_table_len_multiple() {
         let mut data = jump_table_test_data();
-        data.push_to_jump_table_block(BasicData::True).unwrap();
-        data.push_to_jump_table_block(BasicData::False).unwrap();
+        data.push_to_jump_table_block(100).unwrap();
+        data.push_to_jump_table_block(200).unwrap();
         let len = data.get_jump_table_len();
         assert_eq!(len, 2);
     }
