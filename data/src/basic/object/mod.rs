@@ -1,3 +1,5 @@
+mod builder_macro;
+
 use garnish_lang_traits::{GarnishData, GarnishDataType, SymbolListPart};
 
 use crate::{BasicData, BasicDataCustom, BasicGarnishData, BasicNumber, DataError};
