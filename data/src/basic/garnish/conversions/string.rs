@@ -364,7 +364,7 @@ mod tests {
     use garnish_lang_traits::{GarnishData, GarnishDataFactory, GarnishDataType, Instruction, SymbolListPart};
 
     use crate::{
-        BasicData, BasicDataCustom, BasicDataFactory, BasicGarnishData, ConversionDelegate, DataError, basic::{object::BasicObject, utilities::test_data}
+        BasicData, BasicDataCustom, BasicDataFactory, BasicGarnishData, ConversionDelegate, DataError, basic::{object::BasicObject, utilities::test_data}, basic_object
     };
 
     macro_rules! object_conversions {
@@ -411,60 +411,35 @@ mod tests {
     }
 
     object_conversions!(
-        unit: BasicObject::Unit => "()",
-        true_value: BasicObject::True => "True",
-        false_value: BasicObject::False => "False",
-        type_value: BasicObject::Type(GarnishDataType::Number) => "Number",
-        number: BasicObject::Number(100.into()) => "100",
-        char: BasicObject::Char('a') => "a",
-        byte: BasicObject::Byte(100) => "100",
-        symbol: BasicObject::Symbol(100) => "[Symbol 100]",
-        symbol_with_string: BasicObject::Symbol(BasicDataFactory::parse_symbol("my_symbol").unwrap()) => ":my_symbol" with setup |data: &mut BasicGarnishData| {
+        unit: basic_object!(Unit) => "()",
+        true_value: basic_object!(True) => "True",
+        false_value: basic_object!(False) => "False",
+        type_value: basic_object!(Type Number) => "Number",
+        number: basic_object!(Number 100) => "100",
+        char: basic_object!(Char 'a') => "a",
+        byte: basic_object!(Byte 100) => "100",
+        symbol: basic_object!(SymRaw 100) => "[Symbol 100]",
+        symbol_with_string: basic_object!(Symbol "my_symbol") => ":my_symbol" with setup |data: &mut BasicGarnishData| {
             data.parse_add_symbol("my_symbol").unwrap();
         },
-        symbol_list: BasicObject::SymbolList(vec![SymbolListPart::Symbol(100), SymbolListPart::Number(20.into())]) => "[Symbol 100] 20",
-        symbol_list_nested: BasicObject::Pair(
-            Box::new(BasicObject::SymbolList(vec![SymbolListPart::Symbol(100), SymbolListPart::Number(20.into())])),
-            Box::new(BasicObject::SymbolList(vec![SymbolListPart::Symbol(200), SymbolListPart::Number(30.into())]))
-        ) => "([Symbol 100] 20) = ([Symbol 200] 30)",
-        expression: BasicObject::Expression(123) => "[Expression 123]",
-        external: BasicObject::External(123) => "[External 123]",
-        char_list_clones: BasicObject::CharList("Formatted String".to_string()) => "Formatted String",
-        byte_list: BasicObject::ByteList(vec![100, 200]) => "100 200",
-        byte_list_with_one_item: BasicObject::ByteList(vec![100]) => "100",
-        byte_list_nested: BasicObject::Pair(Box::new(BasicObject::ByteList(vec![50])), Box::new(BasicObject::ByteList(vec![100, 150, 200]))) => "(50) = (100 150 200)",
-        pair: BasicObject::Pair(Box::new(BasicObject::CharList("value".to_string())), Box::new(BasicObject::Number(200.into()))) => "value = 200",
-        nested_pairs: BasicObject::Pair(
-            Box::new(BasicObject::Pair(Box::new(BasicObject::CharList("value".to_string())), Box::new(BasicObject::Number(200.into())))),
-            Box::new(BasicObject::Pair(Box::new(BasicObject::CharList("value2".to_string())), Box::new(BasicObject::Number(400.into()))))
-        ) => "(value = 200) = (value2 = 400)",
-        range: BasicObject::Range(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100..200",
-        slice: BasicObject::Slice(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100 ~ 200",
-        partial: BasicObject::Partial(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100 ~ 200",
-        list: BasicObject::List(vec![Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))]) => "100 200",
-        concatenation: BasicObject::Concatenation(Box::new(BasicObject::Number(100.into())), Box::new(BasicObject::Number(200.into()))) => "100 <> 200",
-        list_concatenation_nested_under_pair: BasicObject::Pair(
-            Box::new(BasicObject::Concatenation(
-                Box::new(BasicObject::Number(100.into())),
-                Box::new(BasicObject::Number(200.into()))
-            )),
-            Box::new(BasicObject::List(vec![
-                Box::new(BasicObject::Number(300.into())),
-                Box::new(BasicObject::Number(400.into())),
-                Box::new(BasicObject::Number(500.into())),
-            ]))
-        ) => "(100 <> 200) = (300 400 500)",
-        slice_partial_under_pair: BasicObject::Pair(
-            Box::new(BasicObject::Slice(
-                Box::new(BasicObject::Number(100.into())),
-                Box::new(BasicObject::Number(200.into()))
-            )),
-            Box::new(BasicObject::Partial(
-                Box::new(BasicObject::Number(300.into())),
-                Box::new(BasicObject::Number(500.into()))
-            ))
-        ) => "(100 ~ 200) = (300 ~ 500)",
-        // custom: BasicObject::Custom(Box::new(BasicObject::Number(100.into()))) => "[Custom 100]",
+        symbol_list: basic_object!(SymList(SymRaw(100), Number 20)) => "[Symbol 100] 20",
+        symbol_list_nested: basic_object!((SymList(SymRaw(100), Number 20)) = (SymList(SymRaw(200), Number 30))) => "([Symbol 100] 20) = ([Symbol 200] 30)",
+        expression: basic_object!(Expression 123) => "[Expression 123]",
+        external: basic_object!(External 123) => "[External 123]",
+        char_list_clones: basic_object!(CharList "Formatted String") => "Formatted String",
+        byte_list: basic_object!(ByteList 100, 200) => "100 200",
+        byte_list_with_one_item: basic_object!(ByteList 100) => "100",
+        byte_list_nested: basic_object!((ByteList 50) = (ByteList 100, 150, 200)) => "(50) = (100 150 200)",
+        pair: basic_object!((CharList "value") = (Number 200)) => "value = 200",
+        nested_pairs: basic_object!(((CharList "value") = (Number 200)) = ((CharList "value2") = (Number 400))) => "(value = 200) = (value2 = 400)",
+        range: basic_object!((Number 100)..(Number 200)) => "100..200",
+        slice: basic_object!((Number 100) - (Number 200)) => "100 ~ 200",
+        partial: basic_object!((Number 100) ~ (Number 200)) => "100 ~ 200",
+        list: basic_object!((Number 100), (Number 200)) => "100 200",
+        concatenation: basic_object!((Number 100) <> (Number 200)) => "100 <> 200",
+        list_concatenation_nested_under_pair: basic_object!(((Number 100) <> (Number 200)) = ((Number 300), (Number 400), (Number 500))) => "(100 <> 200) = (300 400 500)",
+        slice_partial_under_pair: basic_object!(((Number 100) - (Number 200)) = ((Number 300) ~ (Number 500))) => "(100 ~ 200) = (300 ~ 500)",
+        // custom: basic_object!(Custom (BasicObject::Number(100.into()))) => "[Custom 100]",
     );
 
     data_conversions!(
@@ -504,9 +479,9 @@ mod tests {
     fn custom_data_converted() {
         let mut data = BasicGarnishData::<Foo>::new().unwrap();
         let index = data
-            .push_object_to_data_block(BasicObject::Custom(Box::new(Foo {
+            .push_object_to_data_block(basic_object!(Custom Foo {
                 value: "custom value".to_string(),
-            })))
+            }))
             .unwrap();
         let char_list = data.convert_basic_data_at_to_char_list(index).unwrap();
 
