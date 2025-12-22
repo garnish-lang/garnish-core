@@ -856,11 +856,11 @@ mod test_data_impl {
             unimplemented!()
         }
 
-        fn push_jump_path(&mut self, index: Self::Size) -> Result<(), Self::Error> {
+        fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
             unimplemented!()
         }
 
-        fn pop_jump_path(&mut self) -> Option<Self::Size> {
+        fn pop_frame(&mut self) -> Result<Option<Self::Size>, Self::Error> {
             unimplemented!()
         }
 
