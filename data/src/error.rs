@@ -25,6 +25,7 @@ pub enum DataErrorType {
     CouldNotParse(String, GarnishDataType),
     NumberToLargeForByteValue(String),
     FailedToParseFloat(String),
+    NotACloneNode,
 }
 
 /// Error implemenation for [`crate::SimpleGarnishData`].

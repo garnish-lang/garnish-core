@@ -68,7 +68,9 @@ where
             | BasicData::Register(_, _)
             | BasicData::Instruction(_, _)
             | BasicData::JumpPoint(_)
-            | BasicData::Frame(_, _) => None,
+            | BasicData::Frame(_, _)
+            | BasicData::CloneNodeNew(_, _)
+            | BasicData::CloneNodeVisited(_, _) => None,
         })
     }
 }

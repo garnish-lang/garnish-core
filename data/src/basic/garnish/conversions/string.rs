@@ -355,7 +355,9 @@ where
         | BasicData::Register(_, _)
         | BasicData::JumpPoint(_)
         | BasicData::Instruction(_, _)
-        | BasicData::Frame(_, _) => {}
+        | BasicData::Frame(_, _)
+        | BasicData::CloneNodeNew(_, _)
+        | BasicData::CloneNodeVisited(_, _) => {}
     })
 }
 
@@ -449,6 +451,8 @@ mod tests {
         instruction: BasicData::Instruction(Instruction::Add, None) => "",
         jump_point: BasicData::JumpPoint(0) => "",
         frame: BasicData::Frame(None, None) => "",
+        clone_node_new: BasicData::CloneNodeNew(None, 0) => "",
+        clone_node_visited: BasicData::CloneNodeVisited(None, 0) => "",
     );
 
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
