@@ -170,6 +170,10 @@ where
         self.data_retention_count = count;
     }
 
+    pub fn optimize(&mut self) -> Result<(), DataError> {
+        self.optimize_data_block()
+    }
+
     pub fn push_to_instruction_block(&mut self, instruction: Instruction, data: Option<usize>) -> Result<usize, DataError> {
         if self.instruction_block.cursor >= self.instruction_block.size {
             self.reallocate_heap(

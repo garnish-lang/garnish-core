@@ -1,5 +1,27 @@
 use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError};
 
+#[derive(Debug)]
+enum Evaluate {
+    Visited,
+    New,
+}
+
+#[derive(Debug)]
+struct EvaluateNode {
+    index: usize,
+    state: Evaluate,
+}
+
+impl EvaluateNode {
+    fn new(index: usize) -> Self {
+        Self { index, state: Evaluate::New }
+    }
+
+    fn visited(self) -> Self{
+        Self { index: self.index, state: Evaluate::Visited }
+    }
+}
+
 impl<T> BasicGarnishData<T>
 where
     T: BasicDataCustom,
@@ -53,12 +75,208 @@ where
     }
 
     pub(crate) fn push_clone_data_from(&mut self, from: usize) -> Result<usize, DataError> {
-        match self.get_from_data_block_ensure_index(from)? {
-            BasicData::Unit => {
-                self.push_to_data_block(BasicData::Unit)
+        let mut index_stack = vec![];
+        let mut evaluate_stack = vec![EvaluateNode::new(from)];
+
+        while let Some(node) = evaluate_stack.pop() {
+
+            // dbg!(index, state);
+
+            match self.get_from_data_block_ensure_index(node.index)? {
+                BasicData::Unit => {
+                    index_stack.push(node.index);
+                }
+                BasicData::True => {
+                    index_stack.push(node.index);
+                }
+                BasicData::False => {
+                    index_stack.push(node.index);
+                }
+                BasicData::Type(_) => {
+                    todo!()
+                }
+                BasicData::Number(_) => {
+                    todo!()
+                }
+                BasicData::Char(_) => {
+                    todo!()
+                }
+                BasicData::Byte(_) => {
+                    todo!()
+                }
+                BasicData::Symbol(_) => {
+                    todo!()
+                }
+                BasicData::SymbolList(_) => {
+                    todo!()
+                }
+                BasicData::Expression(_) => {
+                    todo!()
+                }
+                BasicData::External(_) => {
+                    todo!()
+                }
+                BasicData::CharList(_) => {
+                    todo!()
+                }
+                BasicData::ByteList(_) => {
+                    todo!()
+                }
+                BasicData::Pair(left, right) => match node.state {
+                    Evaluate::New => {
+                        println!("New");
+                        evaluate_stack.push(node.visited());
+                        evaluate_stack.push(EvaluateNode::new(*right));
+                        evaluate_stack.push(EvaluateNode::new(*left));
+                    }
+                    Evaluate::Visited => {
+                        println!("Visited");
+                        index_stack.push(node.index);
+                    }
+                },
+                BasicData::Range(_, _) => {
+                    todo!()
+                }
+                BasicData::Slice(_, _) => {
+                    todo!()
+                }
+                BasicData::Partial(_, _) => {
+                    todo!()
+                }
+                BasicData::List(_, _) => {
+                    todo!()
+                }
+                BasicData::Concatenation(_, _) => {
+                    todo!()
+                }
+                BasicData::Custom(_) => {
+                    todo!()
+                }
+                BasicData::Empty => {
+                    todo!()
+                }
+                BasicData::UninitializedList(_, _) => {
+                    todo!()
+                }
+                BasicData::ListItem(_) => {
+                    todo!()
+                }
+                BasicData::AssociativeItem(_, _) => {
+                    todo!()
+                }
+                BasicData::Value(_, _) => {
+                    todo!()
+                }
+                BasicData::Register(_, _) => {
+                    todo!()
+                }
+                BasicData::Instruction(_, _) => {
+                    todo!()
+                }
+                BasicData::JumpPoint(_) => {
+                    todo!()
+                }
+                BasicData::Frame(_, _) => {
+                    todo!()
+                }
             }
-            _ => todo!(),
         }
+
+        let mut value = from;
+        for index in index_stack {
+            value = match self.get_from_data_block_ensure_index(index)? {
+                BasicData::Unit => {
+                    self.push_to_data_block(BasicData::Unit)?
+                }
+                BasicData::True => {
+                    self.push_to_data_block(BasicData::True)?
+                }
+                BasicData::False => {
+                    self.push_to_data_block(BasicData::False)?
+                }
+                BasicData::Type(_) => {
+                    todo!()
+                }
+                BasicData::Number(_) => {
+                    todo!()
+                }
+                BasicData::Char(_) => {
+                    todo!()
+                }
+                BasicData::Byte(_) => {
+                    todo!()
+                }
+                BasicData::Symbol(_) => {
+                    todo!()
+                }
+                BasicData::SymbolList(_) => {
+                    todo!()
+                }
+                BasicData::Expression(_) => {
+                    todo!()
+                }
+                BasicData::External(_) => {
+                    todo!()
+                }
+                BasicData::CharList(_) => {
+                    todo!()
+                }
+                BasicData::ByteList(_) => {
+                    todo!()
+                }
+                BasicData::Pair(_, _) => {
+                    let new_index = self.data_block().cursor;
+                    self.push_to_data_block(BasicData::Pair(new_index - 2, new_index - 1))?
+                }
+                BasicData::Range(_, _) => {
+                    todo!()
+                }
+                BasicData::Slice(_, _) => {
+                    todo!()
+                }
+                BasicData::Partial(_, _) => {
+                    todo!()
+                }
+                BasicData::List(_, _) => {
+                    todo!()
+                }
+                BasicData::Concatenation(_, _) => {
+                    todo!()
+                }
+                BasicData::Custom(_) => {
+                    todo!()
+                }
+                BasicData::Empty => {
+                    todo!()
+                }
+                BasicData::UninitializedList(_, _) => {
+                    todo!()
+                }
+                BasicData::ListItem(_) => {
+                    todo!()
+                }
+                BasicData::AssociativeItem(_, _) => {
+                    todo!()
+                }
+                BasicData::Value(_, _) => {
+                    todo!()
+                }
+                BasicData::Register(_, _) => {
+                    todo!()
+                }
+                BasicData::Instruction(_, _) => {
+                    todo!()
+                }
+                BasicData::JumpPoint(_) => {
+                    todo!()
+                }
+                BasicData::Frame(_, _) => {
+                    todo!()
+                }
+            }
+        }
+
+        Ok(value)
     }
 }
 
@@ -170,6 +388,29 @@ mod clone {
             BasicData::Unit,
         ]);
         expected_data.data_block_mut().cursor = 2;
+        
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn pair() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!((True = False))).unwrap();
+
+        data.push_clone_data_from(index).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(30..36, vec![
+            BasicData::True,
+            BasicData::False,
+            BasicData::Pair(0, 1),
+            BasicData::True,
+            BasicData::False,
+            BasicData::Pair(3, 4),
+        ]);
+        expected_data.data_block_mut().cursor = 2;
+
+        println!("{}", data.dump_data_block());
         
         assert_eq!(data, expected_data);
     }
