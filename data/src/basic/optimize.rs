@@ -447,6 +447,44 @@ mod clone {
     }
 
     #[test]
+    fn true_value() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!(True)).unwrap();
+        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(30..34, vec![
+            BasicData::True,
+            BasicData::CloneNodeNew(None, 0),
+            BasicData::Value(None, 0),
+            BasicData::True,
+        ]);
+        expected_data.data_block_mut().cursor = 4;
+        
+        assert_eq!(index, 1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn false_value() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!(False)).unwrap();
+        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(30..34, vec![
+            BasicData::False,
+            BasicData::CloneNodeNew(None, 0),
+            BasicData::Value(None, 0),
+            BasicData::False,
+        ]);
+        expected_data.data_block_mut().cursor = 4;
+        
+        assert_eq!(index, 1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
     fn pair() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!((True = False))).unwrap();
