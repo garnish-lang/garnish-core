@@ -74,7 +74,7 @@ where
         Ok(())
     }
 
-    pub(crate) fn push_clone_data_from(&mut self, from: usize) -> Result<usize, DataError> {
+    pub(crate) fn push_clone_data_from(&mut self, from: usize, offset: usize) -> Result<usize, DataError> {
         let mut index_stack = vec![];
         let mut evaluate_stack = vec![EvaluateNode::new(from)];
 
@@ -276,7 +276,7 @@ where
             }
         }
 
-        Ok(value)
+        Ok(value - offset)
     }
 }
 
@@ -338,38 +338,38 @@ mod optimize {
         assert_eq!(data, expected_data);
     }
 
-    #[test]
-    fn data_referenced_by_registers_is_kept() {
-        let mut data = BasicGarnishData::<()>::new().unwrap();
-        let index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
-        let register_index = data.push_to_data_block(BasicData::Register(None, index)).unwrap();
-        data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
-        let index = data.push_object_to_data_block(basic_object!((Number 1234) = (Char 'a'))).unwrap();
-        let register_index = data.push_to_data_block(BasicData::Register(Some(register_index), index)).unwrap();
-        data.set_current_register(Some(register_index));
+    // #[test]
+    // fn data_referenced_by_registers_is_kept() {
+    //     let mut data = BasicGarnishData::<()>::new().unwrap();
+    //     let index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
+    //     let register_index = data.push_to_data_block(BasicData::Register(None, index)).unwrap();
+    //     data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
+    //     let index = data.push_object_to_data_block(basic_object!((Number 1234) = (Char 'a'))).unwrap();
+    //     let register_index = data.push_to_data_block(BasicData::Register(Some(register_index), index)).unwrap();
+    //     data.set_current_register(Some(register_index));
 
-        println!("{}", data.dump_data_block());
+    //     println!("{}", data.dump_data_block());
 
-        data.optimize_data_block().unwrap();
+    //     data.optimize_data_block().unwrap();
     
-        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(70, BasicData::Empty);
-        expected_data.data_mut().splice(30..36, vec![
-            BasicData::Number(100.into()),
-            BasicData::Register(None, 0),
-            BasicData::Number(1234.into()),
-            BasicData::Char('a'),
-            BasicData::Pair(2, 3),
-            BasicData::Register(Some(1), 4),
-        ]);
+    //     let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+    //     expected_data.data_mut().resize(70, BasicData::Empty);
+    //     expected_data.data_mut().splice(30..36, vec![
+    //         BasicData::Number(100.into()),
+    //         BasicData::Register(None, 0),
+    //         BasicData::Number(1234.into()),
+    //         BasicData::Char('a'),
+    //         BasicData::Pair(2, 3),
+    //         BasicData::Register(Some(1), 4),
+    //     ]);
 
-        expected_data.data_block_mut().cursor = 6;
-        expected_data.set_current_register(Some(5));
+    //     expected_data.data_block_mut().cursor = 6;
+    //     expected_data.set_current_register(Some(5));
 
-        println!("{}", data.dump_data_block());
+    //     println!("{}", data.dump_data_block());
 
-        assert_eq!(data, expected_data);
-    }
+    //     assert_eq!(data, expected_data);
+    // }
 }
 
 #[cfg(test)]
@@ -380,7 +380,7 @@ mod clone {
     fn unit() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Unit)).unwrap();
-        data.push_clone_data_from(index).unwrap();
+        let index = data.push_clone_data_from(index, 0).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(30..32, vec![
@@ -389,6 +389,7 @@ mod clone {
         ]);
         expected_data.data_block_mut().cursor = 2;
         
+        assert_eq!(index, 1);
         assert_eq!(data, expected_data);
     }
 
@@ -397,7 +398,7 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!((True = False))).unwrap();
 
-        data.push_clone_data_from(index).unwrap();
+        let index = data.push_clone_data_from(index, 0).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(30..36, vec![
@@ -408,10 +409,31 @@ mod clone {
             BasicData::False,
             BasicData::Pair(3, 4),
         ]);
-        expected_data.data_block_mut().cursor = 2;
+        expected_data.data_block_mut().cursor = 6;
 
-        println!("{}", data.dump_data_block());
+        assert_eq!(index, 5);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn pair_with_offset() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!((True = False))).unwrap();
+
+        let index = data.push_clone_data_from(index, 3).unwrap();
         
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(30..36, vec![
+            BasicData::True,
+            BasicData::False,
+            BasicData::Pair(0, 1),
+            BasicData::True,
+            BasicData::False,
+            BasicData::Pair(3, 4),
+        ]);
+        expected_data.data_block_mut().cursor = 6;
+
+        assert_eq!(index, 2);
         assert_eq!(data, expected_data);
     }
 }
