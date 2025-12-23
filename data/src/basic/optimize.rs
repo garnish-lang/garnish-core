@@ -83,7 +83,7 @@ where
         let addtional_items = self.data_block().cursor - start_index;
         let full_offset = offset + addtional_items;
 
-        self.clone_index_stack(top_index, full_offset)
+        self.clone_index_stack(top_index, full_offset, from)
     }
 
     fn create_index_stack(&mut self, from: usize) -> Result<Option<usize>, DataError> {
@@ -138,8 +138,15 @@ where
                     top_index = Some(index);
                     top_node = previous;
                 }
-                BasicData::SymbolList(_) => {
-                    todo!()
+                BasicData::SymbolList(len) => {
+                    let start = value_index + 1;
+                    let end = start + len;
+                    let range = start..end;
+                    for i in range.rev() {
+                        top_index = Some(self.push_to_data_block(BasicData::Value(top_index, i))?);
+                    }
+                    top_index = Some(self.push_to_data_block(BasicData::Value(top_index, value_index))?);
+                    top_node = previous;
                 }
                 BasicData::Expression(_) => {
                     let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
@@ -228,7 +235,7 @@ where
         Ok(top_index)
     }
 
-    fn clone_index_stack(&mut self, top_index: Option<usize>, offset: usize) -> Result<usize, DataError> {
+    fn clone_index_stack(&mut self, top_index: Option<usize>, offset: usize, original_index: usize) -> Result<usize, DataError> {
         let mut value = match top_index {
             None => {
                 return self.push_to_data_block(BasicData::Unit);
@@ -238,10 +245,10 @@ where
 
         let mut top_index = top_index;
 
-        while let Some(index) = top_index {
-            let (previous, index) = self.get_from_data_block_ensure_index(index)?.as_value()?;
+        while let Some(stack_index) = top_index {
+            let (previous, index) = self.get_from_data_block_ensure_index(stack_index)?.as_value()?;
 
-            value = match self.get_from_data_block_ensure_index(index)?.clone() {
+            let new_index = match self.get_from_data_block_ensure_index(index)?.clone() {
                 BasicData::Unit => {
                     self.push_to_data_block(BasicData::Unit)?
                 }
@@ -266,8 +273,8 @@ where
                 BasicData::Symbol(s) => {
                     self.push_to_data_block(BasicData::Symbol(s))?
                 }
-                BasicData::SymbolList(_) => {
-                    todo!()
+                BasicData::SymbolList(len) => {
+                    self.push_to_data_block(BasicData::SymbolList(len))?
                 }
                 BasicData::Expression(e) => {
                     self.push_to_data_block(BasicData::Expression(e))?
@@ -337,6 +344,10 @@ where
                     todo!()
                 }
             };
+
+            if index == original_index {
+                value = new_index;
+            }
 
             top_index = previous;
         }
@@ -630,6 +641,31 @@ mod clone {
         expected_data.data_block_mut().cursor = 4;
         
         assert_eq!(index, 1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn symbol_list() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!(SymList(SymRaw 100, Number 200))).unwrap();
+        let index = data.push_clone_data_with_offset(index, 3).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(30..40, vec![
+            BasicData::SymbolList(2),
+            BasicData::Symbol(100),
+            BasicData::Number(200.into()),
+            BasicData::CloneNodeNew(None, 0),
+            BasicData::Value(None, 2),
+            BasicData::Value(Some(4), 1),
+            BasicData::Value(Some(5), 0),
+            BasicData::SymbolList(2),
+            BasicData::Symbol(100),
+            BasicData::Number(200.into()),
+        ]);
+        expected_data.data_block_mut().cursor = 10;
+        
+        assert_eq!(index, 0);
         assert_eq!(data, expected_data);
     }
 
