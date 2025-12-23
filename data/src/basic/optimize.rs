@@ -235,7 +235,13 @@ where
                     }
                 }
                 BasicData::List(start, end) => {
-                    todo!()
+                    let start = value_index + 1;
+                    let end = start + end;
+                    let range = start..end;
+                    for i in range.rev() {
+                        top_index = Some(self.push_to_data_block(BasicData::Value(top_index, i))?);
+                    }
+                    top_node = previous;
                 }
                 BasicData::Concatenation(start, end) => match state{
                     Evaluate::New => {
@@ -260,8 +266,9 @@ where
                 BasicData::UninitializedList(_, _) => {
                     todo!()
                 }
-                BasicData::ListItem(_) => {
-                    todo!()
+                BasicData::ListItem(i) => {
+                    let item_index = i.clone();
+
                 }
                 BasicData::AssociativeItem(_, _) => {
                     todo!()
@@ -978,6 +985,46 @@ mod clone {
             BasicData::Number(100.into()),
             BasicData::Number(200.into()),
             BasicData::Concatenation(0, 1),
+            BasicData::CloneNodeNew(None, 2),
+            BasicData::CloneNodeNew(None, 0),
+            BasicData::CloneNodeNew(Some(4), 1),
+            BasicData::CloneNodeVisited(Some(5), 2),
+            BasicData::Value(None, 2),
+            BasicData::Value(Some(7), 1),
+            BasicData::Value(Some(8), 0),
+            BasicData::Number(100.into()),
+            BasicData::Number(200.into()),
+            BasicData::Concatenation(3, 4),
+        ]);
+        expected_data.data_block_mut().cursor = 13;
+        expected_data.data_block_mut().size = 20;
+        expected_data.custom_data_block_mut().start = 50;
+        expected_data.custom_data_block_mut().size = 10;
+
+        assert_eq!(index, 5);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn list() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!((Number 100), (Number 200), (Number 250))).unwrap();
+
+        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().splice(30..43, vec![
+            BasicData::Number(100.into()),
+            BasicData::Number(200.into()),
+            BasicData::Number(250.into()),
+            BasicData::List(0, 3),
+            BasicData::ListItem(0),
+            BasicData::ListItem(1),
+            BasicData::ListItem(2),
+            BasicData::Empty,
+            BasicData::Empty,
+            BasicData::Empty,
             BasicData::CloneNodeNew(None, 2),
             BasicData::CloneNodeNew(None, 0),
             BasicData::CloneNodeNew(Some(4), 1),
