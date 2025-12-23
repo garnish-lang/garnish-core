@@ -503,7 +503,6 @@ mod clone {
             BasicData::False,
             BasicData::Pair(0, 1),
         ]);
-        expected_data.data_block_mut().cursor = 10;
         expected_data.data_block_mut().cursor = 13;
         expected_data.data_block_mut().size = 20;
         expected_data.custom_data_block_mut().start = 50;
