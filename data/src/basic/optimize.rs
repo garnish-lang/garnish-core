@@ -76,7 +76,7 @@ where
         Ok(())
     }
 
-    pub(crate) fn push_clone_data_from(&mut self, from: usize, offset: usize) -> Result<usize, DataError> {
+    pub(crate) fn push_clone_data_with_offset(&mut self, from: usize, offset: usize) -> Result<usize, DataError> {
         let start_index = self.data_block().cursor;
         let top_index = self.create_index_stack(from)?;
 
@@ -431,7 +431,7 @@ mod clone {
     fn unit() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Unit)).unwrap();
-        let index = data.push_clone_data_from(index, 0).unwrap();
+        let index = data.push_clone_data_with_offset(index, 0).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(30..34, vec![
@@ -451,7 +451,7 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!((True = False))).unwrap();
 
-        let index = data.push_clone_data_from(index, 0).unwrap();
+        let index = data.push_clone_data_with_offset(index, 0).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -484,7 +484,7 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!((True = False))).unwrap();
 
-        let index = data.push_clone_data_from(index, 3).unwrap();
+        let index = data.push_clone_data_with_offset(index, 3).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
