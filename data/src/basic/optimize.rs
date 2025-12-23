@@ -78,6 +78,15 @@ where
 
     pub(crate) fn push_clone_data_from(&mut self, from: usize, offset: usize) -> Result<usize, DataError> {
         let start_index = self.data_block().cursor;
+        let top_index = self.create_index_stack(from)?;
+
+        let addtional_items = self.data_block().cursor - start_index;
+        let full_offset = offset + addtional_items;
+
+        self.clone_index_stack(top_index, full_offset)
+    }
+
+    fn create_index_stack(&mut self, from: usize) -> Result<Option<usize>, DataError> {
         let mut top_index = None;
         let mut top_node = Some(self.push_to_data_block(BasicData::CloneNodeNew(None, from))?);
 
@@ -202,10 +211,19 @@ where
             }
         }
 
-        let addtional_items = self.data_block().cursor - start_index;
-        let full_offset = offset + addtional_items;
+        Ok(top_index)
+    }
 
-        let mut value = from;
+    fn clone_index_stack(&mut self, top_index: Option<usize>, offset: usize) -> Result<usize, DataError> {
+        let mut value = match top_index {
+            None => {
+                return self.push_to_data_block(BasicData::Unit);
+            },
+            Some(index) => index,
+        };
+
+        let mut top_index = top_index;
+
         while let Some(index) = top_index {
             let (previous, index) = self.get_from_data_block_ensure_index(index)?.as_value()?;
 
@@ -251,7 +269,7 @@ where
                 }
                 BasicData::Pair(_, _) => {
                     let new_index = self.data_block().cursor;
-                    self.push_to_data_block(BasicData::Pair(new_index - 2 - full_offset, new_index - 1 - full_offset))?
+                    self.push_to_data_block(BasicData::Pair(new_index - 2 - offset, new_index - 1 - offset))?
                 }
                 BasicData::Range(_, _) => {
                     todo!()
@@ -309,7 +327,7 @@ where
             top_index = previous;
         }
 
-        Ok(value - full_offset)
+        Ok(value - offset)
     }
 }
 
