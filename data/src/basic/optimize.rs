@@ -114,28 +114,42 @@ where
                     top_node = previous;
                 }
                 BasicData::Type(_) => {
-                    todo!()
+                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
+                    top_index = Some(index);
+                    top_node = previous;
                 }
                 BasicData::Number(_) => {
-                    todo!()
+                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
+                    top_index = Some(index);
+                    top_node = previous;
                 }
                 BasicData::Char(_) => {
-                    todo!()
+                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
+                    top_index = Some(index);
+                    top_node = previous;
                 }
                 BasicData::Byte(_) => {
-                    todo!()
+                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
+                    top_index = Some(index);
+                    top_node = previous;
                 }
                 BasicData::Symbol(_) => {
-                    todo!()
+                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
+                    top_index = Some(index);
+                    top_node = previous;
                 }
                 BasicData::SymbolList(_) => {
                     todo!()
                 }
                 BasicData::Expression(_) => {
-                    todo!()
+                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
+                    top_index = Some(index);
+                    top_node = previous;
                 }
                 BasicData::External(_) => {
-                    todo!()
+                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
+                    top_index = Some(index);
+                    top_node = previous;
                 }
                 BasicData::CharList(_) => {
                     todo!()
@@ -227,7 +241,7 @@ where
         while let Some(index) = top_index {
             let (previous, index) = self.get_from_data_block_ensure_index(index)?.as_value()?;
 
-            value = match self.get_from_data_block_ensure_index(index)? {
+            value = match self.get_from_data_block_ensure_index(index)?.clone() {
                 BasicData::Unit => {
                     self.push_to_data_block(BasicData::Unit)?
                 }
@@ -237,29 +251,29 @@ where
                 BasicData::False => {
                     self.push_to_data_block(BasicData::False)?
                 }
-                BasicData::Type(_) => {
-                    todo!()
+                BasicData::Type(t) => {
+                    self.push_to_data_block(BasicData::Type(t))?
                 }
-                BasicData::Number(_) => {
-                    todo!()
+                BasicData::Number(n) => {
+                    self.push_to_data_block(BasicData::Number(n))?
                 }
-                BasicData::Char(_) => {
-                    todo!()
+                BasicData::Char(c) => {
+                    self.push_to_data_block(BasicData::Char(c))?
                 }
-                BasicData::Byte(_) => {
-                    todo!()
+                BasicData::Byte(b) => {
+                    self.push_to_data_block(BasicData::Byte(b))?
                 }
-                BasicData::Symbol(_) => {
-                    todo!()
+                BasicData::Symbol(s) => {
+                    self.push_to_data_block(BasicData::Symbol(s))?
                 }
                 BasicData::SymbolList(_) => {
                     todo!()
                 }
-                BasicData::Expression(_) => {
-                    todo!()
+                BasicData::Expression(e) => {
+                    self.push_to_data_block(BasicData::Expression(e))?
                 }
-                BasicData::External(_) => {
-                    todo!()
+                BasicData::External(e) => {
+                    self.push_to_data_block(BasicData::External(e))?
                 }
                 BasicData::CharList(_) => {
                     todo!()
@@ -425,6 +439,8 @@ mod optimize {
 
 #[cfg(test)]
 mod clone {
+    use garnish_lang_traits::GarnishDataType;
+
     use crate::{BasicData, BasicGarnishData, basic_object};
 
     #[test]
@@ -477,6 +493,139 @@ mod clone {
             BasicData::CloneNodeNew(None, 0),
             BasicData::Value(None, 0),
             BasicData::False,
+        ]);
+        expected_data.data_block_mut().cursor = 4;
+        
+        assert_eq!(index, 1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn type_value() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!(Type Number)).unwrap();
+        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(30..34, vec![
+            BasicData::Type(GarnishDataType::Number),
+            BasicData::CloneNodeNew(None, 0),
+            BasicData::Value(None, 0),
+            BasicData::Type(GarnishDataType::Number),
+        ]);
+        expected_data.data_block_mut().cursor = 4;
+        
+        assert_eq!(index, 1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn char() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!(Char 'a')).unwrap();
+        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(30..34, vec![
+            BasicData::Char('a'),
+            BasicData::CloneNodeNew(None, 0),
+            BasicData::Value(None, 0),
+            BasicData::Char('a'),
+        ]);
+        expected_data.data_block_mut().cursor = 4;
+        
+        assert_eq!(index, 1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn byte() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!(Byte 1)).unwrap();
+        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(30..34, vec![
+            BasicData::Byte(1),
+            BasicData::CloneNodeNew(None, 0),
+            BasicData::Value(None, 0),
+            BasicData::Byte(1),
+        ]);
+        expected_data.data_block_mut().cursor = 4;
+        
+        assert_eq!(index, 1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn symbol() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!(SymRaw 100)).unwrap();
+        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(30..34, vec![
+            BasicData::Symbol(100),
+            BasicData::CloneNodeNew(None, 0),
+            BasicData::Value(None, 0),
+            BasicData::Symbol(100),
+        ]);
+        expected_data.data_block_mut().cursor = 4;
+        
+        assert_eq!(index, 1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn number() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
+        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(30..34, vec![
+            BasicData::Number(100.into()),
+            BasicData::CloneNodeNew(None, 0),
+            BasicData::Value(None, 0),
+            BasicData::Number(100.into()),
+        ]);
+        expected_data.data_block_mut().cursor = 4;
+        
+        assert_eq!(index, 1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn expression() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!(Expression 100)).unwrap();
+        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(30..34, vec![
+            BasicData::Expression(100),
+            BasicData::CloneNodeNew(None, 0),
+            BasicData::Value(None, 0),
+            BasicData::Expression(100),
+        ]);
+        expected_data.data_block_mut().cursor = 4;
+        
+        assert_eq!(index, 1);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn external() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!(External 100)).unwrap();
+        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(30..34, vec![
+            BasicData::External(100),
+            BasicData::CloneNodeNew(None, 0),
+            BasicData::Value(None, 0),
+            BasicData::External(100),
         ]);
         expected_data.data_block_mut().cursor = 4;
         
