@@ -78,27 +78,30 @@ where
 
     pub(crate) fn push_clone_data_from(&mut self, from: usize, offset: usize) -> Result<usize, DataError> {
         let start_index = self.data_block().cursor;
-        let mut index_stack = vec![];
+        let mut top_index = None;
         let mut top_node = Some(self.push_to_data_block(BasicData::CloneNodeNew(None, from))?);
 
         while let Some(clone_node_index) = top_node {
-            let (previous, index, state) = match self.get_from_data_block_ensure_index(clone_node_index)?.clone() {
+            let (previous, value_index, state) = match self.get_from_data_block_ensure_index(clone_node_index)?.clone() {
                 BasicData::CloneNodeNew(previous, index) => (previous, index, Evaluate::New),
                 BasicData::CloneNodeVisited(previous, index) => (previous, index, Evaluate::Visited),
                 _ => return Err(DataError::new("Not clone node", DataErrorType::NotACloneNode)),
             };
 
-            match self.get_from_data_block_ensure_index(index)? {
+            match self.get_from_data_block_ensure_index(value_index)? {
                 BasicData::Unit => {
-                    index_stack.push(index);
+                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
+                    top_index = Some(index);
                     top_node = previous;
                 }
                 BasicData::True => {
-                    index_stack.push(index);
+                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
+                    top_index = Some(index);
                     top_node = previous;
                 }
                 BasicData::False => {
-                    index_stack.push(index);
+                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
+                    top_index = Some(index);
                     top_node = previous;
                 }
                 BasicData::Type(_) => {
@@ -134,13 +137,14 @@ where
                 BasicData::Pair(left, right) => match state {
                     Evaluate::New => {
                         let (left, right) = (left.clone(), right.clone());
-                        let index = self.push_to_data_block(BasicData::CloneNodeVisited(previous, index))?;
+                        let index = self.push_to_data_block(BasicData::CloneNodeNew(previous, left))?;
                         let index = self.push_to_data_block(BasicData::CloneNodeNew(Some(index), right))?;
-                        let index = self.push_to_data_block(BasicData::CloneNodeNew(Some(index), left))?;
+                        let index = self.push_to_data_block(BasicData::CloneNodeVisited(Some(index), value_index))?;
                         top_node = Some(index);
                     }
                     Evaluate::Visited => {
-                        index_stack.push(index);
+                        let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
+                        top_index = Some(index);
                         top_node = previous;
                     }
                 },
@@ -202,7 +206,9 @@ where
         let full_offset = offset + addtional_items;
 
         let mut value = from;
-        for index in index_stack {
+        while let Some(index) = top_index {
+            let (previous, index) = self.get_from_data_block_ensure_index(index)?.as_value()?;
+
             value = match self.get_from_data_block_ensure_index(index)? {
                 BasicData::Unit => {
                     self.push_to_data_block(BasicData::Unit)?
@@ -298,7 +304,9 @@ where
                 BasicData::CloneNodeVisited(_, _) => {
                     todo!()
                 }
-            }
+            };
+
+            top_index = previous;
         }
 
         Ok(value - full_offset)
@@ -408,12 +416,13 @@ mod clone {
         let index = data.push_clone_data_from(index, 0).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().splice(30..33, vec![
+        expected_data.data_mut().splice(30..34, vec![
             BasicData::Unit,
             BasicData::CloneNodeNew(None, 0),
+            BasicData::Value(None, 0),
             BasicData::Unit,
         ]);
-        expected_data.data_block_mut().cursor = 3;
+        expected_data.data_block_mut().cursor = 4;
         
         assert_eq!(index, 1);
         assert_eq!(data, expected_data);
@@ -427,19 +436,26 @@ mod clone {
         let index = data.push_clone_data_from(index, 0).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().splice(30..40, vec![
+        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().splice(30..43, vec![
             BasicData::True,
             BasicData::False,
             BasicData::Pair(0, 1),
             BasicData::CloneNodeNew(None, 2),
-            BasicData::CloneNodeVisited(None, 2),
+            BasicData::CloneNodeNew(None, 0),
             BasicData::CloneNodeNew(Some(4), 1),
-            BasicData::CloneNodeNew(Some(5), 0),
+            BasicData::CloneNodeVisited(Some(5), 2),
+            BasicData::Value(None, 2),
+            BasicData::Value(Some(7), 1),
+            BasicData::Value(Some(8), 0),
             BasicData::True,
             BasicData::False,
             BasicData::Pair(3, 4),
         ]);
-        expected_data.data_block_mut().cursor = 10;
+        expected_data.data_block_mut().cursor = 13;
+        expected_data.data_block_mut().size = 20;
+        expected_data.custom_data_block_mut().start = 50;
+        expected_data.custom_data_block_mut().size = 10;
 
         assert_eq!(index, 5);
         assert_eq!(data, expected_data);
@@ -453,21 +469,27 @@ mod clone {
         let index = data.push_clone_data_from(index, 3).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().splice(30..40, vec![
+        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().splice(30..43, vec![
             BasicData::True,
             BasicData::False,
             BasicData::Pair(0, 1),
             BasicData::CloneNodeNew(None, 2),
-            BasicData::CloneNodeVisited(None, 2),
+            BasicData::CloneNodeNew(None, 0),
             BasicData::CloneNodeNew(Some(4), 1),
-            BasicData::CloneNodeNew(Some(5), 0),
+            BasicData::CloneNodeVisited(Some(5), 2),
+            BasicData::Value(None, 2),
+            BasicData::Value(Some(7), 1),
+            BasicData::Value(Some(8), 0),
             BasicData::True,
             BasicData::False,
             BasicData::Pair(0, 1),
         ]);
         expected_data.data_block_mut().cursor = 10;
-
-        println!("{}", data.dump_data_block());
+        expected_data.data_block_mut().cursor = 13;
+        expected_data.data_block_mut().size = 20;
+        expected_data.custom_data_block_mut().start = 50;
+        expected_data.custom_data_block_mut().size = 10;
 
         assert_eq!(index, 2);
         assert_eq!(data, expected_data);
