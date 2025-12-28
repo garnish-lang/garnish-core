@@ -76,242 +76,38 @@ where
         Ok(())
     }
 
-    pub(crate) fn push_clone_data_with_offset(&mut self, from: usize, offset: usize) -> Result<usize, DataError> {
-        let start_index = self.data_block().cursor;
-        let top_index = self.create_index_stack(from)?;
-
-        let addtional_items = self.data_block().cursor - start_index;
-        let full_offset = offset + addtional_items;
-
-        self.clone_index_stack(top_index, full_offset, from)
+    pub(crate) fn push_clone_data(&mut self, from: usize) -> Result<usize, DataError> {
+        let index_stack_start = self.create_index_stack(from)?;
+        self.clone_index_stack(index_stack_start, 0)
     }
 
-    fn create_index_stack(&mut self, from: usize) -> Result<Option<usize>, DataError> {
-        let mut top_index = None;
-        let mut top_node = Some(self.push_to_data_block(BasicData::CloneNodeNew(None, from))?);
+    fn create_index_stack(&mut self, from: usize) -> Result<usize, DataError> {
+        let start = self.push_to_data_block(BasicData::CloneItem(from))?;
+        let mut current = start;
 
-        while let Some(clone_node_index) = top_node {
-            let (previous, value_index, state) = match self.get_from_data_block_ensure_index(clone_node_index)?.clone() {
-                BasicData::CloneNodeNew(previous, index) => (previous, index, Evaluate::New),
-                BasicData::CloneNodeVisited(previous, index) => (previous, index, Evaluate::Visited),
-                _ => return Err(DataError::new("Not clone node", DataErrorType::NotACloneNode)),
-            };
+        while current < self.data_block().cursor {
+            let index = self.get_from_data_block_ensure_index(current)?.as_clone_item()?;
 
-            match self.get_from_data_block_ensure_index(value_index)? {
-                BasicData::Unit => {
-                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                    top_index = Some(index);
-                    top_node = previous;
-                }
-                BasicData::True => {
-                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                    top_index = Some(index);
-                    top_node = previous;
-                }
-                BasicData::False => {
-                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                    top_index = Some(index);
-                    top_node = previous;
-                }
-                BasicData::Type(_) => {
-                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                    top_index = Some(index);
-                    top_node = previous;
-                }
-                BasicData::Number(_) => {
-                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                    top_index = Some(index);
-                    top_node = previous;
-                }
-                BasicData::Char(_) => {
-                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                    top_index = Some(index);
-                    top_node = previous;
-                }
-                BasicData::Byte(_) => {
-                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                    top_index = Some(index);
-                    top_node = previous;
-                }
-                BasicData::Symbol(_) => {
-                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                    top_index = Some(index);
-                    top_node = previous;
-                }
-                BasicData::SymbolList(len) => {
-                    let start = value_index + 1;
-                    let end = start + len;
-                    let range = start..end;
-                    for i in range.rev() {
-                        top_index = Some(self.push_to_data_block(BasicData::Value(top_index, i))?);
-                    }
-                    top_index = Some(self.push_to_data_block(BasicData::Value(top_index, value_index))?);
-                    top_node = previous;
-                }
-                BasicData::Expression(_) => {
-                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                    top_index = Some(index);
-                    top_node = previous;
-                }
-                BasicData::External(_) => {
-                    let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                    top_index = Some(index);
-                    top_node = previous;
-                }
-                BasicData::CharList(len) => {
-                    let start = value_index + 1;
-                    let end = start + len;
-                    let range = start..end;
-                    for i in range.rev() {
-                        top_index = Some(self.push_to_data_block(BasicData::Value(top_index, i))?);
-                    }
-                    top_index = Some(self.push_to_data_block(BasicData::Value(top_index, value_index))?);
-                    top_node = previous;
-                }
-                BasicData::ByteList(len) => {
-                    let start = value_index + 1;
-                    let end = start + len;
-                    let range = start..end;
-                    for i in range.rev() {
-                        top_index = Some(self.push_to_data_block(BasicData::Value(top_index, i))?);
-                    }
-                    top_index = Some(self.push_to_data_block(BasicData::Value(top_index, value_index))?);
-                    top_node = previous;
-                }
-                BasicData::Pair(left, right) => match state {
-                    Evaluate::New => {
-                        let (left, right) = (left.clone(), right.clone());
-                        let index = self.push_to_data_block(BasicData::CloneNodeNew(previous, left))?;
-                        let index = self.push_to_data_block(BasicData::CloneNodeNew(Some(index), right))?;
-                        let index = self.push_to_data_block(BasicData::CloneNodeVisited(Some(index), value_index))?;
-                        top_node = Some(index);
-                    }
-                    Evaluate::Visited => {
-                        let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                        top_index = Some(index);
-                        top_node = previous;
-                    }
-                },
-                BasicData::Range(start, end) => match state {
-                    Evaluate::New => {
-                        let (start, end) = (start.clone(), end.clone());
-                        let index = self.push_to_data_block(BasicData::CloneNodeNew(previous, start))?;
-                        let index = self.push_to_data_block(BasicData::CloneNodeNew(Some(index), end))?;
-                        let index = self.push_to_data_block(BasicData::CloneNodeVisited(Some(index), value_index))?;
-                        top_node = Some(index);
-                    }
-                    Evaluate::Visited => {
-                        let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                        top_index = Some(index);
-                        top_node = previous;
-                    }
-                }
-                BasicData::Slice(start, end) => match state {
-                    Evaluate::New => {
-                        let (start, end) = (start.clone(), end.clone());
-                        let index = self.push_to_data_block(BasicData::CloneNodeNew(previous, start))?;
-                        let index = self.push_to_data_block(BasicData::CloneNodeNew(Some(index), end))?;
-                        let index = self.push_to_data_block(BasicData::CloneNodeVisited(Some(index), value_index))?;
-                        top_node = Some(index);
-                    }
-                    Evaluate::Visited => {
-                        let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                        top_index = Some(index);
-                        top_node = previous;
-                    }
-                }
-                BasicData::Partial(start, end) => match state {
-                    Evaluate::New => {
-                        let (start, end) = (start.clone(), end.clone());
-                        let index = self.push_to_data_block(BasicData::CloneNodeNew(previous, start))?;
-                        let index = self.push_to_data_block(BasicData::CloneNodeNew(Some(index), end))?;
-                        let index = self.push_to_data_block(BasicData::CloneNodeVisited(Some(index), value_index))?;
-                        top_node = Some(index);
-                    }
-                    Evaluate::Visited => {
-                        let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                        top_index = Some(index);
-                        top_node = previous;
-                    }
-                }
-                BasicData::List(start, end) => {
-                    let start = value_index + 1;
-                    let end = start + end;
-                    let range = start..end;
-                    for i in range.rev() {
-                        top_index = Some(self.push_to_data_block(BasicData::Value(top_index, i))?);
-                    }
-                    top_node = previous;
-                }
-                BasicData::Concatenation(start, end) => match state{
-                    Evaluate::New => {
-                        let (start, end) = (start.clone(), end.clone());
-                        let index = self.push_to_data_block(BasicData::CloneNodeNew(previous, start))?;
-                        let index = self.push_to_data_block(BasicData::CloneNodeNew(Some(index), end))?;
-                        let index = self.push_to_data_block(BasicData::CloneNodeVisited(Some(index), value_index))?;
-                        top_node = Some(index);
-                    }
-                    Evaluate::Visited => {
-                        let index = self.push_to_data_block(BasicData::Value(top_index, value_index))?;
-                        top_index = Some(index);
-                        top_node = previous;
-                    }
-                }
-                BasicData::Custom(_) => {
-                    todo!()
-                }
-                BasicData::Empty => {
-                    todo!()
-                }
-                BasicData::UninitializedList(_, _) => {
-                    todo!()
-                }
-                BasicData::ListItem(i) => {
-                    let item_index = i.clone();
-
-                }
-                BasicData::AssociativeItem(_, _) => {
-                    todo!()
-                }
-                BasicData::Value(_, _) => {
-                    todo!()
-                }
-                BasicData::Register(_, _) => {
-                    todo!()
-                }
-                BasicData::Instruction(_, _) => {
-                    todo!()
-                }
-                BasicData::JumpPoint(_) => {
-                    todo!()
-                }
-                BasicData::Frame(_, _) => {
-                    todo!()
-                }
-                BasicData::CloneNodeNew(_, _) => {
-                    todo!()
-                }
-                BasicData::CloneNodeVisited(_, _) => {
-                    todo!()
-                }
+            dbg!(current, index);
+            
+            match self.get_from_data_block_ensure_index(index)? {
+                BasicData::Unit => {}
+                BasicData::True => {},
+                BasicData::False => {},
+                _ => todo!(),
             }
-        }
 
-        Ok(top_index)
+            current += 1;
+        }
+        
+        Ok(start)
     }
 
-    fn clone_index_stack(&mut self, top_index: Option<usize>, offset: usize, original_index: usize) -> Result<usize, DataError> {
-        let mut value = match top_index {
-            None => {
-                return self.push_to_data_block(BasicData::Unit);
-            },
-            Some(index) => index,
-        };
+    fn clone_index_stack(&mut self, top_index: usize, _offset: usize) -> Result<usize, DataError> {
+        let range = top_index..self.data_block().cursor;
 
-        let mut top_index = top_index;
-
-        while let Some(stack_index) = top_index {
-            let (previous, index) = self.get_from_data_block_ensure_index(stack_index)?.as_value()?;
+        for i in range.rev() {
+            let index = self.get_from_data_block_ensure_index(i)?.as_clone_item()?;
 
             let new_index = match self.get_from_data_block_ensure_index(index)?.clone() {
                 BasicData::Unit => {
@@ -355,26 +151,26 @@ where
                 }
                 BasicData::Pair(_, _) => {
                     let new_index = self.data_block().cursor;
-                    self.push_to_data_block(BasicData::Pair(new_index - 2 - offset, new_index - 1 - offset))?
+                    self.push_to_data_block(BasicData::Pair(new_index - 2, new_index - 1))?
                 }
                 BasicData::Range(_, _) => {
                     let new_index = self.data_block().cursor;
-                    self.push_to_data_block(BasicData::Range(new_index - 2 - offset, new_index - 1 - offset))?
+                    self.push_to_data_block(BasicData::Range(new_index - 2, new_index - 1))?
                 }
                 BasicData::Slice(_, _) => {
                     let new_index = self.data_block().cursor;
-                    self.push_to_data_block(BasicData::Slice(new_index - 2 - offset, new_index - 1 - offset))?
+                    self.push_to_data_block(BasicData::Slice(new_index - 2, new_index - 1))?
                 }
                 BasicData::Partial(_, _) => {
                     let new_index = self.data_block().cursor;
-                    self.push_to_data_block(BasicData::Partial(new_index - 2 - offset, new_index - 1 - offset))?
+                    self.push_to_data_block(BasicData::Partial(new_index - 2, new_index - 1))?
                 }
                 BasicData::List(_, _) => {
                     todo!()
                 }
                 BasicData::Concatenation(_, _) => {
                     let new_index = self.data_block().cursor;
-                    self.push_to_data_block(BasicData::Concatenation(new_index - 2 - offset, new_index - 1 - offset))?
+                    self.push_to_data_block(BasicData::Concatenation(new_index - 2, new_index - 1))?
                 }
                 BasicData::Custom(_) => {
                     todo!()
@@ -412,16 +208,20 @@ where
                 BasicData::CloneNodeVisited(_, _) => {
                     todo!()
                 }
+                BasicData::CloneItem(_) => {
+                    todo!()
+                }
+                BasicData::CloneIndexMap(_, _) => {
+                    todo!()
+                }
             };
 
-            if index == original_index {
-                value = new_index;
-            }
-
-            top_index = previous;
+            *self.get_from_data_block_ensure_index_mut(i)? = BasicData::CloneIndexMap(index, new_index);
         }
 
-        Ok(value - offset)
+        let (_original, new) = self.get_from_data_block_ensure_index(top_index)?.as_clone_index_map()?;
+
+        Ok(new)
     }
 }
 
@@ -527,18 +327,17 @@ mod clone {
     fn unit() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Unit)).unwrap();
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().splice(30..34, vec![
+        expected_data.data_mut().splice(30..33, vec![
             BasicData::Unit,
-            BasicData::CloneNodeNew(None, 0),
-            BasicData::Value(None, 0),
+            BasicData::CloneIndexMap(0, 2),
             BasicData::Unit,
         ]);
-        expected_data.data_block_mut().cursor = 4;
+        expected_data.data_block_mut().cursor = 3;
         
-        assert_eq!(index, 1);
+        assert_eq!(index, 2);
         assert_eq!(data, expected_data);
     }
 
@@ -546,18 +345,17 @@ mod clone {
     fn true_value() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(True)).unwrap();
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().splice(30..34, vec![
+        expected_data.data_mut().splice(30..33, vec![
             BasicData::True,
-            BasicData::CloneNodeNew(None, 0),
-            BasicData::Value(None, 0),
+            BasicData::CloneIndexMap(0, 2),
             BasicData::True,
         ]);
-        expected_data.data_block_mut().cursor = 4;
+        expected_data.data_block_mut().cursor = 3;
         
-        assert_eq!(index, 1);
+        assert_eq!(index, 2);
         assert_eq!(data, expected_data);
     }
 
@@ -565,18 +363,17 @@ mod clone {
     fn false_value() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(False)).unwrap();
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().splice(30..34, vec![
+        expected_data.data_mut().splice(30..33, vec![
             BasicData::False,
-            BasicData::CloneNodeNew(None, 0),
-            BasicData::Value(None, 0),
+            BasicData::CloneIndexMap(0, 2),
             BasicData::False,
         ]);
-        expected_data.data_block_mut().cursor = 4;
+        expected_data.data_block_mut().cursor = 3;
         
-        assert_eq!(index, 1);
+        assert_eq!(index, 2);
         assert_eq!(data, expected_data);
     }
 
@@ -584,7 +381,7 @@ mod clone {
     fn type_value() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Type Number)).unwrap();
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(30..34, vec![
@@ -603,7 +400,7 @@ mod clone {
     fn char() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Char 'a')).unwrap();
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(30..34, vec![
@@ -622,7 +419,7 @@ mod clone {
     fn byte() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Byte 1)).unwrap();
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(30..34, vec![
@@ -641,7 +438,7 @@ mod clone {
     fn symbol() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(SymRaw 100)).unwrap();
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(30..34, vec![
@@ -660,7 +457,7 @@ mod clone {
     fn number() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(30..34, vec![
@@ -679,7 +476,7 @@ mod clone {
     fn expression() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Expression 100)).unwrap();
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(30..34, vec![
@@ -698,7 +495,7 @@ mod clone {
     fn external() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(External 100)).unwrap();
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(30..34, vec![
@@ -717,7 +514,7 @@ mod clone {
     fn symbol_list() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(SymList(SymRaw 100, Number 200))).unwrap();
-        let index = data.push_clone_data_with_offset(index, 3).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(30..40, vec![
@@ -742,7 +539,7 @@ mod clone {
     fn char_list() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(CharList "hello")).unwrap();
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -779,7 +576,7 @@ mod clone {
     fn byte_list() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(ByteList 100, 200, 250)).unwrap();
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -812,7 +609,7 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!((True = False))).unwrap();
 
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -845,7 +642,7 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!((True = False))).unwrap();
 
-        let index = data.push_clone_data_with_offset(index, 3).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -878,7 +675,7 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(((Number 100)..(Number 200)))).unwrap();
 
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -911,7 +708,7 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(((Number 100) - (Number 200)))).unwrap();
 
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -944,7 +741,7 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(((Number 100) ~ (Number 200)))).unwrap();
 
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -977,7 +774,7 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(((Number 100) <> (Number 200)))).unwrap();
 
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -1010,7 +807,7 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!((Number 100), (Number 200), (Number 250))).unwrap();
 
-        let index = data.push_clone_data_with_offset(index, 0).unwrap();
+        let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);

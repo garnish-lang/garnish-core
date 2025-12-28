@@ -38,6 +38,8 @@ where T: BasicDataCustom {
     Frame(Option<usize>, Option<usize>),
     CloneNodeNew(Option<usize>, usize),
     CloneNodeVisited(Option<usize>, usize),
+    CloneItem(usize),
+    CloneIndexMap(usize, usize),
 }
 
 impl<T> BasicData<T>
@@ -76,6 +78,8 @@ where T: BasicDataCustom {
             BasicData::Frame(_, _) => GarnishDataType::Invalid,
             BasicData::CloneNodeNew(_, _) => GarnishDataType::Invalid,
             BasicData::CloneNodeVisited(_, _) => GarnishDataType::Invalid,
+            BasicData::CloneItem(_) => GarnishDataType::Invalid,
+            BasicData::CloneIndexMap(_, _) => GarnishDataType::Invalid,
         }
     }
 
@@ -453,6 +457,34 @@ where T: BasicDataCustom {
     pub fn as_clone_node_visited_mut(&mut self) -> Result<&mut usize, DataError> {
         match self {
             BasicData::CloneNodeVisited(_, index) => Ok(index),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_clone_item(&self) -> Result<usize, DataError> {
+        match self {
+            BasicData::CloneItem(item) => Ok(*item),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_clone_item_mut(&mut self) -> Result<&mut usize, DataError> {
+        match self {
+            BasicData::CloneItem(item) => Ok(item),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_clone_index_map(&self) -> Result<(usize, usize), DataError> {
+        match self {
+            BasicData::CloneIndexMap(index, value) => Ok((*index, *value)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_clone_index_map_mut(&mut self) -> Result<(&mut usize, &mut usize), DataError> {
+        match self {
+            BasicData::CloneIndexMap(index, value) => Ok((index, value)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
@@ -1187,5 +1219,32 @@ mod tests {
     fn as_clone_node_visited_mut_not_clone_node_visited() {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_clone_node_visited_mut(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_clone_index_map() {
+        let data = BasicDataUnitCustom::CloneIndexMap(100, 200);
+        assert_eq!(data.as_clone_index_map(), Ok((100, 200)));
+    }
+
+    #[test]
+    fn as_clone_index_map_not_clone_index_map() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_clone_index_map(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_clone_index_map_mut() {
+        let mut data = BasicDataUnitCustom::CloneIndexMap(100, 200);
+        let (index, value) = data.as_clone_index_map_mut().unwrap();
+        *index = 200;
+        *value = 300;
+        assert_eq!(data.as_clone_index_map(), Ok((200, 300)));
+    }
+
+    #[test]
+    fn as_clone_index_map_mut_not_clone_index_map() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_clone_index_map_mut(), Err(DataError::not_basic_type_error()));
     }
 }
