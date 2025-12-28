@@ -96,9 +96,6 @@ where
             let index = self.get_from_data_block_ensure_index(i)?.as_clone_item()?;
             let new_index = self.data_block().cursor;
 
-            println!("Cloneing index: {}", index);
-            println!("{}", self.dump_data_block());
-
             let new_index = match self.get_from_data_block_ensure_index(index)?.clone() {
                 BasicData::Unit => self.push_to_data_block(BasicData::Unit)?,
                 BasicData::True => self.push_to_data_block(BasicData::True)?,
@@ -114,48 +111,8 @@ where
                 BasicData::CharList(len) => self.push_to_data_block(BasicData::CharList(len))?,
                 BasicData::ByteList(len) => self.push_to_data_block(BasicData::ByteList(len))?,
                 BasicData::Pair(left, right) => {
-                    let lookup_range = lookup_start..lookup_end;
-                    let lookup_slice = &self.data()[lookup_range.clone()];
-
-                    dbg!(left, right, &lookup_range, lookup_slice);
-
-                    let existing_left_index = lookup_slice.iter().find_map(|item| match item {
-                        BasicData::CloneIndexMap(original, new) => {
-                            if *original == left {
-                                Some(new.clone())
-                            } else {
-                                None
-                            }
-                        }
-                        _ => None,
-                    });
-
-                    let existing_right_index = lookup_slice.iter().find_map(|item| match item {
-                        BasicData::CloneIndexMap(original, new) => {
-                            if *original == right {
-                                Some(new.clone())
-                            } else {
-                                None
-                            }
-                        }
-                        _ => None,
-                    });
-
-                    let left = match existing_left_index {
-                        Some(value) => value,
-                        None => Err(DataError::new(
-                            "No mapped index found during clone",
-                            DataErrorType::NoMappedIndexFoundDuringClone(left),
-                        ))?,
-                    };
-
-                    let right = match existing_right_index {
-                        Some(value) => value,
-                        None => Err(DataError::new(
-                            "No mapped index found during clone",
-                            DataErrorType::NoMappedIndexFoundDuringClone(right),
-                        ))?,
-                    };
+                    let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
+                    let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
 
                     self.push_to_data_block(BasicData::Pair(left, right))?
                 }
@@ -221,6 +178,31 @@ where
         let (_original, new) = self.get_from_data_block_ensure_index(top_index)?.as_clone_index_map()?;
 
         Ok(new)
+    }
+
+    fn lookup_in_data_slice(&self, start: usize, end: usize, lookup_index: usize) -> Result<usize, DataError> {
+        let lookup_slice = &self.data()[start..end];
+
+        let existing_left_index = lookup_slice.iter().find_map(|item| match item {
+            BasicData::CloneIndexMap(original, new) => {
+                if *original == lookup_index {
+                    Some(new.clone())
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        });
+
+        let index = match existing_left_index {
+            Some(value) => value,
+            None => Err(DataError::new(
+                "No mapped index found during clone",
+                DataErrorType::NoMappedIndexFoundDuringClone(lookup_index),
+            ))?,
+        };
+
+        Ok(index)
     }
 }
 
@@ -691,8 +673,6 @@ mod clone {
         expected_data.data_block_mut().size = 20;
         expected_data.custom_data_block_mut().start = 50;
         expected_data.custom_data_block_mut().size = 10;
-
-        println!("{}", data.dump_data_block());
 
         assert_eq!(index, 14);
         assert_eq!(data, expected_data);
