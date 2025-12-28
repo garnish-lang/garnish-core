@@ -192,8 +192,6 @@ mod tests {
 
     use crate::basic::object::BasicObject;
 
-    use crate::basic_object;
-
     #[test]
     fn build_unit() {
         let value: BasicObject = basic_object!(Unit);
