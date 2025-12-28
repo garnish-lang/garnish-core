@@ -415,7 +415,7 @@ where
         }
 
         let len = len.clone();
-        let start = list_index + 1 + len;
+        let start = self.data_block().start + list_index + 1 + len;
         let associations_end = start + len;
         let associations_range = start..associations_end;
         let associations_slice = &mut self.data_mut()[associations_range];

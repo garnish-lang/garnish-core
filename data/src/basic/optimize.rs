@@ -117,8 +117,24 @@ where
                     todo!()
                 }
                 BasicData::Empty => {}
-                BasicData::UninitializedList(_, _) => {
-                    todo!()
+                BasicData::UninitializedList(len, _count) => {
+                    for _ in 0..len * 2 {
+                        let list_item = self.get_from_data_block_ensure_index(current)?;
+                        match list_item {
+                            BasicData::ListItem(item) => {
+                                self.push_to_data_block(BasicData::CloneItem(item.clone()))?;
+                            }
+                            BasicData::AssociativeItem(_, item) => {
+                                todo!()
+                            }
+                            t => {
+                                Err(DataError::new(
+                                    "Uninitialized list contains non-list item",
+                                    DataErrorType::UninitializedListContainsNonListItem(t.get_data_type()),
+                                ))?;
+                            }
+                        }
+                    }
                 }
                 BasicData::ListItem(_) => {
                     todo!()
@@ -226,8 +242,17 @@ where
                     }
 
                     let association_end = end + association_length;
-                    for _ in end..association_end {
-                        self.push_to_data_block(BasicData::Empty)?;
+                    for i in end..association_end {
+                        match self.get_from_data_block_ensure_index(i)? {
+                            BasicData::AssociativeItem(symbol, item) => {
+                                let item = self.lookup_in_data_slice(lookup_start, lookup_end, *item)?;
+                                self.push_to_data_block(BasicData::AssociativeItem(symbol.clone(), item))?;
+                            }
+                            t => Err(DataError::new(
+                                "Associative item in list is not a valid item",
+                                DataErrorType::NotAssociativeItem(t.get_data_type()),
+                            ))?,
+                        }
                     }
 
                     let full_end = index + 1 + length * 2;
@@ -912,6 +937,72 @@ mod clone {
         expected_data.custom_data_block_mut().start = 60;
 
         assert_eq!(index, 17);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn list_with_associations() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data
+            .push_object_to_data_block(basic_object!(((SymRaw 100) = (Number 100)), ((SymRaw 200) = (Number 200)), ((SymRaw 250) = (Number 250))))
+            .unwrap();
+
+        let index = data.push_clone_data(index).unwrap();
+
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().resize(90, BasicData::Empty);
+        expected_data.data_mut().splice(
+            30..72,
+            vec![
+                BasicData::Symbol(100),
+                BasicData::Number(100.into()),
+                BasicData::Pair(0, 1), // 2
+                BasicData::Symbol(200),
+                BasicData::Number(200.into()),
+                BasicData::Pair(3, 4), // 5
+                BasicData::Symbol(250),
+                BasicData::Number(250.into()),
+                BasicData::Pair(6, 7), // 8
+                BasicData::List(3, 3), // 9
+                BasicData::ListItem(2),
+                BasicData::ListItem(5),
+                BasicData::ListItem(8),
+                BasicData::AssociativeItem(100, 1), // 13
+                BasicData::AssociativeItem(200, 4),
+                BasicData::AssociativeItem(250, 7),
+                BasicData::CloneIndexMap(9, 35), // 16
+                BasicData::CloneIndexMap(2, 34),
+                BasicData::CloneIndexMap(5, 33),
+                BasicData::CloneIndexMap(8, 32),
+                BasicData::CloneIndexMap(1, 31),
+                BasicData::CloneIndexMap(0, 30),
+                BasicData::CloneIndexMap(4, 29),
+                BasicData::CloneIndexMap(3, 28),
+                BasicData::CloneIndexMap(7, 27),
+                BasicData::CloneIndexMap(6, 26),
+                BasicData::Symbol(250), // 26
+                BasicData::Number(250.into()),
+                BasicData::Symbol(200), // 28
+                BasicData::Number(200.into()),
+                BasicData::Symbol(100), // 30
+                BasicData::Number(100.into()),
+                BasicData::Pair(26, 27), // 32
+                BasicData::Pair(28, 29),
+                BasicData::Pair(30, 31),
+                BasicData::List(3, 3), // 35
+                BasicData::ListItem(34),
+                BasicData::ListItem(33),
+                BasicData::ListItem(32),
+                BasicData::AssociativeItem(100, 31),
+                BasicData::AssociativeItem(200, 29),
+                BasicData::AssociativeItem(250, 27), // 41
+            ],
+        );
+        expected_data.data_block_mut().cursor = 42;
+        expected_data.data_block_mut().size = 50;
+        expected_data.custom_data_block_mut().start = 80;
+
+        assert_eq!(index, 35);
         assert_eq!(data, expected_data);
     }
 }

@@ -15,7 +15,7 @@ pub enum DataErrorType {
     NotFullyInitializedList(usize, usize),
     NotASymbolListPart(GarnishDataType),
     NotType(GarnishDataType, GarnishDataType),
-    NotAssociativeItem,
+    NotAssociativeItem(GarnishDataType),
     NotBasicType,
     NotAListItem(GarnishDataType),
     InstructionBlockExceededMaxItems(usize, usize),
@@ -27,6 +27,7 @@ pub enum DataErrorType {
     FailedToParseFloat(String),
     NotACloneNode,
     NoMappedIndexFoundDuringClone(usize),
+    UninitializedListContainsNonListItem(GarnishDataType),
 }
 
 /// Error implemenation for [`crate::SimpleGarnishData`].
