@@ -26,6 +26,7 @@ pub enum DataErrorType {
     NumberToLargeForByteValue(String),
     FailedToParseFloat(String),
     NotACloneNode,
+    NoMappedIndexFoundDuringClone(usize),
 }
 
 /// Error implemenation for [`crate::SimpleGarnishData`].
