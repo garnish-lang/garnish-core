@@ -36,8 +36,6 @@ where T: BasicDataCustom {
     Instruction(Instruction, Option<usize>),
     JumpPoint(usize),
     Frame(Option<usize>, Option<usize>),
-    CloneNodeNew(Option<usize>, usize),
-    CloneNodeVisited(Option<usize>, usize),
     CloneItem(usize),
     CloneIndexMap(usize, usize),
 }
@@ -76,8 +74,6 @@ where T: BasicDataCustom {
             BasicData::Instruction(_, _) => GarnishDataType::Invalid,
             BasicData::JumpPoint(_) => GarnishDataType::Invalid,
             BasicData::Frame(_, _) => GarnishDataType::Invalid,
-            BasicData::CloneNodeNew(_, _) => GarnishDataType::Invalid,
-            BasicData::CloneNodeVisited(_, _) => GarnishDataType::Invalid,
             BasicData::CloneItem(_) => GarnishDataType::Invalid,
             BasicData::CloneIndexMap(_, _) => GarnishDataType::Invalid,
         }
@@ -429,34 +425,6 @@ where T: BasicDataCustom {
     pub fn as_frame_mut(&mut self) -> Result<(&mut Option<usize>, &mut Option<usize>), DataError> {
         match self {
             BasicData::Frame(index, register) => Ok((index, register)),
-            _ => Err(DataError::not_basic_type_error()),
-        }
-    }
-
-    pub fn as_clone_node_new(&self) -> Result<(Option<usize>, usize), DataError> {
-        match self {
-            BasicData::CloneNodeNew(previous, index) => Ok((*previous, *index)),
-            _ => Err(DataError::not_basic_type_error()),
-        }
-    }
-
-    pub fn as_clone_node_new_mut(&mut self) -> Result<(&mut Option<usize>, &mut usize), DataError> {
-        match self {
-            BasicData::CloneNodeNew(previous, index) => Ok((previous, index)),
-            _ => Err(DataError::not_basic_type_error()),
-        }
-    }
-
-    pub fn as_clone_node_visited(&self) -> Result<usize, DataError> {
-        match self {
-            BasicData::CloneNodeVisited(_, index) => Ok(*index),
-            _ => Err(DataError::not_basic_type_error()),
-        }
-    }
-
-    pub fn as_clone_node_visited_mut(&mut self) -> Result<&mut usize, DataError> {
-        match self {
-            BasicData::CloneNodeVisited(_, index) => Ok(index),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
@@ -1167,58 +1135,6 @@ mod tests {
     fn as_frame_mut_not_frame() {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_frame_mut(), Err(DataError::not_basic_type_error()));
-    }
-
-    #[test]
-    fn as_clone_node_new() {
-        let data = BasicDataUnitCustom::CloneNodeNew(None, 100);
-        assert_eq!(data.as_clone_node_new(), Ok((None, 100)));
-    }
-    
-    #[test]
-    fn as_clone_node_new_not_clone_node_new() {
-        let data = BasicDataUnitCustom::Number(100.into());
-        assert_eq!(data.as_clone_node_new(), Err(DataError::not_basic_type_error()));
-    }
-
-    #[test]
-    fn as_clone_node_new_mut() {
-        let mut data = BasicDataUnitCustom::CloneNodeNew(None, 100);
-        let (previous, index) = data.as_clone_node_new_mut().unwrap();
-        *previous = Some(200);
-        *index = 300;
-        assert_eq!(data.as_clone_node_new(), Ok((Some(200), 300)));
-    }
-    
-    #[test]
-    fn as_clone_node_new_mut_not_clone_node_new() {
-        let mut data = BasicDataUnitCustom::Number(100.into());
-        assert_eq!(data.as_clone_node_new_mut(), Err(DataError::not_basic_type_error()));
-    }
-
-    #[test]
-    fn as_clone_node_visited() {
-        let data = BasicDataUnitCustom::CloneNodeVisited(None, 100);
-        assert_eq!(data.as_clone_node_visited(), Ok(100));
-    }
-
-    #[test]
-    fn as_clone_node_visited_not_clone_node_visited() {
-        let data = BasicDataUnitCustom::Number(100.into());
-        assert_eq!(data.as_clone_node_visited(), Err(DataError::not_basic_type_error()));
-    }
-
-    #[test]
-    fn as_clone_node_visited_mut() {
-        let mut data = BasicDataUnitCustom::CloneNodeVisited(None, 100);
-        *data.as_clone_node_visited_mut().unwrap() = 200;
-        assert_eq!(data.as_clone_node_visited(), Ok(200));
-    }
-
-    #[test]
-    fn as_clone_node_visited_mut_not_clone_node_visited() {
-        let mut data = BasicDataUnitCustom::Number(100.into());
-        assert_eq!(data.as_clone_node_visited_mut(), Err(DataError::not_basic_type_error()));
     }
 
     #[test]

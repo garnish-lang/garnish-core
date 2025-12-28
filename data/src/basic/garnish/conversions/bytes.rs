@@ -80,8 +80,6 @@ where
             | BasicData::Instruction(_, _)
             | BasicData::JumpPoint(_)
             | BasicData::Frame(_, _)
-            | BasicData::CloneNodeNew(_, _)
-            | BasicData::CloneNodeVisited(_, _)
             | BasicData::CloneItem(_)
             | BasicData::CloneIndexMap(_, _) => vec![],
         })

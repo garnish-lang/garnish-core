@@ -113,7 +113,42 @@ where
                         self.push_to_data_block(BasicData::CloneItem(item))?;
                     }
                 }
-                _ => todo!(),
+                BasicData::Custom(_) => {
+                    todo!()
+                }
+                BasicData::Empty => {
+                    todo!()
+                }
+                BasicData::UninitializedList(_, _) => {
+                    todo!()
+                }
+                BasicData::ListItem(_) => {
+                    todo!()
+                }
+                BasicData::AssociativeItem(_, _) => {
+                    todo!()
+                }
+                BasicData::Value(_, _) => {
+                    todo!()
+                }
+                BasicData::Register(_, _) => {
+                    todo!()
+                }
+                BasicData::Instruction(_, _) => {
+                    todo!()
+                }
+                BasicData::JumpPoint(_) => {
+                    todo!()
+                }
+                BasicData::Frame(_, _) => {
+                    todo!()
+                }
+                BasicData::CloneItem(_) => {
+                    todo!()
+                }
+                BasicData::CloneIndexMap(_, _) => {
+                    todo!()
+                }
             }
 
             current += 1;
@@ -236,12 +271,6 @@ where
                     todo!()
                 }
                 BasicData::Frame(_, _) => {
-                    todo!()
-                }
-                BasicData::CloneNodeNew(_, _) => {
-                    todo!()
-                }
-                BasicData::CloneNodeVisited(_, _) => {
                     todo!()
                 }
                 BasicData::CloneItem(_) => {
