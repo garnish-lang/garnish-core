@@ -1,28 +1,6 @@
 use garnish_lang_traits::GarnishDataType;
 
-use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, error::DataErrorType};
-
-#[derive(Debug)]
-enum Evaluate {
-    Visited,
-    New,
-}
-
-#[derive(Debug)]
-struct EvaluateNode {
-    index: usize,
-    state: Evaluate,
-}
-
-impl EvaluateNode {
-    fn new(index: usize) -> Self {
-        Self { index, state: Evaluate::New }
-    }
-
-    fn visited(self) -> Self{
-        Self { index: self.index, state: Evaluate::Visited }
-    }
-}
+use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError};
 
 impl<T> BasicGarnishData<T>
 where
@@ -94,6 +72,11 @@ where
                 BasicData::Unit => {}
                 BasicData::True => {},
                 BasicData::False => {},
+                BasicData::Pair(left, right) => {
+                    let (left, right) = (left.clone(), right.clone());
+                    self.push_to_data_block(BasicData::CloneItem(right))?;
+                    self.push_to_data_block(BasicData::CloneItem(left))?;
+                }
                 _ => todo!(),
             }
 
@@ -612,28 +595,20 @@ mod clone {
         let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(60, BasicData::Empty);
-        expected_data.data_mut().splice(30..43, vec![
+        expected_data.data_mut().splice(30..39, vec![
             BasicData::True,
             BasicData::False,
             BasicData::Pair(0, 1),
-            BasicData::CloneNodeNew(None, 2),
-            BasicData::CloneNodeNew(None, 0),
-            BasicData::CloneNodeNew(Some(4), 1),
-            BasicData::CloneNodeVisited(Some(5), 2),
-            BasicData::Value(None, 2),
-            BasicData::Value(Some(7), 1),
-            BasicData::Value(Some(8), 0),
+            BasicData::CloneIndexMap(2, 8),
+            BasicData::CloneIndexMap(1, 7),
+            BasicData::CloneIndexMap(0, 6),
             BasicData::True,
             BasicData::False,
-            BasicData::Pair(3, 4),
+            BasicData::Pair(6, 7),
         ]);
-        expected_data.data_block_mut().cursor = 13;
-        expected_data.data_block_mut().size = 20;
-        expected_data.custom_data_block_mut().start = 50;
-        expected_data.custom_data_block_mut().size = 10;
+        expected_data.data_block_mut().cursor = 9;
 
-        assert_eq!(index, 5);
+        assert_eq!(index, 8);
         assert_eq!(data, expected_data);
     }
 
