@@ -79,6 +79,9 @@ where
                 BasicData::Symbol(_) => {}
                 BasicData::Expression(_) => {}
                 BasicData::External(_) => {}
+                BasicData::SymbolList(_) => {}
+                BasicData::CharList(_) => {}
+                BasicData::ByteList(_) => {}
                 BasicData::Pair(left, right) => {
                     let (left, right) = (left.clone(), right.clone());
                     self.push_to_data_block(BasicData::CloneItem(right))?;
@@ -112,11 +115,38 @@ where
                 BasicData::Char(c) => self.push_to_data_block(BasicData::Char(c))?,
                 BasicData::Byte(b) => self.push_to_data_block(BasicData::Byte(b))?,
                 BasicData::Symbol(s) => self.push_to_data_block(BasicData::Symbol(s))?,
-                BasicData::SymbolList(len) => self.push_to_data_block(BasicData::SymbolList(len))?,
+                BasicData::SymbolList(len) => {
+                    let start = index + 1;
+                    let end = start + len;
+                    let list_index = self.push_to_data_block(BasicData::SymbolList(len))?;
+                    for i in start..end {
+                        let item = self.get_from_data_block_ensure_index(i)?.clone();
+                        self.push_to_data_block(item)?;
+                    }
+                    list_index
+                }
                 BasicData::Expression(e) => self.push_to_data_block(BasicData::Expression(e))?,
                 BasicData::External(e) => self.push_to_data_block(BasicData::External(e))?,
-                BasicData::CharList(len) => self.push_to_data_block(BasicData::CharList(len))?,
-                BasicData::ByteList(len) => self.push_to_data_block(BasicData::ByteList(len))?,
+                BasicData::CharList(len) => {
+                    let start = index + 1;
+                    let end = start + len;
+                    let list_index = self.push_to_data_block(BasicData::CharList(len))?;
+                    for i in start..end {
+                        let item = self.get_from_data_block_ensure_index(i)?.clone();
+                        self.push_to_data_block(item)?;
+                    }
+                    list_index
+                }
+                BasicData::ByteList(len) => {
+                    let start = index + 1;
+                    let end = start + len;
+                    let list_index = self.push_to_data_block(BasicData::ByteList(len))?;
+                    for i in start..end {
+                        let item = self.get_from_data_block_ensure_index(i)?.clone();
+                        self.push_to_data_block(item)?;
+                    }
+                    list_index
+                }
                 BasicData::Pair(left, right) => {
                     let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
                     let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
@@ -517,23 +547,20 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..40,
+            30..37,
             vec![
                 BasicData::SymbolList(2),
                 BasicData::Symbol(100),
                 BasicData::Number(200.into()),
-                BasicData::CloneNodeNew(None, 0),
-                BasicData::Value(None, 2),
-                BasicData::Value(Some(4), 1),
-                BasicData::Value(Some(5), 0),
+                BasicData::CloneIndexMap(0, 4),
                 BasicData::SymbolList(2),
                 BasicData::Symbol(100),
                 BasicData::Number(200.into()),
             ],
         );
-        expected_data.data_block_mut().cursor = 10;
+        expected_data.data_block_mut().cursor = 7;
 
-        assert_eq!(index, 0);
+        assert_eq!(index, 4);
         assert_eq!(data, expected_data);
     }
 
@@ -546,7 +573,7 @@ mod clone {
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..49,
+            30..43,
             vec![
                 BasicData::CharList(5),
                 BasicData::Char('h'),
@@ -554,13 +581,7 @@ mod clone {
                 BasicData::Char('l'),
                 BasicData::Char('l'),
                 BasicData::Char('o'),
-                BasicData::CloneNodeNew(None, 0),
-                BasicData::Value(None, 5),
-                BasicData::Value(Some(7), 4),
-                BasicData::Value(Some(8), 3),
-                BasicData::Value(Some(9), 2),
-                BasicData::Value(Some(10), 1),
-                BasicData::Value(Some(11), 0),
+                BasicData::CloneIndexMap(0, 7),
                 BasicData::CharList(5),
                 BasicData::Char('h'),
                 BasicData::Char('e'),
@@ -569,11 +590,11 @@ mod clone {
                 BasicData::Char('o'),
             ],
         );
-        expected_data.data_block_mut().cursor = 19;
+        expected_data.data_block_mut().cursor = 13;
         expected_data.data_block_mut().size = 20;
         expected_data.custom_data_block_mut().start = 50;
 
-        assert_eq!(index, 6);
+        assert_eq!(index, 7);
         assert_eq!(data, expected_data);
     }
 
@@ -584,31 +605,23 @@ mod clone {
         let index = data.push_clone_data(index).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(60, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..43,
+            30..39,
             vec![
                 BasicData::ByteList(3),
                 BasicData::Byte(100),
                 BasicData::Byte(200),
                 BasicData::Byte(250),
-                BasicData::CloneNodeNew(None, 0),
-                BasicData::Value(None, 3),
-                BasicData::Value(Some(5), 2),
-                BasicData::Value(Some(6), 1),
-                BasicData::Value(Some(7), 0),
+                BasicData::CloneIndexMap(0, 5),
                 BasicData::ByteList(3),
                 BasicData::Byte(100),
                 BasicData::Byte(200),
                 BasicData::Byte(250),
             ],
         );
-        expected_data.data_block_mut().cursor = 13;
-        expected_data.data_block_mut().size = 20;
-        expected_data.custom_data_block_mut().start = 50;
-        expected_data.custom_data_block_mut().size = 10;
+        expected_data.data_block_mut().cursor = 9;
 
-        assert_eq!(index, 4);
+        assert_eq!(index, 5);
         assert_eq!(data, expected_data);
     }
 
