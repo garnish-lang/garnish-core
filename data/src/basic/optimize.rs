@@ -66,9 +66,6 @@ where
         while current < self.data_block().cursor {
             let index = self.get_from_data_block_ensure_index(current)?.as_clone_item()?;
 
-            dbg!(current, index);
-            println!("{}", self.dump_data_block());
-
             match self.get_from_data_block_ensure_index(index)? {
                 BasicData::Unit => {}
                 BasicData::True => {}
@@ -130,9 +127,6 @@ where
 
         let lookup_end = self.data_block().start + self.data_block().cursor;
         let mut lookup_start = lookup_end;
-
-        println!("===== pre clone ======");
-        println!("{}", self.dump_data_block());
 
         for i in clone_range.rev() {
             let index = self.get_from_data_block_ensure_index(i)?.as_clone_item()?;
@@ -862,9 +856,6 @@ mod clone {
             .unwrap();
 
         let index = data.push_clone_data(index).unwrap();
-
-        println!("===== after clone ======");
-        println!("{}", data.dump_data_block());
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(70, BasicData::Empty);
