@@ -67,6 +67,7 @@ where
             let index = self.get_from_data_block_ensure_index(current)?.as_clone_item()?;
 
             dbg!(current, index);
+            println!("{}", self.dump_data_block());
 
             match self.get_from_data_block_ensure_index(index)? {
                 BasicData::Unit => {}
@@ -107,6 +108,14 @@ where
                     self.push_to_data_block(BasicData::CloneItem(right))?;
                     self.push_to_data_block(BasicData::CloneItem(left))?;
                 }
+                BasicData::List(length, _association_length) => {
+                    let start = index + 1;
+                    let end = start + length;
+                    for i in start..end {
+                        let item = self.get_from_data_block_ensure_index(i)?.as_list_item()?;
+                        self.push_to_data_block(BasicData::CloneItem(item))?;
+                    }
+                }
                 _ => todo!(),
             }
 
@@ -121,6 +130,9 @@ where
 
         let lookup_end = self.data_block().start + self.data_block().cursor;
         let mut lookup_start = lookup_end;
+
+        println!("===== pre clone ======");
+        println!("{}", self.dump_data_block());
 
         for i in clone_range.rev() {
             let index = self.get_from_data_block_ensure_index(i)?.as_clone_item()?;
@@ -176,8 +188,27 @@ where
                 BasicData::Range(_, _) => self.push_to_data_block(BasicData::Range(new_index - 2, new_index - 1))?,
                 BasicData::Slice(_, _) => self.push_to_data_block(BasicData::Slice(new_index - 2, new_index - 1))?,
                 BasicData::Partial(_, _) => self.push_to_data_block(BasicData::Partial(new_index - 2, new_index - 1))?,
-                BasicData::List(_, _) => {
-                    todo!()
+                BasicData::List(length, association_length) => {
+                    let start = index + 1;
+                    let end = start + length;
+                    let list_index = self.push_to_data_block(BasicData::List(length, association_length))?;
+                    for i in start..end {
+                        let item = self.get_from_data_block_ensure_index(i)?.as_list_item()?;
+                        let item = self.lookup_in_data_slice(lookup_start, lookup_end, item)?;
+                        self.push_to_data_block(BasicData::ListItem(item))?;
+                    }
+
+                    let association_end = end + association_length;
+                    for _ in end..association_end {
+                        self.push_to_data_block(BasicData::Empty)?;
+                    }
+                    
+                    let full_end = index + 1 + length * 2;
+                    for _ in association_end..full_end {
+                        self.push_to_data_block(BasicData::Empty)?;
+                    }
+
+                    list_index
                 }
                 BasicData::Concatenation(_, _) => {
                     let new_index = self.data_block().cursor;
@@ -832,39 +863,45 @@ mod clone {
 
         let index = data.push_clone_data(index).unwrap();
 
+        println!("===== after clone ======");
+        println!("{}", data.dump_data_block());
+
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().resize(70, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..43,
+            30..54,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::Number(200.into()),
                 BasicData::Number(250.into()),
-                BasicData::List(0, 3),
+                BasicData::List(3, 0),
                 BasicData::ListItem(0),
                 BasicData::ListItem(1),
                 BasicData::ListItem(2),
                 BasicData::Empty,
                 BasicData::Empty,
                 BasicData::Empty,
-                BasicData::CloneNodeNew(None, 2),
-                BasicData::CloneNodeNew(None, 0),
-                BasicData::CloneNodeNew(Some(4), 1),
-                BasicData::CloneNodeVisited(Some(5), 2),
-                BasicData::Value(None, 2),
-                BasicData::Value(Some(7), 1),
-                BasicData::Value(Some(8), 0),
-                BasicData::Number(100.into()),
+                BasicData::CloneIndexMap(3, 17),
+                BasicData::CloneIndexMap(0, 16),
+                BasicData::CloneIndexMap(1, 15),
+                BasicData::CloneIndexMap(2, 14),
+                BasicData::Number(250.into()), // 14
                 BasicData::Number(200.into()),
-                BasicData::Concatenation(3, 4),
+                BasicData::Number(100.into()),
+                BasicData::List(3, 0),
+                BasicData::ListItem(16),
+                BasicData::ListItem(15),
+                BasicData::ListItem(14),
+                BasicData::Empty,
+                BasicData::Empty,
+                BasicData::Empty,
             ],
         );
-        expected_data.data_block_mut().cursor = 13;
-        expected_data.data_block_mut().size = 20;
-        expected_data.custom_data_block_mut().start = 50;
-        expected_data.custom_data_block_mut().size = 10;
+        expected_data.data_block_mut().cursor = 24;
+        expected_data.data_block_mut().size = 30;
+        expected_data.custom_data_block_mut().start = 60;
 
-        assert_eq!(index, 5);
+        assert_eq!(index, 17);
         assert_eq!(data, expected_data);
     }
 }
