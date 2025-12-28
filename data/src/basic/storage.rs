@@ -25,10 +25,6 @@ impl StorageBlock {
             ReallocationStrategy::Multiplicative(multiplier) => self.size * multiplier,
         }
     }
-
-    pub fn range(&self) -> Range<usize> {
-        self.start..self.start + self.size
-    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
