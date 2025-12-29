@@ -170,8 +170,26 @@ where
                     }
                 }
                 BasicData::JumpPoint(_point) => {}
-                BasicData::Frame(_, _) => {
-                    todo!()
+                BasicData::Frame(previous, register) => {
+                    let (previous, register) = (previous.clone(), register.clone());
+                    self.get_from_data_block_ensure_index(index - 1)?;
+                    self.push_to_data_block(BasicData::CloneItem(index - 1))?;
+
+                    match previous {
+                        Some(previous) => {
+                            let previous = previous.clone();
+                            self.push_to_data_block(BasicData::CloneItem(previous))?;
+                        }
+                        None => {}
+                    }
+
+                    match register {
+                        Some(register) => {
+                            let register = register.clone();
+                            self.push_to_data_block(BasicData::CloneItem(register))?;
+                        }
+                        None => {}
+                    }
                 }
                 BasicData::CloneItem(_) => {}
                 BasicData::CloneIndexMap(_, _) => {}
@@ -354,8 +372,22 @@ where
                 BasicData::JumpPoint(point) => {
                     self.push_to_data_block(BasicData::JumpPoint(point))?
                 }
-                BasicData::Frame(_, _) => {
-                    todo!()
+                BasicData::Frame(previous, register) => {
+                    let previous = match previous {
+                        Some(previous) => {
+                            let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
+                            Some(previous)
+                        }
+                        None => None,
+                    };
+                    let register = match register {
+                        Some(register) => {
+                            let register = self.lookup_in_data_slice(lookup_start, lookup_end, register)?;
+                            Some(register)
+                        }
+                        None => None,
+                    };
+                    self.push_to_data_block(BasicData::Frame(previous, register))?
                 }
                 BasicData::CloneItem(_) => {
                     Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
@@ -1276,6 +1308,51 @@ mod clone {
         expected_data.data_block_mut().cursor = 3;
 
         assert_eq!(index, 2);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn frame() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        data.push_to_data_block(BasicData::JumpPoint(10)).unwrap();
+        let first_frame = data.push_to_data_block(BasicData::Frame(None, None)).unwrap();
+        let value2 = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
+        let register = data.push_to_data_block(BasicData::Register(None, value2)).unwrap();
+        data.push_to_data_block(BasicData::JumpPoint(100)).unwrap();
+        let index = data.push_to_data_block(BasicData::Frame(Some(first_frame), Some(register))).unwrap();
+        let index = data.push_clone_data(index).unwrap();
+
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data
+            .data_mut()
+            .splice(30..48, vec![
+                BasicData::JumpPoint(10),
+                BasicData::Frame(None, None),
+                BasicData::Number(200.into()),
+                BasicData::Register(None, 2),
+                BasicData::JumpPoint(100),
+                BasicData::Frame(Some(1), Some(3)),
+                BasicData::CloneIndexMap(5, 17), // 6
+                BasicData::CloneIndexMap(4, 16),
+                BasicData::CloneIndexMap(1, 15),
+                BasicData::CloneIndexMap(3, 14),
+                BasicData::CloneIndexMap(0, 13),
+                BasicData::CloneIndexMap(2, 12),
+                BasicData::Number(200.into()), // 12
+                BasicData::JumpPoint(10),
+                BasicData::Register(None, 12),
+                BasicData::Frame(None, None), 
+                BasicData::JumpPoint(100),
+                BasicData::Frame(Some(15), Some(14)), // 17
+            ]);
+        expected_data.data_block_mut().cursor = 18;
+        expected_data.data_block_mut().size = 20;
+        expected_data.custom_data_block_mut().start = 50;
+
+        println!("{}", data.dump_data_block());
+
+        assert_eq!(index, 17);
         assert_eq!(data, expected_data);
     }
 }
