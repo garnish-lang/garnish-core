@@ -1,4 +1,5 @@
 mod basic;
+mod clone;
 mod data;
 mod dump;
 mod garnish;
