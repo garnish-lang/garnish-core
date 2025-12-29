@@ -12,23 +12,19 @@ where
         let original_value = self.current_value();
         let original_frame = self.current_frame();
 
-        let register_list_start = match original_register {
-            Some(index) => self.create_index_stack(index)?,
-            None => current_data_end,
-        };
+        let index_list_start = self.data_block().cursor;
+        
+        if let Some(index) = original_register {
+            self.create_index_stack(index)?;
+        }
 
-        let value_list_start = match original_value {
-            Some(index) => self.create_index_stack(index)?,
-            None => current_data_end,
-        };
+        if let Some(index) = original_value {
+            self.create_index_stack(index)?;
+        }
 
-        let frame_list_start = match original_frame {
-            Some(index) => self.create_index_stack(index)?,
-            None => current_data_end,
-        };
-
-        let index_list_start = std::cmp::min(register_list_start, value_list_start);
-        let index_list_start = std::cmp::min(index_list_start, frame_list_start);
+        if let Some(index) = original_frame {
+            self.create_index_stack(index)?;
+        }
 
         let index_list_end = self.data_block().start + self.data_block().cursor;
 
