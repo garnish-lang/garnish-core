@@ -136,12 +136,8 @@ where
                         }
                     }
                 }
-                BasicData::ListItem(_) => {
-                    todo!()
-                }
-                BasicData::AssociativeItem(_, _) => {
-                    todo!()
-                }
+                BasicData::ListItem(_) => {}
+                BasicData::AssociativeItem(_, _) => {}
                 BasicData::Value(_, _) => {
                     todo!()
                 }
@@ -157,12 +153,8 @@ where
                 BasicData::Frame(_, _) => {
                     todo!()
                 }
-                BasicData::CloneItem(_) => {
-                    todo!()
-                }
-                BasicData::CloneIndexMap(_, _) => {
-                    todo!()
-                }
+                BasicData::CloneItem(_) => {}
+                BasicData::CloneIndexMap(_, _) => {}
             }
 
             current += 1;
@@ -296,10 +288,10 @@ where
                     list_index
                 }
                 BasicData::ListItem(_) => {
-                    todo!()
+                    Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
                 }
                 BasicData::AssociativeItem(_, _) => {
-                    todo!()
+                    Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
                 }
                 BasicData::Value(_, _) => {
                     todo!()
@@ -317,10 +309,10 @@ where
                     todo!()
                 }
                 BasicData::CloneItem(_) => {
-                    todo!()
+                    Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
                 }
                 BasicData::CloneIndexMap(_, _) => {
-                    todo!()
+                    Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
                 }
             };
 
@@ -457,9 +449,9 @@ mod optimize {
 
 #[cfg(test)]
 mod clone {
-    use garnish_lang_traits::GarnishDataType;
+    use garnish_lang_traits::{GarnishData, GarnishDataType};
 
-    use crate::{BasicData, BasicGarnishData, basic_object};
+    use crate::{BasicData, BasicGarnishData, DataError, basic_object, error::DataErrorType};
 
     #[test]
     fn unit() {
@@ -1030,8 +1022,6 @@ mod clone {
 
     #[test]
     fn uninitialized_list_with_associations() {
-        use garnish_lang_traits::GarnishData;
-        
         let mut data = BasicGarnishData::<()>::new().unwrap();
         
         let num1 = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
@@ -1086,4 +1076,40 @@ mod clone {
         assert_eq!(index, 20);
         assert_eq!(data, expected_data);
     }
+
+    #[test]
+    fn list_item_is_error() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_to_data_block(BasicData::ListItem(0)).unwrap();
+        let index = data.push_clone_data(index);
+
+        assert_eq!(index, Err(DataError::new("Cannot clone", DataErrorType::CannotClone)));
+    } 
+
+    #[test]
+    fn associative_item_is_error() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_to_data_block(BasicData::AssociativeItem(100, 0)).unwrap();
+        let index = data.push_clone_data(index);
+
+        assert_eq!(index, Err(DataError::new("Cannot clone", DataErrorType::CannotClone)));
+    } 
+
+    #[test]
+    fn clone_item_is_error() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_to_data_block(BasicData::CloneItem(0)).unwrap();
+        let index = data.push_clone_data(index);
+
+        assert_eq!(index, Err(DataError::new("Cannot clone", DataErrorType::CannotClone)));
+    } 
+
+    #[test]
+    fn clone_index_map_is_error() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_to_data_block(BasicData::CloneIndexMap(0, 0)).unwrap();
+        let index = data.push_clone_data(index);
+
+        assert_eq!(index, Err(DataError::new("Cannot clone", DataErrorType::CannotClone)));
+    } 
 }

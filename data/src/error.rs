@@ -28,6 +28,7 @@ pub enum DataErrorType {
     NotACloneNode,
     NoMappedIndexFoundDuringClone(usize),
     UninitializedListContainsNonListItem(GarnishDataType),
+    CannotClone,
 }
 
 /// Error implemenation for [`crate::SimpleGarnishData`].
