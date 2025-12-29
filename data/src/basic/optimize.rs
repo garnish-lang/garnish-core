@@ -27,7 +27,7 @@ where
 
         let offset = self.data_block().start + self.data_block().cursor - retained_data_end;
 
-        if index_list_start != current_data_end {
+        if index_list_end != current_data_end {
             self.clone_index_stack(index_list_start, offset)?;
         }
 
