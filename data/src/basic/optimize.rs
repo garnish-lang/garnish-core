@@ -160,8 +160,14 @@ where
                     }
                     self.push_to_data_block(BasicData::CloneItem(value))?;
                 }
-                BasicData::Instruction(_, _) => {
-                    todo!()
+                BasicData::Instruction(_instruction, data) => {
+                    match data {
+                        Some(data) => {
+                            let data = data.clone();
+                            self.push_to_data_block(BasicData::CloneItem(data))?;
+                        }
+                        None => {}
+                    }
                 }
                 BasicData::JumpPoint(_) => {
                     todo!()
@@ -337,8 +343,15 @@ where
                     
                     self.push_to_data_block(BasicData::Register(previous, value))?
                 }
-                BasicData::Instruction(_, _) => {
-                    todo!()
+                BasicData::Instruction(instruction, data) => {
+                    let data = match data {
+                        Some(data) => {
+                            let data = self.lookup_in_data_slice(lookup_start, lookup_end, data)?;
+                            Some(data)
+                        }
+                        None => None,
+                    };
+                    self.push_to_data_block(BasicData::Instruction(instruction.clone(), data))?
                 }
                 BasicData::JumpPoint(_) => {
                     todo!()
@@ -487,7 +500,7 @@ mod optimize {
 
 #[cfg(test)]
 mod clone {
-    use garnish_lang_traits::{GarnishData, GarnishDataType};
+    use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
 
     use crate::{BasicData, BasicGarnishData, DataError, basic_object, error::DataErrorType};
 
@@ -1224,6 +1237,31 @@ mod clone {
         println!("{}", data.dump_data_block());
 
         assert_eq!(index, 11);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn instruction() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let instruction_data = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
+        let index = data.push_to_data_block(BasicData::Instruction(Instruction::Add, Some(instruction_data))).unwrap();
+        let index = data.push_clone_data(index).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().splice(
+            30..36,
+            vec![
+                BasicData::Number(100.into()),
+                BasicData::Instruction(Instruction::Add, Some(0)),
+                BasicData::CloneIndexMap(1, 5),
+                BasicData::CloneIndexMap(0, 4),
+                BasicData::Number(100.into()),
+                BasicData::Instruction(Instruction::Add, Some(4)),
+            ],
+        );
+        expected_data.data_block_mut().cursor = 6;
+
+        assert_eq!(index, 5);
         assert_eq!(data, expected_data);
     }
 }
