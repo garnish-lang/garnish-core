@@ -10,6 +10,7 @@ where
         
         let original_register = self.current_register();
         let original_value = self.current_value();
+        let original_frame = self.current_frame();
 
         let register_list_start = match original_register {
             Some(index) => self.create_index_stack(index)?,
@@ -21,7 +22,13 @@ where
             None => current_data_end,
         };
 
+        let frame_list_start = match original_frame {
+            Some(index) => self.create_index_stack(index)?,
+            None => current_data_end,
+        };
+
         let index_list_start = std::cmp::min(register_list_start, value_list_start);
+        let index_list_start = std::cmp::min(index_list_start, frame_list_start);
 
         let index_list_end = self.data_block().start + self.data_block().cursor;
 
@@ -44,6 +51,11 @@ where
         if let Some(original_value) = original_value {
             let mapped_index = self.lookup_in_data_slice(index_list_start, index_list_end, original_value)?;
             self.set_current_value(Some(mapped_index));
+        }
+
+        if let Some(original_frame) = original_frame {
+            let mapped_index = self.lookup_in_data_slice(index_list_start, index_list_end, original_frame)?;
+            self.set_current_frame(Some(mapped_index));
         }
 
         let new_data_end = self.data_block().start + self.data_block().cursor;
@@ -185,6 +197,39 @@ mod optimize {
         expected_data.data_block_mut().size = 30;
         expected_data.custom_data_block_mut().start = 60;
         expected_data.set_current_value(Some(5));
+
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn data_referenced_by_frames_is_kept() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        data.push_to_data_block(BasicData::JumpPoint(10)).unwrap();
+        let frame_index = data.push_to_data_block(BasicData::FrameRoot).unwrap();
+        data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
+        let index = data.push_object_to_data_block(basic_object!((Number 1234) = (Char 'a'))).unwrap();
+        data.push_to_data_block(BasicData::JumpPoint(20)).unwrap();
+        let frame_index = data.push_to_data_block(BasicData::Frame(frame_index, index)).unwrap();
+        data.set_current_frame(Some(frame_index));
+
+        data.optimize_data_block().unwrap();
+
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().resize(80, BasicData::Empty);
+        expected_data.data_mut().splice(30..37, vec![
+            BasicData::Number(1234.into()),
+            BasicData::Char('a'),
+            BasicData::Pair(0, 1),
+            BasicData::JumpPoint(10),
+            BasicData::FrameRoot,
+            BasicData::JumpPoint(20),
+            BasicData::Frame(4, 2),
+        ]);
+
+        expected_data.data_block_mut().cursor = 7;
+        expected_data.data_block_mut().size = 40;
+        expected_data.custom_data_block_mut().start = 70;
+        expected_data.set_current_frame(Some(6));
 
         println!("{}", data.dump_data_block());
 

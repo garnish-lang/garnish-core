@@ -144,27 +144,18 @@ where
                 BasicData::JumpPoint(_point) => {}
                 BasicData::Frame(previous, register) => {
                     let (previous, register) = (previous.clone(), register.clone());
-                    self.get_from_data_block_ensure_index(index - 1)?;
-                    self.push_to_data_block(BasicData::CloneItem(index - 1))?;
                     self.push_to_data_block(BasicData::CloneItem(previous))?;
                     self.push_to_data_block(BasicData::CloneItem(register))?;
                 }
                 BasicData::FrameIndex(previous) => {
                     let previous = previous.clone();
-                    self.get_from_data_block_ensure_index(index - 1)?;
-                    self.push_to_data_block(BasicData::CloneItem(index - 1))?;
                     self.push_to_data_block(BasicData::CloneItem(previous))?;
                 }
                 BasicData::FrameRegister(register) => {
                     let register = register.clone();
-                    self.get_from_data_block_ensure_index(index - 1)?;
-                    self.push_to_data_block(BasicData::CloneItem(index - 1))?;
                     self.push_to_data_block(BasicData::CloneItem(register))?;
                 }
-                BasicData::FrameRoot => {
-                    self.get_from_data_block_ensure_index(index - 1)?;
-                    self.push_to_data_block(BasicData::CloneItem(index - 1))?;
-                }
+                BasicData::FrameRoot => {}
                 BasicData::CloneItem(_) => {}
                 BasicData::CloneIndexMap(_, _) => {}
             }

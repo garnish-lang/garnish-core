@@ -217,19 +217,27 @@ where
                     self.push_to_data_block(BasicData::JumpPoint(point))?
                 }
                 BasicData::Frame(previous, register) => {
+                    let point = self.get_from_data_block_ensure_index(index - 1)?.as_jump_point()?;
                     let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
                     let register = self.lookup_in_data_slice(lookup_start, lookup_end, register)?;
+                    self.push_to_data_block(BasicData::JumpPoint(point))?;
                     self.push_to_data_block(BasicData::Frame(previous, register))?
                 }
                 BasicData::FrameIndex(previous) => {
+                    let point = self.get_from_data_block_ensure_index(index - 1)?.as_jump_point()?;
                     let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
+                    self.push_to_data_block(BasicData::JumpPoint(point))?;
                     self.push_to_data_block(BasicData::FrameIndex(previous))?
                 }
                 BasicData::FrameRegister(register) => {
+                    let point = self.get_from_data_block_ensure_index(index - 1)?.as_jump_point()?;
                     let register = self.lookup_in_data_slice(lookup_start, lookup_end, register)?;
+                    self.push_to_data_block(BasicData::JumpPoint(point))?;
                     self.push_to_data_block(BasicData::FrameRegister(register))?
                 }
                 BasicData::FrameRoot => {
+                    let point = self.get_from_data_block_ensure_index(index - 1)?.as_jump_point()?;
+                    self.push_to_data_block(BasicData::JumpPoint(point))?;
                     self.push_to_data_block(BasicData::FrameRoot)?
                 }
                 BasicData::CloneItem(_) => {
@@ -1082,31 +1090,31 @@ mod clone {
         expected_data.data_mut().resize(60, BasicData::Empty);
         expected_data
             .data_mut()
-            .splice(30..48, vec![
+            .splice(30..46, vec![
                 BasicData::JumpPoint(10),
                 BasicData::FrameRoot,
                 BasicData::Number(200.into()),
                 BasicData::RegisterRoot(2),
                 BasicData::JumpPoint(100),
                 BasicData::Frame(1, 3),
-                BasicData::CloneIndexMap(5, 17), // 6
-                BasicData::CloneIndexMap(4, 16),
-                BasicData::CloneIndexMap(1, 15),
-                BasicData::CloneIndexMap(3, 14),
-                BasicData::CloneIndexMap(0, 13),
-                BasicData::CloneIndexMap(2, 12),
-                BasicData::Number(200.into()), // 12
+                BasicData::CloneIndexMap(5, 15), // 6
+                BasicData::CloneIndexMap(1, 13),
+                BasicData::CloneIndexMap(3, 11),
+                BasicData::CloneIndexMap(2, 10),
+                BasicData::Number(200.into()), // 10
+                BasicData::RegisterRoot(10),
                 BasicData::JumpPoint(10),
-                BasicData::RegisterRoot(12),
                 BasicData::FrameRoot, 
                 BasicData::JumpPoint(100),
-                BasicData::Frame(15, 14), // 17
+                BasicData::Frame(13, 11), // 15
             ]);
-        expected_data.data_block_mut().cursor = 18;
+        expected_data.data_block_mut().cursor = 16;
         expected_data.data_block_mut().size = 20;
         expected_data.custom_data_block_mut().start = 50;
 
-        assert_eq!(index, 17);
+        println!("{}", data.dump_data_block());
+
+        assert_eq!(index, 15);
         assert_eq!(data, expected_data);
     }
 
