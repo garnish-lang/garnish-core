@@ -245,6 +245,31 @@ mod optimize {
     }
 
     #[test]
+    fn with_retained_keeps_data() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+
+        data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
+        let index = data.push_object_to_data_block(basic_object!((Number 1234) = (Char 'a'))).unwrap();
+
+        let result = data.optimize_data_block_and_retain(&[index]).unwrap();
+
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().resize(70, BasicData::Empty);
+        expected_data.data_mut().splice(30..33, vec![
+            BasicData::Number(1234.into()),
+            BasicData::Char('a'),
+            BasicData::Pair(0, 1),
+        ]);
+
+        expected_data.data_block_mut().cursor = 3;
+        expected_data.data_block_mut().size = 30;
+        expected_data.custom_data_block_mut().start = 60;
+        
+        assert_eq!(result, vec![2]);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
     fn data_with_retention_count_and_stacked_items_is_kept() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         
