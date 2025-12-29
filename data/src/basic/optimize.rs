@@ -233,31 +233,28 @@ where
                 BasicData::Partial(_, _) => self.push_to_data_block(BasicData::Partial(new_index - 2, new_index - 1))?,
                 BasicData::List(length, association_length) => {
                     let start = index + 1;
-                    let end = start + length;
-                    let list_index = self.push_to_data_block(BasicData::List(length, association_length))?;
-                    for i in start..end {
-                        let item = self.get_from_data_block_ensure_index(i)?.as_list_item()?;
-                        let item = self.lookup_in_data_slice(lookup_start, lookup_end, item)?;
-                        self.push_to_data_block(BasicData::ListItem(item))?;
-                    }
+                    let end = start + length * 2;
 
-                    let association_end = end + association_length;
-                    for i in end..association_end {
+                    let list_index = self.push_to_data_block(BasicData::List(length, association_length))?;
+
+                    for i in start..end {
                         match self.get_from_data_block_ensure_index(i)? {
+                            BasicData::ListItem(item) => {
+                                let item = self.lookup_in_data_slice(lookup_start, lookup_end, item.clone())?;
+                                self.push_to_data_block(BasicData::ListItem(item))?;
+                            }
                             BasicData::AssociativeItem(symbol, item) => {
-                                let item = self.lookup_in_data_slice(lookup_start, lookup_end, *item)?;
+                                let item = self.lookup_in_data_slice(lookup_start, lookup_end, item.clone())?;
                                 self.push_to_data_block(BasicData::AssociativeItem(symbol.clone(), item))?;
+                            }
+                            BasicData::Empty => {
+                                self.push_to_data_block(BasicData::Empty)?;
                             }
                             t => Err(DataError::new(
                                 "Associative item in list is not a valid item",
                                 DataErrorType::NotAssociativeItem(t.get_data_type()),
                             ))?,
                         }
-                    }
-
-                    let full_end = index + 1 + length * 2;
-                    for _ in association_end..full_end {
-                        self.push_to_data_block(BasicData::Empty)?;
                     }
 
                     list_index
@@ -272,24 +269,18 @@ where
                 BasicData::Empty => self.push_to_data_block(BasicData::Empty)?,
                 BasicData::UninitializedList(length, count) => {
                     let start = index + 1;
-                    let end = start + count;
+                    let end = start + length * 2;
+
                     let list_index = self.push_to_data_block(BasicData::UninitializedList(length, count))?;
+
                     for i in start..end {
-                        let item = self.get_from_data_block_ensure_index(i)?.as_list_item()?;
-                        let item = self.lookup_in_data_slice(lookup_start, lookup_end, item)?;
-                        self.push_to_data_block(BasicData::ListItem(item))?;
-                    }
-
-                    let item_end = start + length;
-                    for _ in end..item_end {
-                        self.push_to_data_block(BasicData::Empty)?;
-                    }
-
-                    let association_end = item_end + length;
-                    for i in item_end..association_end {
                         match self.get_from_data_block_ensure_index(i)? {
+                            BasicData::ListItem(item) => {
+                                let item = self.lookup_in_data_slice(lookup_start, lookup_end, item.clone())?;
+                                self.push_to_data_block(BasicData::ListItem(item))?;
+                            }
                             BasicData::AssociativeItem(symbol, item) => {
-                                let item = self.lookup_in_data_slice(lookup_start, lookup_end, *item)?;
+                                let item = self.lookup_in_data_slice(lookup_start, lookup_end, item.clone())?;
                                 self.push_to_data_block(BasicData::AssociativeItem(symbol.clone(), item))?;
                             }
                             BasicData::Empty => {
