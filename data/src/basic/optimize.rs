@@ -9,10 +9,19 @@ where
         let retained_data_end = self.data_block().start + self.data_retention_count();
         
         let original_register = self.current_register();
-        let index_list_start = match original_register {
+        let original_value = self.current_value();
+
+        let register_list_start = match original_register {
             Some(index) => self.create_index_stack(index)?,
             None => current_data_end,
         };
+
+        let value_list_start = match original_value {
+            Some(index) => self.create_index_stack(index)?,
+            None => current_data_end,
+        };
+
+        let index_list_start = std::cmp::min(register_list_start, value_list_start);
 
         let index_list_end = self.data_block().start + self.data_block().cursor;
 
@@ -21,10 +30,20 @@ where
         if index_list_start != current_data_end {
             self.clone_index_stack(index_list_start, offset)?;
         }
+
+        dbg!(current_data_end);
+        dbg!(index_list_start, index_list_end);
+        dbg!(original_register, original_value);
+        println!("{}", self.dump_data_block());
         
         if let Some(original_register) = original_register {
             let mapped_index = self.lookup_in_data_slice(index_list_start, index_list_end, original_register)?;
             self.set_current_register(Some(mapped_index));
+        }
+
+        if let Some(original_value) = original_value {
+            let mapped_index = self.lookup_in_data_slice(index_list_start, index_list_end, original_value)?;
+            self.set_current_value(Some(mapped_index));
         }
 
         let new_data_end = self.data_block().start + self.data_block().cursor;
@@ -135,6 +154,39 @@ mod optimize {
         expected_data.data_block_mut().size = 30;
         expected_data.custom_data_block_mut().start = 60;
         expected_data.set_current_register(Some(5));
+
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn data_referenced_by_values_is_kept() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
+        let value_index = data.push_to_data_block(BasicData::ValueRoot(index)).unwrap();
+        data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
+        let index = data.push_object_to_data_block(basic_object!((Number 1234) = (Char 'a'))).unwrap();
+        let value_index = data.push_to_data_block(BasicData::Value(value_index, index)).unwrap();
+        data.set_current_value(Some(value_index));
+
+        data.optimize_data_block().unwrap();
+
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().resize(70, BasicData::Empty);
+        expected_data.data_mut().splice(30..36, vec![
+            BasicData::Number(1234.into()),
+            BasicData::Char('a'),
+            BasicData::Number(100.into()),
+            BasicData::Pair(0, 1),
+            BasicData::ValueRoot(2),
+            BasicData::Value(4, 3),
+        ]);
+
+        expected_data.data_block_mut().cursor = 6;
+        expected_data.data_block_mut().size = 30;
+        expected_data.custom_data_block_mut().start = 60;
+        expected_data.set_current_value(Some(5));
+
+        println!("{}", data.dump_data_block());
 
         assert_eq!(data, expected_data);
     }
