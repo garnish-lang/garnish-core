@@ -65,6 +65,9 @@ where
         let start = self.push_to_data_block(BasicData::CloneItem(from))?;
         let mut current = start;
 
+        let max_iterations = (self.data_block().size / 2).pow(2);
+        let mut iterations = 0;
+
         while current < self.data_block().cursor {
             let index = self.get_from_data_block_ensure_index(current)?.as_clone_item()?;
 
@@ -191,6 +194,11 @@ where
             }
 
             current += 1;
+
+            iterations += 1;
+            if iterations > max_iterations {
+                Err(DataError::new("Clone limit reached", DataErrorType::CloneLimitReached))?
+            }
         }
 
         Ok(start)
@@ -529,6 +537,18 @@ mod clone {
     use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
 
     use crate::{BasicData, BasicGarnishData, DataError, basic_object, error::DataErrorType};
+
+    #[test]
+    fn circular_reference_is_error() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let pair_one = data.push_object_to_data_block(basic_object!((Number 100) = (Number 200))).unwrap();
+        let pair_two = data.push_object_to_data_block(basic_object!((Number 100) = (Number 200))).unwrap();
+        *data.get_from_data_block_ensure_index_mut(pair_two).unwrap() = BasicData::Pair(pair_two, pair_one);
+        
+        let result = data.push_clone_data(pair_two);
+
+        assert_eq!(result, Err(DataError::new("Clone limit reached", DataErrorType::CloneLimitReached)));
+    }
 
     #[test]
     fn unit() {
