@@ -556,11 +556,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn temp() {
-        println!("{}", size_of::<BasicData<()>>());
-    }
-
-    #[test]
     fn get_data_type() {
         let scenarios = vec![
             (BasicDataUnitCustom::Unit, GarnishDataType::Unit),
