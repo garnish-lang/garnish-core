@@ -39,11 +39,6 @@ impl<T> BasicGarnishData<T>
 where
     T: BasicDataCustom,
 {
-    pub(crate) fn push_clone_data(&mut self, from: usize) -> Result<usize, DataError> {
-        let index_stack_start = self.create_index_stack(from)?;
-        self.clone_index_stack(index_stack_start, 0)
-    }
-
     pub(crate) fn clone_index_stack(&mut self, top_index: usize, offset: usize) -> Result<usize, DataError> {
         let clone_range = top_index..self.data_block().cursor;
 
@@ -311,7 +306,9 @@ mod clone {
         let pair_two = data.push_object_to_data_block(basic_object!((Number 100) = (Number 200))).unwrap();
         *data.get_from_data_block_ensure_index_mut(pair_two).unwrap() = BasicData::Pair(pair_two, pair_one);
 
-        let result = data.push_clone_data(pair_two);
+        let result = data.create_index_stack(pair_two).and_then(|index_stack_start| {
+            data.clone_index_stack(index_stack_start, 0)
+        });
 
         assert_eq!(result, Err(DataError::new("Clone limit reached", DataErrorType::CloneLimitReached)));
     }
@@ -320,7 +317,8 @@ mod clone {
     fn unit() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Unit)).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data
@@ -336,7 +334,8 @@ mod clone {
     fn empty() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_to_data_block(BasicData::Empty).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data
@@ -352,7 +351,8 @@ mod clone {
     fn true_value() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(True)).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data
@@ -368,7 +368,8 @@ mod clone {
     fn false_value() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(False)).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data
@@ -384,7 +385,8 @@ mod clone {
     fn type_value() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Type Number)).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -405,7 +407,8 @@ mod clone {
     fn char() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Char 'a')).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data
@@ -421,7 +424,8 @@ mod clone {
     fn byte() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Byte 1)).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data
@@ -437,7 +441,8 @@ mod clone {
     fn symbol() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(SymRaw 100)).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -454,7 +459,8 @@ mod clone {
     fn number() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -475,7 +481,8 @@ mod clone {
     fn expression() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(Expression 100)).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -492,7 +499,8 @@ mod clone {
     fn external() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(External 100)).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -509,7 +517,8 @@ mod clone {
     fn symbol_list() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(SymList(SymRaw 100, Number 200))).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -534,7 +543,8 @@ mod clone {
     fn char_list() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(CharList "hello")).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -568,7 +578,8 @@ mod clone {
     fn byte_list() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(ByteList 100, 200, 250)).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -596,7 +607,8 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!((True = False))).unwrap();
 
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -624,7 +636,8 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!((True = (False = Unit)))).unwrap();
 
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -662,7 +675,8 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(((Number 100)..(Number 200)))).unwrap();
 
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -690,7 +704,8 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(((Number 100) - (Number 200)))).unwrap();
 
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -718,7 +733,8 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(((Number 100) ~ (Number 200)))).unwrap();
 
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -746,7 +762,8 @@ mod clone {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_object_to_data_block(basic_object!(((Number 100) <> (Number 200)))).unwrap();
 
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -776,7 +793,8 @@ mod clone {
             .push_object_to_data_block(basic_object!((Number 100), (Number 200), (Number 250)))
             .unwrap();
 
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(70, BasicData::Empty);
@@ -824,7 +842,8 @@ mod clone {
             .push_object_to_data_block(basic_object!(((SymRaw 100) = (Number 100)), ((SymRaw 200) = (Number 200)), ((SymRaw 250) = (Number 250))))
             .unwrap();
 
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(90, BasicData::Empty);
@@ -894,7 +913,8 @@ mod clone {
         list_index = data.add_to_list(list_index, num1).unwrap();
         list_index = data.add_to_list(list_index, pair).unwrap();
 
-        let index = data.push_clone_data(list_index).unwrap();
+        let index_stack_start = data.create_index_stack(list_index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(70, BasicData::Empty);
@@ -942,7 +962,8 @@ mod clone {
     fn list_item_is_error() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_to_data_block(BasicData::ListItem(0)).unwrap();
-        let index = data.push_clone_data(index);
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0);
 
         assert_eq!(index, Err(DataError::new("Cannot clone", DataErrorType::CannotClone)));
     }
@@ -951,7 +972,8 @@ mod clone {
     fn associative_item_is_error() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_to_data_block(BasicData::AssociativeItem(100, 0)).unwrap();
-        let index = data.push_clone_data(index);
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0);
 
         assert_eq!(index, Err(DataError::new("Cannot clone", DataErrorType::CannotClone)));
     }
@@ -960,7 +982,8 @@ mod clone {
     fn clone_item_is_error() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_to_data_block(BasicData::CloneItem(0)).unwrap();
-        let index = data.push_clone_data(index);
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0);
 
         assert_eq!(index, Err(DataError::new("Cannot clone", DataErrorType::CannotClone)));
     }
@@ -969,7 +992,8 @@ mod clone {
     fn clone_index_map_is_error() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_to_data_block(BasicData::CloneIndexMap(0, 0)).unwrap();
-        let index = data.push_clone_data(index);
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0);
 
         assert_eq!(index, Err(DataError::new("Cannot clone", DataErrorType::CannotClone)));
     }
@@ -982,7 +1006,8 @@ mod clone {
         let index = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
         let index = data.push_to_data_block(BasicData::Value(previous, index)).unwrap();
 
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -1019,7 +1044,8 @@ mod clone {
         let index = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
         let index = data.push_to_data_block(BasicData::Register(previous, index)).unwrap();
 
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -1055,7 +1081,8 @@ mod clone {
         let index = data
             .push_to_data_block(BasicData::InstructionWithData(Instruction::Add, instruction_data))
             .unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -1079,7 +1106,8 @@ mod clone {
     fn jump_point() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_to_data_block(BasicData::JumpPoint(100)).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
@@ -1101,7 +1129,8 @@ mod clone {
         let register = data.push_to_data_block(BasicData::RegisterRoot(value2)).unwrap();
         data.push_to_data_block(BasicData::JumpPoint(100)).unwrap();
         let index = data.push_to_data_block(BasicData::Frame(first_frame, register)).unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -1144,7 +1173,8 @@ mod clone {
 
         let pair2 = data.push_to_data_block(BasicData::Pair(pair1, pair1)).unwrap();
 
-        let cloned_index = data.push_clone_data(pair2).unwrap();
+        let index_stack_start = data.create_index_stack(pair2).unwrap();
+        let cloned_index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
@@ -1206,7 +1236,8 @@ mod clone {
         let index = data
             .push_to_data_block(BasicData::Custom(TestCustom { value: index, name: "test" }))
             .unwrap();
-        let index = data.push_clone_data(index).unwrap();
+        let index_stack_start = data.create_index_stack(index).unwrap();
+        let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<TestCustom>::new().unwrap();
         expected_data.data_mut().splice(
