@@ -2,6 +2,7 @@ use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError};
 
 impl<T> BasicGarnishData<T>
 where
+
     T: BasicDataCustom,
 {   
     pub(crate) fn optimize_data_block_and_retain(&mut self, additional_data_retentions: &[usize]) -> Result<Vec<usize>, DataError> {
@@ -288,7 +289,7 @@ mod optimize {
         let result = data.optimize_data_block_and_retain(&[additional_retained_index, additional_retained_pair_index]).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(90, BasicData::Empty);
+        expected_data.data_mut().resize(100, BasicData::Empty);
         
         expected_data.data_mut().splice(30..46, vec![
             BasicData::Number(100.into()),
@@ -311,9 +312,9 @@ mod optimize {
 
         expected_data.set_data_retention_count(1);
         expected_data.data_block_mut().cursor = 16;
-        expected_data.data_block_mut().size = 50;
+        expected_data.data_block_mut().size = 60;
         expected_data.data_block_mut().start = 30;
-        expected_data.custom_data_block_mut().start = 80;
+        expected_data.custom_data_block_mut().start = 90;
         expected_data.custom_data_block_mut().size = 10;
         expected_data.set_current_value(Some(11));
         expected_data.set_current_register(Some(15));
