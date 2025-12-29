@@ -204,8 +204,6 @@ where
 
         for i in clone_range.rev() {
             let index = self.get_from_data_block_ensure_index(i)?.as_clone_item()?;
-            let new_index = self.data_block().cursor;
-
             let new_index = match self.get_from_data_block_ensure_index(index)?.clone() {
                 BasicData::Unit => self.push_to_data_block(BasicData::Unit)?,
                 BasicData::True => self.push_to_data_block(BasicData::True)?,
