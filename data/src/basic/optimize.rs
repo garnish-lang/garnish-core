@@ -253,9 +253,24 @@ where
 
                     self.push_to_data_block(BasicData::Pair(left, right))?
                 }
-                BasicData::Range(_, _) => self.push_to_data_block(BasicData::Range(new_index - 2, new_index - 1))?,
-                BasicData::Slice(_, _) => self.push_to_data_block(BasicData::Slice(new_index - 2, new_index - 1))?,
-                BasicData::Partial(_, _) => self.push_to_data_block(BasicData::Partial(new_index - 2, new_index - 1))?,
+                BasicData::Range(left, right) => {
+                    let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
+                    let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
+
+                    self.push_to_data_block(BasicData::Range(left, right))?
+                }
+                BasicData::Slice(left, right) => {
+                    let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
+                    let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
+
+                    self.push_to_data_block(BasicData::Slice(left, right))?
+                }
+                BasicData::Partial(left, right) => {
+                    let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
+                    let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
+
+                    self.push_to_data_block(BasicData::Partial(left, right))?
+                }
                 BasicData::List(length, association_length) => {
                     let start = index + 1;
                     let end = start + length * 2;
@@ -284,9 +299,11 @@ where
 
                     list_index
                 }
-                BasicData::Concatenation(_, _) => {
-                    let new_index = self.data_block().cursor;
-                    self.push_to_data_block(BasicData::Concatenation(new_index - 2, new_index - 1))?
+                BasicData::Concatenation(left, right) => {
+                    let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
+                    let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
+
+                    self.push_to_data_block(BasicData::Concatenation(left, right))?
                 }
                 BasicData::Custom(_) => {
                     todo!()
