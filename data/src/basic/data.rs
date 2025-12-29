@@ -583,6 +583,19 @@ mod tests {
             (BasicDataUnitCustom::UninitializedList(100, 200), GarnishDataType::Invalid),
             (BasicDataUnitCustom::ListItem(100), GarnishDataType::Invalid),
             (BasicDataUnitCustom::AssociativeItem(100, 200), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::Value(100, 200), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::ValueRoot(100), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::Register(100, 200), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::RegisterRoot(100), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::Instruction(Instruction::Add, 100), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::InstructionRoot(Instruction::Add), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::JumpPoint(100), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::Frame(100, 200), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::FrameIndex(100), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::FrameRegister(100), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::FrameRoot, GarnishDataType::Invalid),
+            (BasicDataUnitCustom::CloneItem(100), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::CloneIndexMap(100, 200), GarnishDataType::Invalid),
         ];
 
         for (data, expected) in scenarios {
