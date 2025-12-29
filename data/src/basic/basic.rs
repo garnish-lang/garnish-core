@@ -183,8 +183,8 @@ where
         self.data_retention_count = count;
     }
 
-    pub fn optimize(&mut self) -> Result<(), DataError> {
-        self.optimize_data_block()
+    pub fn optimize(&mut self, additional_data_retentions: &[usize]) -> Result<Vec<usize>, DataError> {
+        self.optimize_data_block_and_retain(additional_data_retentions)
     }
 
     pub fn push_to_instruction_block(&mut self, instruction: Instruction, data: Option<usize>) -> Result<usize, DataError> {

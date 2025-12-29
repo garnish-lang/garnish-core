@@ -3,12 +3,7 @@ use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError};
 impl<T> BasicGarnishData<T>
 where
     T: BasicDataCustom,
-{
-    pub(crate) fn optimize_data_block(&mut self) -> Result<(), DataError> {
-        self.optimize_data_block_and_retain(&[])?;
-        Ok(())
-    }
-    
+{   
     pub(crate) fn optimize_data_block_and_retain(&mut self, additional_data_retentions: &[usize]) -> Result<Vec<usize>, DataError> {
         let current_data_end = self.data_block().start + self.data_block().cursor;
         let retained_data_end = self.data_block().start + self.data_retention_count();
@@ -94,7 +89,7 @@ mod optimize {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         data.push_object_to_data_block(basic_object!(Unit, (Number 100), (CharList "hello"), ((ByteList 1, 2, 3) = (Symbol "my_symbol"))))
             .unwrap();
-        data.optimize_data_block().unwrap();
+        data.optimize_data_block_and_retain(&[]).unwrap();
         assert_eq!(data.data_size(), 0);
     }
 
@@ -105,7 +100,7 @@ mod optimize {
             .unwrap();
         data.retain_all_current_data();
         data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
-        data.optimize_data_block().unwrap();
+        data.optimize_data_block_and_retain(&[]).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(80, BasicData::Empty);
@@ -154,7 +149,7 @@ mod optimize {
         let register_index = data.push_to_data_block(BasicData::Register(register_index, index)).unwrap();
         data.set_current_register(Some(register_index));
 
-        data.optimize_data_block().unwrap();
+        data.optimize_data_block_and_retain(&[]).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(70, BasicData::Empty);
@@ -185,7 +180,7 @@ mod optimize {
         let value_index = data.push_to_data_block(BasicData::Value(value_index, index)).unwrap();
         data.set_current_value(Some(value_index));
 
-        data.optimize_data_block().unwrap();
+        data.optimize_data_block_and_retain(&[]).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(70, BasicData::Empty);
@@ -217,7 +212,7 @@ mod optimize {
         let frame_index = data.push_to_data_block(BasicData::Frame(frame_index, index)).unwrap();
         data.set_current_frame(Some(frame_index));
 
-        data.optimize_data_block().unwrap();
+        data.optimize_data_block_and_retain(&[]).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(80, BasicData::Empty);
