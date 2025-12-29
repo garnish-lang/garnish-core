@@ -169,9 +169,7 @@ where
                         None => {}
                     }
                 }
-                BasicData::JumpPoint(_) => {
-                    todo!()
-                }
+                BasicData::JumpPoint(_point) => {}
                 BasicData::Frame(_, _) => {
                     todo!()
                 }
@@ -353,8 +351,8 @@ where
                     };
                     self.push_to_data_block(BasicData::Instruction(instruction.clone(), data))?
                 }
-                BasicData::JumpPoint(_) => {
-                    todo!()
+                BasicData::JumpPoint(point) => {
+                    self.push_to_data_block(BasicData::JumpPoint(point))?
                 }
                 BasicData::Frame(_, _) => {
                     todo!()
@@ -1262,6 +1260,22 @@ mod clone {
         expected_data.data_block_mut().cursor = 6;
 
         assert_eq!(index, 5);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn jump_point() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_to_data_block(BasicData::JumpPoint(100)).unwrap();
+        let index = data.push_clone_data(index).unwrap();
+
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data
+            .data_mut()
+            .splice(30..33, vec![BasicData::JumpPoint(100), BasicData::CloneIndexMap(0, 2), BasicData::JumpPoint(100)]);
+        expected_data.data_block_mut().cursor = 3;
+
+        assert_eq!(index, 2);
         assert_eq!(data, expected_data);
     }
 }
