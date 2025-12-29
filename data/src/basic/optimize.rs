@@ -140,33 +140,21 @@ where
                 BasicData::AssociativeItem(_, _) => {}
                 BasicData::Value(previous, value) => {
                     let (previous, value) = (previous.clone(), value.clone());
-                    match previous {
-                        Some(previous) => {
-                            let previous = previous.clone();
-                            self.push_to_data_block(BasicData::CloneItem(previous))?;
-                        }
-                        None => {}
+                    if let Some(previous) = previous {
+                        self.push_to_data_block(BasicData::CloneItem(previous))?;
                     }
                     self.push_to_data_block(BasicData::CloneItem(value))?;
                 }
                 BasicData::Register(previous, value) => {
                     let (previous, value) = (previous.clone(), value.clone());
-                    match previous {
-                        Some(previous) => {
-                            let previous = previous.clone();
-                            self.push_to_data_block(BasicData::CloneItem(previous))?;
-                        }
-                        None => {}
+                    if let Some(previous) = previous {
+                        self.push_to_data_block(BasicData::CloneItem(previous))?;
                     }
                     self.push_to_data_block(BasicData::CloneItem(value))?;
                 }
                 BasicData::Instruction(_instruction, data) => {
-                    match data {
-                        Some(data) => {
-                            let data = data.clone();
-                            self.push_to_data_block(BasicData::CloneItem(data))?;
-                        }
-                        None => {}
+                    if let Some(data) = data {
+                        self.push_to_data_block(BasicData::CloneItem(data.clone()))?;
                     }
                 }
                 BasicData::JumpPoint(_point) => {}
@@ -175,20 +163,12 @@ where
                     self.get_from_data_block_ensure_index(index - 1)?;
                     self.push_to_data_block(BasicData::CloneItem(index - 1))?;
 
-                    match previous {
-                        Some(previous) => {
-                            let previous = previous.clone();
-                            self.push_to_data_block(BasicData::CloneItem(previous))?;
-                        }
-                        None => {}
+                    if let Some(previous) = previous {
+                        self.push_to_data_block(BasicData::CloneItem(previous))?;
                     }
 
-                    match register {
-                        Some(register) => {
-                            let register = register.clone();
-                            self.push_to_data_block(BasicData::CloneItem(register))?;
-                        }
-                        None => {}
+                    if let Some(register) = register {
+                        self.push_to_data_block(BasicData::CloneItem(register))?;
                     }
                 }
                 BasicData::CloneItem(_) => {}
@@ -332,14 +312,10 @@ where
                     Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
                 }
                 BasicData::Value(previous, value) => {
-                    let previous = match previous {
-                        Some(previous) => {
-                            let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
-                            Some(previous)
-                        }
-                        None => {
-                            None
-                        }
+                    let previous = if let Some(previous) = previous {
+                        Some(self.lookup_in_data_slice(lookup_start, lookup_end, previous)?)
+                    } else {
+                        None
                     };
 
                     let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
@@ -347,12 +323,10 @@ where
                     self.push_to_data_block(BasicData::Value(previous, value))?
                 }
                 BasicData::Register(previous, value) => {
-                    let previous = match previous {
-                        Some(previous) => {
-                            let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
-                            Some(previous)
-                        }
-                        None => None,
+                    let previous = if let Some(previous) = previous {
+                        Some(self.lookup_in_data_slice(lookup_start, lookup_end, previous)?)
+                    } else {
+                        None
                     };
 
                     let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
@@ -360,12 +334,10 @@ where
                     self.push_to_data_block(BasicData::Register(previous, value))?
                 }
                 BasicData::Instruction(instruction, data) => {
-                    let data = match data {
-                        Some(data) => {
-                            let data = self.lookup_in_data_slice(lookup_start, lookup_end, data)?;
-                            Some(data)
-                        }
-                        None => None,
+                    let data = if let Some(data) = data {
+                        Some(self.lookup_in_data_slice(lookup_start, lookup_end, data)?)
+                    } else {
+                        None
                     };
                     self.push_to_data_block(BasicData::Instruction(instruction.clone(), data))?
                 }
@@ -373,19 +345,15 @@ where
                     self.push_to_data_block(BasicData::JumpPoint(point))?
                 }
                 BasicData::Frame(previous, register) => {
-                    let previous = match previous {
-                        Some(previous) => {
-                            let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
-                            Some(previous)
-                        }
-                        None => None,
+                    let previous = if let Some(previous) = previous {
+                        Some(self.lookup_in_data_slice(lookup_start, lookup_end, previous)?)
+                    } else {
+                        None
                     };
-                    let register = match register {
-                        Some(register) => {
-                            let register = self.lookup_in_data_slice(lookup_start, lookup_end, register)?;
-                            Some(register)
-                        }
-                        None => None,
+                    let register = if let Some(register) = register {
+                        Some(self.lookup_in_data_slice(lookup_start, lookup_end, register)?)
+                    } else {
+                        None
                     };
                     self.push_to_data_block(BasicData::Frame(previous, register))?
                 }
