@@ -35,8 +35,8 @@ where T: BasicDataCustom {
     ValueRoot(usize),
     Register(usize, usize),
     RegisterRoot(usize),
-    Instruction(Instruction, usize),
-    InstructionRoot(Instruction),
+    InstructionWithData(Instruction, usize),
+    Instruction(Instruction),
     JumpPoint(usize),
     Frame(usize, usize),
     FrameIndex(usize),
@@ -79,8 +79,8 @@ where T: BasicDataCustom {
             BasicData::ValueRoot(_) => GarnishDataType::Invalid,
             BasicData::Register(_, _) => GarnishDataType::Invalid,
             BasicData::RegisterRoot(_) => GarnishDataType::Invalid,
-            BasicData::Instruction(_, _) => GarnishDataType::Invalid,
-            BasicData::InstructionRoot(_) => GarnishDataType::Invalid,
+            BasicData::InstructionWithData(_, _) => GarnishDataType::Invalid,
+            BasicData::Instruction(_) => GarnishDataType::Invalid,
             BasicData::JumpPoint(_) => GarnishDataType::Invalid,
             BasicData::Frame(_, _) => GarnishDataType::Invalid,
             BasicData::FrameIndex(_) => GarnishDataType::Invalid,
@@ -429,28 +429,28 @@ where T: BasicDataCustom {
 
     pub fn as_instruction(&self) -> Result<(Instruction, usize), DataError> {
         match self {
-            BasicData::Instruction(instruction, data) => Ok((*instruction, *data)),
+            BasicData::InstructionWithData(instruction, data) => Ok((*instruction, *data)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
 
     pub fn as_instruction_mut(&mut self) -> Result<(&mut Instruction, &mut usize), DataError> {
         match self {
-            BasicData::Instruction(instruction, data) => Ok((instruction, data)),
+            BasicData::InstructionWithData(instruction, data) => Ok((instruction, data)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
     
     pub fn as_instruction_root(&self) -> Result<Instruction, DataError> {
         match self {
-            BasicData::InstructionRoot(instruction) => Ok(*instruction),
+            BasicData::Instruction(instruction) => Ok(*instruction),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
     
     pub fn as_instruction_root_mut(&mut self) -> Result<&mut Instruction, DataError> {
         match self {
-            BasicData::InstructionRoot(instruction) => Ok(instruction),
+            BasicData::Instruction(instruction) => Ok(instruction),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
@@ -587,8 +587,8 @@ mod tests {
             (BasicDataUnitCustom::ValueRoot(100), GarnishDataType::Invalid),
             (BasicDataUnitCustom::Register(100, 200), GarnishDataType::Invalid),
             (BasicDataUnitCustom::RegisterRoot(100), GarnishDataType::Invalid),
-            (BasicDataUnitCustom::Instruction(Instruction::Add, 100), GarnishDataType::Invalid),
-            (BasicDataUnitCustom::InstructionRoot(Instruction::Add), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::InstructionWithData(Instruction::Add, 100), GarnishDataType::Invalid),
+            (BasicDataUnitCustom::Instruction(Instruction::Add), GarnishDataType::Invalid),
             (BasicDataUnitCustom::JumpPoint(100), GarnishDataType::Invalid),
             (BasicDataUnitCustom::Frame(100, 200), GarnishDataType::Invalid),
             (BasicDataUnitCustom::FrameIndex(100), GarnishDataType::Invalid),
@@ -1211,7 +1211,7 @@ mod tests {
 
     #[test]
     fn as_instruction() {
-        let data = BasicDataUnitCustom::Instruction(Instruction::Add, 100);
+        let data = BasicDataUnitCustom::InstructionWithData(Instruction::Add, 100);
         assert_eq!(data.as_instruction(), Ok((Instruction::Add, 100)));
     }
     
@@ -1223,7 +1223,7 @@ mod tests {
 
     #[test]
     fn as_instruction_mut() {
-        let mut data = BasicDataUnitCustom::Instruction(Instruction::Add, 100);
+        let mut data = BasicDataUnitCustom::InstructionWithData(Instruction::Add, 100);
         let (instruction, instruction_data) = data.as_instruction_mut().unwrap();
         *instruction = Instruction::Subtract;
         *instruction_data = 200;
@@ -1239,7 +1239,7 @@ mod tests {
     
     #[test]
     fn as_instruction_root() {
-        let data = BasicDataUnitCustom::InstructionRoot(Instruction::Add);
+        let data = BasicDataUnitCustom::Instruction(Instruction::Add);
         assert_eq!(data.as_instruction_root(), Ok(Instruction::Add));
     }
     
@@ -1251,7 +1251,7 @@ mod tests {
 
     #[test]
     fn as_instruction_root_mut() {
-        let mut data = BasicDataUnitCustom::InstructionRoot(Instruction::Add);
+        let mut data = BasicDataUnitCustom::Instruction(Instruction::Add);
         *data.as_instruction_root_mut().unwrap() = Instruction::Subtract;
         assert_eq!(data.as_instruction_root(), Ok(Instruction::Subtract));
     }

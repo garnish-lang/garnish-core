@@ -137,10 +137,10 @@ where
                     let value = value.clone();
                     self.push_to_data_block(BasicData::CloneItem(value))?;
                 }
-                BasicData::Instruction(_instruction, data) => {
+                BasicData::InstructionWithData(_instruction, data) => {
                     self.push_to_data_block(BasicData::CloneItem(data.clone()))?;
                 }
-                BasicData::InstructionRoot(_instruction) => {}
+                BasicData::Instruction(_instruction) => {}
                 BasicData::JumpPoint(_point) => {}
                 BasicData::Frame(previous, register) => {
                     let (previous, register) = (previous.clone(), register.clone());

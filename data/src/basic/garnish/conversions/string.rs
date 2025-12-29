@@ -356,8 +356,8 @@ where
         | BasicData::Register(_, _)
         | BasicData::RegisterRoot(_)
         | BasicData::JumpPoint(_)
-        | BasicData::Instruction(_, _)
-        | BasicData::InstructionRoot(_)
+        | BasicData::InstructionWithData(_, _)
+        | BasicData::Instruction(_)
         | BasicData::Frame(_, _)
         | BasicData::FrameIndex(_)
         | BasicData::FrameRegister(_)
@@ -454,7 +454,7 @@ mod tests {
         associative_item: BasicData::AssociativeItem(0, 0) => "",
         value: BasicData::ValueRoot(0) => "",
         register: BasicData::RegisterRoot(0) => "",
-        instruction: BasicData::InstructionRoot(Instruction::Add) => "",
+        instruction: BasicData::Instruction(Instruction::Add) => "",
         jump_point: BasicData::JumpPoint(0) => "",
         frame: BasicData::FrameRoot => "",
     );

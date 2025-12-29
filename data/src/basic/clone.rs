@@ -206,12 +206,12 @@ where
                     let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
                     self.push_to_data_block(BasicData::RegisterRoot(value))?
                 }
-                BasicData::Instruction(instruction, data) => {
+                BasicData::InstructionWithData(instruction, data) => {
                     let data = self.lookup_in_data_slice(lookup_start, lookup_end, data)?;
-                    self.push_to_data_block(BasicData::Instruction(instruction.clone(), data))?
+                    self.push_to_data_block(BasicData::InstructionWithData(instruction.clone(), data))?
                 }
-                BasicData::InstructionRoot(instruction) => {
-                    self.push_to_data_block(BasicData::InstructionRoot(instruction.clone()))?
+                BasicData::Instruction(instruction) => {
+                    self.push_to_data_block(BasicData::Instruction(instruction.clone()))?
                 }
                 BasicData::JumpPoint(point) => {
                     self.push_to_data_block(BasicData::JumpPoint(point))?
@@ -1030,7 +1030,7 @@ mod clone {
     fn instruction() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let instruction_data = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
-        let index = data.push_to_data_block(BasicData::Instruction(Instruction::Add, instruction_data)).unwrap();
+        let index = data.push_to_data_block(BasicData::InstructionWithData(Instruction::Add, instruction_data)).unwrap();
         let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
@@ -1038,11 +1038,11 @@ mod clone {
             30..36,
             vec![
                 BasicData::Number(100.into()),
-                BasicData::Instruction(Instruction::Add, 0),
+                BasicData::InstructionWithData(Instruction::Add, 0),
                 BasicData::CloneIndexMap(1, 5),
                 BasicData::CloneIndexMap(0, 4),
                 BasicData::Number(100.into()),
-                BasicData::Instruction(Instruction::Add, 4),
+                BasicData::InstructionWithData(Instruction::Add, 4),
             ],
         );
         expected_data.data_block_mut().cursor = 6;

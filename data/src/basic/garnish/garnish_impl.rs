@@ -2478,7 +2478,7 @@ mod tests {
         let mut data = instruction_test_data();
         data.push_instruction(Instruction::Add, None).unwrap();
         let mut expected_data = instruction_test_data();
-        expected_data.data_mut()[0] = BasicData::InstructionRoot(Instruction::Add);
+        expected_data.data_mut()[0] = BasicData::Instruction(Instruction::Add);
         expected_data.instruction_block_mut().cursor = 1;
         assert_eq!(data, expected_data);
     }

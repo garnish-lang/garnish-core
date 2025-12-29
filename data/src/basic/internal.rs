@@ -30,8 +30,8 @@ where
         }
         let true_index = self.instruction_block().start + index;
         match &self.data()[true_index] {
-            BasicData::Instruction(instruction, data) => Ok((*instruction, Some(*data))),
-            BasicData::InstructionRoot(instruction) => Ok((*instruction, None)),
+            BasicData::InstructionWithData(instruction, data) => Ok((*instruction, Some(*data))),
+            BasicData::Instruction(instruction) => Ok((*instruction, None)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
