@@ -118,8 +118,6 @@ mod optimize {
         let register_index = data.push_to_data_block(BasicData::Register(register_index, index)).unwrap();
         data.set_current_register(Some(register_index));
 
-        println!("{}", data.dump_data_block());
-
         data.optimize_data_block().unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
@@ -137,9 +135,6 @@ mod optimize {
         expected_data.data_block_mut().size = 30;
         expected_data.custom_data_block_mut().start = 60;
         expected_data.set_current_register(Some(5));
-
-        println!("===================");
-        println!("{}", data.dump_data_block());
 
         assert_eq!(data, expected_data);
     }
