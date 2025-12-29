@@ -42,11 +42,6 @@ where
         if index_list_end != current_data_end {
             self.clone_index_stack(index_list_start, offset)?;
         }
-
-        dbg!(current_data_end);
-        dbg!(index_list_start, index_list_end);
-        dbg!(original_register, original_value);
-        println!("{}", self.dump_data_block());
         
         if let Some(original_register) = original_register {
             let mapped_index = self.lookup_in_data_slice(index_list_start, index_list_end, original_register)?;
