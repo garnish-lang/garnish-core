@@ -2,6 +2,69 @@ use garnish_lang_traits::GarnishDataType;
 
 use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, error::DataErrorType};
 
+pub trait OrderingDelegate
+{
+    fn push_clone_items(&mut self, value: usize) -> Result<(), DataError>;
+}
+
+pub struct BasicOrderingDelegate<'a, T>
+where
+    T: BasicDataCustom,
+{
+    data: &'a mut BasicGarnishData<T>,
+}
+
+impl<'a, T> BasicOrderingDelegate<'a, T>
+where
+    T: BasicDataCustom,
+{
+    fn new(data: &'a mut BasicGarnishData<T>) -> Self {
+        Self { data }
+    }
+}
+
+impl<'a, T> OrderingDelegate for BasicOrderingDelegate<'a, T>
+where
+    T: BasicDataCustom,
+{
+    fn push_clone_items(&mut self, value: usize) -> Result<(), DataError> {
+        self.data.push_to_data_block(BasicData::CloneItem(value))?;
+        Ok(())
+    }
+}
+
+pub trait CloneDelegate
+{
+    fn lookup_value(&mut self, value: usize) -> Result<usize, DataError>;
+}
+
+pub struct BasicCloneDelegate<'a, T>
+where
+    T: BasicDataCustom,
+{
+    data: &'a mut BasicGarnishData<T>,
+    lookup_start: usize,
+    lookup_end: usize,
+}
+
+impl<'a, T> BasicCloneDelegate<'a, T>
+where
+    T: BasicDataCustom,
+{
+    fn new(data: &'a mut BasicGarnishData<T>, lookup_start: usize, lookup_end: usize) -> Self {
+        Self { data, lookup_start, lookup_end }
+    }
+}
+
+impl<'a, T> CloneDelegate for BasicCloneDelegate<'a, T>
+where
+    T: BasicDataCustom,
+{
+    fn lookup_value(&mut self, value: usize) -> Result<usize, DataError> {
+        self.data.lookup_in_data_slice(self.lookup_start, self.lookup_end, value)
+    }
+}
+
 impl<T> BasicGarnishData<T>
 where
     T: BasicDataCustom,
@@ -118,8 +181,10 @@ where
                         self.push_to_data_block(BasicData::CloneItem(item))?;
                     }
                 }
-                BasicData::Custom(_) => {
-                    todo!()
+                BasicData::Custom(custom) => {
+                    let custom = custom.clone();
+                    let mut delegate = BasicOrderingDelegate::new(self);
+                    T::push_clone_items_for_custom_data(&mut delegate, custom)?;
                 }
                 BasicData::Empty => {}
                 BasicData::UninitializedList(_len, count) => {
@@ -311,8 +376,10 @@ where
 
                     self.push_to_data_block(BasicData::Concatenation(left, right))?
                 }
-                BasicData::Custom(_) => {
-                    todo!()
+                BasicData::Custom(custom) => {
+                    let mut delegate = BasicCloneDelegate::new(self, lookup_start, lookup_end);
+                    let cloned = T::create_cloned_custom_data(&mut delegate, custom)?;
+                    self.push_to_data_block(BasicData::Custom(cloned))?
                 }
                 BasicData::Empty => self.push_to_data_block(BasicData::Empty)?,
                 BasicData::UninitializedList(length, count) => {
@@ -536,7 +603,7 @@ mod optimize {
 mod clone {
     use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
 
-    use crate::{BasicData, BasicGarnishData, DataError, basic_object, error::DataErrorType};
+    use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, basic::optimize::{CloneDelegate, OrderingDelegate}, basic_object, error::DataErrorType};
 
     #[test]
     fn circular_reference_is_error() {
@@ -1363,6 +1430,52 @@ mod clone {
         expected_data.custom_data_block_mut().start = 50;
 
         assert_eq!(index, 17);
+        assert_eq!(data, expected_data);
+    }
+
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
+    struct TestCustom {
+        value: usize,
+        name: &'static str,
+    }
+
+    impl BasicDataCustom for TestCustom {
+        fn push_clone_items_for_custom_data(delegate: &mut impl OrderingDelegate, value: Self) -> Result<(), DataError> {
+            delegate.push_clone_items(value.value)?;
+            Ok(())
+        }
+
+        fn create_cloned_custom_data(delegate: &mut impl CloneDelegate, value: Self) -> Result<Self, DataError> {
+            let index = delegate.lookup_value(value.value)?;
+            Ok(Self {
+                value: index,
+                name: value.name,
+            })
+        }
+    }
+
+    #[test]
+    fn custom() {
+        let mut data = BasicGarnishData::<TestCustom>::new().unwrap();
+        let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        let index = data.push_to_data_block(BasicData::Custom(TestCustom { value: index, name: "test" })).unwrap();
+        let index = data.push_clone_data(index).unwrap();
+
+        let mut expected_data = BasicGarnishData::<TestCustom>::new().unwrap();
+        expected_data.data_mut().splice(
+            30..36,
+            vec![
+                BasicData::Number(100.into()),
+                BasicData::Custom(TestCustom { value: 0, name: "test" }), 
+                BasicData::CloneIndexMap(1, 5),
+                BasicData::CloneIndexMap(0, 4),
+                BasicData::Number(100.into()),
+                BasicData::Custom(TestCustom { value: 4, name: "test" })
+            ],
+        );
+        expected_data.data_block_mut().cursor = 6;
+
+        assert_eq!(index, 5);
         assert_eq!(data, expected_data);
     }
 }

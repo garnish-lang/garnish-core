@@ -6,6 +6,8 @@ use garnish_lang_traits::GarnishDataType;
 use garnish_lang_traits::Instruction;
 
 use crate::ConversionDelegate;
+use crate::basic::optimize::CloneDelegate;
+use crate::basic::optimize::OrderingDelegate;
 use crate::basic::search::search_for_associative_item;
 use crate::basic::storage::{StorageBlock, StorageSettings};
 use crate::{BasicData, DataError, SimpleNumber};
@@ -16,12 +18,23 @@ pub trait BasicDataCustom: Clone + Debug + PartialEq + Eq + PartialOrd {
     fn convert_custom_data_with_delegate(_delegate: &mut impl ConversionDelegate<Self, char>, _value: Self) -> Result<(), DataError> {
         Ok(())
     }
+
+    fn push_clone_items_for_custom_data(_delegate: &mut impl OrderingDelegate, _value: Self) -> Result<(), DataError> {
+        Ok(())
+    }
+
+    fn create_cloned_custom_data(_delegate: &mut impl CloneDelegate, value: Self) -> Result<Self, DataError> {
+        Ok(value.clone())
+    }
+
     fn resolve(_data: &mut BasicGarnishData<Self>, _symbol: u64) -> Result<bool, DataError> {
         Ok(false)
     }
+
     fn apply(_data: &mut BasicGarnishData<Self>, _external_value: usize, _input_addr: usize) -> Result<bool, DataError> {
         Ok(false)
     }
+
     fn defer_op(
         _data: &mut BasicGarnishData<Self>,
         _operation: Instruction,
