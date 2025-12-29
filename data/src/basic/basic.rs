@@ -7,7 +7,7 @@ use garnish_lang_traits::Instruction;
 
 use crate::ConversionDelegate;
 use crate::basic::optimize::CloneDelegate;
-use crate::basic::optimize::OrderingDelegate;
+use crate::basic::ordering::OrderingDelegate;
 use crate::basic::search::search_for_associative_item;
 use crate::basic::storage::{StorageBlock, StorageSettings};
 use crate::{BasicData, DataError, SimpleNumber};

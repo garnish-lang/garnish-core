@@ -5,9 +5,10 @@ mod garnish;
 mod internal;
 mod merge_to_symbol_list;
 mod object;
+mod optimize;
+mod ordering;
 mod search;
 mod storage;
-mod optimize;
 
 pub use data::{BasicData, BasicDataUnitCustom};
 pub use garnish::BasicDataFactory;
