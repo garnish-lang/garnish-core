@@ -16,8 +16,6 @@ where
 
         let index_list_end = self.data_block().start + self.data_block().cursor;
 
-        let clone_start = self.data_block().start + self.data_block().cursor;
-
         let offset = self.data_block().start + self.data_block().cursor - retained_data_end;
 
         if index_list_start != current_data_end {
@@ -30,7 +28,7 @@ where
         }
 
         let new_data_end = self.data_block().start + self.data_block().cursor;
-        let from_range = clone_start..new_data_end;
+        let from_range = index_list_end..new_data_end;
         let mut current = retained_data_end;
 
         for i in from_range.clone() {
