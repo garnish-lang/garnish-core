@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StorageBlock {
     pub(crate) cursor: usize,
