@@ -29,12 +29,9 @@ where
             previous = Some(index - offset);
         }
 
-        println!("{}", self.dump_data_block());
-
         let new_data_end = self.data_block().start + self.data_block().cursor;
         let from_range = current_data_end..new_data_end;
         let mut current = true_start;
-        dbg!(current);
 
         for i in from_range.clone() {
             self.data_mut()[current] = self.data_mut()[i].clone();
@@ -42,14 +39,11 @@ where
         }
 
         self.data_block_mut().cursor = current - self.data_block().start;
-        dbg!(current);
 
         let clear_range = current..new_data_end;
         for i in clear_range.clone() {
             self.data_mut()[i] = BasicData::Empty;
         }
-
-        dbg!(current_data_end, true_start, offset, registers, from_range, clear_range, current);
 
         Ok(())
     }
@@ -1120,8 +1114,6 @@ mod clone {
         expected_data.data_block_mut().size = 30;
         expected_data.custom_data_block_mut().start = 60;
 
-        println!("{}", data.dump_data_block());
-
         assert_eq!(index, 20);
         assert_eq!(data, expected_data);
     }
@@ -1232,8 +1224,6 @@ mod clone {
         expected_data.data_block_mut().size = 20;
         expected_data.custom_data_block_mut().start = 50;
 
-        println!("{}", data.dump_data_block());
-
         assert_eq!(index, 11);
         assert_eq!(data, expected_data);
     }
@@ -1317,8 +1307,6 @@ mod clone {
         expected_data.data_block_mut().cursor = 18;
         expected_data.data_block_mut().size = 20;
         expected_data.custom_data_block_mut().start = 50;
-
-        println!("{}", data.dump_data_block());
 
         assert_eq!(index, 17);
         assert_eq!(data, expected_data);
