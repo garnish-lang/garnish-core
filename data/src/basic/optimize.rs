@@ -138,8 +138,16 @@ where
                 }
                 BasicData::ListItem(_) => {}
                 BasicData::AssociativeItem(_, _) => {}
-                BasicData::Value(_, _) => {
-                    todo!()
+                BasicData::Value(previous, value) => {
+                    let (previous, value) = (previous.clone(), value.clone());
+                    match previous {
+                        Some(previous) => {
+                            let previous = previous.clone();
+                            self.push_to_data_block(BasicData::CloneItem(previous))?;
+                        }
+                        None => {}
+                    }
+                    self.push_to_data_block(BasicData::CloneItem(value))?;
                 }
                 BasicData::Register(_, _) => {
                     todo!()
@@ -293,8 +301,20 @@ where
                 BasicData::AssociativeItem(_, _) => {
                     Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
                 }
-                BasicData::Value(_, _) => {
-                    todo!()
+                BasicData::Value(previous, value) => {
+                    let previous = match previous {
+                        Some(previous) => {
+                            let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
+                            Some(previous)
+                        }
+                        None => {
+                            None
+                        }
+                    };
+
+                    let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
+
+                    self.push_to_data_block(BasicData::Value(previous, value))?
                 }
                 BasicData::Register(_, _) => {
                     todo!()
@@ -1111,5 +1131,44 @@ mod clone {
         let index = data.push_clone_data(index);
 
         assert_eq!(index, Err(DataError::new("Cannot clone", DataErrorType::CannotClone)));
-    } 
+    }
+
+    #[test]
+    fn value() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        let previous = data.push_to_data_block(BasicData::Value(None, index)).unwrap();
+        let index = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
+        let index = data.push_to_data_block(BasicData::Value(Some(previous), index)).unwrap();
+
+        let index = data.push_clone_data(index).unwrap();
+
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().splice(
+            30..42,
+            vec![
+                BasicData::Number(100.into()),
+                BasicData::Value(None, 0),
+                BasicData::Number(200.into()),
+                BasicData::Value(Some(1), 2),
+                BasicData::CloneIndexMap(3, 11), // 4
+                BasicData::CloneIndexMap(1, 10),
+                BasicData::CloneIndexMap(2, 9),
+                BasicData::CloneIndexMap(0, 8),
+                BasicData::Number(100.into()), // 8
+                BasicData::Number(200.into()),
+                BasicData::Value(None, 8),
+                BasicData::Value(Some(10), 9),
+            ],
+        );
+        expected_data.data_block_mut().cursor = 12;
+        expected_data.data_block_mut().size = 20;
+        expected_data.custom_data_block_mut().start = 50;
+
+        println!("{}", data.dump_data_block());
+
+        assert_eq!(index, 11);
+        assert_eq!(data, expected_data);
+    }
 }
