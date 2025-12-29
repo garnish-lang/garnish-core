@@ -181,3 +181,49 @@ where
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::{BasicData, BasicGarnishData, basic_object};
+
+    #[test]
+    fn create_stack_with_multiple_values() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index_one = data.push_object_to_data_block(basic_object!((Number 100) = (Number 400))).unwrap();
+        let index_two = data.push_object_to_data_block(basic_object!((Number 200) = (Number 300))).unwrap();
+        data.push_object_to_data_block(basic_object!((Number 500) = (Number 600))).unwrap();
+        data.create_index_stack(index_two).unwrap();
+        data.create_index_stack(index_one).unwrap();
+        
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().splice(
+            30..45,
+            vec![
+                BasicData::Number(100.into()),
+                BasicData::Number(400.into()),
+                BasicData::Pair(0, 1),
+                BasicData::Number(200.into()),
+                BasicData::Number(300.into()),
+                BasicData::Pair(3, 4),
+                BasicData::Number(500.into()),
+                BasicData::Number(600.into()),
+                BasicData::Pair(6, 7),
+                BasicData::CloneItem(5),
+                BasicData::CloneItem(4),
+                BasicData::CloneItem(3),
+                BasicData::CloneItem(2),
+                BasicData::CloneItem(1),
+                BasicData::CloneItem(0),
+            ],
+        );
+
+        expected_data.data_block_mut().cursor = 15;
+        expected_data.data_block_mut().size = 20;
+        expected_data.custom_data_block_mut().start = 50;
+        expected_data.custom_data_block_mut().size = 10;
+
+        println!("{}", data.dump_data_block());
+
+        assert_eq!(data, expected_data);
+    }
+}
