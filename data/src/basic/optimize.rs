@@ -5,6 +5,11 @@ where
     T: BasicDataCustom,
 {
     pub(crate) fn optimize_data_block(&mut self) -> Result<(), DataError> {
+        self.optimize_data_block_and_retain(&[])?;
+        Ok(())
+    }
+    
+    pub(crate) fn optimize_data_block_and_retain(&mut self, additional_data_retentions: &[usize]) -> Result<Vec<usize>, DataError> {
         let current_data_end = self.data_block().start + self.data_block().cursor;
         let retained_data_end = self.data_block().start + self.data_retention_count();
         
@@ -24,6 +29,10 @@ where
 
         if let Some(index) = original_frame {
             self.create_index_stack(index)?;
+        }
+
+        for additional_data_retention in additional_data_retentions {
+            self.create_index_stack(*additional_data_retention)?;
         }
 
         let index_list_end = self.data_block().start + self.data_block().cursor;
@@ -54,6 +63,11 @@ where
             self.set_current_frame(Some(mapped_index));
         }
 
+        let mut mapped_indexes = vec![0; additional_data_retentions.len()];
+        for (i, additional_data_retention) in additional_data_retentions.iter().enumerate() {
+            mapped_indexes[i] = self.lookup_in_data_slice(index_list_start, index_list_end, *additional_data_retention)?;
+        }
+
         let new_data_end = self.data_block().start + self.data_block().cursor;
         let from_range = index_list_end..new_data_end;
         let mut current = retained_data_end;
@@ -70,7 +84,7 @@ where
             self.data_mut()[i] = BasicData::Empty;
         }
 
-        Ok(())
+        Ok(mapped_indexes)
     }
 }
 
