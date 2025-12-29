@@ -76,10 +76,16 @@ where
             | BasicData::ListItem(_)
             | BasicData::AssociativeItem(_, _)
             | BasicData::Value(_, _)
+            | BasicData::ValueRoot(_)
             | BasicData::Register(_, _)
+            | BasicData::RegisterRoot(_)
             | BasicData::Instruction(_, _)
+            | BasicData::InstructionRoot(_)
             | BasicData::JumpPoint(_)
             | BasicData::Frame(_, _)
+            | BasicData::FrameIndex(_)
+            | BasicData::FrameRegister(_)
+            | BasicData::FrameRoot
             | BasicData::CloneItem(_)
             | BasicData::CloneIndexMap(_, _) => vec![],
         })

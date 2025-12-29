@@ -29,7 +29,11 @@ where
             return Err(DataError::new("Invalid instruction index", DataErrorType::InvalidInstructionIndex(index)));
         }
         let true_index = self.instruction_block().start + index;
-        self.data()[true_index].as_instruction()
+        match &self.data()[true_index] {
+            BasicData::Instruction(instruction, data) => Ok((*instruction, Some(*data))),
+            BasicData::InstructionRoot(instruction) => Ok((*instruction, None)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
     }
 
     pub(crate) fn get_from_jump_table_block_ensure_index(&self, index: usize) -> Result<usize, DataError> {

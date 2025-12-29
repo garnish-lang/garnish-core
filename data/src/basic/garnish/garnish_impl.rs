@@ -48,7 +48,10 @@ where
     }
 
     fn push_value_stack(&mut self, addr: Self::Size) -> Result<(), Self::Error> {
-        let index = self.push_to_data_block(BasicData::Value(self.current_value().clone(), addr))?;
+        let index = match self.current_value() {
+            Some(previous) => self.push_to_data_block(BasicData::Value(previous, addr))?,
+            None => self.push_to_data_block(BasicData::ValueRoot(addr))?,
+        };
         self.set_current_value(Some(index));
         Ok(())
     }
@@ -57,11 +60,12 @@ where
         match self.current_value() {
             None => return None,
             Some(index) => {
-                let (previous, value) = match self.get_from_data_block_ensure_index(index).and_then(|data| data.as_value()) {
-                    Ok((previous, value)) => (previous, value),
-                    Err(_) => return None,
+                let (previous_opt, value) = match self.get_from_data_block_ensure_index(index) {
+                    Ok(BasicData::Value(previous, value)) => (Some(*previous), *value),
+                    Ok(BasicData::ValueRoot(value)) => (None, *value),
+                    _ => return None,
                 };
-                self.set_current_value(previous);
+                self.set_current_value(previous_opt);
                 Some(value)
             }
         }
@@ -70,20 +74,34 @@ where
     fn get_current_value(&self) -> Option<Self::Size> {
         match self.current_value() {
             None => None,
-            Some(index) => match self.get_from_data_block_ensure_index(index).and_then(|data| data.as_value()) {
-                Ok((_previous, value)) => Some(value),
-                Err(_) => return None,
-            },
+            Some(index) => {
+                let data = match self.get_from_data_block_ensure_index(index) {
+                    Ok(d) => d,
+                    Err(_) => return None,
+                };
+                match data {
+                    BasicData::Value(_previous, value) => Some(*value),
+                    BasicData::ValueRoot(value) => Some(*value),
+                    _ => None,
+                }
+            }
         }
     }
 
     fn get_current_value_mut(&mut self) -> Option<&mut Self::Size> {
         match self.current_value() {
             None => None,
-            Some(index) => match self.get_from_data_block_ensure_index_mut(index).and_then(|data| data.as_value_mut()) {
-                Ok((_previous, value)) => Some(value),
-                Err(_) => return None,
-            },
+            Some(index) => {
+                let data = match self.get_from_data_block_ensure_index_mut(index) {
+                    Ok(d) => d,
+                    Err(_) => return None,
+                };
+                match data {
+                    BasicData::Value(_previous, value) => Some(value),
+                    BasicData::ValueRoot(value) => Some(value),
+                    _ => None,
+                }
+            }
         }
     }
 
@@ -449,7 +467,11 @@ where
         while let Some(index) = current {
             match self.get_from_data_block_ensure_index(index) {
                 Ok(BasicData::Register(previous, _value)) => {
-                    current = previous.clone();
+                    current = Some(*previous);
+                    count += 1;
+                }
+                Ok(BasicData::RegisterRoot(_value)) => {
+                    current = None;
                     count += 1;
                 }
                 _ => break,
@@ -460,8 +482,11 @@ where
     }
 
     fn push_register(&mut self, index: Self::Size) -> Result<(), Self::Error> {
-        let index = self.push_to_data_block(BasicData::Register(self.current_register().clone(), index))?;
-        self.set_current_register(Some(index));
+        let register_index = match self.current_register() {
+            Some(previous) => self.push_to_data_block(BasicData::Register(previous, index))?,
+            None => self.push_to_data_block(BasicData::RegisterRoot(index))?,
+        };
+        self.set_current_register(Some(register_index));
         Ok(())
     }
 
@@ -472,8 +497,12 @@ where
         while let Some(index) = current {
             match self.get_from_data_block_ensure_index(index) {
                 Ok(BasicData::Register(previous, value)) => {
-                    current = previous.clone();
-                    list.push(value);
+                    current = Some(*previous);
+                    list.push(*value);
+                }
+                Ok(BasicData::RegisterRoot(value)) => {
+                    current = None;
+                    list.push(*value);
                 }
                 _ => break,
             }
@@ -490,9 +519,14 @@ where
     fn pop_register(&mut self) -> Result<Option<Self::Size>, Self::Error> {
         match self.current_register() {
             Some(index) => {
-                let register = self.get_from_data_block_ensure_index(index)?.as_register()?;
-                self.set_current_register(register.0.clone());
-                Ok(Some(register.1.clone()))
+                let data = self.get_from_data_block_ensure_index(index)?;
+                let (previous_opt, value) = match data {
+                    BasicData::Register(previous, value) => (Some(*previous), *value),
+                    BasicData::RegisterRoot(value) => (None, *value),
+                    _ => return Err(DataError::not_basic_type_error()),
+                };
+                self.set_current_register(previous_opt);
+                Ok(Some(value))
             }
             None => Ok(None),
         }
@@ -551,7 +585,13 @@ where
 
     fn push_frame(&mut self, index: Self::Size) -> Result<(), Self::Error> {
         self.push_to_data_block(BasicData::JumpPoint(index))?;
-        let frame_index = self.push_to_data_block(BasicData::Frame(self.current_frame().clone(), self.current_register().clone()))?;
+        let frame_data = match (self.current_frame(), self.current_register()) {
+            (Some(frame), Some(register)) => BasicData::Frame(frame, register),
+            (Some(frame), None) => BasicData::FrameIndex(frame),
+            (None, Some(register)) => BasicData::FrameRegister(register),
+            (None, None) => BasicData::FrameRoot,
+        };
+        let frame_index = self.push_to_data_block(frame_data)?;
         self.set_current_frame(Some(frame_index));
         Ok(())
     }
@@ -560,9 +600,16 @@ where
         Ok(match self.current_frame() {
             Some(index) => {
                 let return_index = self.get_from_data_block_ensure_index(index - 1).and_then(|data| data.as_jump_point())?;
-                let (previous, register) = self.get_from_data_block_ensure_index(index).and_then(|data| data.as_frame())?;
-                self.set_current_frame(previous);
-                self.set_current_register(register);
+                let data = self.get_from_data_block_ensure_index(index)?;
+                let (previous_opt, register_opt) = match data {
+                    BasicData::Frame(previous, register) => (Some(*previous), Some(*register)),
+                    BasicData::FrameIndex(previous) => (Some(*previous), None),
+                    BasicData::FrameRegister(register) => (None, Some(*register)),
+                    BasicData::FrameRoot => (None, None),
+                    _ => return Err(DataError::not_basic_type_error()),
+                };
+                self.set_current_frame(previous_opt);
+                self.set_current_register(register_opt);
                 Some(return_index)
             }
             None => None,
@@ -2206,7 +2253,7 @@ mod tests {
 
         let mut expected_data = test_data();
         expected_data.data_mut()[0] = BasicData::Number(100.into());
-        expected_data.data_mut()[1] = BasicData::Value(None, 0);
+        expected_data.data_mut()[1] = BasicData::ValueRoot(0);
         expected_data.data_block_mut().cursor = 2;
         expected_data.set_current_value(Some(1));
         assert_eq!(data, expected_data);
@@ -2222,9 +2269,9 @@ mod tests {
 
         let mut expected_data = test_data();
         expected_data.data_mut()[0] = BasicData::Number(100.into());
-        expected_data.data_mut()[1] = BasicData::Value(None, 0);
+        expected_data.data_mut()[1] = BasicData::ValueRoot(0);
         expected_data.data_mut()[2] = BasicData::Number(200.into());
-        expected_data.data_mut()[3] = BasicData::Value(Some(1), 2);
+        expected_data.data_mut()[3] = BasicData::Value(1, 2);
         expected_data.data_block_mut().cursor = 4;
         expected_data.set_current_value(Some(3));
         assert_eq!(data, expected_data);
@@ -2234,7 +2281,7 @@ mod tests {
     fn pop_value_stack() {
         let mut data = test_data();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
-        let value_index = data.push_to_data_block(BasicData::Value(None, index)).unwrap();
+        let value_index = data.push_to_data_block(BasicData::ValueRoot(index)).unwrap();
         data.set_current_value(Some(value_index));
 
         let index = data.pop_value_stack().unwrap();
@@ -2243,7 +2290,7 @@ mod tests {
 
         assert_eq!(index, 0);
         expected_data.data_mut()[0] = BasicData::Number(100.into());
-        expected_data.data_mut()[1] = BasicData::Value(None, 0);
+        expected_data.data_mut()[1] = BasicData::ValueRoot(0);
         expected_data.data_block_mut().cursor = 2;
         expected_data.set_current_value(None);
         assert_eq!(data, expected_data);
@@ -2253,9 +2300,9 @@ mod tests {
     fn pop_value_stack_multiple() {
         let mut data = test_data();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
-        let value_index = data.push_to_data_block(BasicData::Value(None, index)).unwrap();
+        let value_index = data.push_to_data_block(BasicData::ValueRoot(index)).unwrap();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
-        let value_index = data.push_to_data_block(BasicData::Value(Some(value_index), index)).unwrap();
+        let value_index = data.push_to_data_block(BasicData::Value(value_index, index)).unwrap();
         data.set_current_value(Some(value_index));
 
         let index = data.pop_value_stack().unwrap();
@@ -2264,9 +2311,9 @@ mod tests {
 
         assert_eq!(index, 2);
         expected_data.data_mut()[0] = BasicData::Number(100.into());
-        expected_data.data_mut()[1] = BasicData::Value(None, 0);
+        expected_data.data_mut()[1] = BasicData::ValueRoot(0);
         expected_data.data_mut()[2] = BasicData::Number(100.into());
-        expected_data.data_mut()[3] = BasicData::Value(Some(1), 2);
+        expected_data.data_mut()[3] = BasicData::Value(1, 2);
         expected_data.data_block_mut().cursor = 4;
         expected_data.set_current_value(Some(1));
         assert_eq!(data, expected_data);
@@ -2332,7 +2379,7 @@ mod tests {
 
         let mut expected_data = test_data();
         expected_data.data_mut()[0] = BasicData::Number(100.into());
-        expected_data.data_mut()[1] = BasicData::Register(None, 0);
+        expected_data.data_mut()[1] = BasicData::RegisterRoot(0);
         expected_data.data_block_mut().cursor = 2;
         expected_data.set_current_register(Some(1));
         assert_eq!(data, expected_data);
@@ -2348,9 +2395,9 @@ mod tests {
 
         let mut expected_data = test_data();
         expected_data.data_mut()[0] = BasicData::Number(100.into());
-        expected_data.data_mut()[1] = BasicData::Register(None, 0);
+        expected_data.data_mut()[1] = BasicData::RegisterRoot(0);
         expected_data.data_mut()[2] = BasicData::Number(200.into());
-        expected_data.data_mut()[3] = BasicData::Register(Some(1), 2);
+        expected_data.data_mut()[3] = BasicData::Register(1, 2);
         expected_data.data_block_mut().cursor = 4;
         expected_data.set_current_register(Some(3));
         assert_eq!(data, expected_data);
@@ -2431,7 +2478,7 @@ mod tests {
         let mut data = instruction_test_data();
         data.push_instruction(Instruction::Add, None).unwrap();
         let mut expected_data = instruction_test_data();
-        expected_data.data_mut()[0] = BasicData::Instruction(Instruction::Add, None);
+        expected_data.data_mut()[0] = BasicData::InstructionRoot(Instruction::Add);
         expected_data.instruction_block_mut().cursor = 1;
         assert_eq!(data, expected_data);
     }
@@ -2575,7 +2622,7 @@ mod tests {
         data.push_frame(100).unwrap();
         let mut expected_data = test_data();
         expected_data.data_mut()[0] = BasicData::JumpPoint(100);
-        expected_data.data_mut()[1] = BasicData::Frame(None, Some(500));
+        expected_data.data_mut()[1] = BasicData::FrameRegister(500);
         expected_data.set_current_register(Some(500));
         expected_data.set_current_frame(Some(1));
         expected_data.data_block_mut().cursor = 2;
@@ -2591,7 +2638,7 @@ mod tests {
         assert_eq!(jump_path, Some(100));
         let mut expected_data = test_data();
         expected_data.data_mut()[0] = BasicData::JumpPoint(100);
-        expected_data.data_mut()[1] = BasicData::Frame(None, Some(500));
+        expected_data.data_mut()[1] = BasicData::FrameRegister(500);
         expected_data.set_current_register(Some(500));
         expected_data.data_block_mut().cursor = 2;
         expected_data.set_current_frame(None);
@@ -2608,9 +2655,9 @@ mod tests {
         assert_eq!(jump_path, 200);
         let mut expected_data = test_data();
         expected_data.data_mut()[0] = BasicData::JumpPoint(100);
-        expected_data.data_mut()[1] = BasicData::Frame(None, Some(500));
+        expected_data.data_mut()[1] = BasicData::FrameRegister(500);
         expected_data.data_mut()[2] = BasicData::JumpPoint(200);
-        expected_data.data_mut()[3] = BasicData::Frame(Some(1), Some(500));
+        expected_data.data_mut()[3] = BasicData::Frame(1, 500);
         expected_data.set_current_register(Some(500));
         expected_data.data_block_mut().cursor = 4;
         expected_data.set_current_frame(Some(1));
@@ -2632,16 +2679,16 @@ mod tests {
         let mut expected_data = test_data();
         expected_data.data_mut().resize(20, BasicData::Empty);
         expected_data.data_mut()[0] = BasicData::JumpPoint(100);
-        expected_data.data_mut()[1] = BasicData::Frame(None, None);
-        expected_data.data_mut()[2] = BasicData::Register(None, 5);
+        expected_data.data_mut()[1] = BasicData::FrameRoot;
+        expected_data.data_mut()[2] = BasicData::RegisterRoot(5);
         expected_data.data_mut()[3] = BasicData::JumpPoint(200);
-        expected_data.data_mut()[4] = BasicData::Frame(Some(1), Some(2));
-        expected_data.data_mut()[5] = BasicData::Register(Some(2), 6);
-        expected_data.data_mut()[6] = BasicData::Register(Some(5), 7);
+        expected_data.data_mut()[4] = BasicData::Frame(1, 2);
+        expected_data.data_mut()[5] = BasicData::Register(2, 6);
+        expected_data.data_mut()[6] = BasicData::Register(5, 7);
         expected_data.data_mut()[7] = BasicData::JumpPoint(300);
-        expected_data.data_mut()[8] = BasicData::Frame(Some(4), Some(6));
-        expected_data.data_mut()[9] = BasicData::Register(Some(6), 8);
-        expected_data.data_mut()[10] = BasicData::Register(Some(9), 9);
+        expected_data.data_mut()[8] = BasicData::Frame(4, 6);
+        expected_data.data_mut()[9] = BasicData::Register(6, 8);
+        expected_data.data_mut()[10] = BasicData::Register(9, 9);
         expected_data.set_current_register(Some(10));
         expected_data.data_block_mut().cursor = 11;
         expected_data.data_block_mut().size = 20;

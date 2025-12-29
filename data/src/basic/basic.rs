@@ -184,7 +184,11 @@ where
                 self.custom_data_block.size,
             )?;
         }
-        Ok(Self::push_to_block(&mut self.data, &mut self.instruction_block, BasicData::Instruction(instruction, data)))
+        let instruction_data = match data {
+            Some(data_index) => BasicData::Instruction(instruction, data_index),
+            None => BasicData::InstructionRoot(instruction),
+        };
+        Ok(Self::push_to_block(&mut self.data, &mut self.instruction_block, instruction_data))
     }
 
     pub fn push_to_jump_table_block(&mut self, index: usize) -> Result<usize, DataError> {
@@ -490,7 +494,7 @@ mod tests {
         assert_eq!(data.instruction_block().size, 10);
         assert_eq!(
             data.data()[0],
-            BasicData::Instruction(Instruction::Add, None)
+            BasicData::InstructionRoot(Instruction::Add)
         );
     }
 
@@ -547,7 +551,7 @@ mod tests {
             data.push_to_instruction_block(Instruction::Add, None).unwrap();
         }
 
-        let mut expected_data = vec![BasicData::Instruction(Instruction::Add, None); 15];
+        let mut expected_data = vec![BasicData::InstructionRoot(Instruction::Add); 15];
         expected_data.resize(20, BasicData::Empty);
 
         assert_eq!(data.instruction_size(), 15);
@@ -592,7 +596,7 @@ mod tests {
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
 
         let mut expected_data = vec![BasicData::Empty; 40];
-        expected_data[0] = BasicData::Instruction(Instruction::Add, None);
+        expected_data[0] = BasicData::InstructionRoot(Instruction::Add);
         expected_data[10] = BasicData::JumpPoint(200);
         expected_data[20] = BasicData::AssociativeItem(100, 123);
         expected_data[30] = BasicData::Number(100.into());
@@ -624,7 +628,7 @@ mod tests {
         data.push_to_instruction_block(Instruction::Add, None).unwrap();
 
         let mut expected_data = vec![BasicData::Empty; 40];
-        expected_data[0] = BasicData::Instruction(Instruction::Add, None);
+        expected_data[0] = BasicData::InstructionRoot(Instruction::Add);
         expected_data[10] = BasicData::JumpPoint(200);
         expected_data[20] = BasicData::AssociativeItem(100, 0);
         expected_data[30] = BasicData::Number(100.into());

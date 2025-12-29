@@ -15,18 +15,26 @@ where
         let mut registers = vec![];
         let mut current = self.current_register();
         while let Some(index) = current {
-            let (previous, value) = self.get_from_data_block_ensure_index(index)?.as_register()?;
+            let data = self.get_from_data_block_ensure_index(index)?;
+            let (previous_opt, value) = match data {
+                BasicData::Register(previous, value) => (Some(*previous), *value),
+                BasicData::RegisterRoot(value) => (None, *value),
+                _ => break,
+            };
             registers.push(value);
-            current = previous;
+            current = previous_opt;
         }
         registers.reverse();
 
-        let mut previous = None;
+        let mut previous_opt = None;
         for value in registers.iter() {
             let new_value = self.get_from_data_block_ensure_index(*value)?.clone();
             let new_value_index = self.push_to_data_block(new_value)?;
-            let index = self.push_to_data_block(BasicData::Register(previous, new_value_index - offset))?;
-            previous = Some(index - offset);
+            let index = match previous_opt {
+                Some(previous) => self.push_to_data_block(BasicData::Register(previous, new_value_index - offset))?,
+                None => self.push_to_data_block(BasicData::RegisterRoot(new_value_index - offset))?,
+            };
+            previous_opt = Some(index - offset);
         }
 
         let new_data_end = self.data_block().start + self.data_block().cursor;
@@ -134,36 +142,49 @@ where
                 BasicData::AssociativeItem(_, _) => {}
                 BasicData::Value(previous, value) => {
                     let (previous, value) = (previous.clone(), value.clone());
-                    if let Some(previous) = previous {
-                        self.push_to_data_block(BasicData::CloneItem(previous))?;
-                    }
+                    self.push_to_data_block(BasicData::CloneItem(previous))?;
+                    self.push_to_data_block(BasicData::CloneItem(value))?;
+                }
+                BasicData::ValueRoot(value) => {
+                    let value = value.clone();
                     self.push_to_data_block(BasicData::CloneItem(value))?;
                 }
                 BasicData::Register(previous, value) => {
                     let (previous, value) = (previous.clone(), value.clone());
-                    if let Some(previous) = previous {
-                        self.push_to_data_block(BasicData::CloneItem(previous))?;
-                    }
+                    self.push_to_data_block(BasicData::CloneItem(previous))?;
+                    self.push_to_data_block(BasicData::CloneItem(value))?;
+                }
+                BasicData::RegisterRoot(value) => {
+                    let value = value.clone();
                     self.push_to_data_block(BasicData::CloneItem(value))?;
                 }
                 BasicData::Instruction(_instruction, data) => {
-                    if let Some(data) = data {
-                        self.push_to_data_block(BasicData::CloneItem(data.clone()))?;
-                    }
+                    self.push_to_data_block(BasicData::CloneItem(data.clone()))?;
                 }
+                BasicData::InstructionRoot(_instruction) => {}
                 BasicData::JumpPoint(_point) => {}
                 BasicData::Frame(previous, register) => {
                     let (previous, register) = (previous.clone(), register.clone());
                     self.get_from_data_block_ensure_index(index - 1)?;
                     self.push_to_data_block(BasicData::CloneItem(index - 1))?;
-
-                    if let Some(previous) = previous {
-                        self.push_to_data_block(BasicData::CloneItem(previous))?;
-                    }
-
-                    if let Some(register) = register {
-                        self.push_to_data_block(BasicData::CloneItem(register))?;
-                    }
+                    self.push_to_data_block(BasicData::CloneItem(previous))?;
+                    self.push_to_data_block(BasicData::CloneItem(register))?;
+                }
+                BasicData::FrameIndex(previous) => {
+                    let previous = previous.clone();
+                    self.get_from_data_block_ensure_index(index - 1)?;
+                    self.push_to_data_block(BasicData::CloneItem(index - 1))?;
+                    self.push_to_data_block(BasicData::CloneItem(previous))?;
+                }
+                BasicData::FrameRegister(register) => {
+                    let register = register.clone();
+                    self.get_from_data_block_ensure_index(index - 1)?;
+                    self.push_to_data_block(BasicData::CloneItem(index - 1))?;
+                    self.push_to_data_block(BasicData::CloneItem(register))?;
+                }
+                BasicData::FrameRoot => {
+                    self.get_from_data_block_ensure_index(index - 1)?;
+                    self.push_to_data_block(BasicData::CloneItem(index - 1))?;
                 }
                 BasicData::CloneItem(_) => {}
                 BasicData::CloneIndexMap(_, _) => {}
@@ -306,50 +327,48 @@ where
                     Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
                 }
                 BasicData::Value(previous, value) => {
-                    let previous = if let Some(previous) = previous {
-                        Some(self.lookup_in_data_slice(lookup_start, lookup_end, previous)?)
-                    } else {
-                        None
-                    };
-
+                    let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
                     let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
-
                     self.push_to_data_block(BasicData::Value(previous, value))?
                 }
-                BasicData::Register(previous, value) => {
-                    let previous = if let Some(previous) = previous {
-                        Some(self.lookup_in_data_slice(lookup_start, lookup_end, previous)?)
-                    } else {
-                        None
-                    };
-
+                BasicData::ValueRoot(value) => {
                     let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
-                    
+                    self.push_to_data_block(BasicData::ValueRoot(value))?
+                }
+                BasicData::Register(previous, value) => {
+                    let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
+                    let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
                     self.push_to_data_block(BasicData::Register(previous, value))?
                 }
+                BasicData::RegisterRoot(value) => {
+                    let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
+                    self.push_to_data_block(BasicData::RegisterRoot(value))?
+                }
                 BasicData::Instruction(instruction, data) => {
-                    let data = if let Some(data) = data {
-                        Some(self.lookup_in_data_slice(lookup_start, lookup_end, data)?)
-                    } else {
-                        None
-                    };
+                    let data = self.lookup_in_data_slice(lookup_start, lookup_end, data)?;
                     self.push_to_data_block(BasicData::Instruction(instruction.clone(), data))?
+                }
+                BasicData::InstructionRoot(instruction) => {
+                    self.push_to_data_block(BasicData::InstructionRoot(instruction.clone()))?
                 }
                 BasicData::JumpPoint(point) => {
                     self.push_to_data_block(BasicData::JumpPoint(point))?
                 }
                 BasicData::Frame(previous, register) => {
-                    let previous = if let Some(previous) = previous {
-                        Some(self.lookup_in_data_slice(lookup_start, lookup_end, previous)?)
-                    } else {
-                        None
-                    };
-                    let register = if let Some(register) = register {
-                        Some(self.lookup_in_data_slice(lookup_start, lookup_end, register)?)
-                    } else {
-                        None
-                    };
+                    let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
+                    let register = self.lookup_in_data_slice(lookup_start, lookup_end, register)?;
                     self.push_to_data_block(BasicData::Frame(previous, register))?
+                }
+                BasicData::FrameIndex(previous) => {
+                    let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
+                    self.push_to_data_block(BasicData::FrameIndex(previous))?
+                }
+                BasicData::FrameRegister(register) => {
+                    let register = self.lookup_in_data_slice(lookup_start, lookup_end, register)?;
+                    self.push_to_data_block(BasicData::FrameRegister(register))?
+                }
+                BasicData::FrameRoot => {
+                    self.push_to_data_block(BasicData::FrameRoot)?
                 }
                 BasicData::CloneItem(_) => {
                     Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
@@ -1158,9 +1177,9 @@ mod clone {
     fn value() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
-        let previous = data.push_to_data_block(BasicData::Value(None, index)).unwrap();
+        let previous = data.push_to_data_block(BasicData::ValueRoot(index)).unwrap();
         let index = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
-        let index = data.push_to_data_block(BasicData::Value(Some(previous), index)).unwrap();
+        let index = data.push_to_data_block(BasicData::Value(previous, index)).unwrap();
 
         let index = data.push_clone_data(index).unwrap();
 
@@ -1170,17 +1189,17 @@ mod clone {
             30..42,
             vec![
                 BasicData::Number(100.into()),
-                BasicData::Value(None, 0),
+                BasicData::ValueRoot(0),
                 BasicData::Number(200.into()),
-                BasicData::Value(Some(1), 2),
+                BasicData::Value(1, 2),
                 BasicData::CloneIndexMap(3, 11), // 4
                 BasicData::CloneIndexMap(1, 10),
                 BasicData::CloneIndexMap(2, 9),
                 BasicData::CloneIndexMap(0, 8),
                 BasicData::Number(100.into()), // 8
                 BasicData::Number(200.into()),
-                BasicData::Value(None, 8),
-                BasicData::Value(Some(10), 9),
+                BasicData::ValueRoot(8),
+                BasicData::Value(10, 9),
             ],
         );
         expected_data.data_block_mut().cursor = 12;
@@ -1195,9 +1214,9 @@ mod clone {
     fn register() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
-        let previous = data.push_to_data_block(BasicData::Register(None, index)).unwrap();
+        let previous = data.push_to_data_block(BasicData::RegisterRoot(index)).unwrap();
         let index = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
-        let index = data.push_to_data_block(BasicData::Register(Some(previous), index)).unwrap();
+        let index = data.push_to_data_block(BasicData::Register(previous, index)).unwrap();
 
         let index = data.push_clone_data(index).unwrap();
 
@@ -1207,17 +1226,17 @@ mod clone {
             30..42,
             vec![
                 BasicData::Number(100.into()),
-                BasicData::Register(None, 0),
+                BasicData::RegisterRoot(0),
                 BasicData::Number(200.into()),
-                BasicData::Register(Some(1), 2),
+                BasicData::Register(1, 2),
                 BasicData::CloneIndexMap(3, 11), // 4
                 BasicData::CloneIndexMap(1, 10),
                 BasicData::CloneIndexMap(2, 9),
                 BasicData::CloneIndexMap(0, 8),
                 BasicData::Number(100.into()), // 8
                 BasicData::Number(200.into()),
-                BasicData::Register(None, 8),
-                BasicData::Register(Some(10), 9),
+                BasicData::RegisterRoot(8),
+                BasicData::Register(10, 9),
             ],
         );
         expected_data.data_block_mut().cursor = 12;
@@ -1232,7 +1251,7 @@ mod clone {
     fn instruction() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let instruction_data = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
-        let index = data.push_to_data_block(BasicData::Instruction(Instruction::Add, Some(instruction_data))).unwrap();
+        let index = data.push_to_data_block(BasicData::Instruction(Instruction::Add, instruction_data)).unwrap();
         let index = data.push_clone_data(index).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
@@ -1240,11 +1259,11 @@ mod clone {
             30..36,
             vec![
                 BasicData::Number(100.into()),
-                BasicData::Instruction(Instruction::Add, Some(0)),
+                BasicData::Instruction(Instruction::Add, 0),
                 BasicData::CloneIndexMap(1, 5),
                 BasicData::CloneIndexMap(0, 4),
                 BasicData::Number(100.into()),
-                BasicData::Instruction(Instruction::Add, Some(4)),
+                BasicData::Instruction(Instruction::Add, 4),
             ],
         );
         expected_data.data_block_mut().cursor = 6;
@@ -1273,11 +1292,11 @@ mod clone {
     fn frame() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         data.push_to_data_block(BasicData::JumpPoint(10)).unwrap();
-        let first_frame = data.push_to_data_block(BasicData::Frame(None, None)).unwrap();
+        let first_frame = data.push_to_data_block(BasicData::FrameRoot).unwrap();
         let value2 = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
-        let register = data.push_to_data_block(BasicData::Register(None, value2)).unwrap();
+        let register = data.push_to_data_block(BasicData::RegisterRoot(value2)).unwrap();
         data.push_to_data_block(BasicData::JumpPoint(100)).unwrap();
-        let index = data.push_to_data_block(BasicData::Frame(Some(first_frame), Some(register))).unwrap();
+        let index = data.push_to_data_block(BasicData::Frame(first_frame, register)).unwrap();
         let index = data.push_clone_data(index).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
@@ -1286,11 +1305,11 @@ mod clone {
             .data_mut()
             .splice(30..48, vec![
                 BasicData::JumpPoint(10),
-                BasicData::Frame(None, None),
+                BasicData::FrameRoot,
                 BasicData::Number(200.into()),
-                BasicData::Register(None, 2),
+                BasicData::RegisterRoot(2),
                 BasicData::JumpPoint(100),
-                BasicData::Frame(Some(1), Some(3)),
+                BasicData::Frame(1, 3),
                 BasicData::CloneIndexMap(5, 17), // 6
                 BasicData::CloneIndexMap(4, 16),
                 BasicData::CloneIndexMap(1, 15),
@@ -1299,10 +1318,10 @@ mod clone {
                 BasicData::CloneIndexMap(2, 12),
                 BasicData::Number(200.into()), // 12
                 BasicData::JumpPoint(10),
-                BasicData::Register(None, 12),
-                BasicData::Frame(None, None), 
+                BasicData::RegisterRoot(12),
+                BasicData::FrameRoot, 
                 BasicData::JumpPoint(100),
-                BasicData::Frame(Some(15), Some(14)), // 17
+                BasicData::Frame(15, 14), // 17
             ]);
         expected_data.data_block_mut().cursor = 18;
         expected_data.data_block_mut().size = 20;

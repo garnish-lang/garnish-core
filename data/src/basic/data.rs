@@ -31,11 +31,17 @@ where T: BasicDataCustom {
     UninitializedList(usize, usize),
     ListItem(usize),
     AssociativeItem(u64, usize),
-    Value(Option<usize>, usize),
-    Register(Option<usize>, usize),
-    Instruction(Instruction, Option<usize>),
+    Value(usize, usize),
+    ValueRoot(usize),
+    Register(usize, usize),
+    RegisterRoot(usize),
+    Instruction(Instruction, usize),
+    InstructionRoot(Instruction),
     JumpPoint(usize),
-    Frame(Option<usize>, Option<usize>),
+    Frame(usize, usize),
+    FrameIndex(usize),
+    FrameRegister(usize),
+    FrameRoot,
     CloneItem(usize),
     CloneIndexMap(usize, usize),
 }
@@ -70,10 +76,16 @@ where T: BasicDataCustom {
             BasicData::ListItem(_) => GarnishDataType::Invalid,
             BasicData::AssociativeItem(_, _) => GarnishDataType::Invalid,
             BasicData::Value(_, _) => GarnishDataType::Invalid,
+            BasicData::ValueRoot(_) => GarnishDataType::Invalid,
             BasicData::Register(_, _) => GarnishDataType::Invalid,
+            BasicData::RegisterRoot(_) => GarnishDataType::Invalid,
             BasicData::Instruction(_, _) => GarnishDataType::Invalid,
+            BasicData::InstructionRoot(_) => GarnishDataType::Invalid,
             BasicData::JumpPoint(_) => GarnishDataType::Invalid,
             BasicData::Frame(_, _) => GarnishDataType::Invalid,
+            BasicData::FrameIndex(_) => GarnishDataType::Invalid,
+            BasicData::FrameRegister(_) => GarnishDataType::Invalid,
+            BasicData::FrameRoot => GarnishDataType::Invalid,
             BasicData::CloneItem(_) => GarnishDataType::Invalid,
             BasicData::CloneIndexMap(_, _) => GarnishDataType::Invalid,
         }
@@ -359,44 +371,86 @@ where T: BasicDataCustom {
         }
     }
 
-    pub fn as_value(&self) -> Result<(Option<usize>, usize), DataError> {
+    pub fn as_value(&self) -> Result<(usize, usize), DataError> {
         match self {
-            BasicData::Value(index, value) => Ok((*index, *value)),
+            BasicData::Value(previous, value) => Ok((*previous, *value)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
     
-    pub fn as_value_mut(&mut self) -> Result<(&mut Option<usize>, &mut usize), DataError> {
+    pub fn as_value_mut(&mut self) -> Result<(&mut usize, &mut usize), DataError> {
         match self {
-            BasicData::Value(index, value) => Ok((index, value)),
-            _ => Err(DataError::not_basic_type_error()),
-        }
-    }
-
-    pub fn as_register(&self) -> Result<(Option<usize>, usize), DataError> {
-        match self {
-            BasicData::Register(index, value) => Ok((*index, *value)),
+            BasicData::Value(previous, value) => Ok((previous, value)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
     
-    pub fn as_register_mut(&mut self) -> Result<(&mut Option<usize>, &mut usize), DataError> {
+    pub fn as_value_root(&self) -> Result<usize, DataError> {
         match self {
-            BasicData::Register(index, value) => Ok((index, value)),
+            BasicData::ValueRoot(value) => Ok(*value),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_value_root_mut(&mut self) -> Result<&mut usize, DataError> {
+        match self {
+            BasicData::ValueRoot(value) => Ok(value),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
 
-    pub fn as_instruction(&self) -> Result<(Instruction, Option<usize>), DataError> {
+    pub fn as_register(&self) -> Result<(usize, usize), DataError> {
+        match self {
+            BasicData::Register(previous, value) => Ok((*previous, *value)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_register_mut(&mut self) -> Result<(&mut usize, &mut usize), DataError> {
+        match self {
+            BasicData::Register(previous, value) => Ok((previous, value)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_register_root(&self) -> Result<usize, DataError> {
+        match self {
+            BasicData::RegisterRoot(value) => Ok(*value),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_register_root_mut(&mut self) -> Result<&mut usize, DataError> {
+        match self {
+            BasicData::RegisterRoot(value) => Ok(value),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn as_instruction(&self) -> Result<(Instruction, usize), DataError> {
         match self {
             BasicData::Instruction(instruction, data) => Ok((*instruction, *data)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
 
-    pub fn as_instruction_mut(&mut self) -> Result<(&mut Instruction, &mut Option<usize>), DataError> {
+    pub fn as_instruction_mut(&mut self) -> Result<(&mut Instruction, &mut usize), DataError> {
         match self {
             BasicData::Instruction(instruction, data) => Ok((instruction, data)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_instruction_root(&self) -> Result<Instruction, DataError> {
+        match self {
+            BasicData::InstructionRoot(instruction) => Ok(*instruction),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_instruction_root_mut(&mut self) -> Result<&mut Instruction, DataError> {
+        match self {
+            BasicData::InstructionRoot(instruction) => Ok(instruction),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
@@ -415,16 +469,51 @@ where T: BasicDataCustom {
         }
     }
 
-    pub fn as_frame(&self) -> Result<(Option<usize>, Option<usize>), DataError> {
+    pub fn as_frame(&self) -> Result<(usize, usize), DataError> {
         match self {
             BasicData::Frame(index, register) => Ok((*index, *register)),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
 
-    pub fn as_frame_mut(&mut self) -> Result<(&mut Option<usize>, &mut Option<usize>), DataError> {
+    pub fn as_frame_mut(&mut self) -> Result<(&mut usize, &mut usize), DataError> {
         match self {
             BasicData::Frame(index, register) => Ok((index, register)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_frame_index(&self) -> Result<usize, DataError> {
+        match self {
+            BasicData::FrameIndex(index) => Ok(*index),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_frame_index_mut(&mut self) -> Result<&mut usize, DataError> {
+        match self {
+            BasicData::FrameIndex(index) => Ok(index),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_frame_register(&self) -> Result<usize, DataError> {
+        match self {
+            BasicData::FrameRegister(register) => Ok(*register),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_frame_register_mut(&mut self) -> Result<&mut usize, DataError> {
+        match self {
+            BasicData::FrameRegister(register) => Ok(register),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+    
+    pub fn as_frame_root(&self) -> Result<(), DataError> {
+        match self {
+            BasicData::FrameRoot => Ok(()),
             _ => Err(DataError::not_basic_type_error()),
         }
     }
@@ -465,6 +554,11 @@ mod tests {
     use crate::error::DataErrorType;
 
     use super::*;
+
+    #[test]
+    fn temp() {
+        println!("{}", size_of::<BasicData<()>>());
+    }
 
     #[test]
     fn get_data_type() {
@@ -1005,8 +1099,8 @@ mod tests {
 
     #[test]
     fn as_value() {
-        let data = BasicDataUnitCustom::Value(Some(100), 200);
-        assert_eq!(data.as_value(), Ok((Some(100), 200)));
+        let data = BasicDataUnitCustom::Value(100, 200);
+        assert_eq!(data.as_value(), Ok((100, 200)));
     }
     
     #[test]
@@ -1017,11 +1111,11 @@ mod tests {
 
     #[test]
     fn as_value_mut() {
-        let mut data = BasicDataUnitCustom::Value(Some(100), 200);
-        let (index, value) = data.as_value_mut().unwrap();
-        *index = Some(200);
+        let mut data = BasicDataUnitCustom::Value(100, 200);
+        let (previous, value) = data.as_value_mut().unwrap();
+        *previous = 150;
         *value = 300;
-        assert_eq!(data.as_value(), Ok((Some(200), 300)));
+        assert_eq!(data.as_value(), Ok((150, 300)));
     }
 
     #[test]
@@ -1029,11 +1123,36 @@ mod tests {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_value_mut(), Err(DataError::not_basic_type_error()));
     }
+    
+    #[test]
+    fn as_value_root() {
+        let data = BasicDataUnitCustom::ValueRoot(200);
+        assert_eq!(data.as_value_root(), Ok(200));
+    }
+    
+    #[test]
+    fn as_value_root_not_value_root() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_value_root(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_value_root_mut() {
+        let mut data = BasicDataUnitCustom::ValueRoot(200);
+        *data.as_value_root_mut().unwrap() = 300;
+        assert_eq!(data.as_value_root(), Ok(300));
+    }
+
+    #[test]
+    fn as_value_root_mut_not_value_root() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_value_root_mut(), Err(DataError::not_basic_type_error()));
+    }
 
     #[test]
     fn as_register() {
-        let data = BasicDataUnitCustom::Register(Some(100), 200);
-        assert_eq!(data.as_register(), Ok((Some(100), 200)));
+        let data = BasicDataUnitCustom::Register(100, 200);
+        assert_eq!(data.as_register(), Ok((100, 200)));
     }
     
     #[test]
@@ -1044,11 +1163,11 @@ mod tests {
 
     #[test]
     fn as_register_mut() {
-        let mut data = BasicDataUnitCustom::Register(Some(100), 200);
-        let (index, value) = data.as_register_mut().unwrap();
-        *index = Some(200);
+        let mut data = BasicDataUnitCustom::Register(100, 200);
+        let (previous, value) = data.as_register_mut().unwrap();
+        *previous = 150;
         *value = 300;
-        assert_eq!(data.as_register(), Ok((Some(200), 300)));
+        assert_eq!(data.as_register(), Ok((150, 300)));
     }
     
     #[test]
@@ -1056,11 +1175,36 @@ mod tests {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_register_mut(), Err(DataError::not_basic_type_error()));
     }
+    
+    #[test]
+    fn as_register_root() {
+        let data = BasicDataUnitCustom::RegisterRoot(200);
+        assert_eq!(data.as_register_root(), Ok(200));
+    }
+    
+    #[test]
+    fn as_register_root_not_register_root() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_register_root(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_register_root_mut() {
+        let mut data = BasicDataUnitCustom::RegisterRoot(200);
+        *data.as_register_root_mut().unwrap() = 300;
+        assert_eq!(data.as_register_root(), Ok(300));
+    }
+
+    #[test]
+    fn as_register_root_mut_not_register_root() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_register_root_mut(), Err(DataError::not_basic_type_error()));
+    }
 
     #[test]
     fn as_instruction() {
-        let data = BasicDataUnitCustom::Instruction(Instruction::Add, Some(100));
-        assert_eq!(data.as_instruction(), Ok((Instruction::Add, Some(100))));
+        let data = BasicDataUnitCustom::Instruction(Instruction::Add, 100);
+        assert_eq!(data.as_instruction(), Ok((Instruction::Add, 100)));
     }
     
     #[test]
@@ -1071,18 +1215,43 @@ mod tests {
 
     #[test]
     fn as_instruction_mut() {
-        let mut data = BasicDataUnitCustom::Instruction(Instruction::Add, Some(100));
+        let mut data = BasicDataUnitCustom::Instruction(Instruction::Add, 100);
         let (instruction, instruction_data) = data.as_instruction_mut().unwrap();
         *instruction = Instruction::Subtract;
-        *instruction_data = Some(200);
+        *instruction_data = 200;
         let instruction = data.as_instruction().unwrap();
-        assert_eq!(instruction, (Instruction::Subtract, Some(200)));
+        assert_eq!(instruction, (Instruction::Subtract, 200));
     }
 
     #[test]
     fn as_instruction_mut_not_instruction() {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_instruction_mut(), Err(DataError::not_basic_type_error()));
+    }
+    
+    #[test]
+    fn as_instruction_root() {
+        let data = BasicDataUnitCustom::InstructionRoot(Instruction::Add);
+        assert_eq!(data.as_instruction_root(), Ok(Instruction::Add));
+    }
+    
+    #[test]
+    fn as_instruction_root_not_instruction_root() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_instruction_root(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_instruction_root_mut() {
+        let mut data = BasicDataUnitCustom::InstructionRoot(Instruction::Add);
+        *data.as_instruction_root_mut().unwrap() = Instruction::Subtract;
+        assert_eq!(data.as_instruction_root(), Ok(Instruction::Subtract));
+    }
+
+    #[test]
+    fn as_instruction_root_mut_not_instruction_root() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_instruction_root_mut(), Err(DataError::not_basic_type_error()));
     }
 
     #[test]
@@ -1112,8 +1281,8 @@ mod tests {
 
     #[test]
     fn as_frame() {
-        let data = BasicDataUnitCustom::Frame(Some(100), Some(200));
-        assert_eq!(data.as_frame(), Ok((Some(100), Some(200))));
+        let data = BasicDataUnitCustom::Frame(100, 200);
+        assert_eq!(data.as_frame(), Ok((100, 200)));
     }
     
     #[test]
@@ -1124,17 +1293,79 @@ mod tests {
 
     #[test]
     fn as_frame_mut() {
-        let mut data = BasicDataUnitCustom::Frame(Some(100), Some(200));
+        let mut data = BasicDataUnitCustom::Frame(100, 200);
         let (index, register) = data.as_frame_mut().unwrap();
-        *index = Some(200);
-        *register = Some(300);
-        assert_eq!(data.as_frame(), Ok((Some(200), Some(300))));
+        *index = 150;
+        *register = 250;
+        assert_eq!(data.as_frame(), Ok((150, 250)));
     }
 
     #[test]
     fn as_frame_mut_not_frame() {
         let mut data = BasicDataUnitCustom::Number(100.into());
         assert_eq!(data.as_frame_mut(), Err(DataError::not_basic_type_error()));
+    }
+    
+    #[test]
+    fn as_frame_index() {
+        let data = BasicDataUnitCustom::FrameIndex(100);
+        assert_eq!(data.as_frame_index(), Ok(100));
+    }
+    
+    #[test]
+    fn as_frame_index_not_frame_index() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_frame_index(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_frame_index_mut() {
+        let mut data = BasicDataUnitCustom::FrameIndex(100);
+        *data.as_frame_index_mut().unwrap() = 200;
+        assert_eq!(data.as_frame_index(), Ok(200));
+    }
+
+    #[test]
+    fn as_frame_index_mut_not_frame_index() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_frame_index_mut(), Err(DataError::not_basic_type_error()));
+    }
+    
+    #[test]
+    fn as_frame_register() {
+        let data = BasicDataUnitCustom::FrameRegister(200);
+        assert_eq!(data.as_frame_register(), Ok(200));
+    }
+    
+    #[test]
+    fn as_frame_register_not_frame_register() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_frame_register(), Err(DataError::not_basic_type_error()));
+    }
+
+    #[test]
+    fn as_frame_register_mut() {
+        let mut data = BasicDataUnitCustom::FrameRegister(200);
+        *data.as_frame_register_mut().unwrap() = 300;
+        assert_eq!(data.as_frame_register(), Ok(300));
+    }
+
+    #[test]
+    fn as_frame_register_mut_not_frame_register() {
+        let mut data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_frame_register_mut(), Err(DataError::not_basic_type_error()));
+    }
+    
+    #[test]
+    fn as_frame_root() {
+        let data = BasicDataUnitCustom::FrameRoot;
+        assert_eq!(data.as_frame_root(), Ok(()));
+    }
+    
+    #[test]
+    fn as_frame_root_not_frame_root() {
+        let data = BasicDataUnitCustom::Number(100.into());
+        assert_eq!(data.as_frame_root(), Err(DataError::not_basic_type_error()));
     }
 
     #[test]

@@ -352,10 +352,16 @@ where
         | BasicData::ListItem(_)
         | BasicData::AssociativeItem(_, _)
         | BasicData::Value(_, _)
+        | BasicData::ValueRoot(_)
         | BasicData::Register(_, _)
+        | BasicData::RegisterRoot(_)
         | BasicData::JumpPoint(_)
         | BasicData::Instruction(_, _)
+        | BasicData::InstructionRoot(_)
         | BasicData::Frame(_, _)
+        | BasicData::FrameIndex(_)
+        | BasicData::FrameRegister(_)
+        | BasicData::FrameRoot
         | BasicData::CloneItem(_)
         | BasicData::CloneIndexMap(_, _) => {}
     })
@@ -446,11 +452,11 @@ mod tests {
         uninitialized_list: BasicData::UninitializedList(0, 0) => "",
         list_item: BasicData::ListItem(0) => "",
         associative_item: BasicData::AssociativeItem(0, 0) => "",
-        value: BasicData::Value(None, 0) => "",
-        register: BasicData::Register(None, 0) => "",
-        instruction: BasicData::Instruction(Instruction::Add, None) => "",
+        value: BasicData::ValueRoot(0) => "",
+        register: BasicData::RegisterRoot(0) => "",
+        instruction: BasicData::InstructionRoot(Instruction::Add) => "",
         jump_point: BasicData::JumpPoint(0) => "",
-        frame: BasicData::Frame(None, None) => "",
+        frame: BasicData::FrameRoot => "",
     );
 
     #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
