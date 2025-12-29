@@ -1,7 +1,6 @@
 use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, error::DataErrorType};
 
-pub trait CloneDelegate
-{
+pub trait CloneDelegate {
     fn lookup_value(&mut self, value: usize) -> Result<usize, DataError>;
 }
 
@@ -19,7 +18,11 @@ where
     T: BasicDataCustom,
 {
     pub(crate) fn new(data: &'a mut BasicGarnishData<T>, lookup_start: usize, lookup_end: usize) -> Self {
-        Self { data, lookup_start, lookup_end }
+        Self {
+            data,
+            lookup_start,
+            lookup_end,
+        }
     }
 }
 
@@ -49,203 +52,197 @@ where
 
         for i in clone_range.rev() {
             let index = self.get_from_data_block_ensure_index(i)?.as_clone_item()?;
-            let new_index = match self.get_from_data_block_ensure_index(index)?.clone() {
-                BasicData::Unit => self.push_to_data_block(BasicData::Unit)?,
-                BasicData::True => self.push_to_data_block(BasicData::True)?,
-                BasicData::False => self.push_to_data_block(BasicData::False)?,
-                BasicData::Type(t) => self.push_to_data_block(BasicData::Type(t))?,
-                BasicData::Number(n) => self.push_to_data_block(BasicData::Number(n))?,
-                BasicData::Char(c) => self.push_to_data_block(BasicData::Char(c))?,
-                BasicData::Byte(b) => self.push_to_data_block(BasicData::Byte(b))?,
-                BasicData::Symbol(s) => self.push_to_data_block(BasicData::Symbol(s))?,
-                BasicData::SymbolList(len) => {
-                    let start = index + 1;
-                    let end = start + len;
-                    let list_index = self.push_to_data_block(BasicData::SymbolList(len))?;
-                    for i in start..end {
-                        let item = self.get_from_data_block_ensure_index(i)?.clone();
-                        self.push_to_data_block(item)?;
-                    }
-                    list_index
-                }
-                BasicData::Expression(e) => self.push_to_data_block(BasicData::Expression(e))?,
-                BasicData::External(e) => self.push_to_data_block(BasicData::External(e))?,
-                BasicData::CharList(len) => {
-                    let start = index + 1;
-                    let end = start + len;
-                    let list_index = self.push_to_data_block(BasicData::CharList(len))?;
-                    for i in start..end {
-                        let item = self.get_from_data_block_ensure_index(i)?.clone();
-                        self.push_to_data_block(item)?;
-                    }
-                    list_index
-                }
-                BasicData::ByteList(len) => {
-                    let start = index + 1;
-                    let end = start + len;
-                    let list_index = self.push_to_data_block(BasicData::ByteList(len))?;
-                    for i in start..end {
-                        let item = self.get_from_data_block_ensure_index(i)?.clone();
-                        self.push_to_data_block(item)?;
-                    }
-                    list_index
-                }
-                BasicData::Pair(left, right) => {
-                    let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
-                    let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
 
-                    self.push_to_data_block(BasicData::Pair(left, right))?
-                }
-                BasicData::Range(left, right) => {
-                    let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
-                    let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
+            let existing = self.lookup_in_data_slice_optional(lookup_start, lookup_end, index)?;
 
-                    self.push_to_data_block(BasicData::Range(left, right))?
-                }
-                BasicData::Slice(left, right) => {
-                    let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
-                    let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
-
-                    self.push_to_data_block(BasicData::Slice(left, right))?
-                }
-                BasicData::Partial(left, right) => {
-                    let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
-                    let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
-
-                    self.push_to_data_block(BasicData::Partial(left, right))?
-                }
-                BasicData::List(length, association_length) => {
-                    let start = index + 1;
-                    let end = start + length * 2;
-
-                    let list_index = self.push_to_data_block(BasicData::List(length, association_length))?;
-
-                    for i in start..end {
-                        match self.get_from_data_block_ensure_index(i)? {
-                            BasicData::ListItem(item) => {
-                                let item = self.lookup_in_data_slice(lookup_start, lookup_end, item.clone())?;
-                                self.push_to_data_block(BasicData::ListItem(item))?;
-                            }
-                            BasicData::AssociativeItem(symbol, item) => {
-                                let item = self.lookup_in_data_slice(lookup_start, lookup_end, item.clone())?;
-                                self.push_to_data_block(BasicData::AssociativeItem(symbol.clone(), item))?;
-                            }
-                            BasicData::Empty => {
-                                self.push_to_data_block(BasicData::Empty)?;
-                            }
-                            t => Err(DataError::new(
-                                "Associative item in list is not a valid item",
-                                DataErrorType::NotAssociativeItem(t.get_data_type()),
-                            ))?,
+            let new_index = match existing {
+                Some(index) => index,
+                None => match self.get_from_data_block_ensure_index(index)?.clone() {
+                    BasicData::Unit => self.push_to_data_block(BasicData::Unit)?,
+                    BasicData::True => self.push_to_data_block(BasicData::True)?,
+                    BasicData::False => self.push_to_data_block(BasicData::False)?,
+                    BasicData::Type(t) => self.push_to_data_block(BasicData::Type(t))?,
+                    BasicData::Number(n) => self.push_to_data_block(BasicData::Number(n))?,
+                    BasicData::Char(c) => self.push_to_data_block(BasicData::Char(c))?,
+                    BasicData::Byte(b) => self.push_to_data_block(BasicData::Byte(b))?,
+                    BasicData::Symbol(s) => self.push_to_data_block(BasicData::Symbol(s))?,
+                    BasicData::SymbolList(len) => {
+                        let start = index + 1;
+                        let end = start + len;
+                        let list_index = self.push_to_data_block(BasicData::SymbolList(len))?;
+                        for i in start..end {
+                            let item = self.get_from_data_block_ensure_index(i)?.clone();
+                            self.push_to_data_block(item)?;
                         }
+                        list_index
                     }
-
-                    list_index
-                }
-                BasicData::Concatenation(left, right) => {
-                    let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
-                    let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
-
-                    self.push_to_data_block(BasicData::Concatenation(left, right))?
-                }
-                BasicData::Custom(custom) => {
-                    let mut delegate = BasicCloneDelegate::new(self, lookup_start, lookup_end);
-                    let cloned = T::create_cloned_custom_data(&mut delegate, custom)?;
-                    self.push_to_data_block(BasicData::Custom(cloned))?
-                }
-                BasicData::Empty => self.push_to_data_block(BasicData::Empty)?,
-                BasicData::UninitializedList(length, count) => {
-                    let start = index + 1;
-                    let end = start + length * 2;
-
-                    let list_index = self.push_to_data_block(BasicData::UninitializedList(length, count))?;
-
-                    for i in start..end {
-                        match self.get_from_data_block_ensure_index(i)? {
-                            BasicData::ListItem(item) => {
-                                let item = self.lookup_in_data_slice(lookup_start, lookup_end, item.clone())?;
-                                self.push_to_data_block(BasicData::ListItem(item))?;
-                            }
-                            BasicData::AssociativeItem(symbol, item) => {
-                                let item = self.lookup_in_data_slice(lookup_start, lookup_end, item.clone())?;
-                                self.push_to_data_block(BasicData::AssociativeItem(symbol.clone(), item))?;
-                            }
-                            BasicData::Empty => {
-                                self.push_to_data_block(BasicData::Empty)?;
-                            }
-                            t => Err(DataError::new(
-                                "Associative item in list is not a valid item",
-                                DataErrorType::NotAssociativeItem(t.get_data_type()),
-                            ))?,
+                    BasicData::Expression(e) => self.push_to_data_block(BasicData::Expression(e))?,
+                    BasicData::External(e) => self.push_to_data_block(BasicData::External(e))?,
+                    BasicData::CharList(len) => {
+                        let start = index + 1;
+                        let end = start + len;
+                        let list_index = self.push_to_data_block(BasicData::CharList(len))?;
+                        for i in start..end {
+                            let item = self.get_from_data_block_ensure_index(i)?.clone();
+                            self.push_to_data_block(item)?;
                         }
+                        list_index
                     }
+                    BasicData::ByteList(len) => {
+                        let start = index + 1;
+                        let end = start + len;
+                        let list_index = self.push_to_data_block(BasicData::ByteList(len))?;
+                        for i in start..end {
+                            let item = self.get_from_data_block_ensure_index(i)?.clone();
+                            self.push_to_data_block(item)?;
+                        }
+                        list_index
+                    }
+                    BasicData::Pair(left, right) => {
+                        let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
+                        let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
 
-                    list_index
-                }
-                BasicData::ListItem(_) => {
-                    Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
-                }
-                BasicData::AssociativeItem(_, _) => {
-                    Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
-                }
-                BasicData::Value(previous, value) => {
-                    let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
-                    let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
-                    self.push_to_data_block(BasicData::Value(previous, value))?
-                }
-                BasicData::ValueRoot(value) => {
-                    let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
-                    self.push_to_data_block(BasicData::ValueRoot(value))?
-                }
-                BasicData::Register(previous, value) => {
-                    let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
-                    let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
-                    self.push_to_data_block(BasicData::Register(previous, value))?
-                }
-                BasicData::RegisterRoot(value) => {
-                    let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
-                    self.push_to_data_block(BasicData::RegisterRoot(value))?
-                }
-                BasicData::InstructionWithData(instruction, data) => {
-                    let data = self.lookup_in_data_slice(lookup_start, lookup_end, data)?;
-                    self.push_to_data_block(BasicData::InstructionWithData(instruction.clone(), data))?
-                }
-                BasicData::Instruction(instruction) => {
-                    self.push_to_data_block(BasicData::Instruction(instruction.clone()))?
-                }
-                BasicData::JumpPoint(point) => {
-                    self.push_to_data_block(BasicData::JumpPoint(point))?
-                }
-                BasicData::Frame(previous, register) => {
-                    let point = self.get_from_data_block_ensure_index(index - 1)?.as_jump_point()?;
-                    let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
-                    let register = self.lookup_in_data_slice(lookup_start, lookup_end, register)?;
-                    self.push_to_data_block(BasicData::JumpPoint(point))?;
-                    self.push_to_data_block(BasicData::Frame(previous, register))?
-                }
-                BasicData::FrameIndex(previous) => {
-                    let point = self.get_from_data_block_ensure_index(index - 1)?.as_jump_point()?;
-                    let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
-                    self.push_to_data_block(BasicData::JumpPoint(point))?;
-                    self.push_to_data_block(BasicData::FrameIndex(previous))?
-                }
-                BasicData::FrameRegister(register) => {
-                    let point = self.get_from_data_block_ensure_index(index - 1)?.as_jump_point()?;
-                    let register = self.lookup_in_data_slice(lookup_start, lookup_end, register)?;
-                    self.push_to_data_block(BasicData::JumpPoint(point))?;
-                    self.push_to_data_block(BasicData::FrameRegister(register))?
-                }
-                BasicData::FrameRoot => {
-                    let point = self.get_from_data_block_ensure_index(index - 1)?.as_jump_point()?;
-                    self.push_to_data_block(BasicData::JumpPoint(point))?;
-                    self.push_to_data_block(BasicData::FrameRoot)?
-                }
-                BasicData::CloneItem(_) => {
-                    Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
-                }
-                BasicData::CloneIndexMap(_, _) => {
-                    Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?
-                }
+                        self.push_to_data_block(BasicData::Pair(left, right))?
+                    }
+                    BasicData::Range(left, right) => {
+                        let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
+                        let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
+
+                        self.push_to_data_block(BasicData::Range(left, right))?
+                    }
+                    BasicData::Slice(left, right) => {
+                        let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
+                        let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
+
+                        self.push_to_data_block(BasicData::Slice(left, right))?
+                    }
+                    BasicData::Partial(left, right) => {
+                        let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
+                        let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
+
+                        self.push_to_data_block(BasicData::Partial(left, right))?
+                    }
+                    BasicData::List(length, association_length) => {
+                        let start = index + 1;
+                        let end = start + length * 2;
+
+                        let list_index = self.push_to_data_block(BasicData::List(length, association_length))?;
+
+                        for i in start..end {
+                            match self.get_from_data_block_ensure_index(i)? {
+                                BasicData::ListItem(item) => {
+                                    let item = self.lookup_in_data_slice(lookup_start, lookup_end, item.clone())?;
+                                    self.push_to_data_block(BasicData::ListItem(item))?;
+                                }
+                                BasicData::AssociativeItem(symbol, item) => {
+                                    let item = self.lookup_in_data_slice(lookup_start, lookup_end, item.clone())?;
+                                    self.push_to_data_block(BasicData::AssociativeItem(symbol.clone(), item))?;
+                                }
+                                BasicData::Empty => {
+                                    self.push_to_data_block(BasicData::Empty)?;
+                                }
+                                t => Err(DataError::new(
+                                    "Associative item in list is not a valid item",
+                                    DataErrorType::NotAssociativeItem(t.get_data_type()),
+                                ))?,
+                            }
+                        }
+
+                        list_index
+                    }
+                    BasicData::Concatenation(left, right) => {
+                        let left = self.lookup_in_data_slice(lookup_start, lookup_end, left)?;
+                        let right = self.lookup_in_data_slice(lookup_start, lookup_end, right)?;
+
+                        self.push_to_data_block(BasicData::Concatenation(left, right))?
+                    }
+                    BasicData::Custom(custom) => {
+                        let mut delegate = BasicCloneDelegate::new(self, lookup_start, lookup_end);
+                        let cloned = T::create_cloned_custom_data(&mut delegate, custom)?;
+                        self.push_to_data_block(BasicData::Custom(cloned))?
+                    }
+                    BasicData::Empty => self.push_to_data_block(BasicData::Empty)?,
+                    BasicData::UninitializedList(length, count) => {
+                        let start = index + 1;
+                        let end = start + length * 2;
+
+                        let list_index = self.push_to_data_block(BasicData::UninitializedList(length, count))?;
+
+                        for i in start..end {
+                            match self.get_from_data_block_ensure_index(i)? {
+                                BasicData::ListItem(item) => {
+                                    let item = self.lookup_in_data_slice(lookup_start, lookup_end, item.clone())?;
+                                    self.push_to_data_block(BasicData::ListItem(item))?;
+                                }
+                                BasicData::AssociativeItem(symbol, item) => {
+                                    let item = self.lookup_in_data_slice(lookup_start, lookup_end, item.clone())?;
+                                    self.push_to_data_block(BasicData::AssociativeItem(symbol.clone(), item))?;
+                                }
+                                BasicData::Empty => {
+                                    self.push_to_data_block(BasicData::Empty)?;
+                                }
+                                t => Err(DataError::new(
+                                    "Associative item in list is not a valid item",
+                                    DataErrorType::NotAssociativeItem(t.get_data_type()),
+                                ))?,
+                            }
+                        }
+
+                        list_index
+                    }
+                    BasicData::ListItem(_) => Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?,
+                    BasicData::AssociativeItem(_, _) => Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?,
+                    BasicData::Value(previous, value) => {
+                        let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
+                        let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
+                        self.push_to_data_block(BasicData::Value(previous, value))?
+                    }
+                    BasicData::ValueRoot(value) => {
+                        let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
+                        self.push_to_data_block(BasicData::ValueRoot(value))?
+                    }
+                    BasicData::Register(previous, value) => {
+                        let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
+                        let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
+                        self.push_to_data_block(BasicData::Register(previous, value))?
+                    }
+                    BasicData::RegisterRoot(value) => {
+                        let value = self.lookup_in_data_slice(lookup_start, lookup_end, value)?;
+                        self.push_to_data_block(BasicData::RegisterRoot(value))?
+                    }
+                    BasicData::InstructionWithData(instruction, data) => {
+                        let data = self.lookup_in_data_slice(lookup_start, lookup_end, data)?;
+                        self.push_to_data_block(BasicData::InstructionWithData(instruction.clone(), data))?
+                    }
+                    BasicData::Instruction(instruction) => self.push_to_data_block(BasicData::Instruction(instruction.clone()))?,
+                    BasicData::JumpPoint(point) => self.push_to_data_block(BasicData::JumpPoint(point))?,
+                    BasicData::Frame(previous, register) => {
+                        let point = self.get_from_data_block_ensure_index(index - 1)?.as_jump_point()?;
+                        let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
+                        let register = self.lookup_in_data_slice(lookup_start, lookup_end, register)?;
+                        self.push_to_data_block(BasicData::JumpPoint(point))?;
+                        self.push_to_data_block(BasicData::Frame(previous, register))?
+                    }
+                    BasicData::FrameIndex(previous) => {
+                        let point = self.get_from_data_block_ensure_index(index - 1)?.as_jump_point()?;
+                        let previous = self.lookup_in_data_slice(lookup_start, lookup_end, previous)?;
+                        self.push_to_data_block(BasicData::JumpPoint(point))?;
+                        self.push_to_data_block(BasicData::FrameIndex(previous))?
+                    }
+                    BasicData::FrameRegister(register) => {
+                        let point = self.get_from_data_block_ensure_index(index - 1)?.as_jump_point()?;
+                        let register = self.lookup_in_data_slice(lookup_start, lookup_end, register)?;
+                        self.push_to_data_block(BasicData::JumpPoint(point))?;
+                        self.push_to_data_block(BasicData::FrameRegister(register))?
+                    }
+                    BasicData::FrameRoot => {
+                        let point = self.get_from_data_block_ensure_index(index - 1)?.as_jump_point()?;
+                        self.push_to_data_block(BasicData::JumpPoint(point))?;
+                        self.push_to_data_block(BasicData::FrameRoot)?
+                    }
+                    BasicData::CloneItem(_) => Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?,
+                    BasicData::CloneIndexMap(_, _) => Err(DataError::new("Cannot clone", DataErrorType::CannotClone))?,
+                },
             };
 
             *self.get_from_data_block_ensure_index_mut(i)? = BasicData::CloneIndexMap(index, new_index - offset);
@@ -259,20 +256,7 @@ where
     }
 
     pub(crate) fn lookup_in_data_slice(&self, start: usize, end: usize, lookup_index: usize) -> Result<usize, DataError> {
-        let lookup_slice = &self.data()[start..end];
-
-        let existing_left_index = lookup_slice.iter().find_map(|item| match item {
-            BasicData::CloneIndexMap(original, new) => {
-                if *original == lookup_index {
-                    Some(new.clone())
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        });
-
-        let index = match existing_left_index {
+        let index = match self.lookup_in_data_slice_optional(start, end, lookup_index)? {
             Some(value) => value,
             None => Err(DataError::new(
                 "No mapped index found during clone",
@@ -282,13 +266,31 @@ where
 
         Ok(index)
     }
+
+    pub(crate) fn lookup_in_data_slice_optional(&self, start: usize, end: usize, lookup_index: usize) -> Result<Option<usize>, DataError> {
+        let lookup_slice = &self.data()[start..end];
+
+        Ok(lookup_slice.iter().find_map(|item| match item {
+            BasicData::CloneIndexMap(original, new) => {
+                if *original == lookup_index {
+                    Some(new.clone())
+                } else {
+                    None
+                }
+            }
+            _ => None,
+        }))
+    }
 }
 
 #[cfg(test)]
 mod clone {
     use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
 
-    use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, basic::clone::CloneDelegate, basic::ordering::OrderingDelegate, basic_object, error::DataErrorType};
+    use crate::{
+        BasicData, BasicDataCustom, BasicGarnishData, DataError, basic::clone::CloneDelegate, basic::ordering::OrderingDelegate, basic_object,
+        error::DataErrorType,
+    };
 
     #[test]
     fn circular_reference_is_error() {
@@ -296,7 +298,7 @@ mod clone {
         let pair_one = data.push_object_to_data_block(basic_object!((Number 100) = (Number 200))).unwrap();
         let pair_two = data.push_object_to_data_block(basic_object!((Number 100) = (Number 200))).unwrap();
         *data.get_from_data_block_ensure_index_mut(pair_two).unwrap() = BasicData::Pair(pair_two, pair_one);
-        
+
         let result = data.push_clone_data(pair_two);
 
         assert_eq!(result, Err(DataError::new("Clone limit reached", DataErrorType::CloneLimitReached)));
@@ -872,14 +874,14 @@ mod clone {
     #[test]
     fn uninitialized_list_with_associations() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
-        
+
         let num1 = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let pair = data.push_object_to_data_block(basic_object!((SymRaw 200) = (Number 200))).unwrap();
-        
+
         let mut list_index = data.start_list(3).unwrap();
         list_index = data.add_to_list(list_index, num1).unwrap();
         list_index = data.add_to_list(list_index, pair).unwrap();
-        
+
         let index = data.push_clone_data(list_index).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
@@ -887,33 +889,33 @@ mod clone {
         expected_data.data_mut().splice(
             30..57,
             vec![
-                BasicData::Number(100.into()), // 0
-                BasicData::Symbol(200), // 1
-                BasicData::Number(200.into()), // 2
-                BasicData::Pair(1, 2), // 3
-                BasicData::UninitializedList(3, 2), // 4
-                BasicData::ListItem(0), // 5
-                BasicData::ListItem(3), // 6
-                BasicData::Empty, // 7
-                BasicData::Empty, // 8
-                BasicData::AssociativeItem(200, 2), // 9
-                BasicData::Empty, // 10
-                BasicData::CloneIndexMap(4, 20), // 11
-                BasicData::CloneIndexMap(0, 19), // 12
-                BasicData::CloneIndexMap(3, 18), // 13
-                BasicData::CloneIndexMap(2, 17), // 14
-                BasicData::CloneIndexMap(1, 16), // 15
-                BasicData::Symbol(200), // 16
-                BasicData::Number(200.into()), // 17
-                BasicData::Pair(16, 17), // 18
-                BasicData::Number(100.into()), // 19
-                BasicData::UninitializedList(3, 2), // 20
-                BasicData::ListItem(19), // 21
-                BasicData::ListItem(18), // 22
-                BasicData::Empty, // 23
-                BasicData::Empty, // 24
+                BasicData::Number(100.into()),       // 0
+                BasicData::Symbol(200),              // 1
+                BasicData::Number(200.into()),       // 2
+                BasicData::Pair(1, 2),               // 3
+                BasicData::UninitializedList(3, 2),  // 4
+                BasicData::ListItem(0),              // 5
+                BasicData::ListItem(3),              // 6
+                BasicData::Empty,                    // 7
+                BasicData::Empty,                    // 8
+                BasicData::AssociativeItem(200, 2),  // 9
+                BasicData::Empty,                    // 10
+                BasicData::CloneIndexMap(4, 20),     // 11
+                BasicData::CloneIndexMap(0, 19),     // 12
+                BasicData::CloneIndexMap(3, 18),     // 13
+                BasicData::CloneIndexMap(2, 17),     // 14
+                BasicData::CloneIndexMap(1, 16),     // 15
+                BasicData::Symbol(200),              // 16
+                BasicData::Number(200.into()),       // 17
+                BasicData::Pair(16, 17),             // 18
+                BasicData::Number(100.into()),       // 19
+                BasicData::UninitializedList(3, 2),  // 20
+                BasicData::ListItem(19),             // 21
+                BasicData::ListItem(18),             // 22
+                BasicData::Empty,                    // 23
+                BasicData::Empty,                    // 24
                 BasicData::AssociativeItem(200, 17), // 25
-                BasicData::Empty, // 26
+                BasicData::Empty,                    // 26
             ],
         );
         expected_data.data_block_mut().cursor = 27;
@@ -931,7 +933,7 @@ mod clone {
         let index = data.push_clone_data(index);
 
         assert_eq!(index, Err(DataError::new("Cannot clone", DataErrorType::CannotClone)));
-    } 
+    }
 
     #[test]
     fn associative_item_is_error() {
@@ -940,7 +942,7 @@ mod clone {
         let index = data.push_clone_data(index);
 
         assert_eq!(index, Err(DataError::new("Cannot clone", DataErrorType::CannotClone)));
-    } 
+    }
 
     #[test]
     fn clone_item_is_error() {
@@ -949,7 +951,7 @@ mod clone {
         let index = data.push_clone_data(index);
 
         assert_eq!(index, Err(DataError::new("Cannot clone", DataErrorType::CannotClone)));
-    } 
+    }
 
     #[test]
     fn clone_index_map_is_error() {
@@ -1038,9 +1040,11 @@ mod clone {
     fn instruction() {
         let mut data = BasicGarnishData::<()>::new().unwrap();
         let instruction_data = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
-        let index = data.push_to_data_block(BasicData::InstructionWithData(Instruction::Add, instruction_data)).unwrap();
+        let index = data
+            .push_to_data_block(BasicData::InstructionWithData(Instruction::Add, instruction_data))
+            .unwrap();
         let index = data.push_clone_data(index).unwrap();
-        
+
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
             30..36,
@@ -1066,9 +1070,10 @@ mod clone {
         let index = data.push_clone_data(index).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data
-            .data_mut()
-            .splice(30..33, vec![BasicData::JumpPoint(100), BasicData::CloneIndexMap(0, 2), BasicData::JumpPoint(100)]);
+        expected_data.data_mut().splice(
+            30..33,
+            vec![BasicData::JumpPoint(100), BasicData::CloneIndexMap(0, 2), BasicData::JumpPoint(100)],
+        );
         expected_data.data_block_mut().cursor = 3;
 
         assert_eq!(index, 2);
@@ -1088,9 +1093,9 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().resize(60, BasicData::Empty);
-        expected_data
-            .data_mut()
-            .splice(30..46, vec![
+        expected_data.data_mut().splice(
+            30..46,
+            vec![
                 BasicData::JumpPoint(10),
                 BasicData::FrameRoot,
                 BasicData::Number(200.into()),
@@ -1104,17 +1109,60 @@ mod clone {
                 BasicData::Number(200.into()), // 10
                 BasicData::RegisterRoot(10),
                 BasicData::JumpPoint(10),
-                BasicData::FrameRoot, 
+                BasicData::FrameRoot,
                 BasicData::JumpPoint(100),
                 BasicData::Frame(13, 11), // 15
-            ]);
+            ],
+        );
         expected_data.data_block_mut().cursor = 16;
+        expected_data.data_block_mut().size = 20;
+        expected_data.custom_data_block_mut().start = 50;
+
+        assert_eq!(index, 15);
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn multiple_references_to_same_data_doesnt_duplicate() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+
+        let left1 = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        let right1 = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
+        let pair1 = data.push_to_data_block(BasicData::Pair(left1, right1)).unwrap();
+
+        let pair2 = data.push_to_data_block(BasicData::Pair(pair1, pair1)).unwrap();
+
+        let cloned_index = data.push_clone_data(pair2).unwrap();
+
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().splice(
+            30..45,
+            vec![
+                BasicData::Number(100.into()),
+                BasicData::Number(200.into()),
+                BasicData::Pair(0, 1),
+                BasicData::Pair(2, 2),
+                BasicData::CloneIndexMap(3, 14), // 4
+                BasicData::CloneIndexMap(2, 13),
+                BasicData::CloneIndexMap(2, 13),
+                BasicData::CloneIndexMap(1, 12),
+                BasicData::CloneIndexMap(0, 11),
+                BasicData::CloneIndexMap(1, 12),
+                BasicData::CloneIndexMap(0, 11),
+                BasicData::Number(100.into()), // 11
+                BasicData::Number(200.into()),
+                BasicData::Pair(11, 12),
+                BasicData::Pair(13, 13),
+            ],
+        );
+        expected_data.data_block_mut().cursor = 15;
         expected_data.data_block_mut().size = 20;
         expected_data.custom_data_block_mut().start = 50;
 
         println!("{}", data.dump_data_block());
 
-        assert_eq!(index, 15);
+        assert_eq!(cloned_index, 14);
         assert_eq!(data, expected_data);
     }
 
@@ -1143,7 +1191,9 @@ mod clone {
     fn custom() {
         let mut data = BasicGarnishData::<TestCustom>::new().unwrap();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
-        let index = data.push_to_data_block(BasicData::Custom(TestCustom { value: index, name: "test" })).unwrap();
+        let index = data
+            .push_to_data_block(BasicData::Custom(TestCustom { value: index, name: "test" }))
+            .unwrap();
         let index = data.push_clone_data(index).unwrap();
 
         let mut expected_data = BasicGarnishData::<TestCustom>::new().unwrap();
@@ -1151,11 +1201,11 @@ mod clone {
             30..36,
             vec![
                 BasicData::Number(100.into()),
-                BasicData::Custom(TestCustom { value: 0, name: "test" }), 
+                BasicData::Custom(TestCustom { value: 0, name: "test" }),
                 BasicData::CloneIndexMap(1, 5),
                 BasicData::CloneIndexMap(0, 4),
                 BasicData::Number(100.into()),
-                BasicData::Custom(TestCustom { value: 4, name: "test" })
+                BasicData::Custom(TestCustom { value: 4, name: "test" }),
             ],
         );
         expected_data.data_block_mut().cursor = 6;
@@ -1164,4 +1214,3 @@ mod clone {
         assert_eq!(data, expected_data);
     }
 }
-
