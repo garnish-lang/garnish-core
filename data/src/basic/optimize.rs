@@ -1,7 +1,4 @@
-use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, error::DataErrorType};
-
-pub use crate::basic::ordering::OrderingDelegate;
-pub use crate::basic::clone::CloneDelegate;
+use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError};
 
 impl<T> BasicGarnishData<T>
 where
@@ -56,7 +53,6 @@ where
 
         Ok(())
     }
-
 }
 
 #[cfg(test)]
