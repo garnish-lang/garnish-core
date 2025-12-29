@@ -226,8 +226,63 @@ mod optimize {
         expected_data.data_block_mut().size = 40;
         expected_data.custom_data_block_mut().start = 70;
         expected_data.set_current_frame(Some(6));
+        
+        assert_eq!(data, expected_data);
+    }
 
-        println!("{}", data.dump_data_block());
+    #[test]
+    fn data_with_retention_count_and_stacked_items_is_kept() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        
+        let retained_value_index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
+        data.retain_all_current_data();
+        
+        data.push_object_to_data_block(basic_object!((Number 200), (CharList "extra"))).unwrap();
+        let later_value_index = data.push_object_to_data_block(basic_object!(Number 300)).unwrap();
+        let later_pair_index = data.push_object_to_data_block(basic_object!((Number 400) = (Number 500))).unwrap();
+        
+        let value_index = data.push_to_data_block(BasicData::ValueRoot(retained_value_index)).unwrap();
+        let value_index = data.push_to_data_block(BasicData::Value(value_index, later_value_index)).unwrap();
+        data.set_current_value(Some(value_index));
+        
+        let register_index = data.push_to_data_block(BasicData::RegisterRoot(later_pair_index)).unwrap();
+        data.set_current_register(Some(register_index));
+        
+        data.push_to_data_block(BasicData::JumpPoint(10)).unwrap();
+        let frame_index = data.push_to_data_block(BasicData::FrameRoot).unwrap();
+        data.push_to_data_block(BasicData::JumpPoint(20)).unwrap();
+        let frame_index = data.push_to_data_block(BasicData::Frame(frame_index, later_value_index)).unwrap();
+        data.set_current_frame(Some(frame_index));
+        
+        data.optimize_data_block().unwrap();
+
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().resize(90, BasicData::Empty);
+        
+        expected_data.data_mut().splice(30..42, vec![
+            BasicData::Number(100.into()),
+            BasicData::Number(300.into()),
+            BasicData::JumpPoint(10),
+            BasicData::FrameRoot,
+            BasicData::JumpPoint(20),
+            BasicData::Frame(3, 1),
+            BasicData::ValueRoot(0),
+            BasicData::Value(6, 1),
+            BasicData::Number(400.into()),
+            BasicData::Number(500.into()),
+            BasicData::Pair(8, 9),
+            BasicData::RegisterRoot(10),
+        ]);
+
+        expected_data.set_data_retention_count(1);
+        expected_data.data_block_mut().cursor = 12;
+        expected_data.data_block_mut().size = 50;
+        expected_data.data_block_mut().start = 30;
+        expected_data.custom_data_block_mut().start = 80;
+        expected_data.custom_data_block_mut().size = 10;
+        expected_data.set_current_value(Some(7));
+        expected_data.set_current_register(Some(11));
+        expected_data.set_current_frame(Some(5));
 
         assert_eq!(data, expected_data);
     }
