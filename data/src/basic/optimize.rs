@@ -6,38 +6,32 @@ where
 {
     pub(crate) fn optimize_data_block(&mut self) -> Result<(), DataError> {
         let current_data_end = self.data_block().start + self.data_block().cursor;
-        let true_start = self.data_block().start + self.data_retention_count();
+        let retained_data_end = self.data_block().start + self.data_retention_count();
+        
+        let original_register = self.current_register();
+        let index_list_start = match original_register {
+            Some(index) => self.create_index_stack(index)?,
+            None => current_data_end,
+        };
 
-        let offset = current_data_end - true_start;
+        let index_list_end = self.data_block().start + self.data_block().cursor;
 
-        let mut registers = vec![];
-        let mut current = self.current_register();
-        while let Some(index) = current {
-            let data = self.get_from_data_block_ensure_index(index)?;
-            let (previous_opt, value) = match data {
-                BasicData::Register(previous, value) => (Some(*previous), *value),
-                BasicData::RegisterRoot(value) => (None, *value),
-                _ => break,
-            };
-            registers.push(value);
-            current = previous_opt;
+        let clone_start = self.data_block().start + self.data_block().cursor;
+
+        let offset = self.data_block().start + self.data_block().cursor - retained_data_end;
+
+        if index_list_start != current_data_end {
+            self.clone_index_stack(index_list_start, offset)?;
         }
-        registers.reverse();
-
-        let mut previous_opt = None;
-        for value in registers.iter() {
-            let new_value = self.get_from_data_block_ensure_index(*value)?.clone();
-            let new_value_index = self.push_to_data_block(new_value)?;
-            let index = match previous_opt {
-                Some(previous) => self.push_to_data_block(BasicData::Register(previous, new_value_index - offset))?,
-                None => self.push_to_data_block(BasicData::RegisterRoot(new_value_index - offset))?,
-            };
-            previous_opt = Some(index - offset);
+        
+        if let Some(original_register) = original_register {
+            let mapped_index = self.lookup_in_data_slice(index_list_start, index_list_end, original_register)?;
+            self.set_current_register(Some(mapped_index));
         }
 
         let new_data_end = self.data_block().start + self.data_block().cursor;
-        let from_range = current_data_end..new_data_end;
-        let mut current = true_start;
+        let from_range = clone_start..new_data_end;
+        let mut current = retained_data_end;
 
         for i in from_range.clone() {
             self.data_mut()[current] = self.data_mut()[i].clone();
@@ -116,36 +110,39 @@ mod optimize {
         assert_eq!(data, expected_data);
     }
 
-    // #[test]
-    // fn data_referenced_by_registers_is_kept() {
-    //     let mut data = BasicGarnishData::<()>::new().unwrap();
-    //     let index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
-    //     let register_index = data.push_to_data_block(BasicData::Register(None, index)).unwrap();
-    //     data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
-    //     let index = data.push_object_to_data_block(basic_object!((Number 1234) = (Char 'a'))).unwrap();
-    //     let register_index = data.push_to_data_block(BasicData::Register(Some(register_index), index)).unwrap();
-    //     data.set_current_register(Some(register_index));
+    #[test]
+    fn data_referenced_by_registers_is_kept() {
+        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
+        let register_index = data.push_to_data_block(BasicData::RegisterRoot(index)).unwrap();
+        data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
+        let index = data.push_object_to_data_block(basic_object!((Number 1234) = (Char 'a'))).unwrap();
+        let register_index = data.push_to_data_block(BasicData::Register(register_index, index)).unwrap();
+        data.set_current_register(Some(register_index));
 
-    //     println!("{}", data.dump_data_block());
+        println!("{}", data.dump_data_block());
 
-    //     data.optimize_data_block().unwrap();
+        data.optimize_data_block().unwrap();
 
-    //     let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-    //     expected_data.data_mut().resize(70, BasicData::Empty);
-    //     expected_data.data_mut().splice(30..36, vec![
-    //         BasicData::Number(100.into()),
-    //         BasicData::Register(None, 0),
-    //         BasicData::Number(1234.into()),
-    //         BasicData::Char('a'),
-    //         BasicData::Pair(2, 3),
-    //         BasicData::Register(Some(1), 4),
-    //     ]);
+        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        expected_data.data_mut().resize(70, BasicData::Empty);
+        expected_data.data_mut().splice(30..36, vec![
+            BasicData::Number(1234.into()),
+            BasicData::Char('a'),
+            BasicData::Number(100.into()),
+            BasicData::Pair(0, 1),
+            BasicData::RegisterRoot(2),
+            BasicData::Register(4, 3),
+        ]);
 
-    //     expected_data.data_block_mut().cursor = 6;
-    //     expected_data.set_current_register(Some(5));
+        expected_data.data_block_mut().cursor = 6;
+        expected_data.data_block_mut().size = 30;
+        expected_data.custom_data_block_mut().start = 60;
+        expected_data.set_current_register(Some(5));
 
-    //     println!("{}", data.dump_data_block());
+        println!("===================");
+        println!("{}", data.dump_data_block());
 
-    //     assert_eq!(data, expected_data);
-    // }
+        assert_eq!(data, expected_data);
+    }
 }

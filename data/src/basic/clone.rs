@@ -41,7 +41,7 @@ where
         self.clone_index_stack(index_stack_start, 0)
     }
 
-    pub(crate) fn clone_index_stack(&mut self, top_index: usize, _offset: usize) -> Result<usize, DataError> {
+    pub(crate) fn clone_index_stack(&mut self, top_index: usize, offset: usize) -> Result<usize, DataError> {
         let clone_range = top_index..self.data_block().cursor;
 
         let lookup_end = self.data_block().start + self.data_block().cursor;
@@ -240,7 +240,7 @@ where
                 }
             };
 
-            *self.get_from_data_block_ensure_index_mut(i)? = BasicData::CloneIndexMap(index, new_index);
+            *self.get_from_data_block_ensure_index_mut(i)? = BasicData::CloneIndexMap(index, new_index - offset);
 
             lookup_start -= 1;
         }
