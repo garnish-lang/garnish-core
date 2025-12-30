@@ -5,6 +5,7 @@ use std::usize;
 use garnish_lang_traits::GarnishDataType;
 use garnish_lang_traits::Instruction;
 
+use crate::BasicDataFactory;
 use crate::ConversionDelegate;
 use crate::basic::clone::CloneDelegate;
 use crate::basic::ordering::OrderingDelegate;
@@ -163,12 +164,8 @@ where
         self.instruction_block.size + self.jump_table_block.size + self.symbol_table_block.size + self.data_block.size + self.custom_data_block.size
     }
 
-    pub fn get_basic_data(&self, index: usize) -> Option<&BasicData<T>> {
+    pub(crate) fn get_basic_data(&self, index: usize) -> Option<&BasicData<T>> {
         self.data.get(index)
-    }
-
-    pub fn get_basic_data_mut(&mut self, index: usize) -> Option<&mut BasicData<T>> {
-        self.data.get_mut(index)
     }
 
     pub fn data_retention_count(&self) -> usize {

@@ -11,6 +11,7 @@ mod ordering;
 mod search;
 mod storage;
 
+pub use object::{BasicObject};
 pub use data::{BasicData, BasicDataUnitCustom};
 pub use garnish::BasicDataFactory;
 pub use garnish::ConversionDelegate;

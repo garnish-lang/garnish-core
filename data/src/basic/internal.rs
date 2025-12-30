@@ -8,7 +8,7 @@ impl<T> BasicGarnishData<T>
 where
     T: crate::basic::BasicDataCustom,
 {
-    pub(crate) fn get_from_data_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
+    pub fn get_from_data_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
         if index >= self.data_block().cursor {
             return Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(index)));
         }
@@ -16,7 +16,7 @@ where
         Ok(&self.data()[true_index])
     }
 
-    pub(crate) fn get_from_data_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut BasicData<T>, DataError> {
+    pub fn get_from_data_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut BasicData<T>, DataError> {
         if index >= self.data_block().cursor {
             return Err(DataError::new("Invalid data index", DataErrorType::InvalidDataIndex(index)));
         }
@@ -24,7 +24,7 @@ where
         Ok(&mut self.data_mut()[true_index])
     }
 
-    pub(crate) fn get_from_instruction_block_ensure_index(&self, index: usize) -> Result<(garnish_lang_traits::Instruction, Option<usize>), DataError> {
+    pub fn get_from_instruction_block_ensure_index(&self, index: usize) -> Result<(garnish_lang_traits::Instruction, Option<usize>), DataError> {
         if index >= self.instruction_block().cursor {
             return Err(DataError::new("Invalid instruction index", DataErrorType::InvalidInstructionIndex(index)));
         }
@@ -36,7 +36,7 @@ where
         }
     }
 
-    pub(crate) fn get_from_jump_table_block_ensure_index(&self, index: usize) -> Result<usize, DataError> {
+    pub fn get_from_jump_table_block_ensure_index(&self, index: usize) -> Result<usize, DataError> {
         if index >= self.jump_table_block().cursor {
             return Err(DataError::new("Invalid jump table index", DataErrorType::InvalidJumpTableIndex(index)));
         }
@@ -44,7 +44,7 @@ where
         self.data()[true_index].as_jump_point()
     }
 
-    pub(crate) fn get_from_jump_table_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut usize, DataError> {
+    pub fn get_from_jump_table_block_ensure_index_mut(&mut self, index: usize) -> Result<&mut usize, DataError> {
         if index >= self.jump_table_block().cursor {
             return Err(DataError::new("Invalid jump table index", DataErrorType::InvalidJumpTableIndex(index)));
         }
@@ -52,7 +52,7 @@ where
         self.data_mut()[true_index].as_jump_point_mut()
     }
 
-    pub(crate) fn get_from_custom_data_block_ensure_index(&self, index: usize) -> Result<T, DataError> {
+    pub fn get_from_custom_data_block_ensure_index(&self, index: usize) -> Result<T, DataError> {
         if index >= self.custom_data_block().cursor {
             return Err(DataError::new("Invalid custom data index", DataErrorType::InvalidDataIndex(index)));
         }
