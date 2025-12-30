@@ -31,12 +31,12 @@ impl<T> BasicGarnishData<T> where T: BasicDataCustom {
         s.push(self.dump_instruction_block());
         s.push("Jump Table Block:".to_string());
         s.push(self.dump_jump_table_block());
-        s.push("Data Block:".to_string());
-        s.push(self.dump_data_block());
         s.push("Symbol Table Block:".to_string());
         s.push(self.dump_symbol_table_block());
         s.push("Expression Symbol Block:".to_string());
         s.push(self.dump_expression_symbol_block());
+        s.push("Data Block:".to_string());
+        s.push(self.dump_data_block());
         s.push("Custom Data Block:".to_string());
         s.push(self.dump_custom_block());
         s.join("\n")

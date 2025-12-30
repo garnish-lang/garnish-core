@@ -255,8 +255,8 @@ where
 
     fn get_symbol_list_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::SymbolListPartIterator, Self::Error> {
         let len = self.get_from_data_block_ensure_index(list_index)?.as_symbol_list()?;
-        let start: usize = list_index + 1 + usize::from(extents.start()).min(len);
-        let end: usize = list_index + 1 + (usize::from(extents.end())).min(len);
+        let start: usize = self.data_block().start + list_index + 1 + usize::from(extents.start()).min(len);
+        let end: usize = self.data_block().start + list_index + 1 + (usize::from(extents.end())).min(len);
 
         Ok(SymbolListPartIterator::new(
             self.data()[start..end]
@@ -278,7 +278,7 @@ where
     fn get_list_item_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ListItemIterator, Self::Error> {
         let len = self.get_from_data_block_ensure_index(list_index)?.as_list()?.0;
 
-        let (start, end) = extents_to_start_end(extents, list_index, len);
+        let (start, end) = extents_to_start_end(extents, self.data_block().start + list_index, len);
         let slice = &self.data()[start..end];
         let mut items = Vec::new();
 
@@ -316,8 +316,8 @@ where
         }
 
         let len = items.len();
-        let start: usize = usize::from(extents.start()).min(len);
-        let end: usize = usize::from(extents.end()).min(len);
+        let start: usize = self.data_block().start + usize::from(extents.start()).min(len);
+        let end: usize = self.data_block().start + usize::from(extents.end()).min(len);
 
         Ok(DataIndexIterator::new(items[start..end].to_vec()))
     }

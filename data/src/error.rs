@@ -1,4 +1,4 @@
-use std::fmt::{Debug, Display, Formatter};
+use std::{backtrace::Backtrace, cmp::Ordering, fmt::{Debug, Display, Formatter}};
 
 use garnish_lang_traits::GarnishDataType;
 
@@ -34,15 +34,43 @@ pub enum DataErrorType {
 }
 
 /// Error implemenation for [`crate::SimpleGarnishData`].
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Hash)]
 pub struct DataError {
     message: String,
     error_type: DataErrorType,
+    backtrace: Backtrace,
+}
+
+impl Debug for DataError {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}: {}", self.error_type, self.message)?;
+        write!(f, "\n{}", self.backtrace)?;
+        Ok(())
+    }
+}
+
+impl PartialEq for DataError {
+    fn eq(&self, other: &Self) -> bool {
+        self.message == other.message && self.error_type == other.error_type
+    }
+}
+
+impl Eq for DataError {}
+
+impl PartialOrd for DataError {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for DataError {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.message.cmp(&other.message)
+    }
 }
 
 impl DataError {
     pub fn new(message: &str, error_type: DataErrorType) -> Self {
-        DataError { message: message.to_string(), error_type }
+        DataError { message: message.to_string(), error_type, backtrace: Backtrace::capture() }
     }
 
     pub fn not_type_error(expected: GarnishDataType, got: GarnishDataType) -> Self {
@@ -64,13 +92,13 @@ impl std::error::Error for DataError {}
 
 impl From<&str> for DataError {
     fn from(s: &str) -> Self {
-        DataError { message: s.to_string(), error_type: DataErrorType::Unknown }
+        DataError { message: s.to_string(), error_type: DataErrorType::Unknown, backtrace: Backtrace::capture() }
     }
 }
 
 impl From<String> for DataError {
     fn from(s: String) -> Self {
-        DataError { message: s, error_type: DataErrorType::Unknown }
+        DataError { message: s, error_type: DataErrorType::Unknown, backtrace: Backtrace::capture() }
     }
 }
 
