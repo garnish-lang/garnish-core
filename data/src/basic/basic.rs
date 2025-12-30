@@ -418,6 +418,7 @@ where
     }
 }
 
+#[cfg(test)]
 pub mod utilities {
     use crate::{
         BasicGarnishDataUnit,
