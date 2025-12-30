@@ -198,7 +198,7 @@ where
 
     fn get_char_list_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::CharIterator, Self::Error> {
         let len = self.get_from_data_block_ensure_index(list_index)?.as_char_list()?;
-        let (start, end) = extents_to_start_end(extents, list_index, len);
+        let (start, end) = extents_to_start_end(extents, self.data_block().start + list_index, len);
 
         Ok(CharListIterator::new(
             self.data()[start..end].iter().map(|c| c.as_char().unwrap()).collect(),
@@ -220,7 +220,7 @@ where
 
     fn get_byte_list_iter(&self, list_index: Self::Size, extents: Extents<Self::Number>) -> Result<Self::ByteIterator, Self::Error> {
         let len = self.get_from_data_block_ensure_index(list_index)?.as_byte_list()?;
-        let (start, end) = extents_to_start_end(extents, list_index, len);
+        let (start, end) = extents_to_start_end(extents, self.data_block().start + list_index, len);
 
         Ok(ByteListIterator::new(
             self.data()[start..end].iter().map(|c| c.as_byte().unwrap()).collect(),
