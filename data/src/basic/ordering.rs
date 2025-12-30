@@ -186,9 +186,9 @@ mod tests {
         data.create_index_stack(index_one).unwrap();
         
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().resize(70, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..45,
+            40..55,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::Number(400.into()),
@@ -210,10 +210,8 @@ mod tests {
 
         expected_data.data_block_mut().cursor = 15;
         expected_data.data_block_mut().size = 20;
-        expected_data.custom_data_block_mut().start = 50;
+        expected_data.custom_data_block_mut().start = 60;
         expected_data.custom_data_block_mut().size = 10;
-
-        println!("{}", data.dump_data_block());
 
         assert_eq!(data, expected_data);
     }

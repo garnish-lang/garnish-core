@@ -75,6 +75,7 @@ where
         new_instruction_size: usize,
         new_jump_table_size: usize,
         new_symbol_table_size: usize,
+        new_expression_symbol_size: usize,
         new_data_size: usize,
         new_custom_data_size: usize,
     ) -> Result<(), DataError> {
@@ -96,6 +97,12 @@ where
                 DataErrorType::SymbolTableBlockExceededMaxItems(new_symbol_table_size, self.symbol_table_block().settings.max_items()),
             ));
         }
+        if new_expression_symbol_size > self.expression_symbol_block().settings.max_items() {
+            return Err(DataError::new(
+                "Expression symbol block size exceeds max items",
+                DataErrorType::ExpressionSymbolBlockExceededMaxItems(new_expression_symbol_size, self.expression_symbol_block().settings.max_items()),
+            ));
+        }
         if new_data_size > self.data_block().settings.max_items() {
             return Err(DataError::new(
                 "Data block size exceeds max items",
@@ -115,12 +122,14 @@ where
         let jump_table_cursor = self.jump_table_block().cursor;
         let symbol_table_start = self.symbol_table_block().start;
         let symbol_table_cursor = self.symbol_table_block().cursor;
+        let expression_symbol_start = self.expression_symbol_block().start;
+        let expression_symbol_cursor = self.expression_symbol_block().cursor;
         let data_start = self.data_block().start;
         let data_cursor = self.data_block().cursor;
         let custom_data_start = self.custom_data_block().start;
         let custom_data_cursor = self.custom_data_block().cursor;
 
-        let new_size = new_instruction_size + new_jump_table_size + new_symbol_table_size + new_data_size + new_custom_data_size;
+        let new_size = new_instruction_size + new_jump_table_size + new_symbol_table_size + new_expression_symbol_size + new_data_size + new_custom_data_size;
 
         let mut new_heap = vec![BasicData::Empty; new_size];
 
@@ -149,6 +158,14 @@ where
         self.symbol_table_block_mut().start = current_block_start;
         self.symbol_table_block_mut().size = new_symbol_table_size;
         current_block_start += new_symbol_table_size;
+
+        // Copy expression symbol block
+        for i in 0..expression_symbol_cursor {
+            new_heap[current_block_start + i] = self.data()[expression_symbol_start + i].clone();
+        }
+        self.expression_symbol_block_mut().start = current_block_start;
+        self.expression_symbol_block_mut().size = new_expression_symbol_size;
+        current_block_start += new_expression_symbol_size;
 
         // Copy data block
         for i in 0..data_cursor {
@@ -255,6 +272,7 @@ mod tests {
             crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
             crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
             crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
             crate::basic::storage::StorageSettings::new(10, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
@@ -288,6 +306,7 @@ mod tests {
         impl crate::basic::BasicDataCustom for TestCustom {}
 
         let data = BasicGarnishData::<TestCustom>::new_with_settings(
+            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
             crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
             crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
             crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),

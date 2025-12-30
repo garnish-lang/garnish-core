@@ -323,7 +323,7 @@ mod clone {
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data
             .data_mut()
-            .splice(30..33, vec![BasicData::Unit, BasicData::CloneIndexMap(0, 2), BasicData::Unit]);
+            .splice(40..43, vec![BasicData::Unit, BasicData::CloneIndexMap(0, 2), BasicData::Unit]);
         expected_data.data_block_mut().cursor = 3;
 
         assert_eq!(index, 2);
@@ -340,7 +340,7 @@ mod clone {
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data
             .data_mut()
-            .splice(30..33, vec![BasicData::Empty, BasicData::CloneIndexMap(0, 2), BasicData::Empty]);
+            .splice(40..43, vec![BasicData::Empty, BasicData::CloneIndexMap(0, 2), BasicData::Empty]);
         expected_data.data_block_mut().cursor = 3;
 
         assert_eq!(index, 2);
@@ -357,7 +357,7 @@ mod clone {
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data
             .data_mut()
-            .splice(30..33, vec![BasicData::True, BasicData::CloneIndexMap(0, 2), BasicData::True]);
+            .splice(40..43, vec![BasicData::True, BasicData::CloneIndexMap(0, 2), BasicData::True]);
         expected_data.data_block_mut().cursor = 3;
 
         assert_eq!(index, 2);
@@ -374,7 +374,7 @@ mod clone {
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data
             .data_mut()
-            .splice(30..33, vec![BasicData::False, BasicData::CloneIndexMap(0, 2), BasicData::False]);
+            .splice(40..43, vec![BasicData::False, BasicData::CloneIndexMap(0, 2), BasicData::False]);
         expected_data.data_block_mut().cursor = 3;
 
         assert_eq!(index, 2);
@@ -390,7 +390,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..33,
+            40..43,
             vec![
                 BasicData::Type(GarnishDataType::Number),
                 BasicData::CloneIndexMap(0, 2),
@@ -413,7 +413,7 @@ mod clone {
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data
             .data_mut()
-            .splice(30..33, vec![BasicData::Char('a'), BasicData::CloneIndexMap(0, 2), BasicData::Char('a')]);
+            .splice(40..43, vec![BasicData::Char('a'), BasicData::CloneIndexMap(0, 2), BasicData::Char('a')]);
         expected_data.data_block_mut().cursor = 3;
 
         assert_eq!(index, 2);
@@ -430,7 +430,7 @@ mod clone {
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data
             .data_mut()
-            .splice(30..33, vec![BasicData::Byte(1), BasicData::CloneIndexMap(0, 2), BasicData::Byte(1)]);
+            .splice(40..43, vec![BasicData::Byte(1), BasicData::CloneIndexMap(0, 2), BasicData::Byte(1)]);
         expected_data.data_block_mut().cursor = 3;
 
         assert_eq!(index, 2);
@@ -446,7 +446,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..33,
+            40..43,
             vec![BasicData::Symbol(100), BasicData::CloneIndexMap(0, 2), BasicData::Symbol(100)],
         );
         expected_data.data_block_mut().cursor = 3;
@@ -464,7 +464,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..33,
+            40..43,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::CloneIndexMap(0, 2),
@@ -486,7 +486,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..33,
+            40..43,
             vec![BasicData::Expression(100), BasicData::CloneIndexMap(0, 2), BasicData::Expression(100)],
         );
         expected_data.data_block_mut().cursor = 3;
@@ -504,7 +504,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..33,
+            40..43,
             vec![BasicData::External(100), BasicData::CloneIndexMap(0, 2), BasicData::External(100)],
         );
         expected_data.data_block_mut().cursor = 3;
@@ -522,7 +522,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..37,
+            40..47,
             vec![
                 BasicData::SymbolList(2),
                 BasicData::Symbol(100),
@@ -547,9 +547,9 @@ mod clone {
         let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().resize(70, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..43,
+            40..53,
             vec![
                 BasicData::CharList(5),
                 BasicData::Char('h'),
@@ -568,7 +568,7 @@ mod clone {
         );
         expected_data.data_block_mut().cursor = 13;
         expected_data.data_block_mut().size = 20;
-        expected_data.custom_data_block_mut().start = 50;
+        expected_data.custom_data_block_mut().start = 60;
 
         assert_eq!(index, 7);
         assert_eq!(data, expected_data);
@@ -583,7 +583,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..39,
+            40..49,
             vec![
                 BasicData::ByteList(3),
                 BasicData::Byte(100),
@@ -612,7 +612,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..39,
+            40..49,
             vec![
                 BasicData::True,
                 BasicData::False,
@@ -640,9 +640,9 @@ mod clone {
         let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().resize(70, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..45,
+            40..55,
             vec![
                 BasicData::True,
                 BasicData::False,
@@ -663,7 +663,7 @@ mod clone {
         );
         expected_data.data_block_mut().cursor = 15;
         expected_data.data_block_mut().size = 20;
-        expected_data.custom_data_block_mut().start = 50;
+        expected_data.custom_data_block_mut().start = 60;
         expected_data.custom_data_block_mut().size = 10;
 
         assert_eq!(index, 14);
@@ -680,7 +680,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..39,
+            40..49,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::Number(200.into()),
@@ -709,7 +709,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..39,
+            40..49,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::Number(200.into()),
@@ -738,7 +738,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..39,
+            40..49,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::Number(200.into()),
@@ -767,7 +767,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..39,
+            40..49,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::Number(200.into()),
@@ -797,9 +797,9 @@ mod clone {
         let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(70, BasicData::Empty);
+        expected_data.data_mut().resize(80, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..54,
+            40..64,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::Number(200.into()),
@@ -829,7 +829,7 @@ mod clone {
         );
         expected_data.data_block_mut().cursor = 24;
         expected_data.data_block_mut().size = 30;
-        expected_data.custom_data_block_mut().start = 60;
+        expected_data.custom_data_block_mut().start = 70;
 
         assert_eq!(index, 17);
         assert_eq!(data, expected_data);
@@ -846,9 +846,9 @@ mod clone {
         let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(90, BasicData::Empty);
+        expected_data.data_mut().resize(100, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..72,
+            40..82,
             vec![
                 BasicData::Symbol(100),
                 BasicData::Number(100.into()),
@@ -896,7 +896,7 @@ mod clone {
         );
         expected_data.data_block_mut().cursor = 42;
         expected_data.data_block_mut().size = 50;
-        expected_data.custom_data_block_mut().start = 80;
+        expected_data.custom_data_block_mut().start = 90;
 
         assert_eq!(index, 35);
         assert_eq!(data, expected_data);
@@ -917,9 +917,9 @@ mod clone {
         let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(70, BasicData::Empty);
+        expected_data.data_mut().resize(80, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..57,
+            40..67,
             vec![
                 BasicData::Number(100.into()),       // 0
                 BasicData::Symbol(200),              // 1
@@ -952,7 +952,7 @@ mod clone {
         );
         expected_data.data_block_mut().cursor = 27;
         expected_data.data_block_mut().size = 30;
-        expected_data.custom_data_block_mut().start = 60;
+        expected_data.custom_data_block_mut().start = 70;
 
         assert_eq!(index, 20);
         assert_eq!(data, expected_data);
@@ -1010,9 +1010,9 @@ mod clone {
         let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().resize(70, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..42,
+            40..52,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::ValueRoot(0),
@@ -1030,7 +1030,7 @@ mod clone {
         );
         expected_data.data_block_mut().cursor = 12;
         expected_data.data_block_mut().size = 20;
-        expected_data.custom_data_block_mut().start = 50;
+        expected_data.custom_data_block_mut().start = 60;
 
         assert_eq!(index, 11);
         assert_eq!(data, expected_data);
@@ -1048,9 +1048,9 @@ mod clone {
         let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().resize(70, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..42,
+            40..52,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::RegisterRoot(0),
@@ -1068,7 +1068,7 @@ mod clone {
         );
         expected_data.data_block_mut().cursor = 12;
         expected_data.data_block_mut().size = 20;
-        expected_data.custom_data_block_mut().start = 50;
+        expected_data.custom_data_block_mut().start = 60;
 
         assert_eq!(index, 11);
         assert_eq!(data, expected_data);
@@ -1086,7 +1086,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..36,
+            40..46,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::InstructionWithData(Instruction::Add, 0),
@@ -1111,7 +1111,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
         expected_data.data_mut().splice(
-            30..33,
+            40..43,
             vec![BasicData::JumpPoint(100), BasicData::CloneIndexMap(0, 2), BasicData::JumpPoint(100)],
         );
         expected_data.data_block_mut().cursor = 3;
@@ -1133,9 +1133,9 @@ mod clone {
         let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().resize(70, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..46,
+            40..56,
             vec![
                 BasicData::JumpPoint(10),
                 BasicData::FrameRoot,
@@ -1157,7 +1157,7 @@ mod clone {
         );
         expected_data.data_block_mut().cursor = 16;
         expected_data.data_block_mut().size = 20;
-        expected_data.custom_data_block_mut().start = 50;
+        expected_data.custom_data_block_mut().start = 60;
 
         assert_eq!(index, 15);
         assert_eq!(data, expected_data);
@@ -1177,9 +1177,9 @@ mod clone {
         let cloned_index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(60, BasicData::Empty);
+        expected_data.data_mut().resize(70, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..45,
+            40..55,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::Number(200.into()),
@@ -1200,7 +1200,7 @@ mod clone {
         );
         expected_data.data_block_mut().cursor = 15;
         expected_data.data_block_mut().size = 20;
-        expected_data.custom_data_block_mut().start = 50;
+        expected_data.custom_data_block_mut().start = 60;
 
         println!("{}", data.dump_data_block());
 
@@ -1241,7 +1241,7 @@ mod clone {
 
         let mut expected_data = BasicGarnishData::<TestCustom>::new().unwrap();
         expected_data.data_mut().splice(
-            30..36,
+            40..46,
             vec![
                 BasicData::Number(100.into()),
                 BasicData::Custom(TestCustom { value: 0, name: "test" }),

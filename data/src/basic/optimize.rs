@@ -104,9 +104,9 @@ mod optimize {
         data.optimize_data_block_and_retain(&[]).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(80, BasicData::Empty);
+        expected_data.data_mut().resize(90, BasicData::Empty);
         expected_data.data_mut().splice(
-            30..49,
+            40..59,
             vec![
                 BasicData::Unit,
                 BasicData::Number(100.into()),
@@ -133,8 +133,7 @@ mod optimize {
         expected_data.set_data_retention_count(23);
         expected_data.data_block_mut().cursor = 23;
         expected_data.data_block_mut().size = 40;
-        expected_data.data_block_mut().start = 30;
-        expected_data.custom_data_block_mut().start = 70;
+        expected_data.custom_data_block_mut().start = 80;
         expected_data.custom_data_block_mut().size = 10;
 
         assert_eq!(data, expected_data);
@@ -153,8 +152,8 @@ mod optimize {
         data.optimize_data_block_and_retain(&[]).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(70, BasicData::Empty);
-        expected_data.data_mut().splice(30..36, vec![
+        expected_data.data_mut().resize(80, BasicData::Empty);
+        expected_data.data_mut().splice(40..46, vec![
             BasicData::Number(1234.into()),
             BasicData::Char('a'),
             BasicData::Number(100.into()),
@@ -165,7 +164,7 @@ mod optimize {
 
         expected_data.data_block_mut().cursor = 6;
         expected_data.data_block_mut().size = 30;
-        expected_data.custom_data_block_mut().start = 60;
+        expected_data.custom_data_block_mut().start = 70;
         expected_data.set_current_register(Some(5));
 
         assert_eq!(data, expected_data);
@@ -184,8 +183,8 @@ mod optimize {
         data.optimize_data_block_and_retain(&[]).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(70, BasicData::Empty);
-        expected_data.data_mut().splice(30..36, vec![
+        expected_data.data_mut().resize(80, BasicData::Empty);
+        expected_data.data_mut().splice(40..46, vec![
             BasicData::Number(1234.into()),
             BasicData::Char('a'),
             BasicData::Number(100.into()),
@@ -196,7 +195,7 @@ mod optimize {
 
         expected_data.data_block_mut().cursor = 6;
         expected_data.data_block_mut().size = 30;
-        expected_data.custom_data_block_mut().start = 60;
+        expected_data.custom_data_block_mut().start = 70;
         expected_data.set_current_value(Some(5));
 
         assert_eq!(data, expected_data);
@@ -216,8 +215,8 @@ mod optimize {
         data.optimize_data_block_and_retain(&[]).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(80, BasicData::Empty);
-        expected_data.data_mut().splice(30..37, vec![
+        expected_data.data_mut().resize(90, BasicData::Empty);
+        expected_data.data_mut().splice(40..47, vec![
             BasicData::Number(1234.into()),
             BasicData::Char('a'),
             BasicData::Pair(0, 1),
@@ -229,7 +228,7 @@ mod optimize {
 
         expected_data.data_block_mut().cursor = 7;
         expected_data.data_block_mut().size = 40;
-        expected_data.custom_data_block_mut().start = 70;
+        expected_data.custom_data_block_mut().start = 80;
         expected_data.set_current_frame(Some(6));
         
         assert_eq!(data, expected_data);
@@ -245,8 +244,8 @@ mod optimize {
         let result = data.optimize_data_block_and_retain(&[index]).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(70, BasicData::Empty);
-        expected_data.data_mut().splice(30..33, vec![
+        expected_data.data_mut().resize(80, BasicData::Empty);
+        expected_data.data_mut().splice(40..43, vec![
             BasicData::Number(1234.into()),
             BasicData::Char('a'),
             BasicData::Pair(0, 1),
@@ -254,7 +253,7 @@ mod optimize {
 
         expected_data.data_block_mut().cursor = 3;
         expected_data.data_block_mut().size = 30;
-        expected_data.custom_data_block_mut().start = 60;
+        expected_data.custom_data_block_mut().start = 70;
         
         assert_eq!(result, vec![2]);
         assert_eq!(data, expected_data);
@@ -289,9 +288,9 @@ mod optimize {
         let result = data.optimize_data_block_and_retain(&[additional_retained_index, additional_retained_pair_index]).unwrap();
 
         let mut expected_data = BasicGarnishData::<()>::new().unwrap();
-        expected_data.data_mut().resize(100, BasicData::Empty);
+        expected_data.data_mut().resize(110, BasicData::Empty);
         
-        expected_data.data_mut().splice(30..46, vec![
+        expected_data.data_mut().splice(40..56, vec![
             BasicData::Number(100.into()),
             BasicData::Number(700.into()),
             BasicData::Number(800.into()),
@@ -313,8 +312,7 @@ mod optimize {
         expected_data.set_data_retention_count(1);
         expected_data.data_block_mut().cursor = 16;
         expected_data.data_block_mut().size = 60;
-        expected_data.data_block_mut().start = 30;
-        expected_data.custom_data_block_mut().start = 90;
+        expected_data.custom_data_block_mut().start = 100;
         expected_data.custom_data_block_mut().size = 10;
         expected_data.set_current_value(Some(11));
         expected_data.set_current_register(Some(15));

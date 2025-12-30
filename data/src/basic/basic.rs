@@ -5,7 +5,6 @@ use std::usize;
 use garnish_lang_traits::GarnishDataType;
 use garnish_lang_traits::Instruction;
 
-use crate::BasicDataFactory;
 use crate::ConversionDelegate;
 use crate::basic::clone::CloneDelegate;
 use crate::basic::ordering::OrderingDelegate;
@@ -68,6 +67,7 @@ where
     instruction_block: StorageBlock,
     jump_table_block: StorageBlock,
     symbol_table_block: StorageBlock,
+    expression_symbol_block: StorageBlock,
     data_block: StorageBlock,
     custom_data_block: StorageBlock,
 }
@@ -85,6 +85,7 @@ where
             StorageSettings::default(),
             StorageSettings::default(),
             StorageSettings::default(),
+            StorageSettings::default(),
         )
     }
 
@@ -92,6 +93,7 @@ where
         instruction_settings: StorageSettings,
         jump_table_settings: StorageSettings,
         symbol_table_settings: StorageSettings,
+        expression_symbol_settings: StorageSettings,
         data_settings: StorageSettings,
         custom_data_settings: StorageSettings,
     ) -> Result<Self, DataError> {
@@ -105,6 +107,7 @@ where
             instruction_block: StorageBlock::new(instruction_settings.initial_size(), instruction_settings.clone()),
             jump_table_block: StorageBlock::new(jump_table_settings.initial_size(), jump_table_settings.clone()),
             symbol_table_block: StorageBlock::new(symbol_table_settings.initial_size(), symbol_table_settings.clone()),
+            expression_symbol_block: StorageBlock::new(expression_symbol_settings.initial_size(), expression_symbol_settings.clone()),
             data_block: StorageBlock::new(data_settings.initial_size(), data_settings.clone()),
             custom_data_block: StorageBlock::new(custom_data_settings.initial_size(), custom_data_settings.clone()),
         };
@@ -113,6 +116,7 @@ where
             instruction_settings.initial_size,
             jump_table_settings.initial_size,
             symbol_table_settings.initial_size,
+            expression_symbol_settings.initial_size,
             data_settings.initial_size,
             custom_data_settings.initial_size,
         )?;
@@ -136,6 +140,10 @@ where
         self.symbol_table_block.cursor
     }
 
+    pub fn expression_symbol_block_size(&self) -> usize {
+        self.expression_symbol_block.cursor
+    }
+
     pub fn custom_data_size(&self) -> usize {
         self.custom_data_block.cursor
     }
@@ -156,12 +164,16 @@ where
         self.symbol_table_block.size
     }
 
+    pub fn allocated_expression_symbol_block_size(&self) -> usize {
+        self.expression_symbol_block.size
+    }
+
     pub fn allocated_custom_data_size(&self) -> usize {
         self.custom_data_block.size
     }
 
     pub fn total_allocated_size(&self) -> usize {
-        self.instruction_block.size + self.jump_table_block.size + self.symbol_table_block.size + self.data_block.size + self.custom_data_block.size
+        self.instruction_block.size + self.jump_table_block.size + self.symbol_table_block.size + self.expression_symbol_block.size + self.data_block.size + self.custom_data_block.size
     }
 
     pub(crate) fn get_basic_data(&self, index: usize) -> Option<&BasicData<T>> {
@@ -190,6 +202,7 @@ where
                 self.instruction_block.next_size(),
                 self.jump_table_block.size,
                 self.symbol_table_block.size,
+                self.expression_symbol_block.size,
                 self.data_block.size,
                 self.custom_data_block.size,
             )?;
@@ -207,6 +220,7 @@ where
                 self.instruction_block.size,
                 self.jump_table_block.next_size(),
                 self.symbol_table_block.size,
+                self.expression_symbol_block.size,
                 self.data_block.size,
                 self.custom_data_block.size,
             )?;
@@ -220,6 +234,7 @@ where
                 self.instruction_block.size,
                 self.jump_table_block.size,
                 self.symbol_table_block.next_size(),
+                self.expression_symbol_block.size,
                 self.data_block.size,
                 self.custom_data_block.size,
             )?;
@@ -236,12 +251,36 @@ where
         Ok(())
     }
 
+    pub fn push_to_expression_symbol_block(&mut self, symbol: u64, value: usize) -> Result<(), DataError> {
+        if self.expression_symbol_block.cursor >= self.expression_symbol_block.size {
+            self.reallocate_heap(
+                self.instruction_block.size,
+                self.jump_table_block.size,
+                self.symbol_table_block.size,
+                self.expression_symbol_block.next_size(),
+                self.data_block.size,
+                self.custom_data_block.size,
+            )?;
+        }
+        Self::push_to_block(&mut self.data, &mut self.expression_symbol_block, BasicData::AssociativeItem(symbol, value));
+        let sort_range = &mut self.data[self.expression_symbol_block.start..self.expression_symbol_block.start + self.expression_symbol_block.cursor];
+        sort_range.sort_by(|a, b| match (a, b) {
+            (BasicData::AssociativeItem(sym1, _), BasicData::AssociativeItem(sym2, _)) => sym1.cmp(sym2),
+            (BasicData::AssociativeItem(_, _), _) => Ordering::Less,
+            (_, BasicData::AssociativeItem(_, _)) => Ordering::Greater,
+            _ => Ordering::Equal,
+        });
+
+        Ok(())
+    }
+
     pub fn push_to_data_block(&mut self, data: BasicData<T>) -> Result<usize, DataError> {
         if self.data_block.cursor >= self.data_block.size {
             self.reallocate_heap(
                 self.instruction_block.size,
                 self.jump_table_block.size,
                 self.symbol_table_block.size,
+                self.expression_symbol_block.size,
                 self.data_block.next_size(),
                 self.custom_data_block.size,
             )?;
@@ -255,6 +294,7 @@ where
                 self.instruction_block.size,
                 self.jump_table_block.size,
                 self.symbol_table_block.size,
+                self.expression_symbol_block.size,
                 self.data_block.size,
                 self.custom_data_block.next_size(),
             )?;
@@ -284,6 +324,11 @@ where
         }
     }
 
+    pub fn get_symbol_expression(&self, symbol: u64) -> Result<Option<usize>, DataError> {
+        let search_slice = &self.data()[self.expression_symbol_block().start..self.expression_symbol_block().start + self.expression_symbol_block().cursor];
+        search_for_associative_item(search_slice, symbol)
+    }
+
     pub(crate) fn data(&self) -> &Vec<BasicData<T>> {
         &self.data
     }
@@ -308,6 +353,10 @@ where
         &self.symbol_table_block
     }
 
+    pub(crate) fn expression_symbol_block(&self) -> &StorageBlock {
+        &self.expression_symbol_block
+    }
+
     pub(crate) fn instruction_block_mut(&mut self) -> &mut StorageBlock {
         &mut self.instruction_block
     }
@@ -318,6 +367,10 @@ where
 
     pub(crate) fn symbol_table_block_mut(&mut self) -> &mut StorageBlock {
         &mut self.symbol_table_block
+    }
+
+    pub(crate) fn expression_symbol_block_mut(&mut self) -> &mut StorageBlock {
+        &mut self.expression_symbol_block
     }
 
     pub(crate) fn custom_data_block(&self) -> &StorageBlock {
@@ -376,6 +429,7 @@ pub mod utilities {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap()
@@ -388,6 +442,7 @@ pub mod utilities {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap()
     }
 
@@ -395,6 +450,7 @@ pub mod utilities {
         BasicGarnishDataUnit::new_with_settings(
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
@@ -427,10 +483,11 @@ mod tests {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         );
 
-        let expected_data = vec![BasicData::Empty; 40];
+        let expected_data = vec![BasicData::Empty; 50];
 
         let mut expected_instruction_block = StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)));
         expected_instruction_block.start = 0;
@@ -441,11 +498,14 @@ mod tests {
         let mut expected_symbol_table_block = StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)));
         expected_symbol_table_block.start = 20;
 
+        let mut expected_expression_symbol_block = StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)));
+        expected_expression_symbol_block.start = 30;
+
         let mut expected_data_block = StorageBlock::new(10, StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)));
-        expected_data_block.start = 30;
+        expected_data_block.start = 40;
 
         let mut expected_custom_data_block = StorageBlock::new(0, StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)));
-        expected_custom_data_block.start = 40;
+        expected_custom_data_block.start = 50;
 
         assert_eq!(
             data,
@@ -459,6 +519,7 @@ mod tests {
                 instruction_block: expected_instruction_block,
                 jump_table_block: expected_jump_table_block,
                 symbol_table_block: expected_symbol_table_block,
+                expression_symbol_block: expected_expression_symbol_block,
                 data_block: expected_data_block,
                 custom_data_block: expected_custom_data_block,
             })
@@ -497,6 +558,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         let index = data.push_to_instruction_block(Instruction::Add, None).unwrap();
         assert_eq!(index, 0);
@@ -516,6 +578,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         let index = data.push_to_jump_table_block(100).unwrap();
         assert_eq!(index, 0);
@@ -530,6 +593,7 @@ mod tests {
     #[test]
     fn data_block_resizes_when_pushed_past_max_size() {
         let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
@@ -556,6 +620,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         for _ in 0..15 {
             data.push_to_instruction_block(Instruction::Add, None).unwrap();
@@ -574,6 +639,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new_with_settings(
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
@@ -598,18 +664,23 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
         data.push_to_instruction_block(Instruction::Add, None).unwrap();
         data.push_to_jump_table_block(200).unwrap();
         data.push_to_symbol_table_block(100, 123).unwrap();
+        data.push_to_expression_symbol_block(50, 0).unwrap();
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        data.push_to_custom_data_block(()).unwrap();
 
-        let mut expected_data = vec![BasicData::Empty; 40];
+        let mut expected_data = vec![BasicData::Empty; 60];
         expected_data[0] = BasicData::Instruction(Instruction::Add);
         expected_data[10] = BasicData::JumpPoint(200);
         expected_data[20] = BasicData::AssociativeItem(100, 123);
-        expected_data[30] = BasicData::Number(100.into());
+        expected_data[30] = BasicData::AssociativeItem(50, 0);
+        expected_data[40] = BasicData::Number(100.into());
+        expected_data[50] = BasicData::Custom(());
 
         assert_eq!(data.instruction_size(), 1);
         assert_eq!(data.jump_table_size(), 1);
@@ -619,6 +690,8 @@ mod tests {
         assert_eq!(data.allocated_jump_table_size(), 10);
         assert_eq!(data.allocated_symbol_table_size(), 10);
         assert_eq!(data.allocated_data_size(), 10);
+        assert_eq!(data.allocated_expression_symbol_block_size(), 10);
+        assert_eq!(data.allocated_custom_data_size(), 10);
         assert_eq!(data.data, expected_data);
     }
 
@@ -630,18 +703,23 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
+        data.push_to_custom_data_block(()).unwrap();
         data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        data.push_to_expression_symbol_block(50, 0).unwrap();
         data.push_to_symbol_table_block(100, 0).unwrap();
         data.push_to_jump_table_block(200).unwrap();
         data.push_to_instruction_block(Instruction::Add, None).unwrap();
 
-        let mut expected_data = vec![BasicData::Empty; 40];
+        let mut expected_data = vec![BasicData::Empty; 60];
         expected_data[0] = BasicData::Instruction(Instruction::Add);
         expected_data[10] = BasicData::JumpPoint(200);
         expected_data[20] = BasicData::AssociativeItem(100, 0);
-        expected_data[30] = BasicData::Number(100.into());
+        expected_data[30] = BasicData::AssociativeItem(50, 0);
+        expected_data[40] = BasicData::Number(100.into());
+        expected_data[50] = BasicData::Custom(());
 
         assert_eq!(data.instruction_size(), 1);
         assert_eq!(data.jump_table_size(), 1);
@@ -651,12 +729,15 @@ mod tests {
         assert_eq!(data.allocated_jump_table_size(), 10);
         assert_eq!(data.allocated_symbol_table_size(), 10);
         assert_eq!(data.allocated_data_size(), 10);
+        assert_eq!(data.allocated_expression_symbol_block_size(), 10);
+        assert_eq!(data.allocated_custom_data_size(), 10);
         assert_eq!(data.data, expected_data);
     }
 
     #[test]
     fn push_to_data_block_exceeds_max_items() {
         let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
@@ -687,6 +768,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
         for _ in 0..10 {
@@ -709,6 +791,7 @@ mod tests {
         let mut data = BasicGarnishDataUnit::new_with_settings(
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
@@ -737,6 +820,7 @@ mod tests {
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         data.push_to_symbol_table_block(100, 0).unwrap();
         assert_eq!(data.symbol_table_block.cursor, 1);
@@ -751,12 +835,13 @@ mod tests {
             StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         for _ in 0..15 {
             data.push_to_symbol_table_block(100, 0).unwrap();
         }
 
-        let mut expected_data = vec![BasicData::<()>::Empty; 40];
+        let mut expected_data = vec![BasicData::<()>::Empty; 50];
         for i in 20..35 {
             expected_data[i] = BasicData::AssociativeItem(100, 0);
         }
@@ -771,6 +856,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
@@ -798,6 +884,7 @@ mod tests {
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
         data.push_to_symbol_table_block(300, 0).unwrap();
         data.push_to_symbol_table_block(600, 0).unwrap();
@@ -810,6 +897,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
@@ -830,6 +918,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
@@ -855,6 +944,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
@@ -880,6 +970,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
@@ -906,6 +997,154 @@ mod tests {
     }
 
     #[test]
+    fn push_to_expression_symbol_block() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+        data.push_to_expression_symbol_block(100, 0).unwrap();
+        assert_eq!(data.expression_symbol_block.cursor, 1);
+        assert_eq!(data.expression_symbol_block.size, 10);
+    }
+
+    #[test]
+    fn expression_symbol_block_resizes_when_pushed_past_max_size() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+        for _ in 0..15 {
+            data.push_to_expression_symbol_block(100, 0).unwrap();
+        }
+
+        let mut expected_data = vec![BasicData::<()>::Empty; 50];
+        for i in 30..45 {
+            expected_data[i] = BasicData::AssociativeItem(100, 0);
+        }
+
+        assert_eq!(data.expression_symbol_block_size(), 15);
+        assert_eq!(data.allocated_expression_symbol_block_size(), 20);
+    }
+
+    #[test]
+    fn push_to_expression_symbol_block_exceeds_max_items() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+
+        for _ in 0..10 {
+            data.push_to_expression_symbol_block(100, 0).unwrap();
+        }
+
+        let result = data.push_to_expression_symbol_block(100, 0);
+
+        assert_eq!(
+            result,
+            Err(DataError::new(
+                "Expression symbol block size exceeds max items",
+                DataErrorType::ExpressionSymbolBlockExceededMaxItems(20, 10)
+            ))
+        );
+    }
+
+    #[test]
+    fn push_to_expression_symbol_block_is_sorted() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 0, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+        data.push_to_expression_symbol_block(300, 0).unwrap();
+        data.push_to_expression_symbol_block(600, 0).unwrap();
+        data.push_to_expression_symbol_block(100, 0).unwrap();
+        data.push_to_expression_symbol_block(500, 0).unwrap();
+        data.push_to_expression_symbol_block(200, 0).unwrap();
+        data.push_to_expression_symbol_block(400, 0).unwrap();
+
+        let mut expected_data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 0, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+
+        expected_data.data[0] = BasicData::AssociativeItem(100, 0);
+        expected_data.data[1] = BasicData::AssociativeItem(200, 0);
+        expected_data.data[2] = BasicData::AssociativeItem(300, 0);
+        expected_data.data[3] = BasicData::AssociativeItem(400, 0);
+        expected_data.data[4] = BasicData::AssociativeItem(500, 0);
+        expected_data.data[5] = BasicData::AssociativeItem(600, 0);
+        expected_data.expression_symbol_block.cursor = 6;
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn get_symbol_expression() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+        let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        data.push_to_expression_symbol_block(100, index).unwrap();
+
+        let index = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
+        data.push_to_expression_symbol_block(50, index).unwrap();
+
+        let index = data.push_to_data_block(BasicData::Number(300.into())).unwrap();
+        data.push_to_expression_symbol_block(200, index).unwrap();
+
+        let result = data.get_symbol_expression(50).unwrap();
+
+        assert_eq!(result, Some(1));
+    }
+
+    #[test]
+    fn get_symbol_expression_not_found() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+        let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        data.push_to_expression_symbol_block(100, index).unwrap();
+
+        let index = data.push_to_data_block(BasicData::Number(200.into())).unwrap();
+        data.push_to_expression_symbol_block(50, index).unwrap();
+
+        let index = data.push_to_data_block(BasicData::Number(300.into())).unwrap();
+        data.push_to_expression_symbol_block(200, index).unwrap();
+
+        let result = data.get_symbol_expression(150).unwrap();
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
     fn push_to_custom_data_block() {
         #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
         struct TestCustom {
@@ -915,6 +1154,7 @@ mod tests {
         impl BasicDataCustom for TestCustom {}
 
         let mut data = BasicGarnishData::<TestCustom>::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),

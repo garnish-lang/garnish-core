@@ -21,6 +21,7 @@ pub enum DataErrorType {
     InstructionBlockExceededMaxItems(usize, usize),
     JumpTableBlockExceededMaxItems(usize, usize),
     SymbolTableBlockExceededMaxItems(usize, usize),
+    ExpressionSymbolBlockExceededMaxItems(usize, usize),
     DataBlockExceededMaxItems(usize, usize),
     CouldNotParse(String, GarnishDataType),
     NumberToLargeForByteValue(String),

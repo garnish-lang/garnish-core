@@ -2740,6 +2740,7 @@ mod tests {
         expected_data.data_mut()[20] = BasicData::Char('l');
         expected_data.symbol_table_block_mut().cursor = 1;
         expected_data.symbol_table_block_mut().size = 10;
+        expected_data.expression_symbol_block_mut().start = 10;
         expected_data.data_block_mut().start = 10;
         expected_data.data_block_mut().size = 20;
         expected_data.data_block_mut().cursor = 11;
@@ -2906,6 +2907,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
@@ -2919,6 +2921,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
@@ -2929,6 +2932,7 @@ mod tests {
     #[test]
     fn custom_data_deferred() {
         let mut data = BasicGarnishData::<Foo>::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
