@@ -329,6 +329,19 @@ where
         search_for_associative_item(search_slice, symbol)
     }
 
+    pub fn get_expression_string(&self, expression_index: usize) -> Result<Option<String>, DataError> {
+        let expression_slice = &self.data()[self.expression_symbol_block().start..self.expression_symbol_block().start + self.expression_symbol_block().cursor];
+        
+        for item in expression_slice {
+            let (symbol, value) = item.as_associative_item()?;
+            if value == expression_index {
+                return self.get_symbol_string(symbol);
+            }
+        }
+        
+        Ok(None)
+    }
+
     pub(crate) fn data(&self) -> &Vec<BasicData<T>> {
         &self.data
     }
@@ -1141,6 +1154,75 @@ mod tests {
         data.push_to_expression_symbol_block(200, index).unwrap();
 
         let result = data.get_symbol_expression(150).unwrap();
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn get_expression_string() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+        
+        // Create expression data
+        let expr_index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        
+        // Map symbol 50 to expression index
+        data.push_to_expression_symbol_block(50, expr_index).unwrap();
+        
+        // Map symbol 50 to string "my expression"
+        let str_index = data.push_object_to_data_block(BasicObject::CharList("my expression".to_string())).unwrap();
+        data.push_to_symbol_table_block(50, str_index).unwrap();
+
+        let result = data.get_expression_string(expr_index).unwrap();
+
+        assert_eq!(result, Some("my expression".to_string()));
+    }
+
+    #[test]
+    fn get_expression_string_not_found_expression() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+        
+        // Create expression data but don't map it
+        let expr_index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+
+        let result = data.get_expression_string(expr_index).unwrap();
+
+        assert_eq!(result, None);
+    }
+
+    #[test]
+    fn get_expression_string_not_found_symbol() {
+        let mut data = BasicGarnishDataUnit::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+        ).unwrap();
+        
+        // Create expression data
+        let expr_index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
+        
+        // Map symbol 50 to expression index
+        data.push_to_expression_symbol_block(50, expr_index).unwrap();
+        
+        // Don't map symbol 50 to a string
+
+        let result = data.get_expression_string(expr_index).unwrap();
 
         assert_eq!(result, None);
     }
