@@ -17,6 +17,31 @@ impl<T> BasicGarnishData<T> where T: BasicDataCustom {
         self.dump_block(self.symbol_table_block())
     }
 
+    pub fn dump_expression_symbol_block(&self) -> String {
+        self.dump_block(self.expression_symbol_block())
+    }
+
+    pub fn dump_custom_block(&self) -> String {
+        self.dump_block(self.custom_data_block())
+    }
+
+    pub fn dump_all_blocks(&self) -> String {
+        let mut s = vec![];
+        s.push("Instruction Block:".to_string());
+        s.push(self.dump_instruction_block());
+        s.push("Jump Table Block:".to_string());
+        s.push(self.dump_jump_table_block());
+        s.push("Data Block:".to_string());
+        s.push(self.dump_data_block());
+        s.push("Symbol Table Block:".to_string());
+        s.push(self.dump_symbol_table_block());
+        s.push("Expression Symbol Block:".to_string());
+        s.push(self.dump_expression_symbol_block());
+        s.push("Custom Data Block:".to_string());
+        s.push(self.dump_custom_block());
+        s.join("\n")
+    }
+
     fn dump_block(&self, block: &StorageBlock) -> String {
         let mut s = vec![];
         for i in block.start..block.start + block.cursor {
