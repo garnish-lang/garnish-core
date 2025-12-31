@@ -1,9 +1,10 @@
 use super::{BasicData, BasicDataCustom, BasicGarnishData};
-use crate::DataError;
+use crate::{DataError, basic::companion::BasicDataCompanion};
 
-pub fn merge_to_symbol_list<T>(data: &mut BasicGarnishData<T>, first: usize, second: usize) -> Result<usize, DataError>
+pub fn merge_to_symbol_list<T, Companion>(data: &mut BasicGarnishData<T, Companion>, first: usize, second: usize) -> Result<usize, DataError>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     match (data.get_basic_data(first), data.get_basic_data(second)) {
         (Some(BasicData::Symbol(sym1)), Some(BasicData::Symbol(sym2))) => {

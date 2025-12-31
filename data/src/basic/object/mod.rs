@@ -31,9 +31,10 @@ where
     Custom(Box<T>),
 }
 
-impl<T> BasicGarnishData<T>
+impl<T, Companion> BasicGarnishData<T, Companion>
 where
     T: BasicDataCustom,
+    Companion: crate::basic::companion::BasicDataCompanion<T>,
 {
     pub fn push_object_to_data_block(&mut self, obj: BasicObject<T>) -> Result<usize, DataError> {
         match obj {

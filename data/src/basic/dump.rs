@@ -1,6 +1,10 @@
-use crate::{BasicDataCustom, BasicGarnishData, basic::storage::StorageBlock};
+use crate::{BasicDataCustom, BasicGarnishData, basic::storage::StorageBlock, basic::companion::BasicDataCompanion};
 
-impl<T> BasicGarnishData<T> where T: BasicDataCustom {
+impl<T, Companion> BasicGarnishData<T, Companion> 
+where 
+    T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
+{
     pub fn dump_instruction_block(&self) -> String {
         self.dump_block(self.instruction_block())
     }

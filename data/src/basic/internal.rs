@@ -4,9 +4,10 @@ use crate::{BasicData, DataError};
 
 use super::BasicGarnishData;
 
-impl<T> BasicGarnishData<T>
+impl<T, Companion> BasicGarnishData<T, Companion>
 where
     T: crate::basic::BasicDataCustom,
+    Companion: crate::basic::companion::BasicDataCompanion<T>,
 {
     pub fn get_from_data_block_ensure_index(&self, index: usize) -> Result<&BasicData<T>, DataError> {
         if index >= self.data_block().cursor {
@@ -189,10 +190,11 @@ where
 
 #[cfg(test)]
 mod tests {
+    use crate::basic::storage::{ReallocationStrategy, StorageSettings};
     use crate::basic::utilities::test_data;
     use crate::basic::BasicGarnishData;
     use crate::error::DataErrorType;
-    use crate::{BasicData, DataError};
+    use crate::{BasicData, BasicDataCompanion, DataError};
 
     #[test]
     fn get_from_data_block_ensure_index() {
@@ -258,22 +260,39 @@ mod tests {
         assert_eq!(data.get_from_data_block_ensure_index(1).unwrap(), &BasicData::Number(200.into()));
     }
 
-    #[test]
-    fn get_from_custom_data_block() {
-        #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
-        struct TestCustom {
-            value: String,
+    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
+    struct TestCustom {
+        value: String,
+    }
+
+    impl crate::basic::BasicDataCustom for TestCustom {}
+
+    #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd)]
+    struct TestCustomCompanion;
+
+    impl BasicDataCompanion<TestCustom> for TestCustomCompanion {
+        fn resolve(_data: &mut BasicGarnishData<TestCustom, Self>, _symbol: u64) -> Result<bool, crate::DataError> {
+            Ok(false)
         }
 
-        impl crate::basic::BasicDataCustom for TestCustom {}
+        fn apply(_data: &mut BasicGarnishData<TestCustom, Self>, _external_value: usize, _input_addr: usize) -> Result<bool, crate::DataError> {
+            Ok(false)
+        }
 
-        let mut data = BasicGarnishData::<TestCustom>::new_with_settings(
-            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
-            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
-            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
-            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
-            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
-            crate::basic::storage::StorageSettings::new(10, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+        fn defer_op(_data: &mut BasicGarnishData<TestCustom, Self>, _operation: garnish_lang_traits::Instruction, _left: (garnish_lang_traits::GarnishDataType, usize), _right: (garnish_lang_traits::GarnishDataType, usize)) -> Result<bool, crate::DataError> {
+            Ok(false)
+        }
+    }
+
+    #[test]
+    fn get_from_custom_data_block() {
+        let mut data = BasicGarnishData::<TestCustom, TestCustomCompanion>::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
         let custom_value1 = TestCustom { value: "first".to_string() };
@@ -298,20 +317,13 @@ mod tests {
 
     #[test]
     fn get_from_custom_data_block_index_out_of_bounds() {
-        #[derive(Debug, Clone, PartialEq, Eq, PartialOrd)]
-        struct TestCustom {
-            value: String,
-        }
-
-        impl crate::basic::BasicDataCustom for TestCustom {}
-
-        let data = BasicGarnishData::<TestCustom>::new_with_settings(
-            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
-            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
-            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
-            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
-            crate::basic::storage::StorageSettings::new(0, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
-            crate::basic::storage::StorageSettings::new(10, usize::MAX, crate::basic::storage::ReallocationStrategy::FixedSize(10)),
+        let data = BasicGarnishData::<TestCustom, TestCustomCompanion>::new_with_settings(
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
         ).unwrap();
 
         let result = data.get_from_custom_data_block(10);

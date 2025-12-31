@@ -1,8 +1,9 @@
-use crate::{BasicData, BasicDataCustom, BasicGarnishData, BasicNumber, DataError};
+use crate::{BasicData, BasicDataCustom, BasicGarnishData, BasicNumber, DataError, basic::companion::BasicDataCompanion};
 
-impl<T> BasicGarnishData<T>
+impl<T, Companion> BasicGarnishData<T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     pub(crate) fn convert_basic_data_at_to_number(&mut self, from: usize) -> Result<Option<BasicNumber>, DataError> {
         Ok(match self.get_from_data_block_ensure_index(from)? {

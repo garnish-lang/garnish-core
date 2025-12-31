@@ -5,6 +5,7 @@ use crate::{
     SymbolListPartIterator,
     basic::{
         BasicGarnishData, BasicNumber,
+        companion::BasicDataCompanion,
         garnish::{factory::BasicDataFactory, utils::extents_to_start_end},
         merge_to_symbol_list::merge_to_symbol_list,
         search::search_for_associative_item,
@@ -13,9 +14,10 @@ use crate::{
 };
 use garnish_lang_traits::{Extents, GarnishData, GarnishDataFactory, GarnishDataType, Instruction, SymbolListPart, TypeConstants};
 
-impl<T> GarnishData for BasicGarnishData<T>
+impl<T, Companion> GarnishData for BasicGarnishData<T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     type Error = DataError;
     type Symbol = u64;
@@ -673,7 +675,7 @@ where
     }
 
     fn apply(&mut self, external_value: Self::Size, input_addr: Self::Size) -> Result<bool, Self::Error> {
-        T::apply(self, external_value, input_addr)
+        Companion::apply(self, external_value, input_addr)
     }
 
     fn defer_op(
@@ -682,11 +684,11 @@ where
             left: (GarnishDataType, Self::Size),
             right: (GarnishDataType, Self::Size),
         ) -> Result<bool, Self::Error> {
-        T::defer_op(self, operation, left, right)
+        Companion::defer_op(self, operation, left, right)
     }
 
     fn resolve(&mut self, symbol: Self::Symbol) -> Result<bool, Self::Error> {
-        T::resolve(self, symbol)
+        Companion::resolve(self, symbol)
     }
 }
 
@@ -695,9 +697,10 @@ mod tests {
     use garnish_lang_traits::Instruction;
 
     use crate::{
-        BasicData, basic::{
+        BasicData, BasicDataCustom, basic::{
+            companion::BasicDataCompanion,
             storage::{ReallocationStrategy, StorageSettings}, utilities::{instruction_test_data, jump_table_test_data, test_data}
-        }, basic_object, error::DataErrorType
+        }, basic_object, error::DataErrorType, DataError
     };
 
     use super::*;
@@ -2873,15 +2876,20 @@ mod tests {
         value: String,
     }
 
-    impl BasicDataCustom for Foo {
-        fn resolve(data: &mut BasicGarnishData<Self>, _symbol: u64) -> Result<bool, DataError> {
+    impl BasicDataCustom for Foo {}
+
+    #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd)]
+    struct FooCompanion;
+
+    impl BasicDataCompanion<Foo> for FooCompanion {
+        fn resolve(data: &mut BasicGarnishData<Foo, Self>, _symbol: u64) -> Result<bool, DataError> {
             data.push_object_to_data_block(basic_object!(Custom Foo {
                 value: "resolved".to_string(),
             }))?;
             Ok(true)
         }
     
-        fn apply(data: &mut BasicGarnishData<Self>, _external_value: usize, _input_addr: usize) -> Result<bool, DataError> {
+        fn apply(data: &mut BasicGarnishData<Foo, Self>, _external_value: usize, _input_addr: usize) -> Result<bool, DataError> {
             data.push_object_to_data_block(basic_object!(Custom Foo {
                 value: "applied".to_string(),
             }))?;
@@ -2889,7 +2897,7 @@ mod tests {
         }
     
         fn defer_op(
-            data: &mut BasicGarnishData<Self>,
+            data: &mut BasicGarnishData<Foo, Self>,
             _operation: Instruction,
             _left: (GarnishDataType, usize),
             _right: (GarnishDataType, usize),
@@ -2903,7 +2911,7 @@ mod tests {
 
     #[test]
     fn custom_data_resolved() {
-        let mut data = BasicGarnishData::<Foo>::new_with_settings(
+        let mut data = BasicGarnishData::<Foo, FooCompanion>::new_with_settings(
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
@@ -2917,7 +2925,7 @@ mod tests {
 
     #[test]
     fn custom_data_applied() {
-        let mut data = BasicGarnishData::<Foo>::new_with_settings(
+        let mut data = BasicGarnishData::<Foo, FooCompanion>::new_with_settings(
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
@@ -2931,7 +2939,7 @@ mod tests {
     
     #[test]
     fn custom_data_deferred() {
-        let mut data = BasicGarnishData::<Foo>::new_with_settings(
+        let mut data = BasicGarnishData::<Foo, FooCompanion>::new_with_settings(
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),

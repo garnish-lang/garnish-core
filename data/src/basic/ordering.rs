@@ -1,29 +1,31 @@
-use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, error::DataErrorType};
+use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, error::DataErrorType, basic::companion::BasicDataCompanion};
 
-pub trait OrderingDelegate
-{
+pub trait OrderingDelegate<Companion> {
     fn push_clone_items(&mut self, value: usize) -> Result<(), DataError>;
 }
 
-pub struct BasicOrderingDelegate<'a, T>
+pub struct BasicOrderingDelegate<'a, T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
-    data: &'a mut BasicGarnishData<T>,
+    data: &'a mut BasicGarnishData<T, Companion>,
 }
 
-impl<'a, T> BasicOrderingDelegate<'a, T>
+impl<'a, T, Companion> BasicOrderingDelegate<'a, T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
-    pub(crate) fn new(data: &'a mut BasicGarnishData<T>) -> Self {
+    pub(crate) fn new(data: &'a mut BasicGarnishData<T, Companion>) -> Self {
         Self { data }
     }
 }
 
-impl<'a, T> OrderingDelegate for BasicOrderingDelegate<'a, T>
+impl<'a, T, Companion> OrderingDelegate<Companion> for BasicOrderingDelegate<'a, T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     fn push_clone_items(&mut self, value: usize) -> Result<(), DataError> {
         self.data.push_to_data_block(BasicData::CloneItem(value))?;
@@ -31,9 +33,10 @@ where
     }
 }
 
-impl<T> BasicGarnishData<T>
+impl<T, Companion> BasicGarnishData<T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     pub(crate) fn create_index_stack(&mut self, from: usize) -> Result<usize, DataError> {
         let start = self.push_to_data_block(BasicData::CloneItem(from))?;
@@ -95,7 +98,7 @@ where
                 BasicData::Custom(custom) => {
                     let custom = custom.clone();
                     let mut delegate = BasicOrderingDelegate::new(self);
-                    T::push_clone_items_for_custom_data(&mut delegate, custom)?;
+                    T::push_clone_items_for_custom_data::<Companion>(&mut delegate, custom)?;
                 }
                 BasicData::Empty => {}
                 BasicData::UninitializedList(_len, count) => {

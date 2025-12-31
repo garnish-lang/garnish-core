@@ -1,9 +1,10 @@
 use garnish_lang_traits::GarnishDataFactory;
-use crate::{BasicDataCustom, BasicDataFactory, BasicGarnishData, DataError};
+use crate::{BasicDataCustom, BasicDataFactory, BasicGarnishData, DataError, basic::companion::BasicDataCompanion};
 
-impl<T> BasicGarnishData<T>
+impl<T, Companion> BasicGarnishData<T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     pub(crate) fn convert_basic_data_at_to_symbol(&mut self, from: usize) -> Result<u64, DataError> {
         let s = self.string_from_basic_data_at(from)?;

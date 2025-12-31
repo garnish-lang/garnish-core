@@ -1,23 +1,25 @@
-use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, error::DataErrorType};
+use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, error::DataErrorType, basic::companion::BasicDataCompanion};
 
-pub trait CloneDelegate {
+pub trait CloneDelegate<Companion> {
     fn lookup_value(&mut self, value: usize) -> Result<usize, DataError>;
 }
 
-pub struct BasicCloneDelegate<'a, T>
+pub struct BasicCloneDelegate<'a, T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
-    data: &'a mut BasicGarnishData<T>,
+    data: &'a mut BasicGarnishData<T, Companion>,
     lookup_start: usize,
     lookup_end: usize,
 }
 
-impl<'a, T> BasicCloneDelegate<'a, T>
+impl<'a, T, Companion> BasicCloneDelegate<'a, T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
-    pub(crate) fn new(data: &'a mut BasicGarnishData<T>, lookup_start: usize, lookup_end: usize) -> Self {
+    pub(crate) fn new(data: &'a mut BasicGarnishData<T, Companion>, lookup_start: usize, lookup_end: usize) -> Self {
         Self {
             data,
             lookup_start,
@@ -26,18 +28,20 @@ where
     }
 }
 
-impl<'a, T> CloneDelegate for BasicCloneDelegate<'a, T>
+impl<'a, T, Companion> CloneDelegate<Companion> for BasicCloneDelegate<'a, T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     fn lookup_value(&mut self, value: usize) -> Result<usize, DataError> {
         self.data.lookup_in_data_slice(self.lookup_start, self.lookup_end, value)
     }
 }
 
-impl<T> BasicGarnishData<T>
+impl<T, Companion> BasicGarnishData<T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     pub(crate) fn clone_index_stack(&mut self, top_index: usize, offset: usize) -> Result<usize, DataError> {
         let clone_range = top_index..self.data_block().cursor;
@@ -154,7 +158,7 @@ where
                         }
                         BasicData::Custom(custom) => {
                             let mut delegate = BasicCloneDelegate::new(self, lookup_start, lookup_end);
-                            let cloned = T::create_cloned_custom_data(&mut delegate, custom)?;
+                            let cloned = T::create_cloned_custom_data::<Companion>(&mut delegate, custom)?;
                             self.push_to_data_block(BasicData::Custom(cloned))?
                         }
                         BasicData::Empty => self.push_to_data_block(BasicData::Empty)?,
@@ -296,7 +300,7 @@ mod clone {
 
     use crate::{
         BasicData, BasicDataCustom, BasicGarnishData, DataError, basic::clone::CloneDelegate, basic::ordering::OrderingDelegate, basic_object,
-        error::DataErrorType,
+        error::DataErrorType, basic::companion::BasicDataCompanion,
     };
 
     #[test]
@@ -1215,12 +1219,18 @@ mod clone {
     }
 
     impl BasicDataCustom for TestCustom {
-        fn push_clone_items_for_custom_data(delegate: &mut impl OrderingDelegate, value: Self) -> Result<(), DataError> {
+        fn push_clone_items_for_custom_data<Companion>(delegate: &mut impl OrderingDelegate<Companion>, value: Self) -> Result<(), DataError> 
+        where
+            Companion: BasicDataCompanion<TestCustom>,
+        {
             delegate.push_clone_items(value.value)?;
             Ok(())
         }
 
-        fn create_cloned_custom_data(delegate: &mut impl CloneDelegate, value: Self) -> Result<Self, DataError> {
+        fn create_cloned_custom_data<Companion>(delegate: &mut impl CloneDelegate<Companion>, value: Self) -> Result<Self, DataError> 
+        where
+            Companion: BasicDataCompanion<TestCustom>,
+        {
             let index = delegate.lookup_value(value.value)?;
             Ok(Self {
                 value: index,
@@ -1229,9 +1239,26 @@ mod clone {
         }
     }
 
+    #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd)]
+    struct TestCustomCompanion;
+
+    impl BasicDataCompanion<TestCustom> for TestCustomCompanion {
+        fn resolve(_data: &mut BasicGarnishData<TestCustom, Self>, _symbol: u64) -> Result<bool, DataError> {
+            Ok(false)
+        }
+
+        fn apply(_data: &mut BasicGarnishData<TestCustom, Self>, _external_value: usize, _input_addr: usize) -> Result<bool, DataError> {
+            Ok(false)
+        }
+
+        fn defer_op(_data: &mut BasicGarnishData<TestCustom, Self>, _operation: Instruction, _left: (GarnishDataType, usize), _right: (GarnishDataType, usize)) -> Result<bool, DataError> {
+            Ok(false)
+        }
+    }
+
     #[test]
     fn custom() {
-        let mut data = BasicGarnishData::<TestCustom>::new().unwrap();
+        let mut data = BasicGarnishData::<TestCustom, TestCustomCompanion>::new().unwrap();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         let index = data
             .push_to_data_block(BasicData::Custom(TestCustom { value: index, name: "test" }))
@@ -1239,7 +1266,7 @@ mod clone {
         let index_stack_start = data.create_index_stack(index).unwrap();
         let index = data.clone_index_stack(index_stack_start, 0).unwrap();
 
-        let mut expected_data = BasicGarnishData::<TestCustom>::new().unwrap();
+        let mut expected_data = BasicGarnishData::<TestCustom, TestCustomCompanion>::new().unwrap();
         expected_data.data_mut().splice(
             40..46,
             vec![

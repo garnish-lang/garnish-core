@@ -1,19 +1,21 @@
-use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, basic::garnish::conversions::ConversionDelegate};
+use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, basic::garnish::conversions::ConversionDelegate, basic::companion::BasicDataCompanion};
 
-struct BasicDataDelegate<'a, T>
+struct BasicDataDelegate<'a, T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     list_index: usize,
     length: usize,
-    data: &'a mut BasicGarnishData<T>,
+    data: &'a mut BasicGarnishData<T, Companion>,
 }
 
-impl<'a, T> BasicDataDelegate<'a, T>
+impl<'a, T, Companion> BasicDataDelegate<'a, T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
-    fn new(data: &'a mut BasicGarnishData<T>) -> Self {
+    fn new(data: &'a mut BasicGarnishData<T, Companion>) -> Self {
         Self {
             list_index: 0,
             length: 0,
@@ -22,9 +24,10 @@ where
     }
 }
 
-impl<'a, T> ConversionDelegate<T, char> for BasicDataDelegate<'a, T>
+impl<'a, T, Companion> ConversionDelegate<T, char, Companion> for BasicDataDelegate<'a, T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     type Output = usize;
 
@@ -49,31 +52,34 @@ where
         Ok(self.list_index)
     }
 
-    fn data(&self) -> &BasicGarnishData<T> {
+    fn data(&self) -> &BasicGarnishData<T, Companion> {
         self.data
     }
 }
 
-struct StringDelegate<'a, T>
+struct StringDelegate<'a, T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     string: String,
-    data: &'a BasicGarnishData<T>,
+    data: &'a BasicGarnishData<T, Companion>,
 }
 
-impl<'a, T> StringDelegate<'a, T>
+impl<'a, T, Companion> StringDelegate<'a, T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
-    fn new(data: &'a BasicGarnishData<T>) -> Self {
+    fn new(data: &'a BasicGarnishData<T, Companion>) -> Self {
         Self { string: String::new(), data }
     }
 }
 
-impl<'a, T> ConversionDelegate<T, char> for StringDelegate<'a, T>
+impl<'a, T, Companion> ConversionDelegate<T, char, Companion> for StringDelegate<'a, T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     type Output = String;
 
@@ -94,14 +100,15 @@ where
         Ok(self.string)
     }
 
-    fn data(&self) -> &BasicGarnishData<T> {
+    fn data(&self) -> &BasicGarnishData<T, Companion> {
         self.data
     }
 }
 
-impl<T> BasicGarnishData<T>
+impl<T, Companion> BasicGarnishData<T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     pub(crate) fn convert_basic_data_at_to_char_list(&mut self, from: usize) -> Result<usize, DataError> {
         init_convert_with_delegate(BasicDataDelegate::new(self), from)
@@ -112,19 +119,21 @@ where
     }
 }
 
-fn init_convert_with_delegate<Delegate, Output, T>(mut delegate: Delegate, from: usize) -> Result<Output, DataError>
+fn init_convert_with_delegate<Delegate, Output, T, Companion>(mut delegate: Delegate, from: usize) -> Result<Output, DataError>
 where
     T: BasicDataCustom,
-    Delegate: ConversionDelegate<T, char, Output = Output>,
+    Companion: BasicDataCompanion<T>,
+    Delegate: ConversionDelegate<T, char, Companion, Output = Output>,
 {
     delegate.init()?;
     convert_with_delegate(&mut delegate, from, 0)?;
     delegate.end()
 }
 
-fn convert_with_delegate<T>(delegate: &mut impl ConversionDelegate<T, char>, from: usize, depth: usize) -> Result<(), DataError>
+fn convert_with_delegate<T, Companion>(delegate: &mut impl ConversionDelegate<T, char, Companion>, from: usize, depth: usize) -> Result<(), DataError>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     Ok(match delegate.get_data_at(from)? {
         BasicData::Unit => {
@@ -345,7 +354,7 @@ where
             }
         }
         BasicData::Custom(value) => {
-            T::convert_custom_data_with_delegate(delegate, value.clone())?;
+            T::convert_custom_data_with_delegate::<Companion>(delegate, value.clone())?;
         }
         BasicData::Empty
         | BasicData::UninitializedList(_, _)
@@ -371,7 +380,7 @@ where
 mod tests {
     use garnish_lang_traits::{GarnishData, Instruction};
 
-    use crate::{BasicData, BasicDataCustom, BasicGarnishData, ConversionDelegate, DataError, basic::utilities::test_data, basic_object};
+    use crate::{BasicData, BasicDataCustom, BasicGarnishData, ConversionDelegate, DataError, basic::utilities::test_data, basic_object, basic::companion::BasicDataCompanion};
 
     macro_rules! object_conversions {
         ($( $object_test_name:ident: $object:expr => $output:literal $(with setup $setup:expr)? ),+ $(,)?) => {
@@ -465,7 +474,10 @@ mod tests {
     }
 
     impl BasicDataCustom for Foo {
-        fn convert_custom_data_with_delegate(delegate: &mut impl ConversionDelegate<Self, char>, value: Self) -> Result<(), DataError> {
+        fn convert_custom_data_with_delegate<Companion>(delegate: &mut impl ConversionDelegate<Self, char, Companion>, value: Self) -> Result<(), DataError> 
+        where
+            Companion: BasicDataCompanion<Self>,
+        {
             delegate.push_char('F')?;
             delegate.push_char('o')?;
             delegate.push_char('o')?;
@@ -480,9 +492,26 @@ mod tests {
         }
     }
 
+    #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd)]
+    struct FooCompanion;
+
+    impl BasicDataCompanion<Foo> for FooCompanion {
+        fn resolve(data: &mut BasicGarnishData<Foo, Self>, _symbol: u64) -> Result<bool, DataError> {
+            Ok(false)
+        }
+
+        fn apply(data: &mut BasicGarnishData<Foo, Self>, _external_value: usize, _input_addr: usize) -> Result<bool, DataError> {
+            Ok(false)
+        }
+
+        fn defer_op(data: &mut BasicGarnishData<Foo, Self>, _operation: Instruction, _left: (garnish_lang_traits::GarnishDataType, usize), _right: (garnish_lang_traits::GarnishDataType, usize)) -> Result<bool, DataError> {
+            Ok(false)
+        }
+    }
+
     #[test]
     fn custom_data_converted() {
-        let mut data = BasicGarnishData::<Foo>::new().unwrap();
+        let mut data = BasicGarnishData::<Foo, FooCompanion>::new().unwrap();
         let index = data
             .push_object_to_data_block(basic_object!(Custom Foo {
                 value: "custom value".to_string(),

@@ -1,9 +1,9 @@
-use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError};
+use crate::{BasicData, BasicDataCustom, BasicGarnishData, DataError, basic::companion::BasicDataCompanion};
 
-impl<T> BasicGarnishData<T>
+impl<T, Companion> BasicGarnishData<T, Companion>
 where
-
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {   
     pub(crate) fn optimize_data_block_and_retain(&mut self, additional_data_retentions: &[usize]) -> Result<Vec<usize>, DataError> {
         let current_data_end = self.data_block().start + self.data_block().cursor;

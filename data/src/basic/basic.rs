@@ -7,6 +7,7 @@ use garnish_lang_traits::Instruction;
 
 use crate::ConversionDelegate;
 use crate::basic::clone::CloneDelegate;
+use crate::basic::companion::BasicDataCompanion;
 use crate::basic::ordering::OrderingDelegate;
 use crate::basic::search::search_for_associative_item;
 use crate::basic::storage::{StorageBlock, StorageSettings};
@@ -15,48 +16,64 @@ use crate::{BasicData, DataError, SimpleNumber};
 pub type BasicNumber = SimpleNumber;
 
 pub trait BasicDataCustom: Clone + Debug + PartialEq + Eq + PartialOrd {
-    fn convert_custom_data_with_delegate(_delegate: &mut impl ConversionDelegate<Self, char>, _value: Self) -> Result<(), DataError> {
+    fn convert_custom_data_with_delegate<Companion>(_delegate: &mut impl ConversionDelegate<Self, char, Companion>, _value: Self) -> Result<(), DataError> 
+    where
+        Companion: BasicDataCompanion<Self>,
+    {
         Ok(())
     }
 
-    fn push_clone_items_for_custom_data(_delegate: &mut impl OrderingDelegate, _value: Self) -> Result<(), DataError> {
+    fn push_clone_items_for_custom_data<Companion>(_delegate: &mut impl OrderingDelegate<Companion>, _value: Self) -> Result<(), DataError> 
+    where
+        Companion: BasicDataCompanion<Self>,
+    {
         Ok(())
     }
 
-    fn create_cloned_custom_data(_delegate: &mut impl CloneDelegate, value: Self) -> Result<Self, DataError> {
+    fn create_cloned_custom_data<Companion>(_delegate: &mut impl CloneDelegate<Companion>, value: Self) -> Result<Self, DataError> 
+    where
+        Companion: BasicDataCompanion<Self>,
+    {
         Ok(value.clone())
-    }
-
-    fn resolve(_data: &mut BasicGarnishData<Self>, _symbol: u64) -> Result<bool, DataError> {
-        Ok(false)
-    }
-
-    fn apply(_data: &mut BasicGarnishData<Self>, _external_value: usize, _input_addr: usize) -> Result<bool, DataError> {
-        Ok(false)
-    }
-
-    fn defer_op(
-        _data: &mut BasicGarnishData<Self>,
-        _operation: Instruction,
-        _left: (GarnishDataType, usize),
-        _right: (GarnishDataType, usize),
-    ) -> Result<bool, DataError> {
-        Ok(false)
     }
 }
 
 impl BasicDataCustom for () {
-    fn convert_custom_data_with_delegate(delegate: &mut impl ConversionDelegate<Self, char>, _value: Self) -> Result<(), DataError> {
+    fn convert_custom_data_with_delegate<Companion>(delegate: &mut impl ConversionDelegate<Self, char, Companion>, _value: Self) -> Result<(), DataError> 
+    where
+        Companion: BasicDataCompanion<Self>,
+    {
         delegate.push_char('(')?;
         delegate.push_char(')')?;
         Ok(())
     }
+} 
+
+#[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd)]
+pub struct NoOpCompanion {
+
 }
 
+impl BasicDataCompanion<()> for NoOpCompanion {
+    fn resolve(_data: &mut BasicGarnishData<()>, _symbol: u64) -> Result<bool, DataError> {
+        Ok(false)
+    }
+
+    fn apply(_data: &mut BasicGarnishData<()>, _external_value: usize, _input_addr: usize) -> Result<bool, DataError> {
+        Ok(false)
+    }
+
+    fn defer_op(_data: &mut BasicGarnishData<()>, _operation: Instruction, _left: (GarnishDataType, usize), _right: (GarnishDataType, usize)) -> Result<bool, DataError> {
+        Ok(false)
+    }
+}
+
+
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BasicGarnishData<T = ()>
-where
+pub struct BasicGarnishData<T = (), Companion = NoOpCompanion>
+where 
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>
 {
     current_value: Option<usize>,
     current_register: Option<usize>,
@@ -70,13 +87,15 @@ where
     expression_symbol_block: StorageBlock,
     data_block: StorageBlock,
     custom_data_block: StorageBlock,
+    pub(crate) companion: Companion, 
 }
 
 pub type BasicGarnishDataUnit = BasicGarnishData<()>;
 
-impl<T> BasicGarnishData<T>
+impl<T, Companion> BasicGarnishData<T, Companion>
 where
     T: BasicDataCustom,
+    Companion: BasicDataCompanion<T>,
 {
     pub fn new() -> Result<Self, DataError> {
         Self::new_with_settings(
@@ -110,6 +129,7 @@ where
             expression_symbol_block: StorageBlock::new(expression_symbol_settings.initial_size(), expression_symbol_settings.clone()),
             data_block: StorageBlock::new(data_settings.initial_size(), data_settings.clone()),
             custom_data_block: StorageBlock::new(custom_data_settings.initial_size(), custom_data_settings.clone()),
+            companion: Companion::default(),
         };
 
         this.reallocate_heap(
@@ -429,6 +449,7 @@ where
     pub(crate) fn set_current_frame(&mut self, value: Option<usize>) {
         self.current_frame = value;
     }
+
 }
 
 #[cfg(test)]
@@ -536,6 +557,7 @@ mod tests {
                 expression_symbol_block: expected_expression_symbol_block,
                 data_block: expected_data_block,
                 custom_data_block: expected_custom_data_block,
+                companion: crate::basic::NoOpCompanion::default(),
             })
         );
     }
@@ -1236,7 +1258,24 @@ mod tests {
 
         impl BasicDataCustom for TestCustom {}
 
-        let mut data = BasicGarnishData::<TestCustom>::new_with_settings(
+        #[derive(Default, Debug, Clone, PartialEq, Eq, PartialOrd)]
+        struct TestCustomCompanion;
+
+        impl crate::basic::companion::BasicDataCompanion<TestCustom> for TestCustomCompanion {
+            fn resolve(_data: &mut BasicGarnishData<TestCustom, Self>, _symbol: u64) -> Result<bool, DataError> {
+                Ok(false)
+            }
+
+            fn apply(_data: &mut BasicGarnishData<TestCustom, Self>, _external_value: usize, _input_addr: usize) -> Result<bool, DataError> {
+                Ok(false)
+            }
+
+            fn defer_op(_data: &mut BasicGarnishData<TestCustom, Self>, _operation: Instruction, _left: (GarnishDataType, usize), _right: (GarnishDataType, usize)) -> Result<bool, DataError> {
+                Ok(false)
+            }
+        }
+
+        let mut data = BasicGarnishData::<TestCustom, TestCustomCompanion>::new_with_settings(
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
