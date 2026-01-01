@@ -819,7 +819,7 @@ mod to_byte_list {
 
 #[cfg(test)]
 mod to_char_list {
-    use super::{NoCustom, SimpleGarnishData};
+    use super::{SimpleGarnishData};
     use crate::SimpleDataFactory;
     use garnish_lang_traits::{GarnishData, GarnishDataType, GarnishDataFactory};
 

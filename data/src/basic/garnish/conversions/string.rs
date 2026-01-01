@@ -496,15 +496,15 @@ mod tests {
     struct FooCompanion;
 
     impl BasicDataCompanion<Foo> for FooCompanion {
-        fn resolve(data: &mut BasicGarnishData<Foo, Self>, _symbol: u64) -> Result<bool, DataError> {
+        fn resolve(_data: &mut BasicGarnishData<Foo, Self>, _symbol: u64) -> Result<bool, DataError> {
             Ok(false)
         }
 
-        fn apply(data: &mut BasicGarnishData<Foo, Self>, _external_value: usize, _input_addr: usize) -> Result<bool, DataError> {
+        fn apply(_data: &mut BasicGarnishData<Foo, Self>, _external_value: usize, _input_addr: usize) -> Result<bool, DataError> {
             Ok(false)
         }
 
-        fn defer_op(data: &mut BasicGarnishData<Foo, Self>, _operation: Instruction, _left: (garnish_lang_traits::GarnishDataType, usize), _right: (garnish_lang_traits::GarnishDataType, usize)) -> Result<bool, DataError> {
+        fn defer_op(_data: &mut BasicGarnishData<Foo, Self>, _operation: Instruction, _left: (garnish_lang_traits::GarnishDataType, usize), _right: (garnish_lang_traits::GarnishDataType, usize)) -> Result<bool, DataError> {
             Ok(false)
         }
     }

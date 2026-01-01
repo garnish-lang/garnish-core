@@ -1,5 +1,4 @@
 use crate::{DataError, SimpleDataType, SimpleGarnishData};
-use garnish_lang_traits::GarnishDataFactory;
 use garnish_lang_traits::helpers::clone_data;
 
 fn clone_with_retained_data_internal<T, A>(
@@ -66,7 +65,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{NoCustom, SimpleData, SimpleDataFactory, SimpleGarnishData, SimpleNumber};
+    use crate::{SimpleData, SimpleDataFactory, SimpleGarnishData, SimpleNumber};
     use garnish_lang_traits::{GarnishData, GarnishDataFactory};
 
     fn assert_default_data(data: &SimpleGarnishData) {

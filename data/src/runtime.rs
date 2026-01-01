@@ -1,6 +1,6 @@
 use std::convert::TryInto;
 
-use garnish_lang_traits::{Extents, GarnishData, GarnishDataFactory, GarnishDataType, GarnishNumber, Instruction, SymbolListPart, TypeConstants};
+use garnish_lang_traits::{Extents, GarnishData, GarnishDataFactory, GarnishDataType, Instruction, SymbolListPart, TypeConstants};
 
 use crate::data::{NumberIterator, SimpleNumber, SizeIterator, parse_byte_list, parse_char_list, parse_simple_number};
 use crate::{ByteListIterator, CharListIterator, DataError, DataIndexIterator, SimpleData, SimpleDataType, SimpleGarnishData, SimpleInstruction, SimpleStackFrame, SymbolListPartIterator, symbol_value};
@@ -908,7 +908,7 @@ mod add_data {
         }
     }
     mod symbol_list {
-        use crate::{SimpleDataFactory, SimpleDataRuntimeNC, SimpleGarnishData};
+        use crate::{SimpleDataFactory, SimpleGarnishData};
         use garnish_lang_traits::{GarnishData, GarnishDataFactory, GarnishDataType};
 
         fn s1() -> u64 {
