@@ -144,6 +144,14 @@ where
         Ok(this)
     }
 
+    pub fn companion(&self) -> &Companion {
+        &self.companion
+    }
+
+    pub fn companion_mut(&mut self) -> &mut Companion {
+        &mut self.companion
+    }
+
     pub fn data_size(&self) -> usize {
         self.data_block.cursor
     }
