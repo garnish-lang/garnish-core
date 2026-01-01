@@ -178,7 +178,7 @@ where
     fn get_list_item_with_symbol(&self, list_index: Self::Size, sym: Self::Symbol) -> Result<Option<Self::Size>, Self::Error> {
         let (len, associations_len) = self.get_from_data_block_ensure_index(list_index)?.as_list()?;
 
-        let association_start = list_index + len + 1;
+        let association_start = self.data_block().start + list_index + len + 1;
         let association_range = association_start..association_start + associations_len;
         let association_slice = &self.data()[association_range.clone()];
 

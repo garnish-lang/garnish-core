@@ -152,6 +152,10 @@ where
         &mut self.companion
     }
 
+    pub fn set_companion(&mut self, companion: Companion) {
+        self.companion = companion;
+    }
+
     pub fn data_size(&self) -> usize {
         self.data_block.cursor
     }
