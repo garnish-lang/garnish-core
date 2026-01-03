@@ -5,8 +5,7 @@ use colored::Colorize;
 use garnish_lang::compiler::build::build;
 use garnish_lang::compiler::lex::lex;
 use garnish_lang::compiler::parse::{ParseNode, parse};
-use garnish_lang::simple::{SimpleData, SimpleGarnishData, SimpleRuntimeState, execute_current_instruction, ops};
-use garnish_lang::{GarnishData, Instruction};
+use garnish_lang::{GarnishData, simple::{BasicGarnishData, SimpleRuntimeState, execute_current_instruction, ops}};
 use log::error;
 use std::fs::read_to_string;
 use std::path::PathBuf;
@@ -48,7 +47,9 @@ fn main() {
     let mut messages = vec![];
 
     // future cli options
-    let manual_filter: Vec<&str> = vec![];
+    let manual_filter: Vec<&str> = vec![
+        // "access:symbol_list:number"
+    ];
     let display_successes = false;
     let create_dump_files = false;
 
@@ -88,7 +89,11 @@ fn main() {
         };
     }
 
-    println!("{} | {}", format!("{} successes", successes).green(), format!("{} failures", failures).red());
+    println!(
+        "{} | {}",
+        format!("{} successes", successes).green(),
+        format!("{} failures", failures).red()
+    );
     for m in messages {
         println!("{}", m);
     }
@@ -101,7 +106,10 @@ enum TestResult {
 }
 
 fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
-    let mut data = SimpleGarnishData::new();
+    let mut data: BasicGarnishData<()> = match BasicGarnishData::new() {
+        Ok(d) => d,
+        Err(e) => return TestResult::Error(format!("Failed to create BasicGarnishData: {}", e)),
+    };
 
     let mut dump_path = PathBuf::from("./tmp").join(script_path);
     if create_dump_files {
@@ -111,81 +119,58 @@ fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
             Err(e) => error!("failed to create dump directories: {}", e),
         }
     }
-    match read_to_string(PathBuf::from(&script_path)).or_else(|e| Err(format!("{}", e))).and_then(|file| {
-        lex(&file)
-            .or_else(|e| Err(format!("{}", e)))
-            .and_then(|tokens| {
-                if create_dump_files {
-                    let output = tokens
-                        .iter()
-                        .map(|t| format!("{:?} - \"{}\"", t.get_token_type(), escape_invisible_chars(t.get_text())))
-                        .collect::<Vec<String>>()
-                        .join("\n");
-                    let output_path = dump_path.join("tokens.txt");
-                    match fs::write(output_path, output).or_else(|e| Err(format!("{}", e))) {
-                        Ok(_) => {}
-                        Err(e) => println!("error writing token dump: {}", e),
+    match read_to_string(PathBuf::from(&script_path))
+        .or_else(|e| Err(format!("{}", e)))
+        .and_then(|file| {
+            lex(&file)
+                .or_else(|e| Err(format!("{}", e)))
+                .and_then(|tokens| {
+                    if create_dump_files {
+                        let output = tokens
+                            .iter()
+                            .map(|t| format!("{:?} - \"{}\"", t.get_token_type(), escape_invisible_chars(t.get_text())))
+                            .collect::<Vec<String>>()
+                            .join("\n");
+                        let output_path = dump_path.join("tokens.txt");
+                        match fs::write(output_path, output).or_else(|e| Err(format!("{}", e))) {
+                            Ok(_) => {}
+                            Err(e) => println!("error writing token dump: {}", e),
+                        }
                     }
-                }
-                parse(&tokens).or_else(|e| Err(format!("{}", e)))
-            })
-            .and_then(|parse_result| {
-                match parse_result.get_node(parse_result.get_root()) {
-                    None => println!("Could not dump parse tree"),
-                    Some(root) => {
-                        if create_dump_files {
-                            let dump = dump_parse_tree(root, parse_result.get_nodes());
-                            let output_path = dump_path.join("tree.txt");
-                            match fs::write(output_path, dump).or_else(|e| Err(format!("{}", e))) {
-                                Ok(_) => {}
-                                Err(e) => println!("error writing parse tree dump: {}", e),
+                    parse(&tokens).or_else(|e| Err(format!("{}", e)))
+                })
+                .and_then(|parse_result| {
+                    match parse_result.get_node(parse_result.get_root()) {
+                        None => println!("Could not dump parse tree"),
+                        Some(root) => {
+                            if create_dump_files {
+                                let dump = dump_parse_tree(root, parse_result.get_nodes());
+                                let output_path = dump_path.join("tree.txt");
+                                match fs::write(output_path, dump).or_else(|e| Err(format!("{}", e))) {
+                                    Ok(_) => {}
+                                    Err(e) => println!("error writing parse tree dump: {}", e),
+                                }
                             }
                         }
                     }
-                }
 
-                build(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).or_else(|e| Err(format!("{}", e)))
-            })
-            .or_else(|e| Err(format!("{}", e)))
-    }) {
+                    build(parse_result.get_root(), parse_result.get_nodes().clone(), &mut data).or_else(|e| Err(format!("{}", e)))
+                })
+                .or_else(|e| Err(format!("{}", e)))
+        }) {
         Err(e) => TestResult::Error(format!("({}): {}", &script_path, e)),
         Ok(_) => {
             if create_dump_files {
-                let instruction_output = data
-                    .get_instructions()
-                    .iter()
-                    .enumerate()
-                    .map(|(instruction_addr, instruction)| {
-                        let jump_index = data.get_jump_points().iter().enumerate().find(|(_, i)| **i == instruction_addr);
-                        format!(
-                            "{:03} | {} | {:?} - {}",
-                            instruction_addr,
-                            match jump_index {
-                                Some((index, _)) => format!("{:03}", index),
-                                None => "   ".to_string(),
-                            },
-                            instruction.instruction,
-                            match instruction.data {
-                                Some(index) => match instruction.instruction {
-                                    Instruction::Put => data.get_data().display_for_item(index),
-                                    _ => format!("{:?}", index),
-                                },
-                                None => "".to_string(),
-                            }
-                        )
-                    })
-                    .collect::<Vec<String>>()
-                    .join("\n");
-
-                let output_path = dump_path.join("instructions.txt");
-                match fs::write(output_path, instruction_output).or_else(|e| Err(format!("{}", e))) {
+                let blocks_output = data.dump_all_blocks();
+                let output_path = dump_path.join("blocks.txt");
+                match fs::write(output_path, blocks_output).or_else(|e| Err(format!("{}", e))) {
                     Ok(_) => {}
-                    Err(e) => println!("error writing parse tree dump: {}", e),
+                    Err(e) => println!("error writing blocks dump: {}", e),
                 }
             }
 
-            let start = match data.get_jump_points().get(0) {
-                Some(jump_points) => *jump_points,
+            let start = match data.get_from_jump_table(0) {
+                Some(jump_point) => jump_point,
                 None => {
                     return TestResult::Error(format!("({}) No jump point", &script_path));
                 }
@@ -212,7 +197,7 @@ fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
                     Err(e) => {
                         return TestResult::Error(format!("({}): {}", &script_path, e));
                     }
-                    Ok(data) => match data.get_state() {
+                    Ok(runtime_info) => match runtime_info.get_state() {
                         SimpleRuntimeState::Running => (),
                         SimpleRuntimeState::End => break,
                     },
@@ -224,28 +209,52 @@ fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
                 }
             }
 
-            let result = match data.get_current_value().and_then(|i| data.get_data().get(i)) {
-                Some(value) => value,
+            if create_dump_files {
+                println!("Dumping blocks after execution");
+                let blocks_output = data.dump_all_blocks();
+                let output_path = dump_path.join("blocks_after_execution.txt");
+                match fs::write(output_path, blocks_output).or_else(|e| Err(format!("{}", e))) {
+                    Ok(_) => {}
+                    Err(e) => println!("error writing post-execution blocks dump: {}", e),
+                }
+            }
+
+            let result_index = match data.get_current_value() {
+                Some(i) => i,
                 None => {
                     return TestResult::Error(format!("({}) No current value after execution", &script_path));
                 }
             };
 
-            let (left, right) = match result {
-                SimpleData::Pair(left_index, right_index) => (*left_index, *right_index),
-                t => return TestResult::Error(format!("expected a Pair value, got {:?}", t)),
+            let (left, right) = match data.get_pair(result_index) {
+                Ok((l, r)) => (l, r),
+                Err(e) => return TestResult::Error(format!("({}) expected a Pair value, got error: {}", &script_path, e)),
             };
 
-            ops::put(&mut data, left).unwrap();
-            ops::put(&mut data, right).unwrap();
-            ops::equal(&mut data).unwrap();
-            ops::push_value(&mut data).unwrap();
+            let result = ops::put(&mut data, left)
+                .and_then(|_| ops::put(&mut data, right))
+                .and_then(|_| ops::equal(&mut data))
+                .and_then(|_| ops::push_value(&mut data));
 
-            match data.get_current_value().and_then(|i| data.get_data().get(i)) {
-                Some(SimpleData::True) => TestResult::Success,
-                Some(SimpleData::False) => TestResult::Failure(format!("[{} = {}]", data.get_data().display_for_item(left), data.get_data().display_for_item(right))),
-                Some(v) => TestResult::Error(format!("Got non-boolean result after comparison, got {:?}", v.display_simple())),
-                None => TestResult::Error(String::from("No current value after comparison")),
+            match result {
+                Err(e) => TestResult::Error(format!("Error making comparison: {}", e)),
+                Ok(_) => {
+                    let comparison_result_index = match data.get_current_value() {
+                        Some(i) => i,
+                        None => return TestResult::Error(String::from("No current value after comparison")),
+                    };
+        
+                    match data.get_data_type(comparison_result_index) {
+                        Ok(garnish_lang::GarnishDataType::True) => TestResult::Success,
+                        Ok(garnish_lang::GarnishDataType::False) => TestResult::Failure(format!(
+                            "[{} = {}]",
+                            data.get_string_for_data_at(left).unwrap_or_else(|_| format!("[error: {}]", left)),
+                            data.get_string_for_data_at(right).unwrap_or_else(|_| format!("[error: {}]", right))
+                        )),
+                        Ok(t) => TestResult::Error(format!("Got non-boolean result after comparison, got {:?}", t)),
+                        Err(e) => TestResult::Error(format!("Error getting data type: {}", e)),
+                    }
+                }
             }
         }
     }
