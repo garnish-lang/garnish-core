@@ -50,7 +50,7 @@ where
         let mut s = vec![];
         for i in block.start..block.start + block.cursor {
             s.push(format!("{}: {}", i, match self.get_basic_data(i) {
-                Some(d) => format!("{:?}", d),
+                Some(d) => format!("{}", d),
                 None => "[No Data]".to_string()
             }));
         }

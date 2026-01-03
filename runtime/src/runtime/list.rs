@@ -11,8 +11,6 @@ pub fn make_list<Data: GarnishData>(this: &mut Data, len: Data::Size) -> Result<
         state_error(format!("Not enough register values to make list of length {:?}", len))?
     }
 
-    this.start_list(len.clone())?;
-
     let mut list_index = this.start_list(len.clone())?;
     let mut count = this.get_register_len() - len.clone();
     let end = this.get_register_len();

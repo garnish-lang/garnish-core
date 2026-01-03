@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use garnish_lang_traits::{GarnishDataType, Instruction};
 use crate::{BasicDataCustom, DataError};
 
@@ -544,6 +546,19 @@ where T: BasicDataCustom {
             BasicData::CloneIndexMap(index, value) => Ok((index, value)),
             _ => Err(DataError::not_basic_type_error()),
         }
+    }
+}
+
+impl<T> Display for BasicData<T>
+where T: BasicDataCustom,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BasicData::Instruction(instruction) => write!(f, "{:?}", instruction),
+            BasicData::InstructionWithData(instruction, data) => write!(f, "{:?}({})", instruction, data),
+            _ => write!(f, "{:?}", self),
+        }
+        
     }
 }
 
