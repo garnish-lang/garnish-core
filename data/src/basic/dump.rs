@@ -49,7 +49,8 @@ where
     fn dump_block(&self, block: &StorageBlock) -> String {
         let mut s = vec![];
         for i in block.start..block.start + block.cursor {
-            s.push(format!("{}: {}", i, match self.get_basic_data(i) {
+            let relative_index = i - block.start;
+            s.push(format!("{} | {}: {}", i, relative_index,match self.get_basic_data(i) {
                 Some(d) => format!("{}", d),
                 None => "[No Data]".to_string()
             }));
