@@ -1,4 +1,4 @@
-use std::{backtrace::Backtrace, cmp::Ordering, fmt::{Debug, Display, Formatter}};
+use std::{backtrace::{Backtrace, BacktraceStatus}, cmp::Ordering, fmt::{Debug, Display, Formatter}};
 
 use garnish_lang_traits::GarnishDataType;
 
@@ -42,8 +42,14 @@ pub struct DataError {
 
 impl Debug for DataError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}: {}", self.error_type, self.message)?;
-        write!(f, "\n{}", self.backtrace)?;
+        write!(f, "DataError {{ ")?;
+        write!(f, "message: \"{}\", ", self.message)?;
+        write!(f, "error_type: {}", format_error_type(&self.error_type))?;
+        match self.backtrace.status() {
+            BacktraceStatus::Captured => write!(f, "\n{}", self.backtrace)?,
+            _ => {}
+        }
+        write!(f, " }}\n")?;
         Ok(())
     }
 }
@@ -68,6 +74,74 @@ impl Ord for DataError {
     }
 }
 
+fn format_error_type(error_type: &DataErrorType) -> String {
+    match error_type {
+        DataErrorType::Unknown => "Unknown error".to_string(),
+        DataErrorType::InvalidDataIndex(index) => format!("Invalid data index: {}", index),
+        DataErrorType::InvalidInstructionIndex(index) => format!("Invalid instruction index: {}", index),
+        DataErrorType::InvalidJumpTableIndex(index) => format!("Invalid jump table index: {}", index),
+        DataErrorType::InvalidSymbolTableIndex(index) => format!("Invalid symbol table index: {}", index),
+        DataErrorType::InvalidListItemIndex(list_index, item_index) => {
+            format!("Invalid list item index: list={}, item={}", list_index, item_index)
+        }
+        DataErrorType::InvalidCharListItemIndex(list_index, item_index) => {
+            format!("Invalid char list item index: list={}, item={}", list_index, item_index)
+        }
+        DataErrorType::ExceededInitialListLength(length) => {
+            format!("Exceeded initial list length: {}", length)
+        }
+        DataErrorType::NotFullyInitializedList(expected, actual) => {
+            format!("List not fully initialized: expected {} items, got {}", expected, actual)
+        }
+        DataErrorType::NotASymbolListPart(got_type) => {
+            format!("Not a symbol list part, got type: {:?}", got_type)
+        }
+        DataErrorType::NotType(expected, got) => {
+            format!("Type mismatch: expected {:?}, got {:?}", expected, got)
+        }
+        DataErrorType::NotAssociativeItem(got_type) => {
+            format!("Not an associative item, got type: {:?}", got_type)
+        }
+        DataErrorType::NotBasicType => "Not a basic type".to_string(),
+        DataErrorType::NotAListItem(got_type) => {
+            format!("Not a list item, got type: {:?}", got_type)
+        }
+        DataErrorType::InstructionBlockExceededMaxItems(current, max) => {
+            format!("Instruction block exceeded max items: {} > {}", current, max)
+        }
+        DataErrorType::JumpTableBlockExceededMaxItems(current, max) => {
+            format!("Jump table block exceeded max items: {} > {}", current, max)
+        }
+        DataErrorType::SymbolTableBlockExceededMaxItems(current, max) => {
+            format!("Symbol table block exceeded max items: {} > {}", current, max)
+        }
+        DataErrorType::ExpressionSymbolBlockExceededMaxItems(current, max) => {
+            format!("Expression symbol block exceeded max items: {} > {}", current, max)
+        }
+        DataErrorType::DataBlockExceededMaxItems(current, max) => {
+            format!("Data block exceeded max items: {} > {}", current, max)
+        }
+        DataErrorType::CouldNotParse(value, target_type) => {
+            format!("Could not parse \"{}\" as {:?}", value, target_type)
+        }
+        DataErrorType::NumberToLargeForByteValue(value) => {
+            format!("Number too large for byte value: {}", value)
+        }
+        DataErrorType::FailedToParseFloat(value) => {
+            format!("Failed to parse float: \"{}\"", value)
+        }
+        DataErrorType::NotACloneNode => "Not a clone node".to_string(),
+        DataErrorType::NoMappedIndexFoundDuringClone(index) => {
+            format!("No mapped index found during clone: {}", index)
+        }
+        DataErrorType::UninitializedListContainsNonListItem(got_type) => {
+            format!("Uninitialized list contains non-list item, got type: {:?}", got_type)
+        }
+        DataErrorType::CannotClone => "Cannot clone".to_string(),
+        DataErrorType::CloneLimitReached => "Clone limit reached".to_string(),
+    }
+}
+
 impl DataError {
     pub fn new(message: &str, error_type: DataErrorType) -> Self {
         DataError { message: message.to_string(), error_type, backtrace: Backtrace::capture() }
@@ -84,7 +158,12 @@ impl DataError {
 
 impl Display for DataError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.message.as_str())
+        write!(f, "{}", self.message)?;
+        let error_details = format_error_type(&self.error_type);
+        if !error_details.is_empty() {
+            write!(f, " ({})", error_details)?;
+        }
+        Ok(())
     }
 }
 
