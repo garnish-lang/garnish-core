@@ -318,8 +318,8 @@ where
         }
 
         let len = items.len();
-        let start: usize = self.data_block().start + usize::from(extents.start()).min(len);
-        let end: usize = self.data_block().start + usize::from(extents.end()).min(len);
+        let start: usize = usize::from(extents.start()).min(len);
+        let end: usize = usize::from(extents.end()).min(len);
 
         Ok(DataIndexIterator::new(items[start..end].to_vec()))
     }

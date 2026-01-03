@@ -6,8 +6,8 @@ where
     T: BasicDataCustom,
     Companion: BasicDataCompanion<T>,
 {
-    match (data.get_basic_data(first), data.get_basic_data(second)) {
-        (Some(BasicData::Symbol(sym1)), Some(BasicData::Symbol(sym2))) => {
+    match (data.get_from_data_block_ensure_index(first)?, data.get_from_data_block_ensure_index(second)?) {
+        (BasicData::Symbol(sym1), BasicData::Symbol(sym2)) => {
             let sym1 = BasicData::Symbol(*sym1);
             let sym2 = BasicData::Symbol(*sym2);
             let list_index = data.push_to_data_block(BasicData::SymbolList(2))?;
@@ -15,7 +15,7 @@ where
             data.push_to_data_block(sym2)?;
             Ok(list_index)
         }
-        (Some(BasicData::Number(num1)), Some(BasicData::Number(num2))) => {
+        (BasicData::Number(num1), BasicData::Number(num2)) => {
             let num1 = BasicData::Number(*num1);
             let num2 = BasicData::Number(*num2);
             let list_index = data.push_to_data_block(BasicData::SymbolList(2))?;
@@ -23,7 +23,7 @@ where
             data.push_to_data_block(num2)?;
             Ok(list_index)
         }
-        (Some(BasicData::Symbol(sym1)), Some(BasicData::Number(num2))) => {
+        (BasicData::Symbol(sym1), BasicData::Number(num2)) => {
             let sym1 = BasicData::Symbol(*sym1);
             let num2 = BasicData::Number(*num2);
             let list_index = data.push_to_data_block(BasicData::SymbolList(2))?;
@@ -31,7 +31,7 @@ where
             data.push_to_data_block(num2)?;
             Ok(list_index)
         }
-        (Some(BasicData::Number(num1)), Some(BasicData::Symbol(sym2))) => {
+        (BasicData::Number(num1), BasicData::Symbol(sym2)) => {
             let num1 = BasicData::Number(*num1);
             let sym2 = BasicData::Symbol(*sym2);
             let list_index = data.push_to_data_block(BasicData::SymbolList(2))?;
@@ -39,7 +39,7 @@ where
             data.push_to_data_block(sym2)?;
             Ok(list_index)
         }
-        (Some(BasicData::SymbolList(size)), Some(BasicData::Symbol(sym))) => {
+        (BasicData::SymbolList(size), BasicData::Symbol(sym)) => {
             let size = *size;
             let sym = *sym;
             let list_index = data.push_to_data_block(BasicData::SymbolList(size + 1))?;
@@ -53,7 +53,7 @@ where
 
             Ok(list_index)
         }
-        (Some(BasicData::Symbol(sym)), Some(BasicData::SymbolList(size))) => {
+        (BasicData::Symbol(sym), BasicData::SymbolList(size)) => {
             let size = *size;
             let sym = *sym;
             let list_index = data.push_to_data_block(BasicData::SymbolList(size + 1))?;
@@ -67,7 +67,7 @@ where
 
             Ok(list_index)
         }
-        (Some(BasicData::SymbolList(size)), Some(BasicData::Number(num))) => {
+        (BasicData::SymbolList(size), BasicData::Number(num)) => {
             let size = *size;
             let num = *num;
             let list_index = data.push_to_data_block(BasicData::SymbolList(size + 1))?;
@@ -81,7 +81,7 @@ where
 
             Ok(list_index)
         }
-        (Some(BasicData::Number(num)), Some(BasicData::SymbolList(size))) => {
+        (BasicData::Number(num), BasicData::SymbolList(size)) => {
             let size = *size;
             let num = *num;
             let list_index = data.push_to_data_block(BasicData::SymbolList(size + 1))?;
@@ -95,7 +95,7 @@ where
 
             Ok(list_index)
         }
-        (Some(BasicData::SymbolList(size1)), Some(BasicData::SymbolList(size2))) => {
+        (BasicData::SymbolList(size1), BasicData::SymbolList(size2)) => {
             let size1 = *size1;
             let size2 = *size2;
             let list_index = data.push_to_data_block(BasicData::SymbolList(size1 + size2))?;
