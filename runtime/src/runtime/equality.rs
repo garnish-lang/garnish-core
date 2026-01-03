@@ -333,7 +333,7 @@ where
     let (start, end, _) = get_range(this, slice_range)?;
     if this.get_data_type(slice_value.clone())? == expected_data_type {
         let mut iter1 = get_value_iter(this, value_addr.clone(), Extents::new(Data::Number::zero(), Data::Number::max_value()))?;
-        let mut iter2 = get_value_iter(this, slice_addr.clone(), Extents::new(start, end))?;
+        let mut iter2 = get_value_iter(this, slice_value.clone(), Extents::new(start, end))?;
         
         let mut index1 = iter1.next();
         let mut index2 = iter2.next();
@@ -413,9 +413,9 @@ where
     let (start2, end2, _) = get_range(this, range2)?;
     let extents2 = Extents::new(start2, end2);
 
-    match this.get_data_type(value2)? {
-        GarnishDataType::List => compare_item_iterators_2(this, list_addr, slice_addr, get_value_iter, Data::get_list_item_iter, Extents::new(Data::Number::zero(), Data::Number::max_value()), extents2),
-        GarnishDataType::Concatenation => compare_item_iterators_2(this, list_addr, slice_addr, get_value_iter, Data::get_concatenation_iter, Extents::new(Data::Number::zero(), Data::Number::max_value()), extents2),
+    match this.get_data_type(value2.clone())? {
+        GarnishDataType::List => compare_item_iterators_2(this, list_addr, value2.clone(), get_value_iter, Data::get_list_item_iter, Extents::new(Data::Number::zero(), Data::Number::max_value()), extents2),
+        GarnishDataType::Concatenation => compare_item_iterators_2(this, list_addr, value2.clone(), get_value_iter, Data::get_concatenation_iter, Extents::new(Data::Number::zero(), Data::Number::max_value()), extents2),
         _ => Ok(false),
     }
 }

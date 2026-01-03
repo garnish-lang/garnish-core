@@ -39,9 +39,9 @@ fn make_range_internal<Data: GarnishData>(
             };
 
             let right_addr = if end_exclusive {
-                this.add_number(this.get_number(right_addr)?.decrement().or_num_err()?)?
-            } else {
                 right_addr
+            } else {
+                this.add_number(this.get_number(right_addr)?.increment().or_num_err()?)?
             };
 
             let addr = this.add_range(left_addr, right_addr)?;

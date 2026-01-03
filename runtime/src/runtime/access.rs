@@ -10,7 +10,11 @@ pub fn access<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, 
         (GarnishDataType::Symbol, GarnishDataType::Symbol)
         | (GarnishDataType::Symbol, GarnishDataType::SymbolList)
         | (GarnishDataType::SymbolList, GarnishDataType::Symbol)
-        | (GarnishDataType::SymbolList, GarnishDataType::SymbolList) => this.merge_to_symbol_list(left_addr, right_addr).and_then(|i| this.push_register(i))?,
+        | (GarnishDataType::SymbolList, GarnishDataType::SymbolList) 
+        | (GarnishDataType::SymbolList, GarnishDataType::Number)
+        | (GarnishDataType::Number, GarnishDataType::SymbolList)
+        | (GarnishDataType::Symbol, GarnishDataType::Number)
+        | (GarnishDataType::Number, GarnishDataType::Symbol) => this.merge_to_symbol_list(left_addr, right_addr).and_then(|i| this.push_register(i))?,
         (GarnishDataType::Pair, GarnishDataType::Number)
         | (GarnishDataType::Pair, GarnishDataType::Symbol)
         | (GarnishDataType::List, GarnishDataType::Number)
@@ -19,7 +23,6 @@ pub fn access<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, 
         | (GarnishDataType::CharList, GarnishDataType::Symbol)
         | (GarnishDataType::ByteList, GarnishDataType::Number)
         | (GarnishDataType::ByteList, GarnishDataType::Symbol)
-        | (GarnishDataType::SymbolList, GarnishDataType::Number)
         | (GarnishDataType::Range, GarnishDataType::Number)
         | (GarnishDataType::Range, GarnishDataType::Symbol)
         | (GarnishDataType::Concatenation, GarnishDataType::Number)
