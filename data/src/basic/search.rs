@@ -2,19 +2,7 @@ use std::cmp::Ordering;
 
 use crate::{BasicData, BasicDataCustom, DataError};
 
-pub(crate) fn search_for_associative_item<T: BasicDataCustom>(items: &[BasicData<T>], search_symbol: u64) -> Result<Option<usize>, DataError> {
-    // let result = items.binary_search_by(|item| match item {
-    //     BasicData::AssociativeItem(sym1, _) => sym1.cmp(&search_symbol),
-    //     _ => todo!() // return Err(DataError::new("Not a associative item", DataErrorType::NotAssociativeItem)),
-    // });
-
-    // match result {
-    //     Ok(index) => Ok(Some(items[index].as_associative_item()?.1)),
-    //     Err(_) => Ok(None),
-    // }
-
-    // Copied from std::slice::binary_search_by for error handling
-    // might have to switch to above commented code and figure out error scenario if there are issues
+pub(crate) fn search_for_associative_item_index<T: BasicDataCustom>(items: &[BasicData<T>], search_symbol: u64) -> Result<Option<usize>, DataError> {
     let mut size = items.len();
     if size == 0 {
         return Ok(None);
@@ -33,9 +21,16 @@ pub(crate) fn search_for_associative_item<T: BasicDataCustom>(items: &[BasicData
 
     let cmp = items[base].as_associative_item()?.0.cmp(&search_symbol);
     if cmp == Ordering::Equal {
-        Ok(Some(items[base].as_associative_item()?.1))
+        Ok(Some(base))
     } else {
         Ok(None)
+    }
+}
+
+pub(crate) fn search_for_associative_item<T: BasicDataCustom>(items: &[BasicData<T>], search_symbol: u64) -> Result<Option<BasicData<T>>, DataError> {
+    match search_for_associative_item_index(items, search_symbol)? {
+        Some(index) => Ok(Some(items[index].clone())),
+        None => Ok(None),
     }
 }
 
@@ -68,16 +63,16 @@ mod tests {
         ];
 
         let scenarios = vec![
-            (100, Some(10)),
-            (200, Some(11)),
-            (300, Some(12)),
-            (400, Some(13)),
-            (500, Some(14)),
-            (600, Some(15)),
-            (700, Some(16)),
-            (800, Some(17)),
-            (900, Some(18)),
-            (1000, Some(19)),
+            (100, Some(BasicData::<()>::AssociativeItem(100, 10))),
+            (200, Some(BasicData::<()>::AssociativeItem(200, 11))),
+            (300, Some(BasicData::<()>::AssociativeItem(300, 12))),
+            (400, Some(BasicData::<()>::AssociativeItem(400, 13))),
+            (500, Some(BasicData::<()>::AssociativeItem(500, 14))),
+            (600, Some(BasicData::<()>::AssociativeItem(600, 15))),
+            (700, Some(BasicData::<()>::AssociativeItem(700, 16))),
+            (800, Some(BasicData::<()>::AssociativeItem(800, 17))),
+            (900, Some(BasicData::<()>::AssociativeItem(900, 18))),
+            (1000, Some(BasicData::<()>::AssociativeItem(1000, 19))),
             (50, None),
             (250, None),
             (750, None),
@@ -86,7 +81,7 @@ mod tests {
 
         for (sym, expected) in scenarios {
             let result = search_for_associative_item(&items, sym);
-            assert_eq!(result, Ok(expected), "Expected {:?} for sym {} but got {:?}", expected, sym, result);
+            assert_eq!(result, Ok(expected.clone()), "Expected {:?} for sym {} but got {:?}", expected, sym, result);
         }
     }
 

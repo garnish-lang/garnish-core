@@ -9,7 +9,7 @@ use crate::ConversionDelegate;
 use crate::basic::clone::CloneDelegate;
 use crate::basic::companion::BasicDataCompanion;
 use crate::basic::ordering::OrderingDelegate;
-use crate::basic::search::search_for_associative_item;
+use crate::basic::search::{search_for_associative_item, search_for_associative_item_index};
 use crate::basic::storage::{StorageBlock, StorageSettings};
 use crate::{BasicData, DataError, SimpleNumber};
 
@@ -345,7 +345,8 @@ where
     pub fn get_symbol_string(&self, symbol: u64) -> Result<Option<String>, DataError> {
         let search_slice = &self.data()[self.symbol_table_block().start..self.symbol_table_block().start + self.symbol_table_block().cursor];
         match search_for_associative_item(search_slice, symbol)? {
-            Some(index) => {
+            Some(item) => {
+                let (_, index) = item.as_associative_item()?;
                 let list_length = self.get_from_data_block_ensure_index(index)?.as_char_list()?;
                 let start = self.data_block().start + index + 1;
                 let slice = &self.data()[start..start + list_length];
@@ -358,7 +359,10 @@ where
 
     pub fn get_symbol_expression(&self, symbol: u64) -> Result<Option<usize>, DataError> {
         let search_slice = &self.data()[self.expression_symbol_block().start..self.expression_symbol_block().start + self.expression_symbol_block().cursor];
-        search_for_associative_item(search_slice, symbol)
+        match search_for_associative_item(search_slice, symbol)? {
+            Some(item) => Ok(Some(item.as_associative_item()?.1)),
+            None => Ok(None),
+        }
     }
 
     pub fn get_expression_string(&self, expression_index: usize) -> Result<Option<String>, DataError> {
@@ -372,6 +376,39 @@ where
         }
         
         Ok(None)
+    }
+
+    pub fn get_associative_item_with_symbol(&self, list_index: usize, symbol: u64) -> Result<Option<&BasicData<T>>, DataError> {
+        let (len, associations_len) = self.get_from_data_block_ensure_index(list_index)?.as_list()?;
+
+        let association_start = self.data_block().start + list_index + len + 1;
+        let association_range = association_start..association_start + associations_len;
+        let association_slice = &self.data()[association_range];
+
+        match search_for_associative_item_index(association_slice, symbol)? {
+            Some(index) => Ok(Some(&self.data()[association_start + index])),
+            None => Ok(None),
+        }
+    }
+
+    pub fn get_associative_item_with_symbol_mut(&mut self, list_index: usize, symbol: u64) -> Result<Option<&mut BasicData<T>>, DataError> {
+        let (len, associations_len) = self.get_from_data_block_ensure_index(list_index)?.as_list()?;
+
+        let association_start = self.data_block().start + list_index + len + 1;
+        let association_range = association_start..association_start + associations_len;
+        
+        let search_index = {
+            let association_slice = &self.data()[association_range.clone()];
+            search_for_associative_item_index(association_slice, symbol)?
+        };
+
+        match search_index {
+            Some(index) => {
+                let true_index = association_start + index;
+                Ok(Some(&mut self.data_mut()[true_index]))
+            },
+            None => Ok(None),
+        }
     }
 
     pub(crate) fn data(&self) -> &Vec<BasicData<T>> {

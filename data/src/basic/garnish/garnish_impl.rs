@@ -182,7 +182,10 @@ where
         let association_range = association_start..association_start + associations_len;
         let association_slice = &self.data()[association_range.clone()];
 
-        search_for_associative_item(association_slice, sym)
+        match search_for_associative_item(association_slice, sym)? {
+            Some(item) => Ok(Some(item.as_associative_item()?.1)),
+            None => Ok(None),
+        }
     }
 
     fn get_char_list_len(&self, list_index: Self::Size) -> Result<Self::Size, Self::Error> {
