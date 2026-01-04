@@ -2,9 +2,6 @@
 //!
 
 pub use garnish_lang_traits::*;
-#[cfg(feature = "derive")]
-#[doc(hidden)]
-pub use garnish_lang_traits_derive::*;
 
 pub mod simple {
     //! Re-exports for concrete implementations of garnish traits.

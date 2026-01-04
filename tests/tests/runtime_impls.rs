@@ -1,50 +1,22 @@
-use crate::runtime::access::access;
-use crate::runtime::apply::*;
-use crate::runtime::arithmetic::{absolute_value, add, divide, integer_divide, multiply, opposite, power, remainder, subtract};
-use crate::runtime::bitwise::{bitwise_and, bitwise_left_shift, bitwise_not, bitwise_or, bitwise_right_shift, bitwise_xor};
-use crate::runtime::casting::{type_cast, type_of};
-use crate::runtime::comparison::{greater_than, greater_than_or_equal, less_than, less_than_or_equal};
-use crate::runtime::concat::concat;
-use crate::runtime::equality::equal;
-use crate::runtime::equality::{not_equal, type_equal};
-use crate::runtime::internals::{access_left_internal, access_length_internal, access_right_internal};
-use crate::runtime::jumps::{end_expression, jump, jump_if_false, jump_if_true};
-use crate::runtime::list::*;
-use crate::runtime::logical::{and, not, or, tis, xor};
-use crate::runtime::pair::make_pair;
-use crate::runtime::put::{push_value, put, put_value, update_value};
-use crate::runtime::range::{make_end_exclusive_range, make_exclusive_range, make_range, make_start_exclusive_range};
-use crate::runtime::resolve::resolve;
-use crate::runtime::sideeffect::*;
-
-use crate::execute::{execute_current_instruction, SimpleRuntimeInfo};
-use garnish_lang_traits::{
-    GarnishData, GarnishRuntime, RuntimeError
-};
-#[cfg(feature = "serde")]
-use serde::{Deserialize, Serialize};
+use garnish_lang::simple::ops::*;
+use garnish_lang::simple::{execute_current_instruction, SimpleRuntimeInfo};
+use garnish_lang::{GarnishData, GarnishRuntime, RuntimeError};
 
 /// Implementation of a [`GarnishRuntime`]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Debug, Clone)]
-#[deprecated(since = "0.0.20-alpha", note = "Use execute::execute_current_instruction instead of SimpleGarnishData.")]
 pub struct SimpleGarnishRuntime<Data: GarnishData> {
     data: Data,
 }
 
-#[deprecated(since = "0.0.20-alpha", note = "Use execute::execute_current_instruction instead of SimpleGarnishData.")]
 impl<Data: GarnishData> SimpleGarnishRuntime<Data> {
-    #[deprecated(since = "0.0.20-alpha", note = "Use execute::execute_current_instruction instead of SimpleGarnishData.")]
     pub fn new(data: Data) -> SimpleGarnishRuntime<Data> {
         SimpleGarnishRuntime { data }
     }
 
-    #[deprecated(since = "0.0.20-alpha", note = "Use execute::execute_current_instruction instead of SimpleGarnishData.")]
     pub fn get_data_owned(self) -> Data {
         self.data
     }
 
-    #[deprecated(since = "0.0.20-alpha", note = "Use execute::execute_current_instruction instead of SimpleGarnishData.")]
     pub fn execute_current_instruction(&mut self) -> Result<SimpleRuntimeInfo, RuntimeError<Data::Error>> {
         execute_current_instruction(self.get_data_mut())
     }
@@ -332,3 +304,4 @@ where
         resolve(self.get_data_mut(), data)
     }
 }
+
