@@ -511,7 +511,7 @@ mod tests {
 
     #[test]
     fn custom_data_converted() {
-        let mut data = BasicGarnishData::<Foo, FooCompanion>::new().unwrap();
+        let mut data = BasicGarnishData::<Foo, FooCompanion>::new(FooCompanion {}).unwrap();
         let index = data
             .push_object_to_data_block(basic_object!(Custom Foo {
                 value: "custom value".to_string(),

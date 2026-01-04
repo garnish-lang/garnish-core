@@ -54,6 +54,12 @@ pub struct NoOpCompanion {
 
 }
 
+impl NoOpCompanion {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
 impl BasicDataCompanion<()> for NoOpCompanion {
     fn resolve(_data: &mut BasicGarnishData<()>, _symbol: u64) -> Result<bool, DataError> {
         Ok(false)
@@ -97,7 +103,7 @@ where
     T: BasicDataCustom,
     Companion: BasicDataCompanion<T>,
 {
-    pub fn new() -> Result<Self, DataError> {
+    pub fn new(companion: Companion) -> Result<Self, DataError> {
         Self::new_with_settings(
             StorageSettings::default(),
             StorageSettings::default(),
@@ -105,6 +111,7 @@ where
             StorageSettings::default(),
             StorageSettings::default(),
             StorageSettings::default(),
+            companion,
         )
     }
 
@@ -115,6 +122,7 @@ where
         expression_symbol_settings: StorageSettings,
         data_settings: StorageSettings,
         custom_data_settings: StorageSettings,
+        companion: Companion,
     ) -> Result<Self, DataError> {
         let mut this = Self {
             current_value: None,
@@ -129,7 +137,7 @@ where
             expression_symbol_block: StorageBlock::new(expression_symbol_settings.initial_size(), expression_symbol_settings.clone()),
             data_block: StorageBlock::new(data_settings.initial_size(), data_settings.clone()),
             custom_data_block: StorageBlock::new(custom_data_settings.initial_size(), custom_data_settings.clone()),
-            companion: Companion::default(),
+            companion,
         };
 
         this.reallocate_heap(
@@ -509,8 +517,7 @@ where
 #[cfg(test)]
 pub mod utilities {
     use crate::{
-        BasicGarnishDataUnit,
-        basic::storage::{ReallocationStrategy, StorageSettings},
+        BasicGarnishDataUnit, NoOpCompanion, basic::storage::{ReallocationStrategy, StorageSettings}
     };
 
     pub fn test_data() -> BasicGarnishDataUnit {
@@ -521,6 +528,7 @@ pub mod utilities {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::default(),
         ).unwrap()
     }
 
@@ -532,6 +540,7 @@ pub mod utilities {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::default(),
         ).unwrap()
     }
 
@@ -543,6 +552,7 @@ pub mod utilities {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap()
     }
 }
@@ -552,17 +562,15 @@ mod tests {
     use garnish_lang_traits::{GarnishDataType, Instruction};
 
     use crate::{
-        BasicData, BasicDataCustom, BasicGarnishData, BasicGarnishDataUnit, DataError,
-        basic::{
+        BasicData, BasicDataCustom, BasicGarnishData, BasicGarnishDataUnit, DataError, NoOpCompanion, basic::{
             basic::utilities::test_data, object::BasicObject, storage::{ReallocationStrategy, StorageBlock, StorageSettings}
             
-        },
-        error::DataErrorType,
+        }, error::DataErrorType
     };
 
     #[test]
     fn test_basic_garnish_data() {
-        BasicGarnishData::<()>::new().unwrap();
+        BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
     }
 
     #[test]
@@ -574,6 +582,7 @@ mod tests {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         );
 
         let expected_data = vec![BasicData::Empty; 50];
@@ -649,6 +658,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         let index = data.push_to_instruction_block(Instruction::Add, None).unwrap();
         assert_eq!(index, 0);
@@ -669,6 +679,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         let index = data.push_to_jump_table_block(100).unwrap();
         assert_eq!(index, 0);
@@ -689,6 +700,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         for _ in 0..15 {
             data.push_to_data_block(BasicData::Unit).unwrap();
@@ -711,6 +723,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         for _ in 0..15 {
             data.push_to_instruction_block(Instruction::Add, None).unwrap();
@@ -733,6 +746,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         for i in 0..15 {
             data.push_to_jump_table_block(i).unwrap();
@@ -755,6 +769,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
 
         data.push_to_instruction_block(Instruction::Add, None).unwrap();
@@ -794,6 +809,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
 
         data.push_to_custom_data_block(()).unwrap();
@@ -833,6 +849,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
 
         for _ in 0..10 {
@@ -859,6 +876,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
 
         for _ in 0..10 {
@@ -885,6 +903,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
 
         for i in 0..10 {
@@ -911,6 +930,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         data.push_to_symbol_table_block(100, 0).unwrap();
         assert_eq!(data.symbol_table_block.cursor, 1);
@@ -926,6 +946,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         for _ in 0..15 {
             data.push_to_symbol_table_block(100, 0).unwrap();
@@ -949,6 +970,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
 
         for _ in 0..10 {
@@ -975,6 +997,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         data.push_to_symbol_table_block(300, 0).unwrap();
         data.push_to_symbol_table_block(600, 0).unwrap();
@@ -990,6 +1013,7 @@ mod tests {
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
 
         expected_data.data[0] = BasicData::AssociativeItem(100, 0);
@@ -1011,6 +1035,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         let index = data.push_object_to_data_block(BasicObject::CharList("first symbol".to_string())).unwrap();
         data.push_to_symbol_table_block(100, index).unwrap();
@@ -1037,6 +1062,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         let index = data.push_object_to_data_block(BasicObject::CharList("first symbol".to_string())).unwrap();
         data.push_to_symbol_table_block(100, index).unwrap();
@@ -1063,6 +1089,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         let index = data.push_object_to_data_block(BasicObject::Number(100.into())).unwrap();
         data.push_to_symbol_table_block(100, index).unwrap();
@@ -1095,6 +1122,7 @@ mod tests {
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         data.push_to_expression_symbol_block(100, 0).unwrap();
         assert_eq!(data.expression_symbol_block.cursor, 1);
@@ -1110,6 +1138,7 @@ mod tests {
             StorageSettings::new(10, 20, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         for _ in 0..15 {
             data.push_to_expression_symbol_block(100, 0).unwrap();
@@ -1133,6 +1162,7 @@ mod tests {
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
 
         for _ in 0..10 {
@@ -1159,6 +1189,7 @@ mod tests {
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 0, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         data.push_to_expression_symbol_block(300, 0).unwrap();
         data.push_to_expression_symbol_block(600, 0).unwrap();
@@ -1174,6 +1205,7 @@ mod tests {
             StorageSettings::new(10, 10, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 0, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, 10, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
 
         expected_data.data[0] = BasicData::AssociativeItem(100, 0);
@@ -1195,6 +1227,7 @@ mod tests {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         data.push_to_expression_symbol_block(100, index).unwrap();
@@ -1219,6 +1252,7 @@ mod tests {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         let index = data.push_to_data_block(BasicData::Number(100.into())).unwrap();
         data.push_to_expression_symbol_block(100, index).unwrap();
@@ -1243,6 +1277,7 @@ mod tests {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         
         // Create expression data
@@ -1269,6 +1304,7 @@ mod tests {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         
         // Create expression data but don't map it
@@ -1288,6 +1324,7 @@ mod tests {
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            NoOpCompanion::new(),
         ).unwrap();
         
         // Create expression data
@@ -1336,6 +1373,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            TestCustomCompanion {},
         ).unwrap();
 
         let custom_value = TestCustom { value: "test value".to_string() };

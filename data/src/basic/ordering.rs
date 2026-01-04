@@ -177,18 +177,18 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::{BasicData, BasicGarnishData, basic_object};
+    use crate::{BasicData, BasicGarnishData, NoOpCompanion, basic_object};
 
     #[test]
     fn create_stack_with_multiple_values() {
-        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let mut data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         let index_one = data.push_object_to_data_block(basic_object!((Number 100) = (Number 400))).unwrap();
         let index_two = data.push_object_to_data_block(basic_object!((Number 200) = (Number 300))).unwrap();
         data.push_object_to_data_block(basic_object!((Number 500) = (Number 600))).unwrap();
         data.create_index_stack(index_two).unwrap();
         data.create_index_stack(index_one).unwrap();
         
-        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        let mut expected_data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         expected_data.data_mut().resize(70, BasicData::Empty);
         expected_data.data_mut().splice(
             40..55,

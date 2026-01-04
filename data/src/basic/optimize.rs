@@ -81,13 +81,13 @@ where
 
 #[cfg(test)]
 mod optimize {
-    use crate::{BasicData, basic_object};
+    use crate::{BasicData, NoOpCompanion, basic_object};
 
     use super::*;
 
     #[test]
     fn default_with_data_all_data_removed() {
-        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let mut data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         data.push_object_to_data_block(basic_object!(Unit, (Number 100), (CharList "hello"), ((ByteList 1, 2, 3) = (Symbol "my_symbol"))))
             .unwrap();
         data.optimize_data_block_and_retain(&[]).unwrap();
@@ -96,14 +96,14 @@ mod optimize {
 
     #[test]
     fn data_within_retention_count_is_kept() {
-        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let mut data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         data.push_object_to_data_block(basic_object!(Unit, (Number 100), (CharList "hello"), ((ByteList 1, 2, 3) = (Symbol "my_symbol"))))
             .unwrap();
         data.retain_all_current_data();
         data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
         data.optimize_data_block_and_retain(&[]).unwrap();
 
-        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        let mut expected_data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         expected_data.data_mut().resize(90, BasicData::Empty);
         expected_data.data_mut().splice(
             40..59,
@@ -141,7 +141,7 @@ mod optimize {
 
     #[test]
     fn data_referenced_by_registers_is_kept() {
-        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let mut data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         let index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let register_index = data.push_to_data_block(BasicData::RegisterRoot(index)).unwrap();
         data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
@@ -151,7 +151,7 @@ mod optimize {
 
         data.optimize_data_block_and_retain(&[]).unwrap();
 
-        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        let mut expected_data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         expected_data.data_mut().resize(80, BasicData::Empty);
         expected_data.data_mut().splice(40..46, vec![
             BasicData::Number(1234.into()),
@@ -172,7 +172,7 @@ mod optimize {
 
     #[test]
     fn data_referenced_by_values_is_kept() {
-        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let mut data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         let index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         let value_index = data.push_to_data_block(BasicData::ValueRoot(index)).unwrap();
         data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
@@ -182,7 +182,7 @@ mod optimize {
 
         data.optimize_data_block_and_retain(&[]).unwrap();
 
-        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        let mut expected_data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         expected_data.data_mut().resize(80, BasicData::Empty);
         expected_data.data_mut().splice(40..46, vec![
             BasicData::Number(1234.into()),
@@ -203,7 +203,7 @@ mod optimize {
 
     #[test]
     fn data_referenced_by_frames_is_kept() {
-        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let mut data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         data.push_to_data_block(BasicData::JumpPoint(10)).unwrap();
         let frame_index = data.push_to_data_block(BasicData::FrameRoot).unwrap();
         data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
@@ -214,7 +214,7 @@ mod optimize {
 
         data.optimize_data_block_and_retain(&[]).unwrap();
 
-        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        let mut expected_data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         expected_data.data_mut().resize(90, BasicData::Empty);
         expected_data.data_mut().splice(40..47, vec![
             BasicData::Number(1234.into()),
@@ -236,14 +236,14 @@ mod optimize {
 
     #[test]
     fn with_retained_keeps_data() {
-        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let mut data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
 
         data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
         let index = data.push_object_to_data_block(basic_object!((Number 1234) = (Char 'a'))).unwrap();
 
         let result = data.optimize_data_block_and_retain(&[index]).unwrap();
 
-        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        let mut expected_data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         expected_data.data_mut().resize(80, BasicData::Empty);
         expected_data.data_mut().splice(40..43, vec![
             BasicData::Number(1234.into()),
@@ -261,7 +261,7 @@ mod optimize {
 
     #[test]
     fn retain_all_options() {
-        let mut data = BasicGarnishData::<()>::new().unwrap();
+        let mut data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         
         let retained_value_index = data.push_object_to_data_block(basic_object!(Number 100)).unwrap();
         data.retain_all_current_data();
@@ -287,7 +287,7 @@ mod optimize {
         
         let result = data.optimize_data_block_and_retain(&[additional_retained_index, additional_retained_pair_index]).unwrap();
 
-        let mut expected_data = BasicGarnishData::<()>::new().unwrap();
+        let mut expected_data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
         expected_data.data_mut().resize(110, BasicData::Empty);
         
         expected_data.data_mut().splice(40..56, vec![

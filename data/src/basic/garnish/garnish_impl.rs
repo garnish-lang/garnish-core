@@ -2921,6 +2921,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            FooCompanion {},
         ).unwrap();
         data.resolve(100).unwrap();
         assert_eq!(data.data()[0], BasicData::Custom(Foo { value: "resolved".to_string() }));
@@ -2935,6 +2936,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            FooCompanion {},
         ).unwrap();
         data.apply(100, 200).unwrap();
         assert_eq!(data.data()[0], BasicData::Custom(Foo { value: "applied".to_string() }));
@@ -2949,6 +2951,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            FooCompanion {},
         ).unwrap();
         data.defer_op(Instruction::Add, (GarnishDataType::Number, 100), (GarnishDataType::Number, 200)).unwrap();
         assert_eq!(data.data()[0], BasicData::Custom(Foo { value: "deferred".to_string() }));

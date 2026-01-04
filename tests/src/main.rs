@@ -2,6 +2,7 @@ use colored::Colorize;
 use garnish_lang::compiler::build::build;
 use garnish_lang::compiler::lex::lex;
 use garnish_lang::compiler::parse::{ParseNode, parse};
+use garnish_lang::simple::NoOpCompanion;
 use garnish_lang::{GarnishData, simple::{BasicGarnishData, SimpleRuntimeState, execute_current_instruction, ops}};
 use log::error;
 use std::fs::read_to_string;
@@ -103,7 +104,7 @@ enum TestResult {
 }
 
 fn execute_script(script_path: &String, create_dump_files: bool) -> TestResult {
-    let mut data: BasicGarnishData<()> = match BasicGarnishData::new() {
+    let mut data: BasicGarnishData<(), NoOpCompanion> = match BasicGarnishData::new(NoOpCompanion::new()) {
         Ok(d) => d,
         Err(e) => return TestResult::Error(format!("Failed to create BasicGarnishData: {}", e)),
     };

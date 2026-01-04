@@ -293,6 +293,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            TestCustomCompanion {},
         ).unwrap();
 
         let custom_value1 = TestCustom { value: "first".to_string() };
@@ -324,6 +325,7 @@ mod tests {
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(0, usize::MAX, ReallocationStrategy::FixedSize(10)),
             StorageSettings::new(10, usize::MAX, ReallocationStrategy::FixedSize(10)),
+            TestCustomCompanion {},
         ).unwrap();
 
         let result = data.get_from_custom_data_block(10);
