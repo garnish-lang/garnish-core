@@ -157,7 +157,7 @@ mod defer_op {
             assert_eq!(i, 2);
             Ok((1, 0))
         };
-        mock_data.stub_get_symbol = |_, i| Ok(100);
+        mock_data.stub_get_symbol = |_, _i| Ok(100);
         mock_data.stub_add_number = |_, num| {
             assert_eq!(num, 1);
             Ok(100)
@@ -181,7 +181,7 @@ mod defer_op {
             assert_eq!(i, 2);
             Ok((1, 0))
         };
-        mock_data.stub_get_symbol = |_, i| Ok(100);
+        mock_data.stub_get_symbol = |_, _i| Ok(100);
         mock_data.stub_add_unit = |_| {
             Ok(200)
         };

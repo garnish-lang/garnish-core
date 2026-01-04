@@ -845,11 +845,11 @@ mod tests {
             (self.stub_add_number_from)(self.data_mut(), from)
         }
 
-        fn parse_add_char_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        fn parse_add_char_list(&mut self, _from: &str) -> Result<Self::Size, Self::Error> {
             unimplemented!()
         }
 
-        fn parse_add_byte_list(&mut self, from: &str) -> Result<Self::Size, Self::Error> {
+        fn parse_add_byte_list(&mut self, _from: &str) -> Result<Self::Size, Self::Error> {
             unimplemented!()
         }
 

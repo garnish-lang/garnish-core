@@ -337,16 +337,3 @@ pub(crate) fn get_value_if_association<Data: GarnishData>(
 
     Ok(None)
 }
-
-pub(crate) fn is_value_association<Data: GarnishData>(this: &Data, addr: Data::Size) -> Result<bool, RuntimeError<Data::Error>> {
-    Ok(match this.get_data_type(addr.clone())? {
-        GarnishDataType::Pair => {
-            let (left, _right) = this.get_pair(addr)?;
-            match this.get_data_type(left)? {
-                GarnishDataType::Symbol => true,
-                _ => false,
-            }
-        }
-        _ => false,
-    })
-}
