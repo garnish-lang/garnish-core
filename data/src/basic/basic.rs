@@ -228,6 +228,11 @@ where
         self.optimize_data_block_and_retain(additional_data_retentions)
     }
 
+    pub fn clone_data(&mut self, index: usize) -> Result<usize, DataError> {
+        let index_stack_start = self.create_index_stack(index)?;
+        self.clone_index_stack(index_stack_start, 0)
+    }
+
     pub fn push_to_instruction_block(&mut self, instruction: Instruction, data: Option<usize>) -> Result<usize, DataError> {
         if self.instruction_block.cursor >= self.instruction_block.size {
             self.reallocate_heap(
