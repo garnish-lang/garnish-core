@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod deferring {
-    use crate::simple::testing_utilities::{DeferOpTestContext, create_simple_runtime};
+    use crate::simple::testing_utilities::{create_simple_runtime};
     use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
@@ -8,8 +8,6 @@ mod deferring {
         let mut runtime = create_simple_runtime();
 
         let int1 = runtime.get_data_mut().add_number(10.into()).unwrap();
-
-        let mut context = DeferOpTestContext::new();
 
         runtime.resolve(int1).unwrap();
 

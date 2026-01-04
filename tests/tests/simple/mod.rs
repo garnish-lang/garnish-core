@@ -18,57 +18,9 @@ mod sideeffect;
 
 #[cfg(test)]
 pub mod testing_utilities {
-    use garnish_lang::simple::{DataError, SimpleDataFactory, SimpleGarnishData};
+    use garnish_lang::simple::{SimpleDataFactory, SimpleGarnishData};
     use crate::SimpleGarnishRuntime;
-    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime, Instruction, RuntimeError};
-
-    pub const DEFERRED_VALUE: usize = 1000;
-
-    pub struct DeferOpTestContext {}
-
-    impl DeferOpTestContext {
-        pub fn new() -> Self {
-            DeferOpTestContext {}
-        }
-    }
-
-    pub fn deferred_op<F>(func: F)
-    where
-        F: Fn(&mut SimpleGarnishRuntime<SimpleGarnishData>, &mut DeferOpTestContext),
-    {
-        let mut runtime = create_simple_runtime();
-
-        let int1 = runtime.get_data_mut().add_external(10).unwrap();
-        let int2 = runtime.get_data_mut().add_expression(20).unwrap();
-
-        runtime.get_data_mut().push_register(int1).unwrap();
-        runtime.get_data_mut().push_register(int2).unwrap();
-
-        let mut context = DeferOpTestContext::new();
-
-        func(&mut runtime, &mut context);
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_external(i).unwrap(), DEFERRED_VALUE);
-    }
-
-    pub fn deferred_unary_op<F>(func: F)
-    where
-        F: Fn(&mut SimpleGarnishRuntime<SimpleGarnishData>, &mut DeferOpTestContext),
-    {
-        let mut runtime = create_simple_runtime();
-
-        let int1 = runtime.get_data_mut().add_expression(10).unwrap();
-
-        runtime.get_data_mut().push_register(int1).unwrap();
-
-        let mut context = DeferOpTestContext::new();
-
-        func(&mut runtime, &mut context);
-
-        let i = runtime.get_data_mut().get_register(0).unwrap();
-        assert_eq!(runtime.get_data_mut().get_external(i).unwrap(), DEFERRED_VALUE);
-    }
+    use garnish_lang::{GarnishData, GarnishDataFactory};
 
     pub fn create_simple_runtime() -> SimpleGarnishRuntime<SimpleGarnishData> {
         SimpleGarnishRuntime::new(SimpleGarnishData::new())
