@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang::{GarnishData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::{GarnishData, GarnishRuntime};
 
     #[test]
     fn bitwise_not() {
@@ -12,7 +12,7 @@ mod tests {
 
         runtime.get_data_mut().push_register(int1).unwrap();
 
-        runtime.bitwise_not(NO_CONTEXT).unwrap();
+        runtime.bitwise_not().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_data_mut().get_number(new_data_start).unwrap(), (!10).into());
@@ -29,7 +29,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.bitwise_and(NO_CONTEXT).unwrap();
+        runtime.bitwise_and().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_data_mut().get_number(new_data_start).unwrap(), (10 & 20).into());
@@ -46,7 +46,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.bitwise_or(NO_CONTEXT).unwrap();
+        runtime.bitwise_or().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_data_mut().get_number(new_data_start).unwrap(), (10 | 20).into());
@@ -63,7 +63,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.bitwise_xor(NO_CONTEXT).unwrap();
+        runtime.bitwise_xor().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_data_mut().get_number(new_data_start).unwrap(), (10 ^ 20).into());
@@ -80,7 +80,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.bitwise_left_shift(NO_CONTEXT).unwrap();
+        runtime.bitwise_left_shift().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_data_mut().get_number(new_data_start).unwrap(), (10 << 3).into());
@@ -97,7 +97,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.bitwise_right_shift(NO_CONTEXT).unwrap();
+        runtime.bitwise_right_shift().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), new_data_start);
         assert_eq!(runtime.get_data_mut().get_number(new_data_start).unwrap(), (10 >> 3).into());

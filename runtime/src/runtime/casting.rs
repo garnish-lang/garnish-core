@@ -3,9 +3,8 @@ use garnish_lang_traits::helpers::iterate_concatenation_mut;
 
 use crate::runtime::error::OrNumberError;
 use crate::runtime::internals::concatenation_len;
-use crate::runtime::list::is_value_association;
 use crate::runtime::utilities::{get_range, next_ref, next_two_raw_ref, push_unit};
-use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataFactory, GarnishDataType, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishData, GarnishDataFactory, GarnishDataType, GarnishNumber, RuntimeError, TypeConstants};
 
 pub fn type_of<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let a = next_ref(this)?;

@@ -2,7 +2,7 @@
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
     use garnish_lang::simple::SimpleNumber;
-    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime, Instruction, NO_CONTEXT};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction};
 
     #[test]
     fn make_list() {
@@ -95,7 +95,7 @@ mod tests {
         runtime.get_data_mut().push_register(i4).unwrap();
         runtime.get_data_mut().push_register(i5).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), i2);
     }
@@ -117,7 +117,7 @@ mod tests {
         runtime.get_data_mut().push_register(i4).unwrap();
         runtime.get_data_mut().push_register(i5).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), i3);
     }
@@ -139,7 +139,7 @@ mod tests {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), start);
         assert_eq!(runtime.get_data_mut().get_char(start).unwrap(), 'c');
@@ -162,7 +162,7 @@ mod tests {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), start);
         assert_eq!(runtime.get_data_mut().get_byte(start).unwrap(), 30.into());
@@ -185,7 +185,7 @@ mod tests {
         runtime.get_data_mut().push_register(i4).unwrap();
         runtime.get_data_mut().push_register(i5).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -208,7 +208,7 @@ mod tests {
         runtime.get_data_mut().push_register(i4).unwrap();
         runtime.get_data_mut().push_register(i5).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -226,7 +226,7 @@ mod tests {
         runtime.get_data_mut().push_register(i1).unwrap();
         runtime.get_data_mut().push_register(i2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -249,7 +249,7 @@ mod tests {
         runtime.get_data_mut().push_register(i4).unwrap();
         runtime.get_data_mut().push_register(i5).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -269,7 +269,7 @@ mod tests {
 
         runtime.get_data_mut().push_instruction(Instruction::Access, None).unwrap();
 
-        let result = runtime.access(NO_CONTEXT);
+        let result = runtime.access();
 
         assert!(result.is_err());
     }
@@ -291,7 +291,7 @@ mod tests {
         runtime.get_data_mut().push_register(i4).unwrap();
         runtime.get_data_mut().push_register(i5).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -301,7 +301,7 @@ mod tests {
 #[cfg(test)]
 mod ranges {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction, NO_CONTEXT};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction};
 
     #[test]
     fn access_with_integer() {
@@ -317,7 +317,7 @@ mod ranges {
         runtime.get_data_mut().push_register(i3).unwrap();
         runtime.get_data_mut().push_register(i4).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 15.into());
@@ -337,7 +337,7 @@ mod ranges {
         runtime.get_data_mut().push_register(i3).unwrap();
         runtime.get_data_mut().push_register(i4).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -347,8 +347,8 @@ mod ranges {
 #[cfg(test)]
 mod slice {
     use crate::simple::testing_utilities::{add_integer_list, add_list, add_pair, add_range, create_simple_runtime};
-    use garnish_lang::simple::{SimpleDataFactory, SimpleDataRuntimeNC};
-    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::simple::SimpleDataFactory;
+    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn index_slice_of_list() {
@@ -364,7 +364,7 @@ mod slice {
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 40.into());
@@ -389,7 +389,7 @@ mod slice {
         runtime.get_data_mut().push_register(slice).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_char(i).unwrap(), 'd');
@@ -414,7 +414,7 @@ mod slice {
         runtime.get_data_mut().push_register(slice).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_byte(i).unwrap(), 'd' as u8);
@@ -429,12 +429,15 @@ mod slice {
         let d3 = runtime.get_data_mut().add_number(4.into()).unwrap();
         let d4 = runtime.get_data_mut().add_range(d2, d3).unwrap();
         let d5 = runtime.get_data_mut().add_slice(d1, d4).unwrap();
-        let d6 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val4").unwrap()).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val4").unwrap())
+            .unwrap();
 
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 50.into());
@@ -459,12 +462,15 @@ mod slice {
         let d3 = runtime.get_data_mut().add_number(11.into()).unwrap();
         let d4 = runtime.get_data_mut().add_range(d2, d3).unwrap();
         let d5 = runtime.get_data_mut().add_slice(d1, d4).unwrap();
-        let d6 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val5").unwrap()).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val5").unwrap())
+            .unwrap();
 
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 123.into());
@@ -484,7 +490,7 @@ mod slice {
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -504,7 +510,7 @@ mod slice {
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -513,10 +519,12 @@ mod slice {
 
 #[cfg(test)]
 mod concatenation {
-    use crate::simple::testing_utilities::{add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range, create_simple_runtime};
-    use garnish_lang::simple::{SimpleDataFactory, SimpleDataRuntimeNC};
+    use crate::simple::testing_utilities::{
+        add_concatenation_with_start, add_integer_list_with_start, add_list_with_start, add_range, create_simple_runtime,
+    };
+    use garnish_lang::simple::SimpleDataFactory;
     use garnish_lang::simple::SimpleNumber::Integer;
-    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn index_concat_of_items_with_number() {
@@ -528,7 +536,7 @@ mod concatenation {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         let (_left, right) = runtime.get_data_mut().get_pair(i).unwrap();
@@ -540,12 +548,15 @@ mod concatenation {
         let mut runtime = create_simple_runtime();
 
         let d1 = add_concatenation_with_start(runtime.get_data_mut(), 10, 20);
-        let d2 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val23").unwrap()).unwrap();
+        let d2 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val23").unwrap())
+            .unwrap();
 
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 23.into());
@@ -563,7 +574,7 @@ mod concatenation {
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(d4).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 43.into());
@@ -576,12 +587,15 @@ mod concatenation {
         let d1 = add_list_with_start(runtime.get_data_mut(), 10, 20);
         let d2 = add_list_with_start(runtime.get_data_mut(), 10, 40);
         let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
-        let d4 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val43").unwrap()).unwrap();
+        let d4 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val43").unwrap())
+            .unwrap();
 
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(d4).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 43.into());
@@ -592,16 +606,22 @@ mod concatenation {
         let mut runtime = create_simple_runtime();
 
         let d1 = add_list_with_start(runtime.get_data_mut(), 10, 20);
-        let k1 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val25").unwrap()).unwrap();
+        let k1 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val25").unwrap())
+            .unwrap();
         let v1 = runtime.get_data_mut().add_number(Integer(123)).unwrap();
         let d2 = runtime.get_data_mut().add_pair((k1, v1)).unwrap();
         let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
-        let d4 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val25").unwrap()).unwrap();
+        let d4 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val25").unwrap())
+            .unwrap();
 
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(d4).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 123.into());
@@ -619,7 +639,7 @@ mod concatenation {
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(d4).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         let (_left, right) = runtime.get_data_mut().get_pair(i).unwrap();
@@ -633,12 +653,15 @@ mod concatenation {
         let d1 = add_concatenation_with_start(runtime.get_data_mut(), 10, 20);
         let d2 = add_range(runtime.get_data_mut(), 2, 5);
         let d3 = runtime.get_data_mut().add_slice(d1, d2).unwrap();
-        let d4 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val23").unwrap()).unwrap();
+        let d4 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val23").unwrap())
+            .unwrap();
 
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(d4).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 23.into());
@@ -649,7 +672,10 @@ mod concatenation {
         let mut runtime = create_simple_runtime();
 
         let d1 = add_concatenation_with_start(runtime.get_data_mut(), 10, 20);
-        let d2 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val25").unwrap()).unwrap();
+        let d2 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val25").unwrap())
+            .unwrap();
         let d3 = runtime.get_data_mut().add_number(Integer(123)).unwrap();
         let d4 = runtime.get_data_mut().add_pair((d2, d3)).unwrap();
 
@@ -657,12 +683,15 @@ mod concatenation {
         let d6 = add_range(runtime.get_data_mut(), 2, 11);
         let d7 = runtime.get_data_mut().add_slice(d5, d6).unwrap();
 
-        let d8 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val25").unwrap()).unwrap();
+        let d8 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val25").unwrap())
+            .unwrap();
 
         runtime.get_data_mut().push_register(d7).unwrap();
         runtime.get_data_mut().push_register(d8).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 123.into());
@@ -682,7 +711,7 @@ mod concatenation {
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 43.into());
@@ -697,12 +726,15 @@ mod concatenation {
         let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
         let d4 = add_range(runtime.get_data_mut(), 12, 15);
         let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
-        let d6 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val43").unwrap()).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val43").unwrap())
+            .unwrap();
 
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 43.into());
@@ -717,12 +749,15 @@ mod concatenation {
         let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
         let d4 = add_range(runtime.get_data_mut(), 8, 12);
         let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
-        let d6 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val40").unwrap()).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val40").unwrap())
+            .unwrap();
 
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 40.into());
@@ -737,12 +772,15 @@ mod concatenation {
         let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
         let d4 = add_range(runtime.get_data_mut(), 12, 15);
         let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
-        let d6 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val23").unwrap()).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val23").unwrap())
+            .unwrap();
 
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -757,12 +795,15 @@ mod concatenation {
         let d3 = runtime.get_data_mut().add_concatenation(d1, d2).unwrap();
         let d4 = add_range(runtime.get_data_mut(), 12, 15);
         let d5 = runtime.get_data_mut().add_slice(d3, d4).unwrap();
-        let d6 = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("val48").unwrap()).unwrap();
+        let d6 = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("val48").unwrap())
+            .unwrap();
 
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.access(NO_CONTEXT).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);

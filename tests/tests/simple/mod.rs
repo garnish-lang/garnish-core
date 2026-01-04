@@ -18,8 +18,8 @@ mod sideeffect;
 
 #[cfg(test)]
 pub mod testing_utilities {
-    use garnish_lang::simple::{DataError, SimpleDataFactory, SimpleDataRuntimeNC, SimpleGarnishData, SimpleGarnishRuntime};
-    use garnish_lang::{GarnishContext, GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime, Instruction, RuntimeError};
+    use garnish_lang::simple::{DataError, SimpleDataFactory, SimpleGarnishData, SimpleGarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime, Instruction, RuntimeError};
 
     pub const DEFERRED_VALUE: usize = 1000;
 
@@ -28,14 +28,6 @@ pub mod testing_utilities {
     impl DeferOpTestContext {
         pub fn new() -> Self {
             DeferOpTestContext {}
-        }
-    }
-
-    impl GarnishContext<SimpleGarnishData> for DeferOpTestContext {
-        fn defer_op(&mut self, data: &mut SimpleGarnishData, _operation: Instruction, _left: (GarnishDataType, usize), _right: (GarnishDataType, usize)) -> Result<bool, RuntimeError<DataError>> {
-            // add simple value that is produced by any op
-            data.add_external(DEFERRED_VALUE).and_then(|r| data.push_register(r))?;
-            Ok(true)
         }
     }
 

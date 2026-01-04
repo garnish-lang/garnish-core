@@ -11,7 +11,7 @@ mod deferring {
 
         let mut context = DeferOpTestContext::new();
 
-        runtime.resolve(int1, Some(&mut context)).unwrap();
+        runtime.resolve(int1).unwrap();
 
         // resolve never passes to defer make sure default unit is place when not resolved
         let i = runtime.get_data_mut().get_register(0).unwrap();
@@ -22,8 +22,7 @@ mod deferring {
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang::simple::{DataError, SimpleGarnishData};
-    use garnish_lang::{EMPTY_CONTEXT, EmptyContext, GarnishContext, GarnishData, GarnishDataType, GarnishRuntime, Instruction, RuntimeError};
+    use garnish_lang::{ GarnishData, GarnishDataType, GarnishRuntime, Instruction};
 
     #[allow(const_item_mutation)]
     #[test]
@@ -32,7 +31,7 @@ mod tests {
 
         let i2 = runtime.get_data_mut().add_number(10.into()).unwrap();
 
-        runtime.resolve(i2, Some(&mut EMPTY_CONTEXT)).unwrap();
+        runtime.resolve(i2).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -54,7 +53,7 @@ mod tests {
 
         runtime.get_data_mut().push_value_stack(i4).unwrap();
 
-        runtime.resolve::<EmptyContext>(i5, None).unwrap();
+        runtime.resolve(i5).unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), i2);
     }
@@ -73,7 +72,7 @@ mod tests {
 
         runtime.get_data_mut().push_instruction(Instruction::Resolve, None).unwrap();
 
-        runtime.resolve::<EmptyContext>(i5, None).unwrap();
+        runtime.resolve(i5).unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);

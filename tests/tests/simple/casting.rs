@@ -21,7 +21,7 @@ mod type_of {
 #[cfg(test)]
 mod simple {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn no_op_cast_expression() {
@@ -33,7 +33,7 @@ mod simple {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_expression(i).unwrap(), 10);
@@ -49,7 +49,7 @@ mod simple {
         runtime.get_data_mut().push_register(int).unwrap();
         runtime.get_data_mut().push_register(unit).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -65,7 +65,7 @@ mod simple {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
@@ -81,7 +81,7 @@ mod simple {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
@@ -97,7 +97,7 @@ mod simple {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
@@ -113,7 +113,7 @@ mod simple {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
@@ -129,7 +129,7 @@ mod simple {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
@@ -145,7 +145,7 @@ mod simple {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::True);
@@ -161,7 +161,7 @@ mod simple {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::False);
@@ -171,8 +171,8 @@ mod simple {
 #[cfg(test)]
 mod primitive {
     use crate::simple::testing_utilities::{add_char_list, create_simple_runtime};
-    use garnish_lang::simple::{SimpleDataFactory, SimpleDataRuntimeNC};
-    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::simple::SimpleDataFactory;
+    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishRuntime};
 
     #[test]
     fn integer_to_char() {
@@ -184,7 +184,7 @@ mod primitive {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let expected = SimpleDataFactory::number_to_char(('a' as i32).into()).unwrap();
 
@@ -202,7 +202,7 @@ mod primitive {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let expected = SimpleDataFactory::number_to_byte(10.into()).unwrap();
 
@@ -220,7 +220,7 @@ mod primitive {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let expected = SimpleDataFactory::char_to_number('a').unwrap();
 
@@ -238,7 +238,7 @@ mod primitive {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let expected = SimpleDataFactory::char_to_byte('a').unwrap();
 
@@ -256,7 +256,7 @@ mod primitive {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let expected = SimpleDataFactory::byte_to_number('a' as u8).unwrap();
 
@@ -274,7 +274,7 @@ mod primitive {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let expected = SimpleDataFactory::byte_to_char('a' as u8).unwrap();
 
@@ -292,7 +292,7 @@ mod primitive {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_byte(i).unwrap(), 100.into());
@@ -308,7 +308,7 @@ mod primitive {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_char(i).unwrap(), 'c');
@@ -324,7 +324,7 @@ mod primitive {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 100.into());
@@ -334,8 +334,8 @@ mod primitive {
 #[cfg(test)]
 mod lists {
     use crate::simple::testing_utilities::{add_byte_list, add_char_list, add_list_with_start, add_range, create_simple_runtime};
-    use garnish_lang::simple::{SimpleDataFactory, SimpleDataRuntimeNC, symbol_value};
-    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::simple::{SimpleDataFactory, symbol_value};
+    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishRuntime};
 
     #[test]
     fn range_to_list() {
@@ -347,7 +347,7 @@ mod lists {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(list).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
         let len = runtime.get_data_mut().get_list_len(addr).unwrap();
@@ -370,7 +370,7 @@ mod lists {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(list).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
         let expected = SimpleDataFactory::parse_char_list(input).unwrap();
@@ -396,7 +396,7 @@ mod lists {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(list).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
         let expected = SimpleDataFactory::parse_byte_list(input).unwrap();
@@ -423,7 +423,7 @@ mod lists {
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(list).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
         let len = runtime.get_data_mut().get_list_len(addr).unwrap();
@@ -455,10 +455,16 @@ mod lists {
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(list).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
-        let expected: Vec<char> = SimpleDataFactory::parse_char_list(input).unwrap().iter().skip(2).take(6).map(|c| *c).collect();
+        let expected: Vec<char> = SimpleDataFactory::parse_char_list(input)
+            .unwrap()
+            .iter()
+            .skip(2)
+            .take(6)
+            .map(|c| *c)
+            .collect();
         let mut result = vec![];
 
         for i in 0..expected.len() {
@@ -483,10 +489,16 @@ mod lists {
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(list).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
-        let expected: Vec<u8> = SimpleDataFactory::parse_byte_list(input).unwrap().iter().skip(2).take(6).map(|c| *c).collect();
+        let expected: Vec<u8> = SimpleDataFactory::parse_byte_list(input)
+            .unwrap()
+            .iter()
+            .skip(2)
+            .take(6)
+            .map(|c| *c)
+            .collect();
         let mut result = vec![];
 
         for i in 0..expected.len() {
@@ -503,7 +515,7 @@ mod lists {
 mod concatenation {
     use crate::simple::testing_utilities::{add_concatenation_with_start, add_list_with_start, add_range, create_simple_runtime};
     use garnish_lang::simple::symbol_value;
-    use garnish_lang::{GarnishData, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::{GarnishData, GarnishRuntime};
 
     #[test]
     fn concatenation_to_list() {
@@ -516,7 +528,7 @@ mod concatenation {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
         let len = runtime.get_data_mut().get_list_len(addr).unwrap();
@@ -547,7 +559,7 @@ mod concatenation {
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(d4).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
         let len = runtime.get_data_mut().get_list_len(addr).unwrap();
@@ -579,7 +591,7 @@ mod concatenation {
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(d4).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
         let len = runtime.get_data_mut().get_list_len(addr).unwrap();
@@ -612,7 +624,7 @@ mod concatenation {
         runtime.get_data_mut().push_register(d5).unwrap();
         runtime.get_data_mut().push_register(d6).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
         let len = runtime.get_data_mut().get_list_len(addr).unwrap();
@@ -635,8 +647,8 @@ mod concatenation {
 #[cfg(test)]
 mod deferred {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang::simple::{SimpleDataFactory, SimpleDataRuntimeNC};
-    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime, NO_CONTEXT};
+    use garnish_lang::simple::SimpleDataFactory;
+    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn char_list() {
@@ -650,7 +662,7 @@ mod deferred {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(s).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
         let len = runtime.get_data_mut().get_char_list_len(addr).unwrap();
@@ -678,7 +690,7 @@ mod deferred {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(s).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(addr).unwrap(), GarnishDataType::ByteList);
@@ -690,12 +702,15 @@ mod deferred {
 
         let d1 = runtime.get_data_mut().add_unit().unwrap();
 
-        let s = runtime.get_data_mut().add_symbol(SimpleDataFactory::parse_symbol("sym").unwrap()).unwrap();
+        let s = runtime
+            .get_data_mut()
+            .add_symbol(SimpleDataFactory::parse_symbol("sym").unwrap())
+            .unwrap();
 
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(s).unwrap();
 
-        runtime.type_cast(NO_CONTEXT).unwrap();
+        runtime.type_cast().unwrap();
 
         let addr = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(addr).unwrap(), GarnishDataType::Symbol);

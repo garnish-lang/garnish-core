@@ -1,4 +1,4 @@
-use garnish_lang_traits::{ErrorType, GarnishDataType, GarnishContext, GarnishData, RuntimeError};
+use garnish_lang_traits::{ErrorType, GarnishDataType, GarnishData, RuntimeError};
 use crate::runtime::list::get_access_addr;
 use crate::runtime::utilities::push_unit;
 

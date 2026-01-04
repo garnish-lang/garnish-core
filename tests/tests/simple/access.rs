@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
-    use garnish_lang::{EmptyContext, GarnishData, GarnishDataFactory, GarnishRuntime, Instruction, simple::SimpleDataFactory};
+    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishRuntime, Instruction, simple::SimpleDataFactory};
 
     #[test]
     fn access_integer_to_list() {
@@ -22,7 +22,7 @@ mod tests {
         runtime.get_data_mut().push_register(list_index1).unwrap();
         runtime.get_data_mut().push_register(d5).unwrap();
 
-        let next = runtime.access::<EmptyContext>(None).unwrap();
+        let next = runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 30.into());
@@ -46,7 +46,7 @@ mod tests {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        let next = runtime.access::<EmptyContext>(None).unwrap();
+        let next = runtime.access().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), start);
         assert_eq!(runtime.get_data_mut().get_char(start).unwrap(), 'c');
@@ -70,7 +70,7 @@ mod tests {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        let next = runtime.access::<EmptyContext>(None).unwrap();
+        let next = runtime.access().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), start);
         assert_eq!(runtime.get_data_mut().get_byte(start).unwrap(), 30.into());
@@ -91,7 +91,7 @@ mod tests {
         runtime.get_data_mut().push_register(i3).unwrap();
         runtime.get_data_mut().push_register(i4).unwrap();
 
-        runtime.access::<EmptyContext>(None).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 15.into());
@@ -124,7 +124,7 @@ mod tests {
         runtime.get_data_mut().push_register(i10).unwrap();
         runtime.get_data_mut().push_register(i11).unwrap();
 
-        runtime.access::<EmptyContext>(None).unwrap();
+        runtime.access().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 20.into());
@@ -139,7 +139,7 @@ mod tests {
 
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
-        runtime.access::<EmptyContext>(None).unwrap();
+        runtime.access().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_register(0).unwrap(), 0usize);
     }
@@ -167,7 +167,7 @@ mod tests {
 
         runtime.get_data_mut().set_instruction_cursor(7).unwrap();
 
-        let result = runtime.access::<EmptyContext>(None);
+        let result = runtime.access();
 
         assert!(result.is_err());
     }

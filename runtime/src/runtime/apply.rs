@@ -1,7 +1,7 @@
 use crate::runtime::error::state_error;
 use crate::runtime::list::{access_with_integer, access_with_symbol};
 use crate::runtime::utilities::*;
-use garnish_lang_traits::{Extents, GarnishContext, GarnishData, GarnishDataType, GarnishNumber, Instruction, RuntimeError, SymbolListPart, TypeConstants};
+use garnish_lang_traits::{Extents, GarnishData, GarnishDataType, GarnishNumber, Instruction, RuntimeError, SymbolListPart, TypeConstants};
 use log::trace;
 
 pub fn apply<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
@@ -259,8 +259,8 @@ mod data_apply {
 #[cfg(test)]
 mod tests {
     use crate::runtime::apply::{apply, empty_apply};
-    use crate::runtime::tests::{MockGarnishData, MockIterator, MockSymbolListPartIterator};
-    use garnish_lang_traits::{GarnishDataType, NO_CONTEXT, SymbolListPart};
+    use crate::runtime::tests::{MockGarnishData, MockSymbolListPartIterator};
+    use garnish_lang_traits::{GarnishDataType, SymbolListPart};
 
     #[test]
     fn apply_number_to_pair() {

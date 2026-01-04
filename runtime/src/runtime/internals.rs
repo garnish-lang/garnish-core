@@ -3,7 +3,7 @@ use crate::runtime::range::range_len;
 use crate::runtime::utilities::{next_ref, push_number, push_unit};
 use garnish_lang_traits::helpers::iterate_concatenation_mut;
 use garnish_lang_traits::Instruction;
-use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataFactory, GarnishDataType, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishData, GarnishDataFactory, GarnishDataType, RuntimeError, TypeConstants};
 
 pub fn access_left_internal<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     let r = next_ref(this)?;

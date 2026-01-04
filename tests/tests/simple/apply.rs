@@ -1,8 +1,7 @@
 #[cfg(test)]
 mod tests {
-    use crate::simple::testing_utilities::{DEFERRED_VALUE, DeferOpTestContext, create_simple_runtime};
-    use garnish_lang::simple::{DataError, SimpleGarnishData};
-    use garnish_lang::{EmptyContext, GarnishContext, GarnishData, GarnishDataType, GarnishRuntime, Instruction, RuntimeError};
+    use crate::simple::testing_utilities::{create_simple_runtime};
+    use garnish_lang::{GarnishData, GarnishDataType, GarnishRuntime, Instruction};
 
     #[test]
     fn apply() {
@@ -31,7 +30,7 @@ mod tests {
 
         runtime.get_data_mut().set_instruction_cursor(i2).unwrap();
 
-        let next = runtime.apply::<EmptyContext>(None).unwrap();
+        let next = runtime.apply().unwrap();
 
         assert_eq!(runtime.get_data_mut().get_value(0).unwrap(), int2);
         assert_eq!(next.unwrap(), i1);
@@ -61,7 +60,7 @@ mod tests {
 
         runtime.get_data_mut().set_instruction_cursor(i2).unwrap();
 
-        let next = runtime.empty_apply::<EmptyContext>(None).unwrap();
+        let next = runtime.empty_apply().unwrap();
 
         let i = runtime.get_data_mut().get_value(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -89,7 +88,7 @@ mod tests {
 
         runtime.get_data_mut().set_instruction_cursor(6).unwrap();
 
-        let result = runtime.empty_apply::<EmptyContext>(None);
+        let result = runtime.empty_apply();
 
         assert!(result.is_err());
     }
@@ -134,7 +133,7 @@ mod tests {
 #[cfg(test)]
 mod slices {
     use crate::simple::testing_utilities::{add_concatenation_with_start, add_list, add_range, create_simple_runtime};
-    use garnish_lang::{EmptyContext, GarnishData, GarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishRuntime};
 
     #[test]
     fn create_with_list() {
@@ -146,7 +145,7 @@ mod slices {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        runtime.apply().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         let (list, range) = runtime.get_data_mut().get_slice(i).unwrap();
@@ -164,7 +163,7 @@ mod slices {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        runtime.apply().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         let (list, range) = runtime.get_data_mut().get_slice(i).unwrap();
@@ -184,7 +183,7 @@ mod slices {
         runtime.get_data_mut().push_register(d3).unwrap();
         runtime.get_data_mut().push_register(d4).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        runtime.apply().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         let (list, range) = runtime.get_data_mut().get_slice(i).unwrap();
@@ -209,7 +208,7 @@ mod slices {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        runtime.apply().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         let (list, range) = runtime.get_data_mut().get_slice(i).unwrap();
@@ -231,7 +230,7 @@ mod slices {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        runtime.apply().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         let (list, range) = runtime.get_data_mut().get_slice(i).unwrap();
@@ -249,7 +248,7 @@ mod slices {
         runtime.get_data_mut().push_register(d1).unwrap();
         runtime.get_data_mut().push_register(d2).unwrap();
 
-        runtime.apply::<EmptyContext>(None).unwrap();
+        runtime.apply().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         let (start, end) = runtime.get_data_mut().get_range(i).unwrap();

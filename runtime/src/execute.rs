@@ -5,7 +5,7 @@ use crate::ops::{
     less_than_or_equal, make_end_exclusive_range, make_exclusive_range, make_list, make_pair, make_range, make_start_exclusive_range, multiply, not, not_equal, opposite, or, partial_apply, power,
     push_value, put, put_value, reapply, remainder, resolve, start_side_effect, subtract, tis, type_cast, type_equal, type_of, update_value, xor,
 };
-use garnish_lang_traits::{GarnishContext, GarnishData, Instruction, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishData, Instruction, RuntimeError, TypeConstants};
 use log::trace;
 
 /// State that the runtime is currently in.

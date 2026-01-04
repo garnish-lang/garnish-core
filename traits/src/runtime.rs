@@ -1,4 +1,4 @@
-use crate::{GarnishContext, GarnishData, RuntimeError};
+use crate::{GarnishData, RuntimeError};
 
 
 /// Trait containing instruction operations Garnish needs to execute.
@@ -8,38 +8,26 @@ pub trait GarnishRuntime<Data: GarnishData> {
     fn get_data(&self) -> &Data;
     fn get_data_mut(&mut self) -> &mut Data;
 
-    fn apply<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn apply(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn reapply(&mut self, index: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn empty_apply<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn empty_apply(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
 
-    fn add<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn subtract<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn multiply<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn power<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn divide<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn integer_divide<T: GarnishContext<Data>>(
-        &mut self,
-        context: Option<&mut T>,
-    ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn remainder<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn absolute_value<T: GarnishContext<Data>>(
-        &mut self,
-        context: Option<&mut T>,
-    ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn opposite<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn add(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn subtract(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn multiply(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn power(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn divide(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn integer_divide(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn remainder(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn absolute_value(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn opposite(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
 
-    fn bitwise_not<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn bitwise_and<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn bitwise_or<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn bitwise_xor<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn bitwise_left_shift<T: GarnishContext<Data>>(
-        &mut self,
-        context: Option<&mut T>,
-    ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn bitwise_right_shift<T: GarnishContext<Data>>(
-        &mut self,
-        context: Option<&mut T>,
-    ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn bitwise_not(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn bitwise_and(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn bitwise_or(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn bitwise_xor(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn bitwise_left_shift(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn bitwise_right_shift(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
 
     fn and(&mut self, data: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn or(&mut self, data: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
@@ -49,7 +37,7 @@ pub trait GarnishRuntime<Data: GarnishData> {
 
     fn type_of(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn type_equal(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn type_cast<T: GarnishContext<Data>>(&mut self, context: Option<&mut T>) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn type_cast(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
 
     fn equal(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn not_equal(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
@@ -64,22 +52,10 @@ pub trait GarnishRuntime<Data: GarnishData> {
     fn end_expression(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
 
     fn make_list(&mut self, len: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn access<T: GarnishContext<Data>>(
-        &mut self,
-        context: Option<&mut T>,
-    ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn access_left_internal<T: GarnishContext<Data>>(
-        &mut self,
-        context: Option<&mut T>,
-    ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn access_right_internal<T: GarnishContext<Data>>(
-        &mut self,
-        context: Option<&mut T>,
-    ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
-    fn access_length_internal<T: GarnishContext<Data>>(
-        &mut self,
-        context: Option<&mut T>,
-    ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn access(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn access_left_internal(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn access_right_internal(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn access_length_internal(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
 
     fn make_range(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn make_start_exclusive_range(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
@@ -98,9 +74,5 @@ pub trait GarnishRuntime<Data: GarnishData> {
     fn start_side_effect(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
     fn end_side_effect(&mut self) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
 
-    fn resolve<T: GarnishContext<Data>>(
-        &mut self,
-        data: Data::Size,
-        context: Option<&mut T>,
-    ) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
+    fn resolve(&mut self, data: Data::Size) -> Result<Option<Data::Size>, RuntimeError<Data::Error>>;
 }

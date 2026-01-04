@@ -2,7 +2,7 @@ use garnish_lang_traits::Instruction;
 use log::trace;
 
 use crate::runtime::utilities::{next_ref, next_two_raw_ref, push_number, push_unit};
-use garnish_lang_traits::{GarnishContext, GarnishData, GarnishDataType, GarnishNumber, RuntimeError, TypeConstants};
+use garnish_lang_traits::{GarnishData, GarnishDataType, GarnishNumber, RuntimeError, TypeConstants};
 
 pub fn add<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_op(this, Instruction::Add, Data::Number::plus)

@@ -1,5 +1,5 @@
 use crate::runtime::arithmetic::{perform_op, perform_unary_op};
-use garnish_lang_traits::{GarnishContext, GarnishData, GarnishNumber, Instruction, RuntimeError};
+use garnish_lang_traits::{GarnishData, GarnishNumber, Instruction, RuntimeError};
 
 pub fn bitwise_not<Data: GarnishData>(this: &mut Data) -> Result<Option<Data::Size>, RuntimeError<Data::Error>> {
     perform_unary_op(this, Instruction::BitwiseNot, Data::Number::bitwise_not)
@@ -27,7 +27,7 @@ pub fn bitwise_right_shift<Data: GarnishData>(this: &mut Data) -> Result<Option<
 
 #[cfg(test)]
 mod defer_op {
-    use crate::ops::{add, bitwise_and, bitwise_left_shift, bitwise_not, bitwise_or, bitwise_right_shift, bitwise_xor};
+    use crate::ops::{bitwise_and, bitwise_left_shift, bitwise_not, bitwise_or, bitwise_right_shift, bitwise_xor};
     use crate::runtime::tests::MockGarnishData;
     use garnish_lang_traits::{GarnishData, GarnishDataType, Instruction};
 

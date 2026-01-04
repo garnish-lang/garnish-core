@@ -2,7 +2,7 @@
 mod tests {
     use crate::simple::testing_utilities::create_simple_runtime;
     use garnish_lang::simple::{SimpleDataFactory, SimpleNumber};
-    use garnish_lang::{EmptyContext, GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime};
+    use garnish_lang::{GarnishData, GarnishDataFactory, GarnishDataType, GarnishRuntime};
 
     #[test]
     fn add() {
@@ -14,7 +14,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.add::<EmptyContext>(None).unwrap();
+        runtime.add().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 30.into());
@@ -27,7 +27,7 @@ mod tests {
         runtime.get_data_mut().add_number(10.into()).unwrap();
         runtime.get_data_mut().add_number(20.into()).unwrap();
 
-        let result = runtime.add::<EmptyContext>(None);
+        let result = runtime.add();
 
         assert!(result.is_err());
     }
@@ -42,7 +42,7 @@ mod tests {
         runtime.get_data_mut().push_register(1).unwrap();
         runtime.get_data_mut().push_register(2).unwrap();
 
-        runtime.add::<EmptyContext>(None).unwrap();
+        runtime.add().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_data_type(i).unwrap(), GarnishDataType::Unit);
@@ -58,7 +58,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.subtract::<EmptyContext>(None).unwrap();
+        runtime.subtract().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), SimpleNumber::Integer(-10));
@@ -74,7 +74,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.multiply::<EmptyContext>(None).unwrap();
+        runtime.multiply().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 200.into());
@@ -90,7 +90,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.divide::<EmptyContext>(None).unwrap();
+        runtime.divide().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 2.into());
@@ -106,7 +106,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.integer_divide::<EmptyContext>(None).unwrap();
+        runtime.integer_divide().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 2.into());
@@ -122,7 +122,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.power::<EmptyContext>(None).unwrap();
+        runtime.power().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 1000.into());
@@ -138,7 +138,7 @@ mod tests {
         runtime.get_data_mut().push_register(int1).unwrap();
         runtime.get_data_mut().push_register(int2).unwrap();
 
-        runtime.remainder::<EmptyContext>(None).unwrap();
+        runtime.remainder().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 3.into());
@@ -152,7 +152,7 @@ mod tests {
 
         runtime.get_data_mut().push_register(int1).unwrap();
 
-        runtime.absolute_value::<EmptyContext>(None).unwrap();
+        runtime.absolute_value().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), 10.into());
@@ -166,7 +166,7 @@ mod tests {
 
         runtime.get_data_mut().push_register(int1).unwrap();
 
-        runtime.opposite::<EmptyContext>(None).unwrap();
+        runtime.opposite().unwrap();
 
         let i = runtime.get_data_mut().get_register(0).unwrap();
         assert_eq!(runtime.get_data_mut().get_number(i).unwrap(), SimpleNumber::Integer(-10));
