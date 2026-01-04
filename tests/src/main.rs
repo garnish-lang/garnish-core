@@ -1,6 +1,3 @@
-mod derive;
-mod garnish_data_wrapper;
-
 use colored::Colorize;
 use garnish_lang::compiler::build::build;
 use garnish_lang::compiler::lex::lex;

@@ -14,11 +14,9 @@ readme.workspace = true
 
 [dependencies]
 garnish_lang_traits = { workspace = true }
-garnish_lang_traits_derive = { workspace = true, optional = true, features = ["garnish_facade"] }
 garnish_lang_simple_data = { workspace = true }
 garnish_lang_compiler = { workspace = true }
 garnish_lang_runtime = { workspace = true }
 
 [features]
 serde = ["garnish_lang_traits/serde", "garnish_lang_simple_data/serde", "garnish_lang_compiler/serde", "garnish_lang_runtime/serde"]
-derive = ["garnish_lang_traits_derive"]

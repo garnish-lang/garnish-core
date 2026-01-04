@@ -7,7 +7,6 @@ members = [
     "data",
     "tests",
     "garnish",
-    "traits_derive",
 ]
 
 [workspace.package]
@@ -23,7 +22,6 @@ readme = "README.md"
 
 [workspace.dependencies]
 garnish_lang_traits = { version = "0.0.25-alpha",  path = "traits" }
-garnish_lang_traits_derive = { version = "0.0.25-alpha",  path = "traits_derive" }
 garnish_lang_simple_data = { version = "0.0.25-alpha",  path = "data" }
 garnish_lang_compiler = { version = "0.0.25-alpha",  path = "compiler" }
 garnish_lang_runtime = { version = "0.0.25-alpha",  path = "runtime" }
