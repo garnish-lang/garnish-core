@@ -424,6 +424,22 @@ where
         }
     }
 
+    pub fn add_string(&mut self, string: &str) -> Result<usize, DataError> {
+        let start = self.push_to_data_block(BasicData::CharList(string.len()))?;
+        for c in string.chars() {
+            self.push_to_data_block(BasicData::Char(c))?;
+        }
+        Ok(start)
+    }
+
+    pub fn add_byte_slice(&mut self, slice: &[u8]) -> Result<usize, DataError> {
+        let start = self.push_to_data_block(BasicData::ByteList(slice.len()))?;
+        for b in slice {
+            self.push_to_data_block(BasicData::Byte(*b))?;
+        }
+        Ok(start)
+    }
+
     pub(crate) fn data(&self) -> &Vec<BasicData<T>> {
         &self.data
     }
