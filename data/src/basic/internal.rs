@@ -37,6 +37,28 @@ where
         }
     }
 
+    pub fn get_from_symbol_table_block_ensure_index(&self, index: usize) -> Result<(u64, usize), DataError> {
+        if index >= self.symbol_table_block().cursor {
+            return Err(DataError::new("Invalid symbol table index", DataErrorType::InvalidSymbolTableIndex(index)));
+        }
+        let true_index = self.symbol_table_block().start + index;
+        match &self.data()[true_index] {
+            BasicData::AssociativeItem(symbol, index) => Ok((*symbol, *index)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
+    pub fn get_from_symbol_table_block_ensure_index_mut(&mut self, index: usize) -> Result<(&mut u64, &mut usize), DataError> {
+        if index >= self.symbol_table_block().cursor {
+            return Err(DataError::new("Invalid symbol table index", DataErrorType::InvalidSymbolTableIndex(index)));
+        }
+        let true_index = self.symbol_table_block().start + index;
+        match &mut self.data_mut()[true_index] {
+            BasicData::AssociativeItem(symbol, index) => Ok((symbol, index)),
+            _ => Err(DataError::not_basic_type_error()),
+        }
+    }
+
     pub fn get_from_jump_table_block_ensure_index(&self, index: usize) -> Result<usize, DataError> {
         if index >= self.jump_table_block().cursor {
             return Err(DataError::new("Invalid jump table index", DataErrorType::InvalidJumpTableIndex(index)));

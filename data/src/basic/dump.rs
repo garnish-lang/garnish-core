@@ -31,17 +31,17 @@ where
 
     pub fn dump_all_blocks(&self) -> String {
         let mut s = vec![];
-        s.push("Instruction Block:".to_string());
+        s.push(format!("Instruction Block ({}):", self.instruction_block().cursor));
         s.push(self.dump_instruction_block());
-        s.push("Jump Table Block:".to_string());
+        s.push(format!("Jump Table Block ({}):", self.jump_table_block().cursor));
         s.push(self.dump_jump_table_block());
-        s.push("Symbol Table Block:".to_string());
+        s.push(format!("Symbol Table Block ({}):", self.symbol_table_block().cursor));
         s.push(self.dump_symbol_table_block());
-        s.push("Expression Symbol Block:".to_string());
+        s.push(format!("Expression Symbol Block ({}):", self.expression_symbol_block().cursor));
         s.push(self.dump_expression_symbol_block());
-        s.push("Data Block:".to_string());
+        s.push(format!("Data Block ({}):", self.data_block().cursor));
         s.push(self.dump_data_block());
-        s.push("Custom Data Block:".to_string());
+        s.push(format!("Custom Data Block ({}):", self.custom_data_block().cursor));
         s.push(self.dump_custom_block());
         s.join("\n")
     }

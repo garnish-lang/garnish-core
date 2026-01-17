@@ -14,6 +14,12 @@ where
         let original_frame = self.current_frame();
 
         let index_list_start = self.data_block().cursor;
+
+        let symbol_table_range = 0..self.symbol_table_block().cursor;
+        for i in symbol_table_range.clone() {
+            let (_symbol, data_index) = self.get_from_symbol_table_block_ensure_index(i)?; 
+            self.create_index_stack(data_index)?;
+        }
         
         if let Some(index) = original_register {
             self.create_index_stack(index)?;
@@ -37,6 +43,14 @@ where
 
         if index_list_end != current_data_end {
             self.clone_index_stack(index_list_start, offset)?;
+        }
+
+        for i in symbol_table_range {
+            let (_symbol, data_index) = self.get_from_symbol_table_block_ensure_index(i)?;
+            let mapped_index = self.lookup_in_data_slice(index_list_start, index_list_end, data_index)?;
+
+            let (_symbol, data_index) = self.get_from_symbol_table_block_ensure_index_mut(i)?;
+            *data_index = mapped_index;
         }
         
         if let Some(original_register) = original_register {
@@ -81,7 +95,9 @@ where
 
 #[cfg(test)]
 mod optimize {
-    use crate::{BasicData, NoOpCompanion, basic_object};
+    use garnish_lang_traits::{GarnishData, GarnishDataFactory};
+
+    use crate::{BasicData, BasicDataFactory, NoOpCompanion, basic_object};
 
     use super::*;
 
@@ -135,6 +151,47 @@ mod optimize {
         expected_data.data_block_mut().size = 40;
         expected_data.custom_data_block_mut().start = 80;
         expected_data.custom_data_block_mut().size = 10;
+
+        assert_eq!(data, expected_data);
+    }
+
+    #[test]
+    fn symbol_strings_referenced_by_symbol_table_are_kept() {
+        let mut data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
+        data.push_object_to_data_block(basic_object!((Number 1234), (CharList "world"))).unwrap();
+        data.parse_add_symbol("hello").unwrap();
+        data.parse_add_symbol("world").unwrap();
+
+        let hello_symbol = BasicDataFactory::parse_symbol("hello").unwrap();
+        let world_symbol = BasicDataFactory::parse_symbol("world").unwrap();
+
+        data.optimize_data_block_and_retain(&[]).unwrap();
+
+        let mut expected_data = BasicGarnishData::<(), NoOpCompanion>::new(NoOpCompanion::new()).unwrap();
+        expected_data.data_mut().resize(90, BasicData::Empty);
+        expected_data.data_mut().splice(20..22, vec![
+            BasicData::AssociativeItem(world_symbol, 6),
+            BasicData::AssociativeItem(hello_symbol, 0),
+        ]);
+        expected_data.data_mut().splice(40..52, vec![
+            BasicData::CharList(5),
+            BasicData::Char('h'),
+            BasicData::Char('e'),
+            BasicData::Char('l'),
+            BasicData::Char('l'),
+            BasicData::Char('o'),
+            BasicData::CharList(5),
+            BasicData::Char('w'),
+            BasicData::Char('o'),
+            BasicData::Char('r'),
+            BasicData::Char('l'),
+            BasicData::Char('d'),
+        ]);
+
+        expected_data.data_block_mut().cursor = 12;
+        expected_data.data_block_mut().size = 40;
+        expected_data.custom_data_block_mut().start = 80;
+        expected_data.symbol_table_block_mut().cursor = 2;
 
         assert_eq!(data, expected_data);
     }
